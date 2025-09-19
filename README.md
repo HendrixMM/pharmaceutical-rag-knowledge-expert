@@ -14,6 +14,7 @@ A powerful **Retrieval-Augmented Generation (RAG)** template built with **NVIDIA
 - 🔍 **Vector Search**: FAISS-based similarity search with persistence
 - 💬 **Interactive Web UI**: Beautiful Streamlit interface with chat functionality
 - 📊 **Advanced Analytics**: Document statistics and source visualization
+- 🧪 **PubMed Study Ranking**: Optional pharmaceutical study ranking (enable with `rank=True` or `ENABLE_STUDY_RANKING=true`)
 - 🔒 **Secure**: Environment-based API key management
 - 📱 **Responsive**: Mobile-friendly design
 - 🚀 **Production Ready**: Comprehensive error handling and logging
@@ -83,17 +84,26 @@ rag_env\Scripts\activate
 source rag_env/bin/activate
 ```
 
-#### **Option B: Using Conda**
-```bash
-# Create conda environment
-conda create -n rag_env python=3.9
-conda activate rag_env
-```
-
 ### **Step 3: Install Dependencies**
 ```bash
+# Install core dependencies
 pip install -r requirements.txt
+
+# Optional: Install medical safety validation dependencies (for medical/pharmaceutical applications)
+# These include advanced PII/PHI detection using Presidio and biomedical NLP with scispaCy
+# To enable medical guardrails, run:
+pip install -r requirements.txt && pip install -r requirements-medical.txt
 ```
+
+**Medical Dependencies Details:**
+- `presidio-analyzer` and `presidio-anonymizer`: Advanced PII/PHI detection and anonymization
+- `spacy`: Industrial-strength NLP library
+- `scispacy`: Biomedical NLP models built on spaCy
+- `transformers`: State-of-the-art NLP models from Hugging Face
+
+When medical dependencies are installed, the system automatically uses Presidio for more accurate PII/PHI detection. Otherwise, it falls back to regex-based detection.
+
+**To enable medical guardrails**: Set `ENABLE_MEDICAL_GUARDRAILS=true` and run `pip install -r requirements-medical.txt` after the base install.
 
 ### **Step 4: Configure Environment**
 1. **Copy the environment template**:
@@ -118,6 +128,9 @@ pip install -r requirements.txt
    VECTOR_DB_PATH=./vector_db
    CHUNK_SIZE=1000
    CHUNK_OVERLAP=200
+   # Guardrails actions (optional)
+   # Set only if you host a remote actions server; leave unset to use bundled actions
+   ACTIONS_SERVER_URL=http://localhost:8001
    ```
 
 ### **Step 5: Add Your Documents**
@@ -210,6 +223,7 @@ python main.py
 ### **Programmatic Usage**
 ```python
 from src.rag_agent import RAGAgent
+from src.pubmed_scraper import PubMedScraper
 import os
 
 # Initialize RAG agent
@@ -223,6 +237,15 @@ rag_agent.setup_knowledge_base()
 response = rag_agent.ask_question("Your question here")
 print(response.answer)
 print(f"Sources: {len(response.source_documents)}")
+if response.disclaimer:
+    print(response.disclaimer)
+
+# Preserve raw PubMed ordering when fetching articles programmatically
+scraper = PubMedScraper()
+articles = scraper.search_pubmed("oncology pharmacology", rank=False)
+print(f"Fetched {len(articles)} articles in canonical crawl order")
+
+# When preserving order (rank=False), EasyAPI abstracts are omitted unless ranking is enabled to reduce latency/cost.
 ```
 
 ## 🔧 **Configuration Options**
@@ -233,14 +256,98 @@ print(f"Sources: {len(response.source_documents)}")
 | `NVIDIA_API_KEY` | Your NVIDIA API key | **Required** |
 | `DOCS_FOLDER` | Path to PDF documents | `Data/Docs` |
 | `VECTOR_DB_PATH` | Vector database storage | `./vector_db` |
+| `VECTOR_DB_PER_MODEL` | Store vector indexes in per-model subdirectories; auto-migrates compatible legacy data and rebuilds on incompatibilities | `false` |
+| `DISABLE_PREFLIGHT_EMBEDDING` | Set to `true` to skip the per-question preflight embedding (lower latency/cost) at the expense of weaker detection when the runtime falls back to a different model | `false` |
 | `CHUNK_SIZE` | Document chunk size | `1000` |
 | `CHUNK_OVERLAP` | Chunk overlap size | `200` |
+| `DRUG_GENERIC_LEXICON` | Optional path to newline-delimited generic drug names | `data/drugs_generic.txt` if present |
+| `DRUG_BRAND_LEXICON` | Optional path to newline-delimited brand drug names | `data/drugs_brand.txt` if present |
+| `ENABLE_MEDICAL_GUARDRAILS` | Enable medical safety validation features (requires additional dependencies) | `false` |
+
+### **Medical Safety Features**
+This template includes optional medical safety validation features that can be enabled for pharmaceutical and healthcare applications. These features provide:
+
+- PII/PHI detection and anonymization using Presidio
+- Medical context validation
+- Regulatory compliance checking
+- Advanced biomedical NLP pipelines using SciSpaCy
+
+To use these features:
+1. Install the medical dependencies: `pip install -r requirements-medical.txt`
+2. Set `ENABLE_MEDICAL_GUARDRAILS=true` in your environment
 
 ### **Customization Options**
 - **Chunk Size**: Adjust for different document types
 - **Model Selection**: Switch between available NVIDIA models
 - **UI Styling**: Modify Streamlit interface in `streamlit_app.py`
 - **Processing Logic**: Customize RAG pipeline in `src/rag_agent.py`
+
+### **Vector Database Management**
+- **`VECTOR_DB_PER_MODEL`**: When set to `true`, FAISS indexes live in sanitized per-model folders (e.g., `./vector_db/nvidia_llama-3.2-nemoretriever-1b-vlm-embed-v1`). Leaving it `false` keeps the legacy single-folder layout in `VECTOR_DB_PATH`.
+- **`embeddings_meta.json`**: Saved next to each index. It records the embedding model name and vector dimension so the agent can detect mismatches before loading older data.
+- **Rebuilds & migrations**: On first run with per-model paths, compatible legacy data is migrated automatically; mismatched metadata or dimension changes trigger a rebuild at the reconciled path. Runtime fallback to another embedding model updates the vector DB base path, and logs will tell you to rerun `setup_knowledge_base(force_rebuild=True)` when a rebuild is the safest choice.
+
+### **PubMed Scraper CLI**
+Run the scraper directly to fetch and cache PubMed results:
+
+```bash
+# Module execution (original behavior)
+python -m src.pubmed_scraper "metformin glycemic control" --max-items 40 --export-sidecars ./Data/Docs
+
+# Preserve canonical PubMed ordering when ranking isn't desired
+python -m src.pubmed_scraper "metformin glycemic control" --no-rank
+
+# Direct script execution is also supported
+python src/pubmed_scraper.py "metformin glycemic control"
+
+# Environment toggle for repeated runs without CLI flags
+PRESERVE_PUBMED_ORDER=true python -m src.pubmed_scraper "metformin glycemic control"
+```
+
+The CLI prints the number of articles found, cache directory statistics, and a preview of the first few results. When `--export-sidecars` is supplied, `.pubmed.json` files are created next to matching PDFs in the specified folder.
+
+## 📚 **PubMed Workflow**
+
+This template provides seamless integration with PubMed for academic and research workflows. Follow these steps to scrape PubMed articles and integrate them with your RAG system:
+
+### **Step 1: Configure APIFY_TOKEN**
+1. **Sign up for Apify**: Visit [https://console.apify.com](https://console.apify.com)
+2. **Get your API token**: Navigate to Settings → Integrations → API tokens
+3. **Add to environment**: Set `APIFY_TOKEN=your_apify_token_here` in your `.env` file
+
+### **Step 2: Scrape PubMed Articles**
+```bash
+# Scrape articles and export sidecar metadata files
+python -m src.pubmed_scraper "diabetes treatment" --export-sidecars Data/Docs
+
+# Advanced usage with more articles
+python -m src.pubmed_scraper "cancer immunotherapy" --max-items 50 --export-sidecars Data/Docs
+
+# Preserve original PubMed ordering (no ranking)
+python -m src.pubmed_scraper "covid-19 treatment" --no-rank --export-sidecars Data/Docs
+```
+
+### **Step 3: Build and Query Knowledge Base**
+```bash
+# Launch the RAG agent to build knowledge base from documents + sidecars
+python -m src.rag_agent
+
+# Or use the web interface
+streamlit run streamlit_app.py
+```
+
+### **Key Features**
+- **Automatic Metadata**: PubMed metadata (DOI, PMID, authors, MeSH terms) is automatically extracted
+- **Sidecar Integration**: `.pubmed.json` files provide rich metadata alongside PDFs
+- **Deduplication**: Automatic removal of duplicate articles by DOI/PMID and title
+- **Medical Disclaimers**: Built-in medical disclaimers for healthcare applications
+
+### **Environment Examples**
+The `.env.template` file includes comprehensive PubMed configuration options:
+- `APIFY_TOKEN`: Your Apify API token for PubMed scraping
+- `PUBMED_CACHE_DIR`: Local cache directory for results
+- `ENABLE_STUDY_RANKING`: Enable/disable automatic study quality ranking
+- `ENABLE_DEDUPLICATION`: Control duplicate article removal
 
 ## 🧪 **Testing**
 

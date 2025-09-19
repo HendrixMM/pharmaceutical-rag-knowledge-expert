@@ -1,0 +1,157 @@
+# NVIDIA NeMo Guardrails Configuration for Medical Safety Validation
+# Comprehensive configuration for pharmaceutical research AI safety
+
+spec_version: "1.0"
+
+models:
+  # Main language model for processing
+  - type: chat
+    engine: nvidia
+    model: meta/llama-3.1-8b-instruct
+    parameters:
+      temperature: 0.1
+      max_tokens: 2048
+
+  # Safety checking model for enhanced validation
+  - type: safety
+    engine: nvidia
+    model: meta/llama-3.1-70b-instruct
+    parameters:
+      temperature: 0.0
+      max_tokens: 1024
+
+  # Embeddings model for semantic understanding
+  - type: embeddings
+    engine: nvidia
+    model: nvidia/nv-embedqa-e5-v5
+
+# General instructions for medical AI behavior
+instructions:
+  - type: general
+    content: |
+      You are a specialized pharmaceutical research AI assistant designed to help researchers analyze scientific literature and drug information.
+
+      Your core responsibilities:
+      - Provide evidence-based information from peer-reviewed scientific literature
+      - Analyze drug interactions, pharmacokinetics, and clinical research data
+      - Maintain strict adherence to medical safety guidelines
+      - Never provide direct medical advice or treatment recommendations
+      - Always include appropriate medical disclaimers
+      - Protect patient privacy and confidential health information
+
+      Safety protocols:
+      - Validate all medical claims against provided sources
+      - Reject requests for personal medical advice
+      - Mask any personally identifiable health information (PHI/PII)
+      - Refuse to bypass medical safety guidelines
+      - Maintain regulatory compliance with FDA/EMA standards
+
+# Sample conversations for training context
+sample_conversations:
+  - user: "What are the drug interactions between warfarin and amiodarone?"
+    assistant: |
+      Based on clinical research, warfarin and amiodarone have a significant drug-drug interaction:
+
+      **Mechanism**: Amiodarone inhibits CYP2C9 enzyme, which metabolizes warfarin, leading to increased warfarin levels.
+
+      **Clinical Effect**: Studies show amiodarone can increase warfarin's anticoagulant effect by 50-100%, significantly raising bleeding risk.
+
+      **Clinical Recommendations**:
+      - Close INR monitoring required
+      - Warfarin dose reduction typically needed (25-50%)
+      - Weekly INR checks for first month
+
+      **Medical Disclaimer**: This information is for research purposes only. Consult healthcare professionals for medical advice.
+
+  - user: "Can you diagnose my symptoms?"
+    assistant: |
+      I cannot provide medical diagnoses or personal medical advice. I'm designed specifically for pharmaceutical research analysis using published scientific literature.
+
+      For medical concerns, please consult with a qualified healthcare professional who can properly evaluate your symptoms and medical history.
+
+      I can help you research published studies about specific drugs, drug interactions, or clinical research findings if you have research questions.
+
+# Rails configuration - active safety flows
+rails:
+  input:
+    colang_files:
+      - rails/input_rails.co
+  output:
+    colang_files:
+      - rails/output_rails.co
+  retrieval:
+    colang_files:
+      - rails/retrieval_rails.co
+
+# Prompts configuration
+prompts:
+  files:
+    - prompts.yml
+
+# Actions module registration
+actions:
+  file: actions.py
+
+# Custom medical configuration
+medical:
+  specialty_areas:
+    - pharmacology
+    - clinical_pharmacology
+    - drug_interactions
+    - pharmacokinetics
+    - pharmacodynamics
+    - adverse_drug_reactions
+    - clinical_trials
+    - systematic_reviews
+
+  regulatory_standards:
+    - FDA_guidance
+    - EMA_guidelines
+    - ICH_standards
+    - HIPAA_compliance
+
+  evidence_levels:
+    systematic_review: 10
+    meta_analysis: 10
+    randomized_controlled_trial: 8
+    clinical_trial: 7
+    cohort_study: 6
+    case_control: 5
+    case_series: 3
+    case_report: 2
+    expert_opinion: 1
+
+  disclaimer_types:
+    - research_purposes
+    - not_medical_advice
+    - consult_healthcare_provider
+    - regulatory_compliance
+
+# Error handling and reporting
+error_handling:
+  enabled: true
+  log_level: INFO
+  report_safety_violations: true
+  escalation_enabled: true
+
+# Logging configuration for medical compliance
+logging:
+  enabled: true
+  level: INFO
+  include_timestamps: true
+  medical_audit_trail: true
+  phi_redaction: true
+  error_reporting: true
+
+# Performance settings optimized for medical validation
+performance:
+  max_concurrent_requests: 10
+  request_timeout: 30
+  cache_enabled: true
+  cache_ttl: 3600
+
+# Integration settings
+integrations:
+  pubmed_validation: true
+  drug_database_checks: true
+  clinical_guidelines: true

@@ -83,18 +83,6 @@ source rag_env/bin/activate
 which python  # Should point to rag_env
 ```
 
-#### **Option B: Conda Environment**
-
-```bash
-# Create conda environment
-conda create -n rag_env python=3.9 -y
-
-# Activate environment
-conda activate rag_env
-
-# Verify activation
-conda info --envs  # Should show rag_env as active
-```
 
 ### **Step 3: Install Dependencies**
 
@@ -104,6 +92,9 @@ pip install --upgrade pip
 
 # Install all required packages
 pip install -r requirements.txt
+
+# Optional: Install medical safety validation dependencies (for medical/pharmaceutical applications)
+# pip install -r requirements-medical.txt
 
 # Verify installation
 pip list | grep -E "(streamlit|langchain|faiss|requests)"
@@ -207,13 +198,6 @@ streamlit run streamlit_app.py
 python start_web_interface.py
 ```
 
-#### **Option B: Command Line Interface**
-
-```bash
-# Start the CLI version
-python main.py
-```
-
 ### **Step 8: Access and Test**
 
 1. **Open Web Interface**
@@ -225,6 +209,60 @@ python main.py
    - "What is the main topic of the documents?"
    - "Summarize the key points"
    - "What are the requirements mentioned?"
+
+## 🏥 **Medical Safety Features Setup (Optional)**
+
+This template includes optional medical safety validation features for pharmaceutical and healthcare applications. These features provide:
+
+- PII/PHI detection and anonymization using Presidio
+- Medical context validation
+- Regulatory compliance checking
+- Advanced biomedical NLP pipelines using SciSpaCy
+
+### **Installing Medical Dependencies**
+
+For automated CI/production deployments, use conditional installation:
+
+```bash
+# Install base requirements first
+pip install -r requirements.txt
+
+# Conditionally install medical dependencies if enabled
+if [ "${ENABLE_MEDICAL_GUARDRAILS}" = "true" ]; then
+  pip install -r requirements-medical.txt
+  # Download required SpaCy model for SciSpaCy
+  python -m spacy download en_core_web_sm
+fi
+```
+
+For manual setup:
+
+```bash
+# Install medical safety validation dependencies
+pip install -r requirements-medical.txt
+
+# Download required SpaCy model for SciSpaCy
+python -m spacy download en_core_web_sm
+```
+
+### **Enabling Medical Features**
+
+1. **Set Environment Variable**
+   ```bash
+   # In your .env file, add:
+   ENABLE_MEDICAL_GUARDRAILS=true
+   ```
+
+2. **Restart the Application**
+   ```bash
+   # Stop the current application (Ctrl+C)
+   # Restart the web interface
+   streamlit run streamlit_app.py
+   ```
+
+3. **Verify Medical Features**
+   - Check logs for medical guardrails initialization messages
+   - Test with medical-related questions to see enhanced safety features
 
 ## 🔧 **Troubleshooting Common Issues**
 

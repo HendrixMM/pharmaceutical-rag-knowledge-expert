@@ -1,0 +1,372 @@
+# Retrieval validation rails for pharmaceutical document safety
+# Comprehensive validation for PubMed and scientific document retrieval
+
+define flow validate pubmed sources
+  """
+  Check authenticity and quality of PubMed sources with impact factor validation.
+  Ensures retrieved documents meet pharmaceutical research standards.
+  """
+  if $retrieved_documents
+    $source_validation = execute validate_source_authenticity(sources=$retrieved_documents)
+
+    # Check for authentic PubMed sources
+    $authentic_sources = []
+    $suspicious_sources = []
+
+    for $source in $retrieved_documents
+      $pmid_check = execute verify_pmid(source=$source)
+      $journal_check = execute verify_journal_authenticity(source=$source)
+
+      if $pmid_check.valid and $journal_check.valid
+        $authentic_sources.append($source)
+      else
+        $suspicious_sources.append($source)
+
+    # Filter out suspicious sources
+    if $suspicious_sources
+      bot warn suspicious sources detected
+      $retrieved_documents = $authentic_sources
+
+    # Require minimum number of valid sources
+    $source_count = count($authentic_sources)
+    if $source_count < 2
+      bot warn insufficient valid sources
+      execute request_additional_sources()
+
+define flow medical relevance filtering
+  """
+  Pharmaceutical research relevance assessment with medical focus validation.
+  Ensures documents are relevant to pharmaceutical research queries.
+  """
+  if $retrieved_documents and $user_query
+    $filtered_documents = []
+
+    for $source in $retrieved_documents
+      $current_source = $source
+      $relevance_score = execute assess_pharmaceutical_relevance(source=$current_source, query=$user_query)
+
+      if $relevance_score.score < 0.6
+        if $relevance_score.medical_context == False
+          continue
+        else
+          $current_source = execute append_source_warning(source=$current_source, warning="Low relevance to query")
+
+      $current_source = execute update_source_metadata(source=$current_source, key="relevance_score", value=$relevance_score.score)
+      $current_source = execute update_source_metadata(source=$current_source, key="medical_context", value=$relevance_score.medical_context)
+
+      $pharma_indicators = execute identify_pharmaceutical_indicators(source=$current_source)
+      $current_source = execute update_source_metadata(source=$current_source, key="pharmaceutical_focus", value=$pharma_indicators)
+
+      $filtered_documents.append($current_source)
+
+    $retrieved_documents = $filtered_documents
+
+    # Require minimum pharmaceutical relevance
+    $high_relevance_count = 0
+    for $source in $retrieved_documents
+      $source_relevance = execute assess_pharmaceutical_relevance(source=$source, query=$user_query)
+      if $source_relevance.score >= 0.8
+        $high_relevance_count = $high_relevance_count + 1
+
+    if $high_relevance_count < 1
+      bot warn low relevance sources
+      execute suggest_query_refinement(query=$user_query)
+
+define flow duplicate source removal
+  """
+  Remove duplicate sources using similarity thresholds and PMID matching.
+  Prevents redundant information and improves analysis quality.
+  """
+  if $retrieved_documents
+    $original_count = count($retrieved_documents)
+    $unique_sources = []
+    $duplicate_pmids = set()
+    $processed_titles = set()
+
+    for $source in $retrieved_documents
+      # Check for PMID duplicates
+      $pmid = $source.metadata.get("pmid")
+      if $pmid and $pmid in $duplicate_pmids
+        # Skip this duplicate
+        continue
+
+      # Check for title similarity
+      $title = $source.metadata.get("title", "").lower()
+      $is_duplicate_title = False
+
+      for $processed_title in $processed_titles
+        $similarity = execute calculate_title_similarity(title1=$title, title2=$processed_title)
+        if $similarity > 0.9
+          $is_duplicate_title = True
+          break
+
+      if not $is_duplicate_title
+        $unique_sources.append($source)
+        if $pmid
+          $duplicate_pmids.add($pmid)
+        $processed_titles.add($title)
+
+    # Update document list with unique sources
+    $retrieved_documents = $unique_sources
+
+    # Log duplicate removal statistics
+    $unique_count = count($retrieved_documents)
+    $duplicates_removed = $original_count - $unique_count
+    if $duplicates_removed > 0
+      bot inform "Removed " + str($duplicates_removed) + " duplicate sources"
+
+define flow impact factor assessment
+  """
+  Prioritize high-quality journal sources based on impact factors and journal reputation.
+  Enhances evidence quality for pharmaceutical research.
+  """
+  if $retrieved_documents
+    $enriched_sources = []
+
+    for $source in $retrieved_documents
+      $current_source = $source
+      $journal = $source.metadata.get("journal", "")
+      $impact_assessment = execute assess_journal_quality(journal=$journal)
+
+      $metadata_updates = {
+        "journal_quality": $impact_assessment.quality_tier,
+        "impact_factor": $impact_assessment.impact_factor,
+        "journal_reputation": $impact_assessment.reputation_score
+      }
+      $current_source = execute update_source_metadata(source=$current_source, updates=$metadata_updates)
+
+      if $impact_assessment.predatory_indicator == True
+        $current_source = execute append_source_warning(source=$current_source, warning="Potential predatory journal")
+        $current_source = execute set_source_flag(source=$current_source, key="quality_flag", value="LOW_QUALITY")
+
+      if $impact_assessment.quality_tier == "high"
+        $current_source = execute set_source_flag(source=$current_source, key="quality_flag", value="HIGH_QUALITY")
+        $current_source = execute set_source_flag(source=$current_source, key="reliability_bonus", value=0.2)
+
+      $enriched_sources.append($current_source)
+
+    # Sort by quality for prioritization
+    # Note: Sorting by impact factor would be handled by a custom action
+    $retrieved_documents = execute sort_sources_by_quality(sources=$enriched_sources)
+
+    # Quality distribution summary
+    $quality_distribution = execute calculate_quality_distribution(sources=$retrieved_documents)
+    if $quality_distribution.high_quality_ratio < 0.3
+      bot warn low quality source distribution
+
+# Bot response definitions for retrieval issues
+
+define bot warn suspicious sources detected
+  "⚠️ Some sources could not be verified as authentic. They have been filtered out to ensure reliability."
+
+define bot warn insufficient valid sources
+  "⚠️ Limited valid sources found. Results may be incomplete. Consider refining your search terms."
+
+define bot warn low relevance sources
+  "⚠️ Some retrieved sources have low relevance to your pharmaceutical research query. Consider refining your search."
+
+define bot warn low quality source distribution
+  "⚠️ The retrieved sources include limited high-impact publications. Consider expanding search terms for higher quality evidence."
+
+define bot inform $message
+  $message
+
+define subflow assess pharmaceutical focus
+  """
+  Assess pharmaceutical research focus of retrieved documents.
+  """
+  $pharmaceutical_keywords = [
+    "pharmacokinetics", "pharmacodynamics", "drug interaction", "mechanism of action",
+    "clinical trial", "adverse effects", "dosage", "bioavailability", "metabolism",
+    "therapeutic index", "drug discovery", "pharmaceutical", "medication"
+  ]
+
+  $medical_keywords = [
+    "patient", "treatment", "therapy", "clinical", "medical", "disease",
+    "syndrome", "diagnosis", "prognosis", "healthcare"
+  ]
+
+  $content = $source.page_content.lower()
+  $title = $source.metadata.get("title", "").lower()
+  $abstract = $source.metadata.get("abstract", "").lower()
+
+  $combined_text = $content + " " + $title + " " + $abstract
+
+  # Count pharmaceutical keyword matches
+  $pharma_score = 0
+  for $keyword in $pharmaceutical_keywords
+    if $keyword in $combined_text
+      $pharma_score += 1
+
+  # Count medical keyword matches
+  $medical_score = 0
+  for $keyword in $medical_keywords
+    if $keyword in $combined_text
+      $medical_score += 1
+
+  # Calculate focus scores
+  $pharma_keyword_count = count($pharmaceutical_keywords)
+  $medical_keyword_count = count($medical_keywords)
+  $pharma_focus = $pharma_score / $pharma_keyword_count
+  $medical_focus = $medical_score / $medical_keyword_count
+
+  return {
+    "pharmaceutical_focus": $pharma_focus,
+    "medical_focus": $medical_focus,
+    "is_pharmaceutical": $pharma_focus > 0.2,
+    "is_medical": $medical_focus > 0.3
+  }
+
+# Journal quality assessment
+
+define subflow evaluate journal tier
+  """
+  Evaluate journal tier based on reputation and impact metrics using journal database.
+  """
+  # Get journal database (with fallback to built-in defaults)
+  $journal_db = execute get_medical_journal_database()
+
+  $journal_name = $source.metadata.get("journal", "").lower()
+
+  # Check tier 1 (highest quality)
+  if $journal_db.journals.tier1
+    for $t1_journal in $journal_db.journals.tier1
+      if $t1_journal.lower() in $journal_name
+        return "tier1_high_impact"
+
+  # Check tier 2 (high quality specialized)
+  if $journal_db.journals.tier2
+    for $t2_journal in $journal_db.journals.tier2
+      if $t2_journal.lower() in $journal_name
+        return "tier2_specialized"
+
+  # Check tier 3 (moderate quality)
+  if $journal_db.journals.tier3
+    for $t3_journal in $journal_db.journals.tier3
+      if $t3_journal.lower() in $journal_name
+        return "tier3_moderate"
+
+  # Check tier 4 (lower quality but acceptable)
+  if $journal_db.journals.tier4
+    for $t4_journal in $journal_db.journals.tier4
+      if $t4_journal.lower() in $journal_name
+        return "tier4_acceptable"
+
+  # Default to unranked
+  return "tier_unranked"
+
+# Pharmaceutical relevance scoring
+
+define subflow calculate relevance score
+  """
+  Calculate comprehensive relevance score for pharmaceutical research.
+  """
+  $query_terms = $user_query.lower().split()
+  $document_text = $source.page_content.lower()
+  $title = $source.metadata.get("title", "").lower()
+  $abstract = $source.metadata.get("abstract", "").lower()
+
+  # Term frequency scoring
+  $title_matches = 0
+  $abstract_matches = 0
+  $content_matches = 0
+
+  for $term in $query_terms
+    if $term in $title
+      $title_matches += 1
+    if $term in $abstract
+      $abstract_matches += 1
+    if $term in $document_text
+      $content_matches += 1
+
+  # Weighted relevance score
+  $title_weight = 0.4
+  $abstract_weight = 0.3
+  $content_weight = 0.3
+
+  $query_term_count = count($query_terms)
+  $title_score = ($title_matches / $query_term_count) * $title_weight
+  $abstract_score = ($abstract_matches / $query_term_count) * $abstract_weight
+  $content_score_ratio = $content_matches / $query_term_count
+  if $content_score_ratio > 1.0
+    $content_score_ratio = 1.0
+  $content_score = $content_score_ratio * $content_weight
+
+  $total_score = $title_score + $abstract_score + $content_score
+
+  return min($total_score, 1.0)
+
+# Source enhancement and metadata validation
+
+define flow enhance source metadata
+  """
+  Enhance source metadata with pharmaceutical research indicators.
+  """
+  if $retrieved_documents
+    $enhanced_sources = []
+
+    for $source in $retrieved_documents
+      $current_source = $source
+      # Add study type classification
+      $study_type = execute classify_study_type(content=$current_source.page_content)
+
+      # Add drug entity extraction
+      $drug_entities = execute extract_drug_entities(content=$current_source.page_content)
+
+      # Add CYP enzyme mentions
+      $cyp_enzymes = execute extract_cyp_enzymes(content=$current_source.page_content)
+
+      # Add pharmacokinetic parameters
+      $pk_parameters = execute extract_pk_parameters(content=$current_source.page_content)
+
+      # Add evidence level
+      $evidence_level = execute assess_evidence_level(study_type=$study_type)
+      $metadata_updates = {
+        "study_type": $study_type,
+        "drug_entities": $drug_entities,
+        "cyp_enzymes": $cyp_enzymes,
+        "pk_parameters": $pk_parameters,
+        "evidence_level": $evidence_level
+      }
+      $current_source = execute update_source_metadata(source=$current_source, updates=$metadata_updates)
+      $enhanced_sources.append($current_source)
+
+    $retrieved_documents = $enhanced_sources
+
+# Quality control and filtering
+
+define flow final source quality control
+  """
+  Final quality control check before document processing.
+  """
+  if $retrieved_documents
+    $high_quality_sources = []
+    $quality_issues = []
+
+    for $source in $retrieved_documents
+      $quality_check = execute comprehensive_quality_assessment(source=$source)
+
+      if $quality_check.meets_standards == True
+        $high_quality_sources.append($source)
+      else
+        $quality_issues.append({
+          "source": $source.metadata.get("title", "Unknown"),
+          "issues": $quality_check.issues
+        })
+
+    # Update document list to high-quality sources only
+    $retrieved_documents = $high_quality_sources
+
+    # Report quality control results
+    if $quality_issues
+      $issue_count = count($quality_issues)
+      bot inform "Quality control filtered out " + str($issue_count) + " sources with quality issues"
+
+    # Ensure minimum source count
+    $high_quality_count = count($high_quality_sources)
+    if $high_quality_count == 0
+      bot warn no valid sources
+      execute escalate_source_quality_issue()
+
+define bot warn no valid sources
+  "⚠️ No sources met the quality standards for pharmaceutical research. Please try different search terms or broaden your query."

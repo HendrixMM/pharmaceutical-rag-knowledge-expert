@@ -1,0 +1,343 @@
+# Comprehensive generic drug names for pharmaceutical processing
+# One drug name per line, case insensitive
+# Comments start with #
+
+# Cardiovascular - Statins
+atorvastatin
+simvastatin
+rosuvastatin
+lovastatin
+pravastatin
+fluvastatin
+pitavastatin
+
+# Cardiovascular - Anticoagulants/Antiplatelets  
+warfarin
+heparin
+enoxaparin
+rivaroxaban
+apixaban
+dabigatran
+edoxaban
+clopidogrel
+prasugrel
+ticagrelor
+aspirin
+dipyridamole
+
+# Cardiovascular - ACE Inhibitors
+lisinopril
+enalapril
+captopril
+ramipril
+benazepril
+fosinopril
+quinapril
+trandolapril
+
+# Cardiovascular - ARBs
+losartan
+valsartan
+olmesartan
+telmisartan
+candesartan
+irbesartan
+azilsartan
+
+# Cardiovascular - Beta Blockers
+metoprolol
+atenolol
+propranolol
+carvedilol
+bisoprolol
+nebivolol
+labetalol
+nadolol
+
+# Cardiovascular - Calcium Channel Blockers
+amlodipine
+nifedipine
+diltiazem
+verapamil
+felodipine
+isradipine
+nicardipine
+clevidipine
+
+# Cardiovascular - Diuretics
+hydrochlorothiazide
+furosemide
+spironolactone
+chlorthalidone
+indapamide
+amiloride
+triamterene
+torsemide
+bumetanide
+
+# Pain/Inflammation - NSAIDs
+ibuprofen
+naproxen
+diclofenac
+celecoxib
+meloxicam
+indomethacin
+piroxicam
+sulindac
+ketoprofen
+ketorolac
+
+# Pain/Inflammation - Other
+acetaminophen
+tramadol
+morphine
+oxycodone
+hydrocodone
+codeine
+fentanyl
+gabapentin
+pregabalin
+
+# Antibiotics - Penicillins
+amoxicillin
+ampicillin
+penicillin
+piperacillin
+ticarcillin
+
+# Antibiotics - Cephalosporins
+cephalexin
+cefazolin
+ceftriaxone
+cefuroxime
+cefepime
+ceftaroline
+
+# Antibiotics - Macrolides
+azithromycin
+clarithromycin
+erythromycin
+roxithromycin
+
+# Antibiotics - Quinolones
+ciprofloxacin
+levofloxacin
+moxifloxacin
+ofloxacin
+norfloxacin
+
+# Antibiotics - Other
+doxycycline
+tetracycline
+minocycline
+clindamycin
+metronidazole
+vancomycin
+linezolid
+trimethoprim
+sulfamethoxazole
+
+# Antifungals
+fluconazole
+itraconazole
+ketoconazole
+voriconazole
+posaconazole
+amphotericin
+caspofungin
+micafungin
+anidulafungin
+terbinafine
+
+# Antivirals
+acyclovir
+valacyclovir
+oseltamivir
+zanamivir
+ribavirin
+sofosbuvir
+ledipasvir
+glecaprevir
+pibrentasvir
+
+# Gastrointestinal - PPIs
+omeprazole
+lansoprazole
+esomeprazole
+pantoprazole
+rabeprazole
+dexlansoprazole
+
+# Gastrointestinal - H2 Blockers
+ranitidine
+famotidine
+cimetidine
+nizatidine
+
+# Gastrointestinal - Other
+metoclopramide
+ondansetron
+simethicone
+loperamide
+docusate
+senna
+bisacodyl
+
+# Diabetes
+metformin
+glyburide
+glipizide
+glimepiride
+pioglitazone
+rosiglitazone
+sitagliptin
+saxagliptin
+linagliptin
+alogliptin
+insulin
+glargine
+detemir
+aspart
+lispro
+regular
+nph
+
+# CNS - Benzodiazepines
+midazolam
+lorazepam
+diazepam
+alprazolam
+clonazepam
+temazepam
+triazolam
+oxazepam
+
+# CNS - Antidepressants
+sertraline
+fluoxetine
+paroxetine
+citalopram
+escitalopram
+venlafaxine
+duloxetine
+bupropion
+mirtazapine
+trazodone
+amitriptyline
+nortriptyline
+imipramine
+
+# CNS - Antipsychotics
+haloperidol
+chlorpromazine
+risperidone
+olanzapine
+quetiapine
+aripiprazole
+ziprasidone
+paliperidone
+asenapine
+lurasidone
+
+# CNS - Anticonvulsants
+phenytoin
+carbamazepine
+valproic
+lamotrigine
+levetiracetam
+topiramate
+oxcarbazepine
+lacosamide
+zonisamide
+
+# CNS - Other
+caffeine
+modafinil
+methylphenidate
+amphetamine
+dextroamphetamine
+atomoxetine
+
+# Cancer Chemotherapy
+doxorubicin
+cyclophosphamide
+methotrexate
+fluorouracil
+carboplatin
+cisplatin
+oxaliplatin
+paclitaxel
+docetaxel
+gemcitabine
+irinotecan
+topotecan
+bleomycin
+vincristine
+vinblastine
+
+# Cancer Targeted Therapy
+imatinib
+dasatinib
+nilotinib
+erlotinib
+gefitinib
+sorafenib
+sunitinib
+bevacizumab
+trastuzumab
+rituximab
+
+# Immunosuppressants
+cyclosporine
+tacrolimus
+sirolimus
+mycophenolate
+azathioprine
+methotrexate
+prednisone
+prednisolone
+methylprednisolone
+hydrocortisone
+
+# Respiratory
+albuterol
+ipratropium
+tiotropium
+formoterol
+salmeterol
+budesonide
+fluticasone
+beclomethasone
+montelukast
+zafirlukast
+
+# Thyroid
+levothyroxine
+liothyronine
+methimazole
+propylthiouracil
+
+# Other Important Drugs
+digoxin
+theophylline
+lithium
+allopurinol
+colchicine
+probenecid
+alendronate
+risedronate
+calcitriol
+vitamin
+folic
+cyanocobalamin
+thiamine
+riboflavin
+niacin
+pyridoxine
+biotin
+pantothenic
+ascorbic
+ergocalciferol
+cholecalciferol
+phytonadione
+tocopherol

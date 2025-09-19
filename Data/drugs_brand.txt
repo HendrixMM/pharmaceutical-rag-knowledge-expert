@@ -1,0 +1,344 @@
+# Comprehensive brand drug names for pharmaceutical processing
+# One drug name per line, case insensitive
+# Comments start with #
+
+# Cardiovascular - Statins
+lipitor
+zocor
+crestor
+mevacor
+pravachol
+lescol
+livalo
+
+# Cardiovascular - Anticoagulants/Antiplatelets
+coumadin
+lovenox
+xarelto
+eliquis
+pradaxa
+savaysa
+plavix
+effient
+brilinta
+
+# Cardiovascular - ACE Inhibitors
+prinivil
+zestril
+vasotec
+capoten
+altace
+lotensin
+monopril
+accupril
+mavik
+
+# Cardiovascular - ARBs
+cozaar
+diovan
+benicar
+micardis
+atacand
+avapro
+edarbi
+
+# Cardiovascular - Beta Blockers
+lopressor
+toprol
+tenormin
+inderal
+coreg
+bystolic
+normodyne
+trandate
+corgard
+
+# Cardiovascular - Calcium Channel Blockers
+norvasc
+adalat
+procardia
+cardizem
+calan
+isoptin
+plendil
+dynacirc
+cardene
+cleviprex
+
+# Cardiovascular - Diuretics
+microzide
+hctz
+lasix
+aldactone
+hygroton
+lozol
+midamor
+dyrenium
+demadex
+bumex
+
+# Pain/Inflammation - NSAIDs
+advil
+motrin
+aleve
+naprosyn
+voltaren
+celebrex
+mobic
+indocin
+feldene
+clinoril
+orudis
+toradol
+
+# Pain/Inflammation - Other
+tylenol
+ultram
+ms contin
+oxycontin
+vicodin
+norco
+percocet
+codeine
+duragesic
+neurontin
+lyrica
+
+# Antibiotics - Penicillins
+amoxil
+ampicillin
+penicillin
+zosyn
+ticar
+
+# Antibiotics - Cephalosporins
+keflex
+ancef
+rocephin
+ceftin
+maxipime
+teflaro
+
+# Antibiotics - Macrolides
+zithromax
+biaxin
+ery-tab
+erythrocin
+rulide
+
+# Antibiotics - Quinolones
+cipro
+levaquin
+avelox
+floxin
+noroxin
+
+# Antibiotics - Other
+vibramycin
+sumycin
+minocin
+cleocin
+flagyl
+vancocin
+zyvox
+bactrim
+septra
+
+# Antifungals
+diflucan
+sporanox
+nizoral
+vfend
+noxafil
+fungizone
+cancidas
+eraxis
+anidulafungin
+lamisil
+
+# Antivirals
+zovirax
+valtrex
+tamiflu
+relenza
+copegus
+sovaldi
+harvoni
+maviret
+
+# Gastrointestinal - PPIs
+prilosec
+prevacid
+nexium
+protonix
+aciphex
+dexilant
+
+# Gastrointestinal - H2 Blockers
+zantac
+pepcid
+tagamet
+axid
+
+# Gastrointestinal - Other
+reglan
+zofran
+gas-x
+imodium
+colace
+senokot
+dulcolax
+
+# Diabetes
+glucophage
+diabeta
+micronase
+glucotrol
+amaryl
+actos
+avandia
+januvia
+onglyza
+tradjenta
+nesina
+lantus
+levemir
+novolog
+humalog
+humulin
+novolin
+
+# CNS - Benzodiazepines
+versed
+ativan
+valium
+xanax
+klonopin
+restoril
+halcion
+serax
+
+# CNS - Antidepressants
+zoloft
+prozac
+paxil
+celexa
+lexapro
+effexor
+cymbalta
+wellbutrin
+zyban
+remeron
+desyrel
+elavil
+pamelor
+tofranil
+
+# CNS - Antipsychotics
+haldol
+thorazine
+risperdal
+zyprexa
+seroquel
+abilify
+geodon
+invega
+saphris
+latuda
+
+# CNS - Anticonvulsants
+dilantin
+tegretol
+depakote
+lamictal
+keppra
+topamax
+trileptal
+vimpat
+zonegran
+
+# CNS - Other
+provigil
+nuvigil
+ritalin
+concerta
+adderall
+strattera
+
+# Cancer Chemotherapy
+adriamycin
+cytoxan
+rheumatrex
+adrucil
+paraplatin
+platinol
+eloxatin
+taxol
+taxotere
+gemzar
+camptosar
+hycamtin
+blenoxane
+oncovin
+velban
+
+# Cancer Targeted Therapy
+gleevec
+sprycel
+tasigna
+tarceva
+iressa
+nexavar
+sutent
+avastin
+herceptin
+rituxan
+
+# Immunosuppressants
+sandimmune
+neoral
+prograf
+rapamune
+cellcept
+imuran
+deltasone
+prelone
+medrol
+solu-cortef
+
+# Respiratory
+proventil
+ventolin
+atrovent
+spiriva
+foradil
+serevent
+pulmicort
+flovent
+vanceril
+qvar
+singulair
+accolate
+
+# Thyroid
+synthroid
+cytomel
+tapazole
+ptu
+
+# Other Important Drugs
+lanoxin
+theo-dur
+lithobid
+zyloprim
+colcrys
+benemid
+fosamax
+actonel
+rocaltrol
+zyrtec
+claritin
+benadryl
+sudafed
+robitussin
+mucinex

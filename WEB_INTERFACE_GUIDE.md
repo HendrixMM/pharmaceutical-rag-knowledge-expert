@@ -193,4 +193,24 @@ Your web interface is now ready for professional use with:
 - ✅ **Advanced analytics** for understanding document coverage
 - ✅ **Export capabilities** for record keeping
 
+## 🏥 **Medical Safety Features (Optional)**
+
+For pharmaceutical and healthcare applications, the web interface includes optional medical safety validation features:
+
+### **Enhanced Medical Safety Validation**
+- **PII/PHI Detection**: Automatic identification and masking of sensitive health information
+- **Medical Context Validation**: Ensures queries and responses remain in appropriate medical contexts
+- **Regulatory Compliance Checking**: Validates responses against FDA and other regulatory guidelines
+- **Jailbreak Detection**: Prevents attempts to bypass medical safety guidelines
+
+### **Medical Disclaimer Management**
+- **Automatic Disclaimer Generation**: Adds appropriate disclaimers based on content
+- **FDA Warning Integration**: Special handling for black box warnings and contraindications
+- **Prescription Information Safety**: Proper disclaimers for medication-related queries
+
+To enable these features:
+1. Install medical dependencies: `pip install -r requirements-medical.txt`
+2. Set `ENABLE_MEDICAL_GUARDRAILS=true` in your environment
+3. Restart the web interface
+
 **🤖 Your RAG Template is now accessible through a beautiful, professional web interface! 🚀**
