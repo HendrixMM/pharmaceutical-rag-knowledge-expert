@@ -351,6 +351,19 @@ class PDFDocumentLoader:
                         metadata['authors'] = sanitized_authors
                         break
 
+        # Relaxed fallback: allow potential affiliation words but require multiple capitalized names
+        if 'authors' not in metadata:
+            for line in lines[:80]:
+                candidate = line.strip()
+                if not candidate or len(candidate) > 140:
+                    continue
+                name_matches = re.findall(r'\b\p{Lu}[\p{L}\p{M}\-]+(?:\s+\p{Lu}[\p{L}\p{M}\-]+)+', candidate)
+                if len(name_matches) >= 2:
+                    sanitized_authors = sanitize_author_line(candidate)
+                    if sanitized_authors:
+                        metadata['authors'] = sanitized_authors
+                        break
+
         # Extract date strings and parse them
         if parse_date:
             date_patterns = [

@@ -302,9 +302,35 @@ class NVIDIAEmbeddings(Embeddings):
                 else:
                     break
 
-        # If we get here, all probe attempts failed with transient errors
-        # Keep the original model name unchanged and proceed without permanent fallback
+        # If we reach here, all preferred-model probes hit transient errors; attempt a final soft probe with fallback
         logger.warning(f"Model probe failed after {self.max_retries} attempts with transient errors. Keeping model: {preferred}")
+        try:
+            url = f"{self.base_url}/embeddings"
+            payload = {
+                "input": ["probe"],
+                "model": fallback,
+                "encoding_format": "float"
+            }
+            response = requests.post(
+                url,
+                headers=self.headers,
+                json=payload,
+                timeout=30
+            )
+            if response.status_code == 200:
+                logger.info(
+                    "Fallback model '%s' responded successfully during soft probe. Will continue with preferred model but fallback is warm.",
+                    fallback,
+                )
+            else:
+                logger.debug(
+                    "Fallback soft probe returned status %s: %s",
+                    response.status_code,
+                    response.text,
+                )
+        except Exception as soft_probe_error:
+            logger.debug("Fallback soft probe failed: %s", soft_probe_error)
+
         logger.info("First embedding request will validate model availability with fallback if needed")
 
     def _make_request(self, texts: List[str]) -> List[List[float]]:
