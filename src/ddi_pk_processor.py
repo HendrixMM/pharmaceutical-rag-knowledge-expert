@@ -14,11 +14,17 @@ from dataclasses import dataclass, asdict
 try:
     from .pharmaceutical_processor import PharmaceuticalProcessor
 except ImportError:
-    PharmaceuticalProcessor = None
+    try:
+        from pharmaceutical_processor import PharmaceuticalProcessor  # type: ignore
+    except ImportError:
+        PharmaceuticalProcessor = None
 
 from pydantic import BaseModel, Field, ValidationError
 
-from .paper_schema import Paper
+try:
+    from .paper_schema import Paper
+except ImportError:  # pragma: no cover - support direct module execution
+    from paper_schema import Paper  # type: ignore
 
 try:
     import yaml  # type: ignore

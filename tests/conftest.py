@@ -18,6 +18,10 @@ if "langchain" not in sys.modules:
     embeddings_module = types.ModuleType("langchain.embeddings")
     embeddings_base_module = types.ModuleType("langchain.embeddings.base")
     text_splitter_module = types.ModuleType("langchain.text_splitter")
+    chains_module = types.ModuleType("langchain.chains")
+    prompts_module = types.ModuleType("langchain.prompts")
+    llms_module = types.ModuleType("langchain.llms")
+    llms_base_module = types.ModuleType("langchain.llms.base")
 
     class Document:
         def __init__(self, page_content: str, metadata: dict | None = None):
@@ -27,8 +31,17 @@ if "langchain" not in sys.modules:
     class Embeddings:
         pass
 
+    class PromptTemplate:
+        def __init__(self, template: str = "", input_variables=None, **_kwargs):
+            self.template = template
+            self.input_variables = input_variables or []
+
+        def format(self, **kwargs):  # pragma: no cover - trivial formatting helper
+            return self.template.format(**kwargs)
+
     schema_module.Document = Document
-    
+    prompts_module.PromptTemplate = PromptTemplate
+
     class RecursiveCharacterTextSplitter:
         def __init__(self, *args, **kwargs):
             self.args = args
@@ -39,16 +52,56 @@ if "langchain" not in sys.modules:
 
     text_splitter_module.RecursiveCharacterTextSplitter = RecursiveCharacterTextSplitter
 
+    class LLM:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+        def generate(self, *_args, **_kwargs):  # pragma: no cover - placeholder
+            return {}
+
+    class RetrievalQA:
+        def __init__(self, retriever=None, llm=None, return_source_documents=False, chain_type: str | None = None):
+            self.retriever = retriever
+            self.llm = llm
+            self.return_source_documents = return_source_documents
+            self.chain_type = chain_type
+
+        @classmethod
+        def from_chain_type(
+            cls,
+            chain_type: str = "stuff",
+            retriever=None,
+            llm=None,
+            return_source_documents: bool = False,
+            **_kwargs,
+        ):
+            return cls(retriever=retriever, llm=llm, return_source_documents=return_source_documents, chain_type=chain_type)
+
+        def __call__(self, *_args, **_kwargs):  # pragma: no cover - placeholder invocation
+            return {"result": "", "source_documents": []}
+
     embeddings_base_module.Embeddings = Embeddings
     embeddings_module.base = embeddings_base_module
+    chains_module.RetrievalQA = RetrievalQA
+    prompts_module.PromptTemplate = PromptTemplate
+    llms_base_module.LLM = LLM
+    llms_module.base = llms_base_module
     langchain_module.schema = schema_module
     langchain_module.embeddings = embeddings_module
     langchain_module.text_splitter = text_splitter_module
+    langchain_module.chains = chains_module
+    langchain_module.prompts = prompts_module
+    langchain_module.llms = llms_module
     sys.modules["langchain"] = langchain_module
     sys.modules["langchain.schema"] = schema_module
     sys.modules["langchain.embeddings"] = embeddings_module
     sys.modules["langchain.embeddings.base"] = embeddings_base_module
     sys.modules["langchain.text_splitter"] = text_splitter_module
+    sys.modules["langchain.chains"] = chains_module
+    sys.modules["langchain.prompts"] = prompts_module
+    sys.modules["langchain.llms"] = llms_module
+    sys.modules["langchain.llms.base"] = llms_base_module
 else:
     Document = sys.modules["langchain.schema"].Document
 

@@ -13,11 +13,17 @@ from dataclasses import dataclass
 try:
     from .pharmaceutical_processor import PharmaceuticalProcessor
 except ImportError:
-    PharmaceuticalProcessor = None
+    try:
+        from pharmaceutical_processor import PharmaceuticalProcessor  # type: ignore
+    except ImportError:
+        PharmaceuticalProcessor = None
 
 from pydantic import BaseModel, Field, ValidationError
 
-from .paper_schema import Paper
+try:
+    from .paper_schema import Paper
+except ImportError:  # pragma: no cover - module executed outside package context
+    from paper_schema import Paper  # type: ignore
 
 logger = logging.getLogger(__name__)
 
