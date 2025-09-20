@@ -8,9 +8,241 @@ import logging
 import json
 import html
 from io import BytesIO
-import regex as re
-from typing import List, Optional, Dict, Callable, Any
+import re
+from typing import List, Optional, Dict, Callable, Any, Pattern
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+HAS_REGEX: bool = False
+_REGEX_MODULE: Optional[Any] = None
+_RE_ENGINE: Any = re
+
+SOFT_LINEBREAK_PATTERN: Optional[Pattern[str]] = None
+DOI_REGEX: Optional[Pattern[str]] = None
+PMID_REGEX: Optional[Pattern[str]] = None
+PMID_EXTRACT_REGEX: Optional[Pattern[str]] = None
+HEADER_TERMINATOR_PATTERN: Optional[Pattern[str]] = None
+AFFILIATION_LINE_PATTERN: Optional[Pattern[str]] = None
+AFFILIATION_PREFIX_PATTERN: Optional[Pattern[str]] = None
+AUTHOR_PREFIX_PATTERN: Optional[Pattern[str]] = None
+AUTHOR_LINE_PATTERN_UNICODE: Optional[Pattern[str]] = None
+AUTHOR_LINE_PATTERN_ASCII: Optional[Pattern[str]] = None
+AUTHOR_UNICODE_PREFIX_PATTERN: Optional[Pattern[str]] = None
+AUTHOR_UNICODE_PREFIX_PATTERN_ASCII: Optional[Pattern[str]] = None
+AUTHOR_NAME_CLUSTER_PATTERN_UNICODE: Optional[Pattern[str]] = None
+AUTHOR_NAME_CLUSTER_PATTERN_ASCII: Optional[Pattern[str]] = None
+JOURNAL_PATTERN_UNICODE: Optional[Pattern[str]] = None
+JOURNAL_PATTERN_ASCII: Optional[Pattern[str]] = None
+AFFILIATION_EXCLUSION_PATTERN: Optional[Pattern[str]] = None
+
+
+def _setup_regex_support(regex_module: Optional[Any]) -> None:
+    """Configure regex/regex fallbacks and precompiled patterns."""
+
+    global HAS_REGEX
+    global _REGEX_MODULE
+    global _RE_ENGINE
+    global SOFT_LINEBREAK_PATTERN
+    global DOI_REGEX
+    global PMID_REGEX
+    global PMID_EXTRACT_REGEX
+    global HEADER_TERMINATOR_PATTERN
+    global AFFILIATION_LINE_PATTERN
+    global AFFILIATION_PREFIX_PATTERN
+    global AUTHOR_PREFIX_PATTERN
+    global AUTHOR_LINE_PATTERN_UNICODE
+    global AUTHOR_LINE_PATTERN_ASCII
+    global AUTHOR_UNICODE_PREFIX_PATTERN
+    global AUTHOR_UNICODE_PREFIX_PATTERN_ASCII
+    global AUTHOR_NAME_CLUSTER_PATTERN_UNICODE
+    global AUTHOR_NAME_CLUSTER_PATTERN_ASCII
+    global JOURNAL_PATTERN_UNICODE
+    global JOURNAL_PATTERN_ASCII
+    global AFFILIATION_EXCLUSION_PATTERN
+
+    unicode_module = regex_module
+    engine = unicode_module if unicode_module is not None else re
+
+    SOFT_LINEBREAK_PATTERN = engine.compile(r'(?<=\w)\n(?=\w)')
+    DOI_REGEX = engine.compile(DOI_PATTERN, engine.IGNORECASE)
+    PMID_REGEX = engine.compile(PMID_PATTERN, engine.IGNORECASE)
+    PMID_EXTRACT_REGEX = engine.compile(PMID_PATTERN_EXTRACT, engine.IGNORECASE)
+    HEADER_TERMINATOR_PATTERN = engine.compile(
+        r'^(Abstract|Introduction|Background|Keywords|ABSTRACT|INTRODUCTION)\b',
+        engine.IGNORECASE,
+    )
+    AFFILIATION_LINE_PATTERN = engine.compile(
+        r'(@|University|Department|Institute|College|Hospital|School|Center|Centre|\.edu|\.org)',
+        engine.IGNORECASE,
+    )
+    AFFILIATION_PREFIX_PATTERN = engine.compile(
+        r'(Department|University|Hospital|Institute|College|Center|Centre)',
+        engine.IGNORECASE,
+    )
+    AUTHOR_PREFIX_PATTERN = engine.compile(r'^Authors?:\s+(.+)', engine.IGNORECASE | engine.MULTILINE)
+
+    # ASCII-safe fallback patterns that work with Python's stdlib `re`
+    AUTHOR_LINE_PATTERN_ASCII = re.compile(
+        r"^[\w'\-·]+(?:\s+[\w'\-·]+)*,\s*[\w'\-·]+(?:\s+[\w'\-·]+)*"
+    )
+    AUTHOR_UNICODE_PREFIX_PATTERN_ASCII = re.compile(
+        r'^Author(?:s)?\s*[:：]\s*([\w\s\-·,.;.-]+)$',
+        re.IGNORECASE,
+    )
+    AUTHOR_NAME_CLUSTER_PATTERN_ASCII = re.compile(
+        r"\b[\w'\-·]+(?:\s+[\w'\-·]+)+"
+    )
+    JOURNAL_PATTERN_ASCII = re.compile(
+        r'^[A-Za-z][A-Za-z\s\-:,\.]{3,}\s\d{4}(?:\s?[A-Za-z]{3})?;\s?\d{1,3}(?:\(\d{1,3}\))?:\d{1,5}(?:-\d{1,5})?',
+    )
+
+    unicode_patterns_success = False
+    if unicode_module is not None:
+        try:
+            AUTHOR_LINE_PATTERN_UNICODE = unicode_module.compile(
+                r'^\p{Lu}[\p{L}\p{M}\-·]*\.?(\s+\p{Lu}[\p{L}\p{M}\-·]*\.?)*,\s*\p{Lu}[\p{L}\p{M}\-·]*\.?(\s+\p{Lu}[\p{L}\p{M}\-·]*\.?)*'
+            )
+            AUTHOR_UNICODE_PREFIX_PATTERN = unicode_module.compile(
+                r'^Author(?:s)?\s*[:：]\s*([\p{L}\p{M}\p{Zs}\p{Pd}·,.;.-]+)$',
+                unicode_module.IGNORECASE,
+            )
+            AUTHOR_NAME_CLUSTER_PATTERN_UNICODE = unicode_module.compile(
+                r'\b\p{Lu}[\p{L}\p{M}\-·]+(?:\s+\p{Lu}[\p{L}\p{M}\-·]+)+'
+            )
+            JOURNAL_PATTERN_UNICODE = unicode_module.compile(
+                r'^[\p{L}\p{M}][\p{L}\p{M}\s\-:,\.]{3,}\s\d{4}(?:\s?[A-Za-z]{3})?;\s?\d{1,3}(?:\(\d{1,3}\))?:\d{1,5}(?:-\d{1,5})?'
+            )
+            unicode_patterns_success = True
+        except Exception as err:
+            logger.warning(
+                "Unicode-aware regex patterns unavailable; falling back to ASCII-safe heuristics: %s",
+                err,
+            )
+            unicode_module = None
+            AUTHOR_LINE_PATTERN_UNICODE = None
+            AUTHOR_UNICODE_PREFIX_PATTERN = None
+            AUTHOR_NAME_CLUSTER_PATTERN_UNICODE = None
+            JOURNAL_PATTERN_UNICODE = None
+    if not unicode_patterns_success:
+        AUTHOR_LINE_PATTERN_UNICODE = None
+        AUTHOR_UNICODE_PREFIX_PATTERN = None
+        AUTHOR_NAME_CLUSTER_PATTERN_UNICODE = None
+        JOURNAL_PATTERN_UNICODE = None
+
+    HAS_REGEX = unicode_patterns_success
+    _REGEX_MODULE = unicode_module if unicode_patterns_success else None
+    _RE_ENGINE = unicode_module if unicode_patterns_success else re
+
+    AFFILIATION_EXCLUSION_PATTERN = re.compile(
+        r'\d{4,}|[A-Z]{2,}\s+\d|PO\s+Box|\b(USA|UK|Canada|Germany|France|China|Japan)\b',
+        re.IGNORECASE,
+    )
+
+
+try:
+    import regex as _imported_regex  # type: ignore import
+except ImportError:
+    _imported_regex = None
+    logger.warning(
+        "The optional 'regex' module is not installed; Unicode-aware PubMed parsing will use "
+        "ASCII fallbacks. Install it with 'pip install regex' to restore full functionality."
+    )
+
+_PENDING_REGEX_MODULE: Optional[Any] = _imported_regex
+
+# Import unified DOI/PMID patterns and utilities
+from .paper_schema import (
+    DOI_PATTERN, PMID_PATTERN, PMID_PATTERN_EXTRACT,
+    clean_identifier, normalize_doi, normalize_pmid
+)
+
+_setup_regex_support(_PENDING_REGEX_MODULE)
+
+
+def _safe_sub(pattern: Optional[Pattern[str]], repl: str, text: str, label: str) -> str:
+    """Safely apply substitution, returning original text on failure."""
+
+    if pattern is None:
+        return text
+
+    try:
+        return pattern.sub(repl, text)
+    except Exception as err:
+        logger.debug("Pattern %s substitution failed: %s", label, err)
+        return text
+
+
+def _safe_search(pattern: Optional[Pattern[str]], text: str, label: str) -> Optional[Any]:
+    """Safely perform regex search and return match when available."""
+
+    if pattern is None:
+        return None
+
+    try:
+        return pattern.search(text)
+    except Exception as err:
+        logger.debug("Pattern %s search failed: %s", label, err)
+        return None
+
+
+def _safe_match(pattern: Optional[Pattern[str]], text: str, label: str) -> Optional[Any]:
+    """Safely perform regex match and return match when available."""
+
+    if pattern is None:
+        return None
+
+    try:
+        return pattern.match(text)
+    except Exception as err:
+        logger.debug("Pattern %s match failed: %s", label, err)
+        return None
+
+
+def _safe_findall(pattern: Optional[Pattern[str]], text: str, label: str) -> List[str]:
+    """Safely perform regex findall returning empty list on failure."""
+
+    if pattern is None:
+        return []
+
+    try:
+        return pattern.findall(text)
+    except Exception as err:
+        logger.debug("Pattern %s findall failed: %s", label, err)
+        return []
+
+
+def _prefer_unicode_pattern(unicode_pattern: Optional[Pattern[str]], ascii_pattern: Optional[Pattern[str]]) -> Optional[Pattern[str]]:
+    """Return the Unicode-capable pattern when present, otherwise fall back to ASCII pattern."""
+
+    if HAS_REGEX and unicode_pattern is not None:
+        return unicode_pattern
+    return ascii_pattern
+
+
+JOURNAL_KEYWORDS = [
+    'journal', 'nature', 'science', 'cell', 'lancet', 'nejm', 'bmj', 'jama',
+    'plos', 'proceedings', 'annals', 'review', 'research', 'medicine',
+    'biology', 'chemistry', 'physics', 'therapeutics', 'clinical'
+]
+
+
+def _get_env_int(name: str, default: int) -> int:
+    """Return positive integer configuration from environment with fallback."""
+
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return default
+
+    try:
+        parsed = int(value.strip())
+        if parsed <= 0:
+            logger.warning("Environment variable %s must be positive. Using default %s.", name, default)
+            return default
+        return parsed
+    except ValueError:
+        logger.warning("Environment variable %s=%s is not an integer. Using default %s.", name, value, default)
+        return default
 
 try:
     from langchain_community.document_loaders.parsers.pdf import PyPDFParser
@@ -29,30 +261,12 @@ except ImportError:
         Blob = None  # type: ignore[assignment]
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 try:
     from dateutil.parser import parse as parse_date
 except ImportError:
     parse_date = None
-
-# Set up logging
-logger = logging.getLogger(__name__)
-
-
-def _clean_identifier(identifier: str) -> str:
-    """Clean DOI/PMID by stripping zero-width characters and decoding HTML entities."""
-    if not identifier:
-        return identifier
-
-    # Strip zero-width characters
-    cleaned = identifier.replace('\u200b', '').replace('\u200c', '').replace('\u200d', '').replace('\ufeff', '')
-
-    # Decode common HTML entities
-    cleaned = html.unescape(cleaned)
-
-    return cleaned
-
 
 class PDFDocumentLoader:
     """Handles loading and processing PDF documents"""
@@ -145,16 +359,16 @@ class PDFDocumentLoader:
             doi_match = re.search(doi_pattern, cleaned, re.IGNORECASE)
             if doi_match and 'doi' not in extracted:
                 raw_doi = doi_match.group().replace('doi:', '').replace('DOI:', '').strip()
-                clean_doi = _clean_identifier(raw_doi.rstrip('.,;)'))
-                extracted['doi'] = clean_doi
+                clean_doi = clean_identifier(raw_doi.rstrip('.,;)'))
+                extracted['doi'] = normalize_doi(clean_doi)
             elif cleaned.lower().startswith('10.') and 'doi' not in extracted:
-                clean_doi = _clean_identifier(cleaned.rstrip('.,;)'))
-                extracted['doi'] = clean_doi
+                clean_doi = clean_identifier(cleaned.rstrip('.,;)'))
+                extracted['doi'] = normalize_doi(clean_doi)
 
-            pmid_match = re.search(r'(?:\()?pmid[\s:]*[-]?(\d+)(?:\))?', cleaned, re.IGNORECASE)
+            pmid_match = re.search(PMID_PATTERN, cleaned, re.IGNORECASE)
             if pmid_match and 'pmid' not in extracted:
-                clean_pmid = _clean_identifier(pmid_match.group(1))
-                extracted['pmid'] = clean_pmid
+                clean_pmid = clean_identifier(pmid_match.group(1))
+                extracted['pmid'] = normalize_pmid(clean_pmid)
 
         identifiers_to_check: List[str] = []
 
@@ -263,8 +477,8 @@ class PDFDocumentLoader:
                 sanitized = f"{trimmed}..."
             return sanitized
 
-        # Extract DOI using regex (tightened to avoid trailing bracketed text)
-        doi_pattern = r'(?:doi[:\s]*)?10\.\d{4,9}/[^\s)>\]]+'
+        # Use shared DOI pattern
+        doi_pattern = DOI_PATTERN
 
         if pdf_path:
             xmp_metadata = self._extract_pubmed_metadata_from_xmp(
@@ -278,52 +492,46 @@ class PDFDocumentLoader:
                     metadata[key] = value
 
         # Apply DOI regex across text with soft line-breaks collapsed
-        text_collapsed = re.sub(r'(?<=\w)\n(?=\w)', ' ', text)
-        doi_match = re.search(doi_pattern, text_collapsed, re.IGNORECASE)
+        text_collapsed = _safe_sub(SOFT_LINEBREAK_PATTERN, ' ', text, 'soft_linebreak')
+        doi_match = _safe_search(DOI_REGEX, text_collapsed, 'doi_extraction')
         if doi_match:
             raw_doi = doi_match.group().replace('doi:', '').replace('DOI:', '').strip()
-            # Strip trailing punctuation and clean identifier
-            clean_doi = _clean_identifier(raw_doi.rstrip('.,;)'))
-            metadata['doi'] = clean_doi
+            clean_doi = clean_identifier(raw_doi.rstrip('.,;)'))
+            metadata['doi'] = normalize_doi(clean_doi)
 
-        # Extract PMID using enhanced regex to match PMID-\d+ and (PMID: \d+)
-        pmid_pattern = r'(?:\()?PMID[\s:]*[-]?(\d+)(?:\))?'
-        pmid_match = re.search(pmid_pattern, text, re.IGNORECASE)
+        # Use shared PMID pattern for extraction
+        pmid_match = _safe_search(PMID_EXTRACT_REGEX, text, 'pmid_extraction')
         if pmid_match:
-            clean_pmid = _clean_identifier(pmid_match.group(1))
-            metadata['pmid'] = clean_pmid
+            clean_pmid = clean_identifier(pmid_match.group(1))
+            metadata['pmid'] = normalize_pmid(clean_pmid)
 
         # Enhanced author line heuristics with boundary detection and affiliation filtering
         lines = text.split('\n')
-        found_abstract = False
         cumulative_chars = 0
-        for i, line in enumerate(lines[:80]):  # Check first 80 lines with character bound
+        author_line_pattern = _prefer_unicode_pattern(AUTHOR_LINE_PATTERN_UNICODE, AUTHOR_LINE_PATTERN_ASCII)
+        author_prefix_pattern = _prefer_unicode_pattern(AUTHOR_UNICODE_PREFIX_PATTERN, AUTHOR_UNICODE_PREFIX_PATTERN_ASCII)
+        author_cluster_pattern = _prefer_unicode_pattern(AUTHOR_NAME_CLUSTER_PATTERN_UNICODE, AUTHOR_NAME_CLUSTER_PATTERN_ASCII)
+
+        for line in lines[:80]:  # Check first 80 lines with character bound
             cumulative_chars += len(line)
             if cumulative_chars > 2500:  # Upper bound on cumulative characters processed
                 break
             line = line.strip()
 
-            # Stop scanning when encountering common headers
-            if re.match(r'^(Abstract|Introduction|Background|Keywords|ABSTRACT|INTRODUCTION)\b', line, re.IGNORECASE):
-                found_abstract = True
+            if _safe_match(HEADER_TERMINATOR_PATTERN, line, 'section_header'):
                 break
 
-            # Skip lines containing common affiliation tokens
-            if re.search(r'(@|University|Department|Institute|College|Hospital|School|Center|Centre|\.edu|\.org)', line, re.IGNORECASE):
+            if _safe_search(AFFILIATION_LINE_PATTERN, line, 'affiliation_line'):
                 continue
 
-            # Enhanced heuristic: line with multiple comma-separated names
-            # Support initials (A. B.) and hyphenated names (Smith-Jones)
             tokens = line.split()
-            if any(
-                re.search(r'(Department|University|Hospital|Institute|College|Center|Centre)', token, re.IGNORECASE)
-                for token in tokens[:2]
-            ):
+            if any(_safe_search(AFFILIATION_PREFIX_PATTERN, token, 'affiliation_prefix') for token in tokens[:2]):
                 continue
-            if re.match(r'^\p{Lu}[\p{L}-]*\.?(\s+\p{Lu}[\p{L}-]*\.?)*,\s*\p{Lu}[\p{L}-]*\.?(\s+\p{Lu}[\p{L}-]*\.?)*', line):
+
+            author_line_match = _safe_match(author_line_pattern, line, 'author_line') if author_line_pattern else None
+            if author_line_match:
                 if len(line.split(',')) >= 2 and len(line) < 200:
-                    # Additional check: ensure it doesn't look like an affiliation line
-                    if not re.search(r'\d{4,}|[A-Z]{2,}\s+\d|PO\s+Box|\b(USA|UK|Canada|Germany|France|China|Japan)\b', line):
+                    if not _safe_search(AFFILIATION_EXCLUSION_PATTERN, line, 'author_affiliation_exclusion'):
                         sanitized_authors = sanitize_author_line(line)
                         if sanitized_authors:
                             metadata['authors'] = sanitized_authors
@@ -331,20 +539,20 @@ class PDFDocumentLoader:
 
         # Fallback check for explicit "Authors:" prefix if not found above
         if 'authors' not in metadata:
-            m = re.search(r'^Authors?:\s+(.+)', text, re.IGNORECASE | re.MULTILINE)
-            if m:
-                sanitized_authors = sanitize_author_line(m.group(1).strip())
+            prefix_match = _safe_search(AUTHOR_PREFIX_PATTERN, text, 'authors_prefix')
+            if prefix_match:
+                sanitized_authors = sanitize_author_line(prefix_match.group(1).strip())
                 if sanitized_authors:
                     metadata['authors'] = sanitized_authors
 
         # Secondary Unicode-aware fallback for Author(s) lines that may include non-Latin scripts
-        if 'authors' not in metadata:
+        if 'authors' not in metadata and author_prefix_pattern is not None:
             cumulative_chars = 0
             for line in lines[:80]:
                 cumulative_chars += len(line)
-                if cumulative_chars > 2500:  # Upper bound on cumulative characters processed
+                if cumulative_chars > 2500:
                     break
-                unicode_match = re.match(r'^Author(?:s)?\s*[:：]\s*([\p{L}\p{M}\p{Zs}\p{Pd}·,.;.-]+)$', line, re.IGNORECASE)
+                unicode_match = _safe_match(author_prefix_pattern, line, 'unicode_author_prefix')
                 if unicode_match:
                     sanitized_authors = sanitize_author_line(unicode_match.group(1).strip())
                     if sanitized_authors:
@@ -352,12 +560,12 @@ class PDFDocumentLoader:
                         break
 
         # Relaxed fallback: allow potential affiliation words but require multiple capitalized names
-        if 'authors' not in metadata:
+        if 'authors' not in metadata and author_cluster_pattern is not None:
             for line in lines[:80]:
                 candidate = line.strip()
                 if not candidate or len(candidate) > 140:
                     continue
-                name_matches = re.findall(r'\b\p{Lu}[\p{L}\p{M}\-]+(?:\s+\p{Lu}[\p{L}\p{M}\-]+)+', candidate)
+                name_matches = _safe_findall(author_cluster_pattern, candidate, 'author_name_cluster')
                 if len(name_matches) >= 2:
                     sanitized_authors = sanitize_author_line(candidate)
                     if sanitized_authors:
@@ -384,15 +592,32 @@ class PDFDocumentLoader:
 
         # Attempt to capture journal information if still missing
         if 'journal' not in metadata:
-            # Pattern examples: "Journal Name 2023;12(4):567-578" or "Journal Name. 2024 Jan;15(2):123-130"
-            journal_pattern = r'\s*[\p{L}\p{M}\s\-:,\.]{5,}\s\d{4}(?:\s?[A-Za-z]{3})?;\s?\d{1,3}(?:\(\d{1,3}\))?:\d{1,5}(?:-\d{1,5})?'
-            for line in text.split('\n'):
-                stripped = line.strip()
-                if len(stripped) < 12 or len(stripped) > 200:
-                    continue
-                if re.match(journal_pattern, stripped):
-                    metadata['journal'] = stripped
-                    break
+            journal_pattern = _prefer_unicode_pattern(JOURNAL_PATTERN_UNICODE, JOURNAL_PATTERN_ASCII)
+            if journal_pattern is not None:
+                for i, line in enumerate(lines):
+                    stripped = line.strip()
+                    if len(stripped) < 12 or len(stripped) > 200:
+                        continue
+
+                    if not _safe_match(journal_pattern, stripped, 'journal_line'):
+                        continue
+
+                    validation_context = []
+                    for j in range(max(0, i - 1), min(len(lines), i + 2)):
+                        validation_context.append(lines[j].strip())
+                    context_text = ' '.join(validation_context)
+                    context_text_lower = context_text.lower()
+
+                    has_doi_pmid = bool(
+                        _safe_search(DOI_REGEX, context_text, 'journal_context_doi') or
+                        _safe_search(PMID_REGEX, context_text, 'journal_context_pmid')
+                    )
+
+                    has_journal_keyword = any(keyword in context_text_lower for keyword in JOURNAL_KEYWORDS)
+
+                    if has_doi_pmid or has_journal_keyword:
+                        metadata['journal'] = stripped
+                        break
 
         # Extract abstract content after detecting an Abstract header when missing
         if 'abstract' not in metadata:
@@ -522,9 +747,47 @@ class PDFDocumentLoader:
                 result.append(t)
         return result
 
+    def _truncate_metadata_fields(self, metadata: Dict[str, Any], source_label: str) -> None:
+        """Cap oversized metadata fields to avoid excessive payloads."""
+
+        authors_cap = _get_env_int('DOC_METADATA_AUTHORS_MAX_LEN', 500)
+        abstract_cap = _get_env_int('DOC_METADATA_ABSTRACT_MAX_LEN', 4000)
+
+        authors_value = metadata.get('authors')
+        if isinstance(authors_value, str) and len(authors_value) > authors_cap:
+            truncated = authors_value[:authors_cap].rstrip()
+            metadata['authors'] = truncated
+            logger.warning(
+                "Truncated authors metadata for %s from %s to %s characters.",
+                source_label,
+                len(authors_value),
+                authors_cap,
+            )
+
+        abstract_value = metadata.get('abstract')
+        if isinstance(abstract_value, str) and len(abstract_value) > abstract_cap:
+            truncated = abstract_value[:abstract_cap].rstrip()
+            metadata['abstract'] = truncated
+            logger.warning(
+                "Truncated abstract metadata for %s from %s to %s characters.",
+                source_label,
+                len(abstract_value),
+                abstract_cap,
+            )
+
     def _extract_pubmed_metadata(self, pdf_path: Path) -> Dict:
         """
         Extract PubMed metadata from PDF file and optional sidecar JSON
+
+        Sidecar JSON schema (produced by src.pubmed_scraper.write_sidecar_for_pdf):
+            - doi: str
+            - pmid: str
+            - title: str
+            - authors: str or list[str]
+            - abstract: str
+            - publication_date: ISO8601 string
+            - journal: str
+            - mesh_terms: list[str]
 
         Args:
             pdf_path: Path to PDF file
@@ -550,8 +813,38 @@ class PDFDocumentLoader:
                 if mesh_terms:
                     metadata['mesh_terms'] = self._normalize_mesh_terms(mesh_terms)
 
+                raw_doi = json_data.get('doi')
+                if raw_doi is not None and str(raw_doi).strip():
+                    doi_original = str(raw_doi).strip()
+                    cleaned_doi = clean_identifier(doi_original.rstrip('.,;)'))
+                    normalized_doi = normalize_doi(cleaned_doi)
+                    if normalized_doi:
+                        if normalized_doi != doi_original:
+                            logger.info(
+                                "Normalized DOI value for %s: '%s' -> '%s'",
+                                json_path.name,
+                                doi_original,
+                                normalized_doi,
+                            )
+                        metadata['doi'] = normalized_doi
+
+                raw_pmid = json_data.get('pmid')
+                if raw_pmid is not None and str(raw_pmid).strip():
+                    pmid_original = str(raw_pmid).strip()
+                    cleaned_pmid = clean_identifier(pmid_original)
+                    normalized_pmid = normalize_pmid(cleaned_pmid)
+                    if normalized_pmid:
+                        if normalized_pmid != pmid_original:
+                            logger.info(
+                                "Normalized PMID value for %s: '%s' -> '%s'",
+                                json_path.name,
+                                pmid_original,
+                                normalized_pmid,
+                            )
+                        metadata['pmid'] = normalized_pmid
+
                 # Handle other fields normally, treating empty strings as missing
-                for field in ['doi', 'pmid', 'title', 'abstract', 'publication_date', 'journal']:
+                for field in ['title', 'abstract', 'publication_date', 'journal']:
                     value = json_data.get(field)
                     if value is not None and str(value).strip():
                         metadata[field] = value
@@ -676,6 +969,8 @@ class PDFDocumentLoader:
                     for field in missing_fields:
                         if field in text_metadata:
                             pubmed_metadata[field] = text_metadata[field]
+
+                self._truncate_metadata_fields(pubmed_metadata, pdf_file.name)
 
                 # Add metadata to all pages
                 for doc in pdf_documents:

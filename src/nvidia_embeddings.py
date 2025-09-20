@@ -21,13 +21,19 @@ import re
 import requests
 import time
 from typing import List, Optional, Dict, Any
-from langchain.embeddings.base import Embeddings
+from langchain_core.embeddings import Embeddings
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 class NVIDIAEmbeddings(Embeddings):
     """NVIDIA LLaMA 3.2 NemoRetriever embedding model integration"""
+
+    # Known model name aliases to canonical names
+    MODEL_ALIASES = {
+        'nvidia/llama-3_2-nemoretriever-1b-vlm-embed-v1': 'nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1',
+        # Add more aliases here as needed
+    }
     
     def __init__(
         self,
@@ -127,7 +133,7 @@ class NVIDIAEmbeddings(Embeddings):
 
     def _normalize_model_name(self, model_name: str) -> str:
         """
-        Normalize model name by converting recognized model-name patterns only
+        Normalize model name by applying known aliases and converting recognized model-name patterns
 
         Args:
             model_name: Raw model name that might contain variants
@@ -135,6 +141,12 @@ class NVIDIAEmbeddings(Embeddings):
         Returns:
             Normalized model name
         """
+        # First, check if this is a known alias
+        if model_name in self.MODEL_ALIASES:
+            canonical_name = self.MODEL_ALIASES[model_name]
+            logger.info(f"Normalized model alias: '{model_name}' -> '{canonical_name}'")
+            return canonical_name
+
         # Only apply normalization to recognized LLaMA model name patterns
         # Pattern: "llama-X_Y" where X and Y are digits
         if re.match(r'.*llama-\d+_\d+.*', model_name, re.IGNORECASE):
@@ -158,6 +170,32 @@ class NVIDIAEmbeddings(Embeddings):
 
         # For other model names, return unchanged
         return model_name
+
+    def _parse_embeddings_response(self, json_result: Dict) -> List[List[float]]:
+        """
+        Parse embeddings response and cache dimension.
+
+        Args:
+            json_result: JSON response from NVIDIA API
+
+        Returns:
+            List of embedding vectors
+        """
+        if not isinstance(json_result, dict) or "data" not in json_result:
+            raise Exception(f"Unexpected embeddings response format: {json_result}")
+
+        try:
+            embeddings = [item["embedding"] for item in json_result["data"]]
+        except Exception as parsing_error:
+            logger.error("Malformed embedding payload: %s", parsing_error)
+            raise
+
+        # Cache embedding dimension on first successful request
+        if self._dimension is None and embeddings:
+            self._dimension = len(embeddings[0])
+            logger.debug(f"Cached embedding dimension: {self._dimension}")
+
+        return embeddings
 
     def _extract_model_unavailable_reason(self, response: requests.Response) -> Optional[str]:
         """Return reason string when response indicates the model is unavailable."""
@@ -365,19 +403,7 @@ class NVIDIAEmbeddings(Embeddings):
 
                 if response.status_code == 200:
                     result = response.json()
-                    if not isinstance(result, dict) or "data" not in result:
-                        raise Exception(f"Unexpected embeddings response format: {result}")
-                    try:
-                        embeddings = [item["embedding"] for item in result["data"]]
-                    except Exception as parsing_error:
-                        logger.error("Malformed embedding payload: %s", parsing_error)
-                        raise
-
-                    # Cache embedding dimension on first successful request
-                    if self._dimension is None and embeddings:
-                        self._dimension = len(embeddings[0])
-                        logger.debug(f"Cached embedding dimension: {self._dimension}")
-
+                    embeddings = self._parse_embeddings_response(result)
                     logger.debug(f"Successfully got embeddings for {len(texts)} texts using model '{self.model_name}'")
                     return embeddings
 
@@ -392,65 +418,77 @@ class NVIDIAEmbeddings(Embeddings):
 
                 else:
                     handled = False
-                    if response.status_code in (400, 404, 422, 501) and not self._already_fallback:
-                        reason = self._extract_model_unavailable_reason(response)
-                        if reason:
-                            logger.warning(f"Fallback triggered for request: {reason}")
-                            logger.warning(f"Falling back to {self._fallback_model}")
-                            self.model_name = self._fallback_model
-                            self._dimension = None
-                            logger.debug("Embedding dimension cache cleared after request-triggered fallback")
-                            self._already_fallback = True
-                            self.model_selection_reason = reason
 
-                            payload["model"] = self.model_name
+                    if response.status_code in (400, 422):
+                        if not self._already_fallback:
+                            reason = self._extract_model_unavailable_reason(response)
+                            if reason:
+                                handled = True
+                                logger.warning(f"Fallback triggered for request: {reason}")
+                                logger.warning(f"Falling back to {self._fallback_model}")
+                                self.model_name = self._fallback_model
+                                self._dimension = None
+                                logger.debug("Embedding dimension cache cleared after request-triggered fallback")
+                                self._already_fallback = True
+                                self.model_selection_reason = reason
 
-                            logger.info(f"Retrying request with fallback model: {self.model_name}")
+                                payload["model"] = self.model_name
 
-                            fallback_response = requests.post(
-                                url,
-                                headers=self.headers,
-                                json=payload,
-                                timeout=60
-                            )
+                                logger.info(f"Retrying request with fallback model: {self.model_name}")
 
-                            if fallback_response.status_code == 200:
-                                result = fallback_response.json()
-                                if not isinstance(result, dict) or "data" not in result:
-                                    raise Exception(f"Unexpected embeddings response format: {result}")
-                                try:
-                                    embeddings = [item["embedding"] for item in result["data"]]
-                                except Exception as parsing_error:
-                                    logger.error("Malformed embedding payload (fallback): %s", parsing_error)
-                                    raise
-
-                                if self._dimension is None and embeddings:
-                                    self._dimension = len(embeddings[0])
-                                    logger.debug(f"Cached embedding dimension: {self._dimension}")
-
-                                logger.info(f"Successfully got embeddings using fallback model '{self.model_name}'")
-                                self.model_selection_reason = reason or f"fallback_status_{response.status_code}"
-                                return embeddings
-
-                            last_fallback_error = (
-                                f"Fallback model '{self.model_name}' failed with status "
-                                f"{fallback_response.status_code}. Response: {fallback_response.text}"
-                            )
-                            logger.error(last_fallback_error)
-
-                            if attempt < self.max_retries - 1:
-                                logger.warning(
-                                    "Continuing retries with fallback model '%s' despite previous failure (attempt %s of %s).",
-                                    self.model_name,
-                                    attempt + 2,
-                                    self.max_retries,
+                                fallback_response = requests.post(
+                                    url,
+                                    headers=self.headers,
+                                    json=payload,
+                                    timeout=60
                                 )
-                                time.sleep(self.retry_delay)
-                                continue
 
-                            raise Exception(last_fallback_error)
+                                if fallback_response.status_code == 200:
+                                    result = fallback_response.json()
+                                    embeddings = self._parse_embeddings_response(result)
+                                    logger.info(f"Successfully got embeddings using fallback model '{self.model_name}'")
+                                    self.model_selection_reason = reason or f"fallback_status_{response.status_code}"
+                                    return embeddings
 
-                        handled = True
+                                last_fallback_error = (
+                                    f"Fallback model '{self.model_name}' failed with status "
+                                    f"{fallback_response.status_code}. Response: {fallback_response.text}"
+                                )
+                                logger.error(last_fallback_error)
+
+                                if attempt < self.max_retries - 1:
+                                    logger.warning(
+                                        "Continuing retries with fallback model '%s' despite previous failure (attempt %s of %s).",
+                                        self.model_name,
+                                        attempt + 2,
+                                        self.max_retries,
+                                    )
+                                    time.sleep(self.retry_delay)
+                                    continue
+
+                                raise Exception(last_fallback_error)
+
+                            else:
+                                response_snippet = response.text[:500]
+                                logger.info(
+                                    "Received status %s without fallback reason; raising to avoid masking upstream errors. Response: %s",
+                                    response.status_code,
+                                    response_snippet,
+                                )
+                                raise Exception(
+                                    f"Embedding request failed with status {response.status_code} and did not provide a fallback reason. Response: {response_snippet}"
+                                )
+                        else:
+                            response_snippet = response.text[:500]
+                            logger.error(
+                                "Embedding request failed with status %s while already on fallback model '%s': %s",
+                                response.status_code,
+                                self.model_name,
+                                response_snippet,
+                            )
+                            raise Exception(
+                                f"Embedding request failed with status {response.status_code} while using fallback model {self.model_name}. Response: {response_snippet}"
+                            )
 
                     if handled:
                         continue
@@ -583,10 +621,13 @@ def main():
     """Test the NVIDIA embeddings"""
     from dotenv import load_dotenv
     load_dotenv()
-    
+
     # Initialize embeddings
     embeddings = NVIDIAEmbeddings()
-    
+
+    # Sanity check: print the resolved model name
+    print(f"Resolved model name: {embeddings.model_name}")
+
     # Test connection
     if embeddings.test_connection():
         print("✅ NVIDIA API connection successful!")

@@ -17,6 +17,7 @@ if "langchain" not in sys.modules:
     schema_module = types.ModuleType("langchain.schema")
     embeddings_module = types.ModuleType("langchain.embeddings")
     embeddings_base_module = types.ModuleType("langchain.embeddings.base")
+    text_splitter_module = types.ModuleType("langchain.text_splitter")
 
     class Document:
         def __init__(self, page_content: str, metadata: dict | None = None):
@@ -27,14 +28,27 @@ if "langchain" not in sys.modules:
         pass
 
     schema_module.Document = Document
+    
+    class RecursiveCharacterTextSplitter:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+        def split_documents(self, documents):  # pragma: no cover - simple passthrough
+            return documents
+
+    text_splitter_module.RecursiveCharacterTextSplitter = RecursiveCharacterTextSplitter
+
     embeddings_base_module.Embeddings = Embeddings
     embeddings_module.base = embeddings_base_module
     langchain_module.schema = schema_module
     langchain_module.embeddings = embeddings_module
+    langchain_module.text_splitter = text_splitter_module
     sys.modules["langchain"] = langchain_module
     sys.modules["langchain.schema"] = schema_module
     sys.modules["langchain.embeddings"] = embeddings_module
     sys.modules["langchain.embeddings.base"] = embeddings_base_module
+    sys.modules["langchain.text_splitter"] = text_splitter_module
 else:
     Document = sys.modules["langchain.schema"].Document
 
