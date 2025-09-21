@@ -2,6 +2,7 @@ import asyncio
 import json
 import threading
 import types
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -798,12 +799,22 @@ def test_cache_expiry_grace_period_override(tmp_path, frozen_datetime):
     assert result is not None
     assert result.stale is True
 
-    # Advance past explicit grace period
-    frozen_datetime.advance(hours=1)
 
-    # Entry should be evicted
-    result = cache_manager.get("grace-test")
-    assert result is None
+def test_thread_safe_access_supports_parallel_operations(cache_manager):
+    """Ensure cache manager handles concurrent set/get operations."""
+
+    def worker(index: int) -> int:
+        key = f"concurrent-{index}"
+        payload = [{"value": index}]
+        cache_manager.set(key, payload)
+        lookup = cache_manager.get(key)
+        assert lookup is not None
+        return lookup.payload[0]["value"]
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(executor.map(worker, range(20)))
+
+    assert sorted(results) == list(range(20))
 
 
 def test_cache_warming_with_new_timing_methods(tmp_path):

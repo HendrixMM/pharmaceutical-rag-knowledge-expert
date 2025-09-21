@@ -6,7 +6,7 @@ import os
 import threading
 from dataclasses import asdict
 from datetime import UTC, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 from .cache_management import CacheLookupResult, NCBICacheManager
 from .pubmed_scraper import PubMedScraper
@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 def _env_flag(name: str, default: str = "true") -> bool:
     value = os.getenv(name, default)
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+BatchRequest = Union[str, Mapping[str, Any]]
 
 
 class EnhancedPubMedScraper(PubMedScraper):
@@ -391,3 +394,187 @@ class EnhancedPubMedScraper(PubMedScraper):
         if not self._advanced_cache_active():
             return {}
         return self._cache_manager.warmable_entries()  # type: ignore[union-attr]
+
+    # ------------------------------------------------------------------
+    # Batch and preload helpers
+    # ------------------------------------------------------------------
+
+    def _normalize_batch_request(
+        self,
+        request: BatchRequest,
+        *,
+        default_max_items: Optional[int],
+        default_rank: Optional[bool],
+        default_pharma_enhance: Optional[bool],
+    ) -> Tuple[str, Optional[int], Optional[bool], Optional[bool]]:
+        if isinstance(request, str):
+            return request, default_max_items, default_rank, default_pharma_enhance
+        if not isinstance(request, Mapping):
+            raise TypeError("Batch requests must be strings or mappings with a 'query' field")
+        if "query" not in request:
+            raise ValueError("Batch request mappings must contain a 'query' key")
+        query = str(request["query"])
+        return (
+            query,
+            request.get("max_items", default_max_items),
+            request.get("rank", default_rank),
+            request.get("pharma_enhance", default_pharma_enhance),
+        )
+
+    @staticmethod
+    def _make_batch_key(
+        query: str,
+        max_items: Optional[int],
+        rank: Optional[bool],
+        pharma_enhance: Optional[bool],
+    ) -> Tuple[Any, ...]:
+        return (
+            query,
+            max_items,
+            rank,
+            pharma_enhance,
+        )
+
+    def search_pubmed_batch(
+        self,
+        requests: Sequence[BatchRequest],
+        *,
+        max_items: Optional[int] = None,
+        rank: Optional[bool] = None,
+        pharma_enhance: Optional[bool] = None,
+        reuse_cached_results: bool = True,
+    ) -> List[Dict[str, Any]]:
+        """Execute multiple PubMed queries with intelligent cache reuse."""
+
+        if not requests:
+            return []
+
+        batch_results: List[Dict[str, Any]] = []
+        dedup_cache: Dict[Tuple[Any, ...], Dict[str, Any]] = {}
+
+        for request in requests:
+            query, resolved_max_items, resolved_rank, resolved_pharma = self._normalize_batch_request(
+                request,
+                default_max_items=max_items,
+                default_rank=rank,
+                default_pharma_enhance=pharma_enhance,
+            )
+            dedup_key = self._make_batch_key(query, resolved_max_items, resolved_rank, resolved_pharma)
+
+            if reuse_cached_results and dedup_key in dedup_cache:
+                cached_info = dedup_cache[dedup_key]
+                batch_results.append(
+                    {
+                        "query": query,
+                        "results": cached_info["results"],
+                        "from_cache": cached_info["from_cache"],
+                        "reused": True,
+                        "result_count": len(cached_info["results"]),
+                    }
+                )
+                continue
+
+            stats_before = self._cache_manager.get_statistics() if self._cache_manager else None
+            payload = self.search_pubmed(
+                query,
+                max_items=resolved_max_items,
+                rank=resolved_rank,
+                pharma_enhance=resolved_pharma,
+            )
+            stats_after = self._cache_manager.get_statistics() if self._cache_manager else None
+            from_cache = False
+            if stats_before and stats_after:
+                from_cache = stats_after["hits"] > stats_before["hits"]
+
+            record = {
+                "query": query,
+                "results": payload,
+                "from_cache": from_cache,
+                "reused": False,
+                "result_count": len(payload),
+            }
+            batch_results.append(record)
+
+            if reuse_cached_results:
+                dedup_cache[dedup_key] = {
+                    "results": payload,
+                    "from_cache": from_cache,
+                }
+
+        return batch_results
+
+    def preload_cache(
+        self,
+        requests: Sequence[BatchRequest],
+        *,
+        max_items: Optional[int] = None,
+        rank: Optional[bool] = None,
+        pharma_enhance: Optional[bool] = None,
+        reuse_cached_results: bool = True,
+    ) -> List[Dict[str, Any]]:
+        """Warm cache entries for a batch of queries without returning payloads."""
+
+        batch_results = self.search_pubmed_batch(
+            requests,
+            max_items=max_items,
+            rank=rank,
+            pharma_enhance=pharma_enhance,
+            reuse_cached_results=reuse_cached_results,
+        )
+
+        cache_active = self._advanced_cache_active()
+        summaries: List[Dict[str, Any]] = []
+
+        for entry in batch_results:
+            if not cache_active:
+                status = "executed"
+            elif entry["from_cache"]:
+                status = "hit"
+            elif entry["reused"]:
+                status = "reused"
+            else:
+                status = "stored"
+
+            summaries.append(
+                {
+                    "query": entry["query"],
+                    "status": status,
+                    "result_count": entry["result_count"],
+                    "from_cache": entry["from_cache"],
+                    "reused": entry["reused"],
+                }
+            )
+
+        return summaries
+
+    def get_performance_metrics(self) -> Dict[str, Any]:
+        """Return combined cache and rate limiting analytics."""
+
+        metrics: Dict[str, Any] = {}
+        cache_stats: Optional[Dict[str, int]]
+        if self._cache_manager:
+            cache_stats = self._cache_manager.get_statistics()
+            metrics["cache"] = cache_stats
+            total_events = cache_stats["hits"] + cache_stats["stale_hits"] + cache_stats["misses"]
+            metrics["cache_hit_rate"] = (
+                (cache_stats["hits"] + cache_stats["stale_hits"]) / total_events if total_events else None
+            )
+            metrics["cache_miss_rate"] = (cache_stats["misses"] / total_events if total_events else None)
+            metrics["cache_rate_limit_skips"] = cache_stats["skipped_rate_limit"]
+            metrics["cache_write_count"] = cache_stats["writes"]
+            metrics["cache_eviction_count"] = cache_stats["evictions"]
+        else:
+            cache_stats = None
+            metrics["cache"] = None
+            metrics["cache_hit_rate"] = None
+            metrics["cache_miss_rate"] = None
+            metrics["cache_rate_limit_skips"] = None
+            metrics["cache_write_count"] = None
+            metrics["cache_eviction_count"] = None
+
+        status = self.get_rate_limit_status()
+        metrics["rate_limit"] = asdict(status) if isinstance(status, RateLimitStatus) else None
+        if metrics["rate_limit"] is not None:
+            metrics["rate_limit"]["skipped_due_to_cache"] = metrics["cache_rate_limit_skips"] or 0
+
+        return metrics

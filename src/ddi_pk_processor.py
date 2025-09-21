@@ -190,7 +190,8 @@ class DDIPKProcessor:
         self.pk_parameter_patterns = {
             "auc": {
                 "patterns": [
-                    r"auc.*?(\d+(?:\.\d+)?)\s*([%]?)\s*(increase|decrease|chang|fold)",
+                    # Enumerate "change" variants for clarity while preserving previous partial-match behaviour.
+                    r"auc.*?(\d+(?:\.\d+)?)\s*([%]?)\s*(increase|decrease|(?:change|changes|changed|changing)|fold)",
                     r"area.*under.*curve.*?(\d+(?:\.\d+)?)\s*([%]?)",
                     r"auc.*ratio.*?(\d+(?:\.\d+)?)"
                 ],
@@ -198,7 +199,8 @@ class DDIPKProcessor:
             },
             "cmax": {
                 "patterns": [
-                    r"cmax.*?(\d+(?:\.\d+)?)\s*([%]?)\s*(increase|decrease|chang|fold)",
+                    # Enumerate "change" variants for clarity while preserving previous partial-match behaviour.
+                    r"cmax.*?(\d+(?:\.\d+)?)\s*([%]?)\s*(increase|decrease|(?:change|changes|changed|changing)|fold)",
                     r"maximum.*concentration.*?(\d+(?:\.\d+)?)\s*([%]?)",
                     r"peak.*concentration.*?(\d+(?:\.\d+)?)\s*([%]?)"
                 ],
@@ -206,7 +208,8 @@ class DDIPKProcessor:
             },
             "clearance": {
                 "patterns": [
-                    r"clearance.*?(\d+(?:\.\d+)?)\s*([%]?)\s*(increase|decrease|chang)",
+                    # Enumerate "change" variants for clarity while preserving previous partial-match behaviour.
+                    r"clearance.*?(\d+(?:\.\d+)?)\s*([%]?)\s*(increase|decrease|(?:change|changes|changed|changing))",
                     r"cl/f.*?(\d+(?:\.\d+)?)\s*([%]?)"
                 ],
                 "units": ["L/h", "mL/min", "L/h/kg", "%"]

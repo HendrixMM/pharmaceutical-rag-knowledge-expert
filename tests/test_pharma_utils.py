@@ -4,15 +4,18 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any, Dict
 from unittest.mock import patch
 
 from src.pharma_utils import (
     _PK_FILTERING_ENABLED,
     _tokenize_species_string,
-    DrugNameChecker,
     CacheSizeConfig,
-    get_cache_dir_size_mb,
+    DrugNameChecker,
+    SpeciesMatchResult,
     cleanup_oldest_cache_files,
+    get_cache_dir_size_mb,
+    match_species_preference,
 )
 
 
@@ -137,11 +140,13 @@ class TestCacheSizeConfig(unittest.TestCase):
         self.assertEqual(config.max_size_mb, 1000)
         self.assertEqual(config.cleanup_threshold_mb, 900)
         self.assertEqual(config.check_frequency, 50)
+        self.assertEqual(config.opportunistic_cleanup_frequency, 10)
 
     @patch.dict(os.environ, {
         "QUERY_ENGINE_MAX_CACHE_MB": "500",
         "QUERY_ENGINE_CACHE_CLEANUP_THRESHOLD_MB": "450",
-        "QUERY_ENGINE_CACHE_CHECK_FREQUENCY": "25"
+        "QUERY_ENGINE_CACHE_CHECK_FREQUENCY": "25",
+        "QUERY_ENGINE_CACHE_OPPORTUNISTIC_CLEANUP_FREQUENCY": "5",
     })
     def test_env_override(self):
         """Test environment variable overrides."""
@@ -149,6 +154,7 @@ class TestCacheSizeConfig(unittest.TestCase):
         self.assertEqual(config.max_size_mb, 500)
         self.assertEqual(config.cleanup_threshold_mb, 450)
         self.assertEqual(config.check_frequency, 25)
+        self.assertEqual(config.opportunistic_cleanup_frequency, 5)
 
 
 class TestCacheSizeManagement(unittest.TestCase):
@@ -172,8 +178,8 @@ class TestCacheSizeManagement(unittest.TestCase):
     def test_cache_size_with_files(self):
         """Test size calculation with cache files."""
         # Create test files
-        (self.cache_dir / "file1.json").write_text('{"data": "x" * 1000}')
-        (self.cache_dir / "file2.json").write_text('{"data": "y" * 2000}')
+        (self.cache_dir / "file1.json").write_text('{"data": "' + "x" * 1000 + '"}')
+        (self.cache_dir / "file2.json").write_text('{"data": "' + "y" * 2000 + '"}')
 
         size_mb = get_cache_dir_size_mb(self.cache_dir)
         # Should be approximately 3KB
@@ -194,19 +200,31 @@ class TestCacheSizeManagement(unittest.TestCase):
         stats = cleanup_oldest_cache_files(self.cache_dir, 10.0)
         self.assertEqual(stats["files_removed"], 0)
 
+    def test_cleanup_with_config_object(self):
+        """Test cleanup using CacheSizeConfig as the target argument."""
+        config = CacheSizeConfig()
+        config.cleanup_threshold_mb = 0  # Force aggressive cleanup
+
+        # Create files to trigger cleanup
+        for idx in range(3):
+            (self.cache_dir / f"entry{idx}.json").write_text('{"value": "' + "x" * 1000 + '"}')
+
+        stats = cleanup_oldest_cache_files(self.cache_dir, config)
+        self.assertGreaterEqual(stats["files_removed"], 1)
+
     def test_cleanup_over_limit(self):
         """Test cleanup when over size limit."""
         # Create test files with different timestamps
         files = []
         for i in range(5):
             file_path = self.cache_dir / f"file{i}.json"
-            file_path.write_text('{"data": "x" * 1000}')  # 1KB each
+            file_path.write_text('{"data": "' + "x" * 1000 + '"}')
             # Set different modification times
             file_path.touch()
             files.append(file_path)
 
         # Set target size very low to force cleanup
-        stats = cleanup_oldest_cache_files(self.cache_dir, 0.001)
+        stats = cleanup_oldest_cache_files(self.cache_dir, 0.0001)
 
         # Should have removed some files
         self.assertGreater(stats["files_removed"], 0)
@@ -215,13 +233,60 @@ class TestCacheSizeManagement(unittest.TestCase):
     def test_cleanup_ignores_non_json(self):
         """Test that cleanup only considers JSON files."""
         # Create mixed files
-        (self.cache_dir / "data.json").write_text('{"data": "x" * 1000}')
+        (self.cache_dir / "data.json").write_text('{"data": "' + "x" * 1000 + '"}')
         (self.cache_dir / "temp.txt").write_text("temporary file")
         (self.cache_dir / "backup").write_text("backup data")
 
-        stats = cleanup_oldest_cache_files(self.cache_dir, 0.001)
+        stats = cleanup_oldest_cache_files(self.cache_dir, 0.0001)
         # Should only remove JSON files
         self.assertEqual(stats["files_removed"], 1)
+
+
+class TestSpeciesPreferenceMatching(unittest.TestCase):
+    """Test shared species matching helper."""
+
+    def test_matches_with_explicit_species(self):
+        """Documents with matching species should pass the filter."""
+        filters = {"species_preference": ["Human"]}
+        metadata = {"species": "Human Clinical Trial"}
+
+        result = match_species_preference(metadata, filters)
+        self.assertIsInstance(result, SpeciesMatchResult)
+        self.assertTrue(result.matches)
+        self.assertFalse(result.was_inferred)
+        self.assertIn("human clinical trial", result.species_values)
+
+    def test_infers_species_when_missing(self):
+        """Inference callback should allow matches when metadata is empty."""
+
+        def fake_infer(meta, page):  # pylint: disable=unused-argument
+            return ["Mouse"]
+
+        filters = {"species_preference": ["mouse"], "include_unknown_species": False}
+        metadata: Dict[str, Any] = {}
+
+        result = match_species_preference(metadata, filters, infer_species=fake_infer)
+        self.assertTrue(result.matches)
+        self.assertTrue(result.was_inferred)
+        self.assertEqual(result.species_values, ["mouse"])
+
+    def test_respects_include_unknown_flag(self):
+        """When include_unknown is False and no inference, the match should fail."""
+
+        filters = {"species_preference": ["dog"], "include_unknown_species": False}
+        metadata: Dict[str, Any] = {}
+
+        result = match_species_preference(metadata, filters, default_include_unknown=True)
+        self.assertFalse(result.matches)
+
+    def test_include_unknown_defaults_to_true(self):
+        """Default include_unknown flag should allow documents without species."""
+
+        filters = {"species_preference": ["dog"]}
+        metadata: Dict[str, Any] = {}
+
+        result = match_species_preference(metadata, filters)
+        self.assertTrue(result.matches)
 
 
 class TestPKFilteringFlag(unittest.TestCase):

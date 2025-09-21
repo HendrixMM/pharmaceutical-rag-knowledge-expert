@@ -8,6 +8,7 @@ import os
 import pickle
 import logging
 import re
+import statistics
 from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
@@ -26,11 +27,38 @@ from langchain_community.vectorstores import FAISS
 
 from .nvidia_embeddings import NVIDIAEmbeddings
 from .pharmaceutical_processor import PharmaceuticalProcessor
-from . import pharma_utils
-from .pharma_utils import (
-    _tokenize_species_string,
-    normalize_text,
-)
+try:  # pragma: no cover - optional dependency
+    from . import pharma_utils as _pharma_utils
+except ImportError as exc:  # pragma: no cover
+    logger.error(
+        "pharma_utils module unavailable; vector database pharmaceutical filtering is limited. Error: %s",
+        exc,
+    )
+
+    class _FallbackPharmaUtils:
+        _PK_FILTERING_ENABLED = False
+        SPECIES_UNKNOWN_DEFAULT = True
+
+    pharma_utils = _FallbackPharmaUtils()
+else:
+    pharma_utils = _pharma_utils
+
+if hasattr(pharma_utils, "match_species_preference"):
+    match_species_preference = pharma_utils.match_species_preference
+else:  # pragma: no cover - degraded fallback
+
+    class _FallbackSpeciesResult:
+        def __init__(self, include_unknown: bool) -> None:
+            self.matches = include_unknown
+            self.species_values: List[str] = []
+            self.was_inferred = False
+
+    def match_species_preference(
+        metadata: Dict[str, Any],
+        filters: Dict[str, Any],
+        **_: Any,
+    ) -> _FallbackSpeciesResult:
+        return _FallbackSpeciesResult(filters.get("include_unknown_species", True))
 
 # Enable species filtering without pharmaceutical enrichment
 ALLOW_SPECIES_FILTER_WITHOUT_ENRICHMENT = os.getenv("ALLOW_SPECIES_FILTER_WITHOUT_ENRICHMENT", "false").lower() == "true"
@@ -74,7 +102,8 @@ class VectorDatabase:
         db_path: str = "./vector_db",
         index_name: str = "faiss_index",
         *,
-        pharmaceutical_processor: Optional[PharmaceuticalProcessor] = None
+        pharmaceutical_processor: Optional[PharmaceuticalProcessor] = None,
+        species_unknown_default: Optional[bool] = None,
     ):
         """
         Initialize vector database
@@ -94,6 +123,11 @@ class VectorDatabase:
         self._pharma_metadata_enabled = False
         self._docstore_ids: List[Any] = []
         self._pharma_filter_warning_emitted = False
+        self.species_unknown_default = (
+            bool(species_unknown_default)
+            if species_unknown_default is not None
+            else False
+        )
 
         # Create database directory
         self.db_path.mkdir(parents=True, exist_ok=True)
@@ -557,10 +591,12 @@ class VectorDatabase:
         if not drug_name:
             return []
         filters = {"drug_names": [drug_name]}
+        oversample_multiplier = max(VECTOR_DB_DEFAULT_OVERSAMPLE_MULTIPLIER, 5)
         results = self.similarity_search_with_pharmaceutical_filters(
             drug_name,
             k=max(k * 2, 10),
             filters=filters,
+            oversample=oversample_multiplier,
         )
         return results[:k]
 
@@ -856,6 +892,17 @@ class VectorDatabase:
             "average_ranking_score": average_ranking,
         }
 
+        result["pharma_metadata_ratio"] = coverage_ratio
+        result["pharma_metadata_enabled"] = self._pharma_metadata_enabled
+        if ranking_accumulator:
+            result["ranking_score"] = {
+                "average": average_ranking,
+                "median": statistics.median(ranking_accumulator),
+                "count": len(ranking_accumulator),
+            }
+        else:
+            result["ranking_score"] = {"average": None, "median": None, "count": 0}
+
         # Add sampling warning if not all documents were processed
         if iterations < total_docs:
             result["sampling_warning"] = f"Stats based on sample of {iterations:,} documents out of {total_docs:,} total"
@@ -1030,43 +1077,36 @@ class VectorDatabase:
 
         species_preference = filters.get("species_preference")
         if species_preference:
-            if isinstance(species_preference, (list, tuple, set)):
-                preferred_values = [str(value).lower() for value in species_preference if value]
-            else:
-                preferred_values = [str(species_preference).lower()]
 
-            if not preferred_values:
+            def _infer_species_for_metadata(
+                meta: Dict[str, Any],
+                page: Optional[str] = None,
+            ) -> Optional[List[str]]:
+                resolved = self._resolve_species(meta, page)
+                if not resolved:
+                    return None
+                processor = self._get_pharmaceutical_processor()
+                if processor:
+                    normalised = processor.normalize_species([resolved]) or []
+                    if normalised:
+                        return normalised
+                return [resolved]
+
+            species_match = match_species_preference(
+                metadata,
+                filters,
+                page_content=page_content,
+                infer_species=_infer_species_for_metadata,
+                default_include_unknown=self.species_unknown_default,
+            )
+
+            if not getattr(species_match, "matches", False):
                 return False
 
-            # Use normalized species_list from metadata
-            species_values = metadata.get("species_list", []) or []
-
-            # When metadata lacks species, attempt cheap species inference
-            if not species_values:
-                inferred_species = self._resolve_species(metadata, page_content)
-                if inferred_species:
-                    # Normalize the inferred species for consistency
-                    processor = self._get_pharmaceutical_processor()
-                    species_values = processor.normalize_species([inferred_species])
-
-            # Configurable include_unknown_species flag defaulting to True
-            include_unknown_species = filters.get("include_unknown_species", True)
-            if not species_values and not include_unknown_species:
-                return False
-            elif not species_values:
-                # Include unknown species when flag is True (default)
-                return True
-
-            # Use tokenized matching to reduce false positives
-            # Note: 'non-human' is normalized to 'nonhuman' to prevent false positives on human studies
-            species_tokens = set()
-            for value in species_values:
-                species_tokens.update(_tokenize_species_string(value))
-            preferred_tokens = set()
-            for pref in preferred_values:
-                preferred_tokens.update(_tokenize_species_string(pref))
-            if not preferred_tokens.intersection(species_tokens):
-                return False
+            if getattr(species_match, "was_inferred", False) and getattr(
+                species_match, "species_values", None
+            ):
+                metadata.setdefault("species_list", species_match.species_values)
 
         # Pharmacokinetics filtering (only when enabled)
         pharmacokinetics = filters.get("pharmacokinetics")

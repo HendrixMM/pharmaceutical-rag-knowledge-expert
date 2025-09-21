@@ -23,8 +23,9 @@ from __future__ import annotations
 import os
 import re
 import unicodedata
-from typing import Any, Dict, List, Optional, Set, Union
-from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Union, Callable
+from dataclasses import dataclass, field
 
 
 # Module-level constants for PK filtering
@@ -110,8 +111,9 @@ def normalize_text(text: str, *, remove_diacritics: bool = True, lowercase: bool
 
     # Remove diacritics if requested
     if remove_diacritics:
+        decomposed = unicodedata.normalize('NFKD', text)
         text = ''.join(
-            c for c in text
+            c for c in decomposed
             if not unicodedata.combining(c)
         )
 
@@ -160,11 +162,124 @@ def _tokenize_species_string(text: str) -> Set[str]:
 
 
 @dataclass
+class SpeciesMatchResult:
+    """Result returned by species preference matching helpers."""
+
+    matches: bool
+    species_values: List[str]
+    was_inferred: bool = False
+
+
+def match_species_preference(
+    metadata: Mapping[str, Any],
+    filters: Mapping[str, Any],
+    *,
+    page_content: Optional[str] = None,
+    infer_species: Optional[
+        Callable[[Mapping[str, Any], Optional[str]], Optional[Iterable[str]]]
+    ] = None,
+    default_include_unknown: bool = True,
+    tokenizer: Callable[[str], Set[str]] = _tokenize_species_string,
+) -> SpeciesMatchResult:
+    """Determine whether metadata satisfies species preference filters."""
+
+    species_preference = filters.get("species_preference")
+    if not species_preference:
+        return SpeciesMatchResult(True, [], False)
+
+    preferred_values: List[str] = []
+    if isinstance(species_preference, (list, tuple, set)):
+        for value in species_preference:
+            if value is None:
+                continue
+            text = str(value).strip()
+            if text:
+                preferred_values.append(text.lower())
+    else:
+        text = str(species_preference).strip()
+        if text:
+            preferred_values.append(text.lower())
+
+    if not preferred_values:
+        return SpeciesMatchResult(False, [], False)
+
+    def _normalise_species_source(source: Any) -> List[str]:
+        if source is None:
+            return []
+        if isinstance(source, str):
+            text_value = source.strip()
+            return [text_value] if text_value else []
+        if isinstance(source, (list, tuple, set)):
+            values = []
+            for entry in source:
+                if entry is None:
+                    continue
+                text_value = str(entry).strip()
+                if text_value:
+                    values.append(text_value)
+            return values
+        text_value = str(source).strip()
+        return [text_value] if text_value else []
+
+    species_values: List[str] = []
+    for key in ("species_list", "species", "organism"):
+        if key in metadata:
+            species_values = _normalise_species_source(metadata.get(key))
+            if species_values:
+                break
+
+    was_inferred = False
+    if not species_values and infer_species:
+        inferred_values = infer_species(metadata, page_content)
+        normalised_inferred = _normalise_species_source(inferred_values)
+        if normalised_inferred:
+            species_values = normalised_inferred
+            was_inferred = True
+
+    include_unknown = filters.get("include_unknown_species")
+    if include_unknown is None:
+        include_unknown = default_include_unknown
+    include_unknown = bool(include_unknown)
+
+    if not species_values:
+        return SpeciesMatchResult(bool(include_unknown), [], was_inferred)
+
+    preferred_tokens: Set[str] = set()
+    for pref in preferred_values:
+        preferred_tokens.update(tokenizer(pref))
+
+    if not preferred_tokens:
+        return SpeciesMatchResult(False, [value.lower() for value in species_values], was_inferred)
+
+    species_tokens: Set[str] = set()
+    for value in species_values:
+        species_tokens.update(tokenizer(value))
+
+    if not species_tokens:
+        return SpeciesMatchResult(bool(include_unknown), [value.lower() for value in species_values], was_inferred)
+
+    matches = bool(preferred_tokens.intersection(species_tokens))
+    return SpeciesMatchResult(matches, [value.lower() for value in species_values], was_inferred)
+
+
+@dataclass
 class CacheSizeConfig:
     """Configuration for cache size management."""
-    max_size_mb: int = int(os.getenv("QUERY_ENGINE_MAX_CACHE_MB", "1000"))
-    cleanup_threshold_mb: int = int(os.getenv("QUERY_ENGINE_CACHE_CLEANUP_THRESHOLD_MB", "900"))
-    check_frequency: int = int(os.getenv("QUERY_ENGINE_CACHE_CHECK_FREQUENCY", "50"))
+
+    max_size_mb: int = field(
+        default_factory=lambda: int(os.getenv("QUERY_ENGINE_MAX_CACHE_MB", "1000"))
+    )
+    cleanup_threshold_mb: int = field(
+        default_factory=lambda: int(os.getenv("QUERY_ENGINE_CACHE_CLEANUP_THRESHOLD_MB", "900"))
+    )
+    check_frequency: int = field(
+        default_factory=lambda: int(os.getenv("QUERY_ENGINE_CACHE_CHECK_FREQUENCY", "50"))
+    )
+    opportunistic_cleanup_frequency: int = field(
+        default_factory=lambda: int(
+            os.getenv("QUERY_ENGINE_CACHE_OPPORTUNISTIC_CLEANUP_FREQUENCY", "10")
+        )
+    )
 
 
 class DrugNameChecker:
@@ -177,11 +292,15 @@ class DrugNameChecker:
 
     def __init__(self) -> None:
         # Compile regex patterns for performance
-        self.cyp_pattern = re.compile(r'\bCYP\d+[A-Z]*\b', re.IGNORECASE)
-        self.suffix_patterns = [
-            re.compile(r'\w+' + re.escape(suffix), re.IGNORECASE)
-            for suffix in _DRUG_SUFFIXES
-        ]
+        self.cyp_pattern = re.compile(r'\bCYP\d+[A-Z0-9]*\b', re.IGNORECASE)
+        self._suffix_patterns = []
+        self._suffix_tokens = []
+        for suffix in _DRUG_SUFFIXES:
+            cleaned = suffix.lstrip('-')
+            self._suffix_tokens.append(cleaned)
+            self._suffix_patterns.append(
+                re.compile(r'\b\w+' + re.escape(cleaned) + r'\b', re.IGNORECASE)
+            )
 
     def is_drug_like(self, text: str) -> bool:
         """Check if text contains drug-like terms.
@@ -199,7 +318,7 @@ class DrugNameChecker:
             return True
 
         # Check drug suffixes
-        for pattern in self.suffix_patterns:
+        for pattern in self._suffix_patterns:
             if pattern.search(text):
                 return True
 
@@ -233,19 +352,16 @@ class DrugNameChecker:
             signals["signal_count"] += len(signals["cyp_enzymes"])
 
         # Find drug suffix matches
-        text_lower = text.lower()
-        for suffix in _DRUG_SUFFIXES:
-            if suffix in text_lower:
-                # Find words ending with this suffix
-                pattern = re.compile(r'\b\w+' + re.escape(suffix) + r'\b')
-                matches = pattern.findall(text)
-                if matches:
-                    signals["drug_suffix_matches"].extend(matches)
+        for pattern in self._suffix_patterns:
+            matches = pattern.findall(text)
+            if matches:
+                signals["drug_suffix_matches"].extend(matches)
 
         if signals["drug_suffix_matches"]:
             signals["signal_count"] += len(set(signals["drug_suffix_matches"]))
 
         # Find common drug names
+        text_lower = text.lower()
         words = set(re.findall(r'\b\w+\b', text_lower))
         found_drugs = [drug for drug in _COMMON_DRUG_NAMES if drug in words]
         if found_drugs:
@@ -278,8 +394,10 @@ def get_cache_dir_size_mb(cache_dir_path: Union[str, os.PathLike]) -> float:
     return total_size / (1024 * 1024)
 
 
-def cleanup_oldest_cache_files(cache_dir_path: Union[str, os.PathLike],
-                            target_size_mb: float) -> Dict[str, int]:
+def cleanup_oldest_cache_files(
+    cache_dir_path: Union[str, os.PathLike],
+    target: Union[float, "CacheSizeConfig"],
+) -> Dict[str, int]:
     """Remove oldest cache files to meet size target.
 
     Args:
@@ -308,6 +426,11 @@ def cleanup_oldest_cache_files(cache_dir_path: Union[str, os.PathLike],
     files_removed = 0
     bytes_freed = 0
     current_size = sum(size for _, _, size in cache_files)
+    if isinstance(target, CacheSizeConfig):
+        target_size_mb = float(max(target.cleanup_threshold_mb, 0))
+    else:
+        target_size_mb = float(target)
+
     target_bytes = target_size_mb * 1024 * 1024
 
     # Remove oldest files until under target
@@ -336,7 +459,9 @@ __all__ = [
     "_CLINICAL_STUDY_TAGS",
     "_NEGATION_TERMS",
     "_tokenize_species_string",
+    "match_species_preference",
     "CacheSizeConfig",
+    "SpeciesMatchResult",
     "DrugNameChecker",
     "get_cache_dir_size_mb",
     "cleanup_oldest_cache_files",
