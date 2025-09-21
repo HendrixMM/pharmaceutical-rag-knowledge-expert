@@ -88,7 +88,7 @@ def infer_species_from_text(
         else:
             # For non-human species, use standard matching
             if any(keyword in tokens for keyword in keywords):
-                if not (has_negation and species != "human"):  # Allow in vitro for non-human
+                if not (has_negation and species == "human"):  # Block only human when in vitro
                     if species not in matches:
                         matches.append(species)
 

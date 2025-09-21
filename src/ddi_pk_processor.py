@@ -181,8 +181,8 @@ class DDIPKProcessor:
                 r"cyp.*inhibition", r"blocks.*cyp", r"cyp.*blocking"
             ],
             "inducer": [
-                r"induc.*cyp", r"cyp.*induc", r"upregulat.*cyp",
-                r"cyp.*upregulat", r"increas.*cyp.*activity"
+                r"(induce|induces|inducing|induction).*cyp", r"cyp.*(induce|induces|inducing|induction)", r"(upregulate|upregulates|upregulating|upregulation).*cyp",
+                r"cyp.*(upregulate|upregulates|upregulating|upregulation)", r"(increase|increases|increasing).*cyp.*activity"
             ]
         }
 
@@ -230,11 +230,11 @@ class DDIPKProcessor:
 
         # Clinical recommendation patterns
         self.recommendation_patterns = [
-            r"recommend.*?(monitor|avoid|adjust|reduc|increas|caution)",
-            r"suggest.*?(monitor|avoid|adjust|reduc|increas|caution)",
-            r"advise.*?(monitor|avoid|adjust|reduc|increas|caution)",
-            r"clinical.*?(monitor|avoid|adjust|reduc|increas|caution)",
-            r"should.*?(monitor|avoid|adjust|reduc|increas|caution)"
+            r"recommend.*?(monitor|avoid|adjust|reduce|reducing|reduction|increase|increasing|elevation|caution)",
+            r"suggest.*?(monitor|avoid|adjust|reduce|reducing|reduction|increase|increasing|elevation|caution)",
+            r"advise.*?(monitor|avoid|adjust|reduce|reducing|reduction|increase|increasing|elevation|caution)",
+            r"clinical.*?(monitor|avoid|adjust|reduce|reducing|reduction|increase|increasing|elevation|caution)",
+            r"should.*?(monitor|avoid|adjust|reduce|reducing|reduction|increase|increasing|elevation|caution)"
         ]
 
     def _build_config(

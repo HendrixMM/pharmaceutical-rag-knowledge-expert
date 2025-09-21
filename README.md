@@ -571,7 +571,7 @@ results = rag_agent.similarity_search_with_pharmaceutical_filters(
 
 - **Issues**: [GitHub Issues](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/discussions)
-- **Documentation**: Check the `docs/` folder for additional guides
+- **Documentation**: Check the `WEB_INTERFACE_GUIDE.md` and `SETUP_GUIDE.md` files for additional guides
 
 ---
 
