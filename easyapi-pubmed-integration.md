@@ -102,7 +102,7 @@ ENABLE_PMID_DEDUPLICATION=true
 ### **Required Dependencies**
 ```python
 # Add to requirements.txt
-apify-client>=1.6.0
+apify-client>=1.7.0
 ```
 
 ---

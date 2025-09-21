@@ -123,3 +123,61 @@ def test_truncate_metadata_fields_respects_environment(monkeypatch, configure_re
 
     assert len(metadata["authors"]) == 10
     assert len(metadata["abstract"]) == 20
+
+
+def test_extract_pubmed_metadata_precedence_pdf_first_then_sidecar(configure_regex, tmp_path, monkeypatch):
+    """Test that metadata merge follows deterministic precedence: PDF first, then sidecar overlay."""
+    configure_regex(document_loader._REGEX_MODULE)
+    loader = document_loader.PDFDocumentLoader.__new__(document_loader.PDFDocumentLoader)
+
+    # Create a fake PDF file
+    pdf_file = tmp_path / "test.pdf"
+    pdf_file.write_text("fake pdf content")
+
+    # Mock the XMP extraction to return PDF metadata
+    pdf_metadata = {
+        "doi": "10.pdf-test/xmp123",
+        "pmid": "12345678",
+        "title": "PDF Title",
+        "authors": "PDF Author",
+        "abstract": "PDF abstract content",
+        "publication_date": "2023-01-01",
+        "journal": "PDF Journal",
+        "mesh_terms": ["PDF Term 1", "PDF Term 2"]
+    }
+
+    def mock_extract_xmp(path):
+        return pdf_metadata.copy()
+
+    loader._extract_pubmed_metadata_from_xmp = mock_extract_xmp
+
+    # Create sidecar JSON with some overlapping fields
+    sidecar_file = pdf_file.with_suffix('.pubmed.json')
+    sidecar_data = {
+        "doi": "10.sidecar-test/sc123",  # Should override PDF
+        "pmid": "87654321",             # Should override PDF
+        "title": "Sidecar Title",       # Should NOT override (not in overlay list)
+        "authors": ["Sidecar Author 1", "Sidecar Author 2"],  # Should override
+        "abstract": "Sidecar abstract",  # Should override
+        "publication_date": "2023-02-01",  # Should override
+        "journal": "Sidecar Journal",    # Should override
+        "mesh_terms": ["Sidecar Term"],  # Should override
+        "extra_field": "Should not appear"  # Should be ignored
+    }
+
+    with open(sidecar_file, 'w') as f:
+        json.dump(sidecar_data, f)
+
+    # Extract merged metadata
+    result = loader._extract_pubmed_metadata(pdf_file)
+
+    # Verify precedence: PDF metadata first, sidecar overlay for specific fields
+    assert result["doi"] == "10.sidecar-test/sc123"  # Sidecar overrode PDF
+    assert result["pmid"] == "87654321"              # Sidecar overrode PDF
+    assert result["title"] == "PDF Title"            # PDF preserved (not in overlay list)
+    assert result["authors"] == "Sidecar Author 1, Sidecar Author 2"  # Sidecar overrode (normalized to string)
+    assert result["abstract"] == "Sidecar abstract"   # Sidecar overrode
+    assert result["publication_date"] == "2023-02-01T00:00:00"  # Sidecar overrode (normalized)
+    assert result["journal"] == "Sidecar Journal"     # Sidecar overrode
+    assert result["mesh_terms"] == ["Sidecar Term"]   # Sidecar overrode
+    assert "extra_field" not in result                # Ignored (not in overlay list)

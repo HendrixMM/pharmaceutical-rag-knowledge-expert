@@ -686,6 +686,200 @@ async def ensure_disclaimer(response: str, response_type: str) -> str:
         return response
 
 
+async def evaluate_hallucination_risk(response: str, sources: List[Dict]) -> Dict[str, Any]:
+    """Evaluate hallucination risk and return directives for response handling."""
+    try:
+        actions = MedicalSafetyActions()
+        check = await actions.medical_hallucination_check(response=response, sources=sources)
+        if not check:
+            return {"block": False, "message": response, "notice": None, "metadata": {}}
+
+        severity = str(check.get("severity", "")).lower()
+        if check.get("detected") and severity == "high":
+            return {"block": True, "message": response, "notice": "high", "metadata": check}
+
+        message = response
+        notice_text = None
+        if check.get("detected"):
+            notice_text = (
+                "⚠️ **Verification Note:** Some claims in this response may require additional verification. "
+                "Please cross-reference with original sources."
+            )
+            message = f"{response}\n\n{notice_text}"
+
+        return {"block": False, "message": message, "notice": notice_text, "metadata": check}
+    except Exception as exc:
+        logger.error(f"Error evaluating hallucination risk: {exc}")
+        return {"block": False, "message": response, "notice": None, "metadata": {"error": str(exc)}}
+
+
+async def evaluate_fact_check_result(response: str, sources: List[Dict]) -> Dict[str, Any]:
+    """Assess fact-check support and construct updated messaging when needed."""
+    try:
+        fact_check = await validate_against_pubmed_sources(claims=response, sources=sources)
+        notice_parts: List[str] = []
+        message = response
+
+        if fact_check.get("support_ratio", 1.0) < 0.5:
+            notice_parts.append(
+                "⚠️ **Source Verification:** Claims may not be fully supported by the provided sources. Please verify with additional literature."
+            )
+
+        if fact_check.get("sources_count", len(sources)) < 2:
+            notice_parts.append(
+                "📝 **Limited Sources:** This analysis is based on limited sources. Consider reviewing additional literature."
+            )
+
+        if notice_parts:
+            message = f"{response}\n\n" + "\n\n".join(notice_parts)
+
+        return {"message": message, "notice": bool(notice_parts), "metadata": fact_check}
+    except Exception as exc:
+        logger.error(f"Error evaluating fact check result: {exc}")
+        return {"message": response, "notice": False, "metadata": {"error": str(exc)}}
+
+
+async def evaluate_regulatory_compliance_flow(response: str) -> Dict[str, Any]:
+    """Evaluate regulatory compliance and generate remediation guidance."""
+    try:
+        compliance = await assess_regulatory_compliance(response=response)
+        if not compliance:
+            return {"block": False, "message": response, "metadata": {}}
+
+        lower_response = response.lower()
+        if any(term in lower_response for term in ["guaranteed cure", "miracle drug"]):
+            return {"block": True, "message": response, "metadata": compliance}
+
+        message = response
+        violations = compliance.get("violations", [])
+        if violations:
+            regulatory_notice = (
+                "⚠️ **Regulatory Note:** This information is for research purposes and does not constitute medical advice."
+            )
+            if regulatory_notice.lower() not in message.lower():
+                message = f"{message}\n\n{regulatory_notice}"
+
+        if any(term in lower_response for term in ["efficacy", "effectiveness"]):
+            disclaimer = (
+                "📋 **Regulatory Note:** Efficacy claims are based on published research and may not reflect FDA/EMA approved indications."
+            )
+            if disclaimer.lower() not in message.lower():
+                message = f"{message}\n\n{disclaimer}"
+
+        return {"block": False, "message": message, "metadata": compliance}
+    except Exception as exc:
+        logger.error(f"Error evaluating regulatory compliance: {exc}")
+        return {"block": False, "message": response, "metadata": {"error": str(exc)}}
+
+
+async def filter_sensitive_response_content(response: str) -> Dict[str, Any]:
+    """Filter sensitive medical content and detect disallowed advice patterns."""
+    try:
+        filtered = await filter_sensitive_medical_info(response=response)
+        text = filtered or ""
+
+        risk_patterns = [
+            r"(?i)\byou\b.*(should take|must take|need to take|stop taking|increase your dose|decrease your dose)",
+            r"(?i)\b(i|we)\s+(recommend|advise)\s+(you|that you|taking|stopping)",
+            r"(?i)\byou\b.*(have|are suffering|diagnosis is|are diagnosed with)",
+            r"(?i)(your diagnosis|you likely have|you probably have|this indicates you)",
+        ]
+
+        for pattern in risk_patterns:
+            if re.search(pattern, text):
+                return {"block": True, "message": text, "reason": pattern}
+
+        return {"block": False, "message": text, "reason": None}
+    except Exception as exc:
+        logger.error(f"Error filtering sensitive response content: {exc}")
+        return {"block": False, "message": response, "reason": str(exc)}
+
+
+async def append_pharmaceutical_warnings_response(response: str) -> str:
+    """Append contextual pharmaceutical safety warnings when keywords are present."""
+    try:
+        additions: List[str] = []
+        lowered = response.lower()
+        if re.search(r"interaction|contraindicated|avoid.*combination", lowered):
+            additions.append(
+                "🚨 **Drug Interaction Warning:** This information is for research purposes. Clinical drug interaction decisions should involve healthcare professionals."
+            )
+        if re.search(r"adverse|side effect|toxicity|contraindication", lowered):
+            additions.append(
+                "⚠️ **Safety Information:** Adverse effect insights are based on clinical studies. Individual responses may vary; consult healthcare providers for concerns."
+            )
+        if re.search(r"metabolism|clearance|half-life|bioavailability", lowered):
+            additions.append(
+                "🧬 **Pharmacokinetic Note:** PK parameters may vary with genetics, age, disease state, and concomitant medications."
+            )
+        if not additions:
+            return response
+        return response + "\n\n" + "\n\n".join(additions)
+    except Exception as exc:
+        logger.error(f"Error appending pharmaceutical warnings: {exc}")
+        return response
+
+
+async def append_evidence_quality_summary(response: str, sources: List[Dict]) -> str:
+    """Append evidence quality summary based on assessed source levels."""
+    try:
+        levels = await assess_evidence_levels(sources=sources)
+        if not levels:
+            return response
+        parts: List[str] = ["📊 **Evidence Quality:**"]
+        if levels.get("high_quality", 0):
+            parts.append(f"High quality studies: {levels['high_quality']}")
+        if levels.get("moderate_quality", 0):
+            parts.append(f"Moderate quality studies: {levels['moderate_quality']}")
+        if levels.get("low_quality", 0):
+            parts.append(f"Lower quality studies: {levels['low_quality']}")
+        if len(parts) == 1:
+            return response
+        summary = " | ".join(parts)
+        return f"{response}\n\n{summary}"
+    except Exception as exc:
+        logger.error(f"Error appending evidence quality summary: {exc}")
+        return response
+
+
+async def ensure_citation_block(response: str, sources: List[Dict]) -> Dict[str, Any]:
+    """Ensure the response contains citations referencing provided sources."""
+    try:
+        citations_block_added = False
+        if not re.search(r"PMID|PubMed|doi|et al", response, re.IGNORECASE):
+            citation_list = await format_source_citations(sources=sources)
+            if citation_list:
+                response = f"{response}\n\n📚 **Sources:**\n{citation_list}"
+                citations_block_added = True
+
+        citation_validation = await validate_citations(response=response, sources=sources)
+        return {
+            "message": response,
+            "invalid_citations": citation_validation.get("invalid_citations", []),
+            "citations_added": citations_block_added,
+            "metadata": citation_validation,
+        }
+    except Exception as exc:
+        logger.error(f"Error ensuring citation block: {exc}")
+        return {"message": response, "invalid_citations": [], "citations_added": False, "metadata": {"error": str(exc)}}
+
+
+async def enhance_response_quality_format(response: str) -> str:
+    """Apply structured formatting helpers to improve medical response clarity."""
+    try:
+        enhanced = response
+        if re.search(r"(?i)mechanism of action|\bMOA\b", enhanced):
+            enhanced = await structure_moa_information(response=enhanced)
+        if re.search(r"(?i)(drug\s+interaction|\bDDI\b)", enhanced):
+            enhanced = await structure_interaction_information(response=enhanced)
+        if re.search(r"(?i)pharmacokinetic|clearance|half-life|bioavailability|cmax|auc", enhanced):
+            enhanced = await structure_pk_information(response=enhanced)
+        return enhanced
+    except Exception as exc:
+        logger.error(f"Error enhancing response quality: {exc}")
+        return response
+
+
 # Helper functions for medical query classification
 async def classify_medical_query_type(query: str) -> str:
     """
@@ -1221,6 +1415,44 @@ async def request_additional_sources() -> None:
         logger.error(f"Error requesting additional sources: {str(e)}")
 
 
+async def process_pubmed_sources(sources: List[Dict]) -> Dict[str, Any]:
+    """Run authenticity screening on retrieved sources and filter suspicious entries."""
+    if not sources:
+        return {
+            "filtered_sources": [],
+            "suspicious_sources": [],
+            "issues": ["No sources provided"],
+            "authentic_summary": {},
+            "insufficient_valid": True,
+        }
+
+    authenticity = await validate_source_authenticity(sources)
+    details = authenticity.get("details") or []
+    filtered_sources: List[Dict[str, Any]] = []
+    suspicious_sources: List[Dict[str, Any]] = []
+
+    for idx, source in enumerate(sources):
+        detail = details[idx] if idx < len(details) else {}
+        if detail.get("authentic"):
+            filtered_sources.append(source)
+        else:
+            suspicious_sources.append({
+                "source": source,
+                "reasons": detail.get("reasons", []),
+                "title": detail.get("title"),
+            })
+
+    insufficient_valid = len(filtered_sources) < 2
+
+    return {
+        "filtered_sources": filtered_sources,
+        "suspicious_sources": suspicious_sources,
+        "issues": authenticity.get("issues", []),
+        "authentic_summary": authenticity,
+        "insufficient_valid": insufficient_valid,
+    }
+
+
 async def assess_pharmaceutical_relevance(source: Dict, query: str) -> Dict[str, Any]:
     """Assess pharmaceutical relevance of a source to the query using weighted heuristics."""
     try:
@@ -1279,6 +1511,58 @@ async def assess_pharmaceutical_relevance(source: Dict, query: str) -> Dict[str,
         return {'score': 0, 'medical_context': False, 'matches': 0, 'total_terms': 0, 'missing_terms': [], 'error': str(e)}
 
 
+async def filter_pharmaceutical_relevance_batch(sources: List[Dict], query: str) -> Dict[str, Any]:
+    """Filter sources by pharmaceutical relevance using asynchronous relevance scoring."""
+    if not sources:
+        return {
+            "filtered_sources": [],
+            "warnings": ["No sources available for relevance filtering"],
+            "high_relevance_count": 0,
+        }
+
+    filtered_sources: List[Dict[str, Any]] = []
+    warnings: List[str] = []
+    high_relevance_count = 0
+
+    for source in sources:
+        relevance = await assess_pharmaceutical_relevance(source, query)
+        score = relevance.get("score", 0.0)
+        medical_context = relevance.get("medical_context", False)
+
+        if score < 0.6 and not medical_context:
+            continue
+
+        if score < 0.6:
+            warnings.append(
+                f"Source '{source.get('metadata', {}).get('title', 'Unknown source')}' has low relevance score {score}",
+            )
+
+        enriched_source = dict(source)
+        metadata = dict(enriched_source.get("metadata", {}))
+        metadata["relevance_score"] = score
+        metadata["medical_context"] = medical_context
+        metadata["query_matches"] = relevance.get("matches", 0)
+        metadata["missing_terms"] = relevance.get("missing_terms", [])
+        enriched_source["metadata"] = metadata
+
+        indicators = await identify_pharmaceutical_indicators(enriched_source)
+        metadata["pharmaceutical_focus"] = indicators
+
+        if score >= 0.8:
+            high_relevance_count += 1
+
+        filtered_sources.append(enriched_source)
+
+    if not filtered_sources:
+        warnings.append("All sources were filtered out due to low pharmaceutical relevance")
+
+    return {
+        "filtered_sources": filtered_sources,
+        "warnings": warnings,
+        "high_relevance_count": high_relevance_count,
+    }
+
+
 async def identify_pharmaceutical_indicators(source: Dict) -> List[str]:
     """Identify pharmaceutical indicators in a source."""
     try:
@@ -1328,6 +1612,54 @@ async def calculate_title_similarity(title1: str, title2: str) -> float:
     except Exception as e:
         logger.error(f"Error calculating title similarity: {str(e)}")
         return 0.0
+
+
+async def remove_duplicate_sources_batch(sources: List[Dict]) -> Dict[str, Any]:
+    """Remove duplicate sources using PMID and title similarity heuristics."""
+    if not sources:
+        return {
+            "unique_sources": [],
+            "duplicates_removed": 0,
+            "message": "No sources available for duplicate removal",
+        }
+
+    unique_sources: List[Dict[str, Any]] = []
+    seen_pmids: Set[str] = set()
+    processed_titles: List[str] = []
+
+    for source in sources:
+        metadata = source.get("metadata", {})
+        pmid = str(metadata.get("pmid", "")).strip()
+
+        if pmid and pmid in seen_pmids:
+            continue
+
+        title = str(metadata.get("title", "")).lower()
+        is_duplicate_title = False
+        for processed_title in processed_titles:
+            similarity = await calculate_title_similarity(title, processed_title)
+            if similarity > 0.9:
+                is_duplicate_title = True
+                break
+
+        if is_duplicate_title:
+            continue
+
+        unique_sources.append(source)
+        if pmid:
+            seen_pmids.add(pmid)
+        processed_titles.append(title)
+
+    duplicates_removed = len(sources) - len(unique_sources)
+    message = "No duplicate sources detected"
+    if duplicates_removed > 0:
+        message = f"Removed {duplicates_removed} duplicate sources"
+
+    return {
+        "unique_sources": unique_sources,
+        "duplicates_removed": duplicates_removed,
+        "message": message,
+    }
 
 
 async def assess_journal_quality(journal: str) -> Dict[str, Any]:
@@ -1401,6 +1733,54 @@ async def calculate_quality_distribution(sources: List[Dict]) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error calculating quality distribution: {str(e)}")
         return {'high_quality_ratio': 0, 'moderate_quality_ratio': 0, 'low_quality_ratio': 0}
+
+
+async def enrich_sources_with_quality(sources: List[Dict]) -> Dict[str, Any]:
+    """Annotate sources with journal quality metadata and return enriched ordering."""
+    if not sources:
+        return {
+            "enriched_sources": [],
+            "quality_distribution": {},
+            "low_quality_warning": False,
+        }
+
+    enriched_sources: List[Dict[str, Any]] = []
+    for source in sources:
+        metadata = dict(source.get("metadata", {}))
+        journal = metadata.get("journal", "")
+        assessment = await assess_journal_quality(journal)
+
+        metadata.update({
+            "journal_quality": assessment.get("quality_tier"),
+            "impact_factor": assessment.get("impact_factor"),
+            "journal_reputation": assessment.get("reputation_score"),
+        })
+
+        quality_flag = "HIGH_QUALITY" if assessment.get("quality_tier") == "high" else "STANDARD"
+        if assessment.get("predatory_indicator"):
+            quality_flag = "LOW_QUALITY"
+        metadata["quality_flag"] = quality_flag
+
+        enriched_source = dict(source)
+        enriched_source["metadata"] = metadata
+
+        if quality_flag == "LOW_QUALITY":
+            enriched_source = await append_source_warning(
+                source=enriched_source,
+                warning="Potential predatory journal",
+            ) or enriched_source
+
+        enriched_sources.append(enriched_source)
+
+    sorted_sources = await sort_sources_by_quality(sources=enriched_sources) or enriched_sources
+    quality_distribution = await calculate_quality_distribution(sorted_sources)
+    low_quality_warning = quality_distribution.get("high_quality_ratio", 0) < 0.3
+
+    return {
+        "enriched_sources": sorted_sources,
+        "quality_distribution": quality_distribution,
+        "low_quality_warning": low_quality_warning,
+    }
 
 
 async def get_medical_journal_database() -> List[str]:
@@ -1873,6 +2253,18 @@ def init(app):
             ("assess_medical_toxicity", assess_medical_toxicity),
             ("validate_against_pubmed_sources", validate_against_pubmed_sources),
             ("assess_regulatory_compliance", assess_regulatory_compliance),
+            ("process_pubmed_sources", process_pubmed_sources),
+            ("filter_pharmaceutical_relevance_batch", filter_pharmaceutical_relevance_batch),
+            ("remove_duplicate_sources_batch", remove_duplicate_sources_batch),
+            ("enrich_sources_with_quality", enrich_sources_with_quality),
+            ("evaluate_hallucination_risk", evaluate_hallucination_risk),
+            ("evaluate_fact_check_result", evaluate_fact_check_result),
+            ("evaluate_regulatory_compliance_flow", evaluate_regulatory_compliance_flow),
+            ("filter_sensitive_response_content", filter_sensitive_response_content),
+            ("append_pharmaceutical_warnings_response", append_pharmaceutical_warnings_response),
+            ("append_evidence_quality_summary", append_evidence_quality_summary),
+            ("ensure_citation_block", ensure_citation_block),
+            ("enhance_response_quality_format", enhance_response_quality_format),
 
             # Additional missing actions
             ("classify_medical_response_type", classify_medical_response_type),

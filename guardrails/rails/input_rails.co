@@ -1,81 +1,66 @@
 # Input validation rails for medical query safety
-# Comprehensive input validation for pharmaceutical research AI
+# Simplified flows compatible with latest Colang parser.
 
 define flow medical input validation
   """
-  Main input validation flow for medical queries.
-  Validates medical context and adds safety context when required.
+  Validate medical context and record disclaimer requirements.
   """
   if $user_message
     $medical_context = execute check_medical_context(query=$user_message)
-
     if $medical_context.valid == False
       bot refuse invalid medical context
       stop
-
     if $medical_context.disclaimer_required == True
-      $required_disclaimer = execute get_medical_disclaimer(context_type=$medical_context.context_type)
       bot inform "This response will include appropriate medical disclaimers as this appears to be a medical information request."
 
-    # Store safety context in dedicated variable instead of appending to user message
-    $safety_context = "[MEDICAL_SAFETY_CONTEXT: pharmaceutical_research]"
 
 define flow check jailbreak attempts
   """
-  Detect and block medical-specific jailbreak attempts.
-  Uses comprehensive pattern matching for medical AI bypass attempts.
+  Detect and block medical jailbreak attempts.
   """
   if $user_message
     $jailbreak_detected = execute detect_medical_jailbreak(query=$user_message)
-
     if $jailbreak_detected == True
       bot refuse jailbreak attempt
       stop
 
+
 define flow pii detection and masking
   """
   Detect and mask personally identifiable health information (PHI/PII).
-  Comprehensive healthcare identifier protection.
   """
   if $user_message
     $pii_scan = execute scan_medical_pii(text=$user_message)
-
     if $pii_scan.detected == True
-      $masked_text = execute mask_medical_pii(text=$user_message, detected_pii=$pii_scan.types)
-      $user_message = $masked_text
+      $user_message = execute mask_medical_pii(text=$user_message, detected_pii=$pii_scan.types)
       bot inform "Personal health information has been detected and masked for privacy protection."
+
 
 define flow pharmaceutical context validation
   """
   Ensure queries are within pharmaceutical research scope.
-  Validates research context and rejects inappropriate medical advice requests.
   """
   if $user_message
     $pharma_context = execute validate_pharmaceutical_context(query=$user_message)
-
     if $pharma_context.valid == False
       bot refuse non pharmaceutical context
       stop
-
     if $pharma_context.research_focused == False
       bot warn "This query appears to be seeking medical advice. I can only provide research-based pharmaceutical information."
 
+
 define flow toxicity screening
   """
-  Screen for harmful medical requests including self-harm indicators.
-  Multi-level toxicity detection with appropriate escalation.
+  Screen for potentially harmful medical requests.
   """
   if $user_message
     $toxicity_score = execute assess_medical_toxicity(text=$user_message)
-
     if $toxicity_score > 0.8
       bot refuse high toxicity
       stop
-    elif $toxicity_score > 0.5
+    if $toxicity_score <= 0.8 and $toxicity_score > 0.5
       bot warn moderate toxicity
-      $safety_context = $safety_context + "\n[SAFETY_FLAG: moderate_toxicity_detected]"
 
-# Bot response definitions for input violations
 
 define bot refuse invalid medical context
   "I can only assist with pharmaceutical research questions based on published scientific literature. I cannot provide personal medical advice, diagnoses, or treatment recommendations. Please consult a healthcare professional for medical concerns."
@@ -90,133 +75,12 @@ define bot refuse high toxicity
   "I cannot assist with requests that may be harmful. If you're experiencing a medical emergency, please contact emergency services immediately. For mental health support, please contact a crisis helpline or mental health professional."
 
 define bot warn moderate toxicity
-  "I notice your query contains concerning content. Please ensure you're seeking research information only. For medical concerns, please consult healthcare professionals."
+  "⚠️ I noticed potentially concerning content. Please ensure you're seeking research information only. For medical concerns, consult healthcare professionals."
+
 
 define bot inform $message
   $message
 
+
 define bot warn $message
   "⚠️ " + $message
-
-# Exception handling for medical safety
-
-define flow handle medical safety exception
-  """
-  Handle exceptions in medical safety validation.
-  Ensures fail-safe behavior for safety-critical operations.
-  """
-  if exception occurred
-    bot refuse safety exception
-    stop
-
-define bot refuse safety exception
-  "A safety validation error occurred. For your protection, I cannot process this request. Please try rephrasing your query or contact support if this persists."
-
-# Medical query classification helpers
-
-define subflow classify medical query type
-  """
-  Classify the type of medical query for appropriate handling.
-  """
-  if "drug interaction" in $user_message or "DDI" in $user_message
-    return "drug_interactions"
-  elif "pharmacokinetics" in $user_message or "PK" in $user_message or "ADME" in $user_message
-    return "pharmacokinetics"
-  elif "clinical trial" in $user_message or "study" in $user_message or "research" in $user_message
-    return "clinical_research"
-  elif "side effects" in $user_message or "adverse" in $user_message or "safety" in $user_message
-    return "safety_information"
-  elif "mechanism" in $user_message or "MOA" in $user_message or "target" in $user_message
-    return "mechanism_of_action"
-  else
-    return "general_pharmaceutical"
-
-# Advanced PII patterns for healthcare
-
-define subflow detect healthcare identifiers
-  """
-  Detect specific healthcare identifiers that require masking.
-  """
-  # Medical record numbers
-  if regex_match($user_message, r"\b(?:MRN|medical record|patient id)[:\s]*\d{6,12}\b")
-    return True
-
-  # Patient names in medical context
-  if regex_match($user_message, r"\bpatient\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b")
-    return True
-
-  # Dates of birth
-  if regex_match($user_message, r"\b(?:DOB|date of birth)[:\s]*\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b")
-    return True
-
-  # Social security numbers
-  if regex_match($user_message, r"\b\d{3}-?\d{2}-?\d{4}\b")
-    return True
-
-  return False
-
-# Medical jailbreak pattern detection
-
-define subflow detect medical jailbreaks
-  """
-  Comprehensive medical jailbreak pattern detection.
-  """
-  # Direct bypass attempts
-  if regex_match($user_message, r"ignore.*medical.*guidelines")
-    return True
-  if regex_match($user_message, r"bypass.*safety.*protocols")
-    return True
-  if regex_match($user_message, r"pretend.*not.*medical.*ai")
-    return True
-
-  # Role-playing attempts
-  if regex_match($user_message, r"act.*as.*doctor")
-    return True
-  if regex_match($user_message, r"roleplay.*physician")
-    return True
-  if regex_match($user_message, r"pretend.*you.*are.*medical")
-    return True
-
-  # Direct medical advice requests
-  if regex_match($user_message, r"diagnose.*patient")
-    return True
-  if regex_match($user_message, r"recommend.*treatment.*for")
-    return True
-  if regex_match($user_message, r"prescribe.*medication")
-    return True
-  if regex_match($user_message, r"what.*should.*i.*take.*for")
-    return True
-
-  return False
-
-# Pharmaceutical research validation
-
-define subflow validate research context
-  """
-  Validate that queries are focused on legitimate pharmaceutical research.
-  """
-  # Positive indicators
-  $research_indicators = ["literature review", "clinical trial", "pharmacokinetics",
-                         "drug interaction", "mechanism of action", "adverse effects",
-                         "systematic review", "meta-analysis", "PubMed", "research"]
-
-  $has_research_context = False
-  for $indicator in $research_indicators
-    if $indicator in $user_message.lower()
-      $has_research_context = True
-      break
-
-  # Negative indicators
-  $advice_indicators = ["diagnose me", "what should I take", "medical advice",
-                       "treat my", "cure for", "am I having", "symptoms mean"]
-
-  $seeks_medical_advice = False
-  for $indicator in $advice_indicators
-    if $indicator in $user_message.lower()
-      $seeks_medical_advice = True
-      break
-
-  if $has_research_context and not $seeks_medical_advice
-    return True
-  else
-    return False

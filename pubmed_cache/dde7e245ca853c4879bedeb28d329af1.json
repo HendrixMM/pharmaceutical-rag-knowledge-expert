@@ -1,0 +1,276 @@
+[
+  {
+    "pmid": "39753753",
+    "year": "2025",
+    "authors": "Francoeur AA, Monk BJ, Tewari KS.",
+    "abstract": "Novel treatments and practice-changing research have improved cervical cancer outcomes over the past few decades. In this Review, we discuss clinical trials that have refined or redefined the treatment of cervical cancers across the early stage, locall …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/39753753/",
+    "article_id": "39753753",
+    "journal": "Nat Rev Clin Oncol",
+    "tags": [
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Treatment advances across the cervical cancer spectrum.",
+    "citation_short": "Nat Rev Clin Oncol. 2025.",
+    "citation_full": "Nat Rev Clin Oncol. 2025 Mar;22(3):182-199. doi: 10.1038/s41571-024-00977-w. Epub 2025 Jan 3.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.6000000000000001
+  },
+  {
+    "pmid": "39125710",
+    "year": "2024",
+    "authors": "Paleari L.",
+    "abstract": "The intention of this Special Issue is to highlight research that aims to recognize cancer's complexity to better prevent or treat its occurrence [...]....",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/39125710/",
+    "article_id": "39125710",
+    "journal": "Int J Mol Sci",
+    "tags": [
+      "Free PMC article."
+    ],
+    "mesh_terms": [],
+    "title": "Personalized Assessment for Cancer Prevention, Detection, and Treatment.",
+    "citation_short": "Int J Mol Sci. 2024.",
+    "citation_full": "Int J Mol Sci. 2024 Jul 26;25(15):8140. doi: 10.3390/ijms25158140.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.5900000000000001
+  },
+  {
+    "pmid": "37828275",
+    "year": "2023",
+    "authors": "Kaur R, Bhardwaj A, Gupta S.",
+    "abstract": "As far as health issues are concerned, cancer causes one out of every six deaths around the globe. As potent therapeutics are still awaited for the successful treatment of cancer, some unconventional treatments like radiotherapy, surgery, and ch …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/37828275/",
+    "article_id": "37828275",
+    "journal": "Mol Biol Rep",
+    "tags": [
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Cancer treatment therapies: traditional to modern approaches to combat cancers.",
+    "citation_short": "Mol Biol Rep. 2023.",
+    "citation_full": "Mol Biol Rep. 2023 Nov;50(11):9663-9676. doi: 10.1007/s11033-023-08809-3. Epub 2023 Oct 12.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.5800000000000001
+  },
+  {
+    "pmid": "35362092",
+    "year": "2022",
+    "authors": "Gadaleta E, Thorn GJ, Ross-Adams H, Jones LJ, Chelala C.",
+    "abstract": "Although breast cancer is one of the most studied cancers, patients still recur at a rate of up to 15% within the first 10 years post-surgery. ...However, the spectrum of inter-patient variability of normal breast tissue may obfuscate recognition of a cancerized …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35362092/",
+    "article_id": "35362092",
+    "journal": "J Pathol",
+    "tags": [
+      "Free PMC article.",
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Field cancerization in breast cancer.",
+    "citation_short": "J Pathol. 2022.",
+    "citation_full": "J Pathol. 2022 Jul;257(4):561-574. doi: 10.1002/path.5902. Epub 2022 May 3.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.5700000000000001
+  },
+  {
+    "pmid": "34218784",
+    "year": "2021",
+    "authors": "Nasir A, Khan A, Li J, Naeem M, Khalil AAK, Khan K, Qasim M.",
+    "abstract": "In particular, the applications of nanoparticles for treatment and diagnostics of cancer reached such a precision that it can detect a single cancer cell and target it to deliver a payload for the treatment of that cancerous cell. Conventional …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/34218784/",
+    "article_id": "34218784",
+    "journal": "Curr Top Med Chem",
+    "tags": [
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Nanotechnology, A Tool for Diagnostics and Treatment of Cancer.",
+    "citation_short": "Curr Top Med Chem. 2021.",
+    "citation_full": "Curr Top Med Chem. 2021;21(15):1360-1376. doi: 10.2174/1568026621666210701144124.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.56
+  },
+  {
+    "pmid": "33282961",
+    "year": "2020",
+    "authors": "Igarashi Y, Sasada T.",
+    "abstract": "These treatments can cure cancer at earlier stages but are frequently ineffective for treating cancer in the advanced or recurrent stages. ...Cancer immunotherapies have been proposed as the fourth cancer treatment. In particular, clinica …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/33282961/",
+    "article_id": "33282961",
+    "journal": "J Immunol Res",
+    "tags": [
+      "Free PMC article.",
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Cancer Vaccines: Toward the Next Breakthrough in Cancer Immunotherapy.",
+    "citation_short": "J Immunol Res. 2020.",
+    "citation_full": "J Immunol Res. 2020 Nov 17;2020:5825401. doi: 10.1155/2020/5825401. eCollection 2020.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.55
+  },
+  {
+    "pmid": "29949179",
+    "year": "2018",
+    "authors": "Wang JJ, Lei KF, Han F.",
+    "abstract": "This is a review regarding different types of cancer treatments. We aimed at analyzing the tumor microenvironment and the recent trends for the therapeutic applications and effectiveness for several kinds of cancers. ...The tumor microenvironment describes th …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/29949179/",
+    "article_id": "29949179",
+    "journal": "Eur Rev Med Pharmacol Sci",
+    "tags": [
+      "Free article.",
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Tumor microenvironment: recent advances in various cancer treatments.",
+    "citation_short": "Eur Rev Med Pharmacol Sci. 2018.",
+    "citation_full": "Eur Rev Med Pharmacol Sci. 2018 Jun;22(12):3855-3864. doi: 10.26355/eurrev_201806_15270.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.53
+  },
+  {
+    "pmid": "30031797",
+    "year": "2018",
+    "authors": "Lee YT, Tan YJ, Oon CE.",
+    "abstract": "Many molecular targeted therapies approved by the Food and Drug Administration (FDA), have demonstrated remarkable clinical success in the treatment of a myriad of cancer types including breast, leukemia, colorectal, lung, and ovarian cancers. This review pro …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/30031797/",
+    "article_id": "30031797",
+    "journal": "Eur J Pharmacol",
+    "tags": [
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Molecular targeted therapy: Treating cancer with specificity.",
+    "citation_short": "Eur J Pharmacol. 2018.",
+    "citation_full": "Eur J Pharmacol. 2018 Sep 5;834:188-196. doi: 10.1016/j.ejphar.2018.07.034. Epub 2018 Jul 20.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.53
+  },
+  {
+    "pmid": "28574057",
+    "year": "2017",
+    "authors": "Zaimy MA, Saffarzadeh N, Mohammadi A, Pourghadamyari H, Izadi P, Sarli A, Moghaddam LK, Paschepari SR, Azizi H, Torkamandi S, Tavakkoly-Bazzaz J.",
+    "abstract": "Current cancer treatments include surgical intervention, radiation, and taking chemotherapeutic drugs, which often kill the healthy cells and result in toxicity in patients. Therefore, researchers are looking for ways to be able to eliminate just cancerous ce …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/28574057/",
+    "article_id": "28574057",
+    "journal": "Cancer Gene Ther",
+    "tags": [
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "New methods in the diagnosis of cancer and gene therapy of cancer based on nanoparticles.",
+    "citation_short": "Cancer Gene Ther. 2017.",
+    "citation_full": "Cancer Gene Ther. 2017 Jun;24(6):233-243. doi: 10.1038/cgt.2017.16. Epub 2017 Jun 2.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.52
+  },
+  {
+    "pmid": "16988102",
+    "year": "2006",
+    "authors": "Cross D, Burmester JK.",
+    "abstract": "The broad field of gene therapy promises a number of innovative treatments that are likely to become important in preventing deaths from cancer. ...Oncolytic virotherapy, which uses viral particles that replicate within the cancer cell to cause cell de …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/16988102/",
+    "article_id": "16988102",
+    "journal": "Clin Med Res",
+    "tags": [
+      "Free PMC article.",
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Gene therapy for cancer treatment: past, present and future.",
+    "citation_short": "Clin Med Res. 2006.",
+    "citation_full": "Clin Med Res. 2006 Sep;4(3):218-27. doi: 10.3121/cmr.4.3.218.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.41000000000000003
+  }
+]

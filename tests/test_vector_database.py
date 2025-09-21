@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 from src.vector_database import VectorDatabase
 
@@ -74,3 +74,113 @@ def test_iter_documents_uses_docstore_search_when_dict_missing(tmp_path):
     docs = db._iter_documents()
 
     assert docs == [document]
+
+
+def test_get_pharmaceutical_stats_includes_ratios(tmp_path, monkeypatch):
+    db = VectorDatabase(DummyEmbeddings(), db_path=str(tmp_path / "db_stats"))
+    db.vectorstore = object()
+
+    doc1 = Document(
+        page_content="Study about ketoconazole",
+        metadata={
+            "drug_names": ["Ketoconazole"],
+            "therapeutic_areas": ["hepatology"],
+            "species": ["Human"],
+            "cyp_enzymes": ["CYP3A4"],
+            "ranking_score": 0.75,
+            "pharmaceutical_enriched": True,
+        },
+    )
+    doc2 = Document(
+        page_content="Unannotated study",
+        metadata={},
+    )
+
+    monkeypatch.setattr(db, "_iter_documents", lambda: [doc1, doc2])
+
+    stats = db.get_pharmaceutical_stats()
+    assert stats["documents_indexed"] == 2
+    assert stats["drug_annotation_ratio"] == 0.5
+    assert stats["pharma_metadata_ratio"] == 0.5
+    ranking_stats = stats["ranking_score"]
+    assert ranking_stats["average"] == 0.75
+    assert ranking_stats["median"] == 0.75
+    assert ranking_stats["count"] == 1
+
+
+def test_pharma_filters_support_species_alias_and_enriched(tmp_path):
+    db = VectorDatabase(DummyEmbeddings(), db_path=str(tmp_path / "db_filters"))
+    doc = Document(
+        page_content="",
+        metadata={
+            "species": ["Human"],
+            "pharmaceutical_enriched": True,
+            "cyp_enzymes": ["CYP3A4"],
+        },
+    )
+
+    matched = db._apply_pharmaceutical_filters(
+        [doc],
+        {
+            "species": ["human"],
+            "pharmaceutical_enriched": True,
+            "cyp_enzymes": ["cyp3a4"],
+        },
+    )
+
+    assert matched == [doc]
+
+
+def test_species_filter_excludes_unknown_by_default(tmp_path):
+    db = VectorDatabase(DummyEmbeddings(), db_path=str(tmp_path / "db_species"))
+    db._resolve_species = lambda _metadata, _mesh: None
+
+    metadata = {"species": []}
+    filters = {"species_preference": ["human"]}
+
+    assert db._document_matches_pharma_filters(metadata, filters) is False
+
+    filters_allow_unknown = {"species_preference": ["human"], "include_unknown_species": True}
+    assert db._document_matches_pharma_filters(metadata, filters_allow_unknown) is True
+
+
+def test_species_default_configuration_includes_unknown(tmp_path):
+    db = VectorDatabase(
+        DummyEmbeddings(),
+        db_path=str(tmp_path / "db_species_config"),
+        species_unknown_default=True,
+    )
+    metadata = {"species": []}
+    filters = {"species_preference": ["human"]}
+
+    assert db._document_matches_pharma_filters(metadata, filters) is True
+
+
+def test_search_by_drug_name_uses_generous_oversample(tmp_path):
+    db = VectorDatabase(DummyEmbeddings(), db_path=str(tmp_path / "db_search"))
+    calls = {}
+
+    def fake_search(query, *, k, filters, oversample):
+        calls["params"] = {
+            "query": query,
+            "k": k,
+            "filters": filters,
+            "oversample": oversample,
+        }
+        return []
+
+    db.similarity_search_with_pharmaceutical_filters = fake_search  # type: ignore[assignment]
+
+    db.search_by_drug_name("ketoconazole", k=3)
+    assert calls["params"]["filters"] == {"drug_names": ["ketoconazole"]}
+    assert calls["params"]["oversample"] >= 5
+
+
+def test_drug_filtering_uses_normalized_storage(tmp_path):
+    db = VectorDatabase(DummyEmbeddings(), db_path=str(tmp_path / "db_drug_filter"))
+    doc = Document(page_content="", metadata={"drug_names": "Ketoconazole"})
+    ensured = db._ensure_document_metadata(doc)
+    metadata = ensured.metadata
+    filters = {"drug_names": ["ketoconazole"]}
+
+    assert db._document_matches_pharma_filters(metadata, filters) is True

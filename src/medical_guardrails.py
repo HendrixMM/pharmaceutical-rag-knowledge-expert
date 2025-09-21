@@ -16,8 +16,27 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# Check if medical guardrails are enabled via environment variable
-ENABLE_MEDICAL_GUARDRAILS = os.getenv("ENABLE_MEDICAL_GUARDRAILS", "false").lower() == "true"
+_TRUTHY_VALUES = {"true", "1", "yes", "on"}
+_FALSEY_VALUES = {"false", "0", "no", "off"}
+
+
+def _env_flag(name: str, *, default: bool = True) -> bool:
+    """Return boolean flag from environment with sensible defaults."""
+
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+
+    value = raw.strip().lower()
+    if value in _TRUTHY_VALUES:
+        return True
+    if value in _FALSEY_VALUES:
+        return False
+    return default
+
+
+# Check if medical guardrails are enabled via environment variable (default: enabled)
+ENABLE_MEDICAL_GUARDRAILS = _env_flag("ENABLE_MEDICAL_GUARDRAILS", default=True)
 
 # Optional Presidio imports for advanced PII/PHI detection
 PRESIDIO_AVAILABLE = False
@@ -35,17 +54,43 @@ except ImportError:
 
 # Optional NeMo Guardrails imports
 NEMO_GUARDRAILS_AVAILABLE = False
+_NEMO_IMPORT_ERROR = None
 if ENABLE_MEDICAL_GUARDRAILS:
     try:
         from nemoguardrails import LLMRails, RailsConfig
         NEMO_GUARDRAILS_AVAILABLE = True
-    except ImportError:
+    except ImportError as e:
+        _NEMO_IMPORT_ERROR = e
         logger.info("NeMo Guardrails not available - using lightweight validators only")
         LLMRails = None
         RailsConfig = None
 else:
     logger.info("Medical guardrails disabled via ENABLE_MEDICAL_GUARDRAILS environment variable")
     logger.info("Using lightweight validators only - skipping heavy medical dependencies")
+
+try:
+    from langchain_core.language_models.llms import LLM as _LangChainLLM
+except ImportError:  # pragma: no cover - optional dependency
+    _LangChainLLM = None
+
+
+class _GuardrailsNullLLM(_LangChainLLM if _LangChainLLM is not None else object):
+    """Minimal LLM stub that satisfies NeMo Guardrails when real providers are unavailable."""
+
+    def __init__(self) -> None:  # pragma: no cover - trivial initializer
+        if hasattr(super(), "__init__"):
+            super().__init__()
+
+    @property
+    def _llm_type(self) -> str:  # pragma: no cover - simple metadata
+        return "guardrails-dummy"
+
+    @property
+    def _identifying_params(self) -> Dict[str, Any]:  # pragma: no cover - simple metadata
+        return {"provider": "dummy"}
+
+    def _call(self, prompt: str, stop: Optional[List[str]] = None, run_manager: Any = None, **kwargs: Any) -> str:
+        return ""
 
 
 @dataclass
@@ -124,9 +169,26 @@ class MedicalGuardrails:
             logger.info("Using lightweight validators only - skipping heavy medical dependencies")
 
         # Add runtime check/log for missing medical dependencies
-        if self.enabled and not PRESIDIO_AVAILABLE:
-            logger.warning("Medical guardrails enabled but Presidio/spaCy unavailable for advanced PII/PHI detection")
-            logger.warning("For full medical safety features, install with: pip install -r requirements-medical.txt")
+        if self.enabled:
+            missing_deps = []
+            if not PRESIDIO_AVAILABLE:
+                missing_deps.append("presidio-analyzer, presidio-anonymizer")
+            if not NEMO_GUARDRAILS_AVAILABLE:
+                missing_deps.append("nemoguardrails")
+
+            if missing_deps:
+                missing_str = ", ".join(missing_deps)
+                error_msg = (
+                    f"Medical guardrails enabled (ENABLE_MEDICAL_GUARDRAILS=true) but required dependencies are missing: {missing_str}. "
+                    f"Install with: pip install -r requirements-medical.txt"
+                )
+                if len(missing_deps) > 1 or not NEMO_GUARDRAILS_AVAILABLE:
+                    # Critical dependencies missing - raise error
+                    raise ImportError(error_msg)
+                else:
+                    # Only Presidio missing - log warning but continue
+                    logger.warning(error_msg)
+                    logger.warning("Falling back to regex-based PII/PHI detection")
 
         # Medical context patterns
         self.medical_patterns = {
@@ -180,7 +242,8 @@ class MedicalGuardrails:
             "dates": [
                 r"\b\d{1,2}/\d{1,2}/\d{2,4}\b",
                 r"\b\d{1,2}-\d{1,2}-\d{2,4}\b",
-                r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{2,4}\b"
+                r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{2,4}\b",
+                r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{2,4}\b",
             ],
         }
         self.pii_mask_flags = {
@@ -268,8 +331,16 @@ class MedicalGuardrails:
                 return
 
             # Initialize NeMo Guardrails
-            config = RailsConfig.from_path(guardrails_root)
-            self.nemo_rails = LLMRails(config)
+            config = RailsConfig.from_path(str(guardrails_root))
+            try:
+                self.nemo_rails = LLMRails(config)
+            except Exception as model_error:  # pragma: no cover - fallback for missing providers
+                logger.warning(
+                    "NeMo Guardrails model initialization failed (%s); using dummy LLM fallback.",
+                    model_error,
+                )
+                dummy_llm = _GuardrailsNullLLM() if _LangChainLLM is not None else None
+                self.nemo_rails = LLMRails(config, llm=dummy_llm)
 
             # Load and register actions
             actions_candidates = []
@@ -1202,6 +1273,7 @@ class MedicalGuardrails:
         """
         # If guardrails are disabled, return a simple pass-through result
         if not self.enabled:
+            source_list = list(sources or [])
             return {
                 "is_valid": True,
                 "severity": "low",
@@ -1211,13 +1283,14 @@ class MedicalGuardrails:
                 "metadata": {
                     "guardrails_enabled": False,
                     "note": "Medical guardrails are disabled",
-                    "response_length": len(response),
-                    "source_count": len(sources),
+                    "response_length": len(response or ""),
+                    "source_count": len(source_list),
                     "disclaimer_added": self._contains_medical_disclaimer(response),
                 }
             }
 
         try:
+            sources_list = list(sources) if sources else []
             validation_results = {
                 "is_valid": True,
                 "severity": "low",
@@ -1233,7 +1306,7 @@ class MedicalGuardrails:
                 "metadata": {
                     "timestamp": datetime.now().isoformat(),
                     "response_length": len(response),
-                    "source_count": len(sources),
+                    "source_count": len(sources_list),
                     "claim_validation": {"claims_assessed": 0, "notes": "Not evaluated"},
                     "disclaimer_added": self._contains_medical_disclaimer(response),
                 }
@@ -1250,7 +1323,7 @@ class MedicalGuardrails:
                 validation_results["recommendations"].extend(content_validation["recommendations"])
 
             # Validate sources against PubMed/medical literature
-            source_validation = self._validate_against_pubmed_sources(response, sources)
+            source_validation = self._validate_against_pubmed_sources(response, sources_list)
             validation_results["checks_performed"]["source_validation"] = True
 
             if not source_validation["sources_appropriate"]:
@@ -1262,8 +1335,8 @@ class MedicalGuardrails:
                 "claims_assessed": 0,
                 "notes": "Claim validation skipped"
             }
-            if sources:
-                claim_validation_summary = self._run_claim_level_checks(response, sources)
+            if sources_list:
+                claim_validation_summary = self._run_claim_level_checks(response, sources_list)
                 validation_results["checks_performed"]["claim_validation"] = bool(
                     claim_validation_summary.get("claims_assessed")
                 )

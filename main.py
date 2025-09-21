@@ -6,13 +6,14 @@ Provides CLI interface for interacting with the RAG agent
 import os
 import sys
 import time
+from typing import Any, Dict, Tuple
 from pathlib import Path
 from dotenv import load_dotenv
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
-from src.rag_agent import RAGAgent
+from src.enhanced_rag_agent import EnhancedRAGAgent
 from src.nvidia_embeddings import NVIDIAEmbeddings
 
 
@@ -44,10 +45,10 @@ def print_help():
     print()
 
 
-def print_stats(rag_agent: RAGAgent):
+def print_stats(agent: EnhancedRAGAgent):
     """Print knowledge base statistics"""
     print("\n📊 Knowledge Base Statistics:")
-    stats = rag_agent.get_knowledge_base_stats()
+    stats = agent.base_agent.get_knowledge_base_stats()
     
     for key, value in stats.items():
         if key == "status":
@@ -66,34 +67,71 @@ def print_stats(rag_agent: RAGAgent):
     print()
 
 
-def format_response(response):
-    """Format and display the RAG response"""
-    print(f"\n🤖 Answer:")
+def _normalise_source(source: Any) -> Tuple[Dict[str, Any], str]:
+    """Return metadata and text for Document or dict source entries."""
+    if hasattr(source, "metadata") and hasattr(source, "page_content"):
+        return dict(source.metadata or {}), source.page_content
+    if isinstance(source, dict):
+        return dict(source.get("metadata", {})), source.get("page_content", "")
+    return {}, str(source)
+
+
+def format_response(response: Dict[str, Any]) -> None:
+    """Format and display the enhanced response payload."""
+    error = response.get("error")
+    if error:
+        print("\n⚠️  Safety block triggered")
+        print("-" * 40)
+        for issue in error.get("issues", []):
+            print(f"• {issue}")
+        recommendations = error.get("recommendations", [])
+        if recommendations:
+            print("\nRecommended actions:")
+            for item in recommendations:
+                print(f"  - {item}")
+        print()
+        return
+
+    answer = response.get("answer") or "No answer returned."
+    print("\n🤖 Answer:")
     print("-" * 40)
-    print(response.answer)
+    print(answer)
     print("-" * 40)
-    
-    if response.source_documents:
-        print(f"\n📚 Sources ({len(response.source_documents)} documents):")
-        for i, doc in enumerate(response.source_documents, 1):
-            source_file = doc.metadata.get("source_file", "Unknown")
-            page = doc.metadata.get("page", "Unknown")
-            chunk_id = doc.metadata.get("chunk_id", "Unknown")
-            
-            print(f"\n  [{i}] {source_file} (Page: {page}, Chunk: {chunk_id})")
-            # Show first 150 characters of the source text
-            preview = doc.page_content[:150]
-            if len(doc.page_content) > 150:
+
+    sources = response.get("sources") or []
+    if sources:
+        print(f"\n📚 Sources ({len(sources)} documents):")
+        for idx, source in enumerate(sources, 1):
+            metadata, content = _normalise_source(source)
+            source_file = metadata.get("source_file") or metadata.get("title") or metadata.get("id", "Unknown")
+            page = metadata.get("page", "Unknown")
+            chunk_id = metadata.get("chunk_id", "Unknown")
+
+            print(f"\n  [{idx}] {source_file} (Page: {page}, Chunk: {chunk_id})")
+            preview = content[:150]
+            if len(content) > 150:
                 preview += "..."
             print(f"      \"{preview}\"")
-    
-    print(f"\n⏱️  Processing time: {response.processing_time:.2f} seconds")
+
+    processing_time = response.get("processing_time") or 0.0
+    print(f"\n⏱️  Processing time: {processing_time:.2f} seconds")
+
+    warnings = response.get("safety", {}).get("output_validation", {}).get("warnings")
+    if warnings:
+        print("\n⚠️  Safety warnings:")
+        for warning in warnings:
+            print(f"  - {warning}")
+
+    disclaimer = response.get("disclaimer")
+    if disclaimer:
+        print("\n📄 Disclaimer:")
+        print(disclaimer)
     print()
 
 
 def setup_rag_agent():
-    """Initialize and setup the RAG agent"""
-    print("🔧 Initializing RAG Agent...")
+    """Initialize and setup the enhanced RAG agent"""
+    print("🔧 Initializing Enhanced RAG Agent...")
     
     # Load environment variables
     load_dotenv()
@@ -102,6 +140,10 @@ def setup_rag_agent():
     api_key = os.getenv("NVIDIA_API_KEY")
     docs_folder = os.getenv("DOCS_FOLDER", "Data/Docs")
     vector_db_path = os.getenv("VECTOR_DB_PATH", "./vector_db")
+    guardrails_config = os.getenv("MEDICAL_GUARDRAILS_CONFIG")
+    enable_synthesis = os.getenv("ENABLE_SYNTHESIS", "true").strip().lower() in ("1", "true", "yes", "on")
+    enable_ddi = os.getenv("ENABLE_DDI_ANALYSIS", "true").strip().lower() in ("1", "true", "yes", "on")
+    safety_mode = os.getenv("ENHANCED_RAG_SAFETY_MODE", "balanced")
     
     if not api_key:
         print("❌ Error: NVIDIA_API_KEY not found in environment variables")
@@ -128,11 +170,19 @@ def setup_rag_agent():
     
     # Initialize RAG agent
     try:
-        rag_agent = RAGAgent(docs_folder, api_key, vector_db_path)
-        print("✅ RAG Agent initialized successfully!")
+        rag_agent = EnhancedRAGAgent(
+            docs_folder=docs_folder,
+            api_key=api_key,
+            vector_db_path=vector_db_path,
+            guardrails_config_path=guardrails_config,
+            enable_synthesis=enable_synthesis,
+            enable_ddi_analysis=enable_ddi,
+            safety_mode=safety_mode,
+        )
+        print("✅ Enhanced RAG Agent initialized successfully!")
         return rag_agent
     except Exception as e:
-        print(f"❌ Failed to initialize RAG Agent: {str(e)}")
+        print(f"❌ Failed to initialize Enhanced RAG Agent: {str(e)}")
         return None
 
 
@@ -141,14 +191,14 @@ def main():
     print_banner()
     
     # Setup RAG agent
-    rag_agent = setup_rag_agent()
-    if not rag_agent:
-        print("❌ Failed to initialize RAG Agent. Exiting...")
+    agent = setup_rag_agent()
+    if not agent:
+        print("❌ Failed to initialize Enhanced RAG Agent. Exiting...")
         return
 
     # Setup knowledge base
     print("\n🔨 Setting up knowledge base...")
-    if not rag_agent.setup_knowledge_base():
+    if not agent.base_agent.setup_knowledge_base():
         print("❌ Failed to setup knowledge base.")
         print("Please ensure you have PDF files in the documents folder and try again.")
 
@@ -158,7 +208,7 @@ def main():
             return
     else:
         print("✅ Knowledge base setup completed!")
-        print_stats(rag_agent)
+        print_stats(agent)
 
     print("\n🚀 RAG Agent is ready! Ask me anything about your documents.")
     
@@ -182,14 +232,14 @@ def main():
                 continue
             
             elif question.lower() == 'stats':
-                print_stats(rag_agent)
+                print_stats(agent)
                 continue
             
             elif question.lower() == 'rebuild':
                 print("\n🔨 Rebuilding knowledge base...")
-                if rag_agent.setup_knowledge_base(force_rebuild=True):
+                if agent.base_agent.setup_knowledge_base(force_rebuild=True):
                     print("✅ Knowledge base rebuilt successfully!")
-                    print_stats(rag_agent)
+                    print_stats(agent)
                 else:
                     print("❌ Failed to rebuild knowledge base")
                 continue
@@ -201,7 +251,7 @@ def main():
             
             # Process question
             print(f"\n🔍 Searching knowledge base...")
-            response = rag_agent.ask_question(question)
+            response = agent.ask_question(question)
             format_response(response)
             
         except KeyboardInterrupt:

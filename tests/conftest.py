@@ -105,6 +105,35 @@ if "langchain" not in sys.modules:
 else:
     Document = sys.modules["langchain.schema"].Document
 
+if "langchain_core" not in sys.modules:
+    langchain_core_module = types.ModuleType("langchain_core")
+    documents_module = types.ModuleType("langchain_core.documents")
+    documents_base_module = types.ModuleType("langchain_core.documents.base")
+    embeddings_module = types.ModuleType("langchain_core.embeddings")
+
+    class CoreDocument:
+        def __init__(self, page_content: str, metadata: dict | None = None):
+            self.page_content = page_content
+            self.metadata = metadata or {}
+
+    class CoreBlob:
+        def __init__(self, data: bytes | str):  # pragma: no cover - simple stub
+            self.data = data
+
+    class CoreEmbeddings:
+        pass
+
+    documents_module.Document = CoreDocument
+    documents_base_module.Blob = CoreBlob
+    embeddings_module.Embeddings = CoreEmbeddings
+    langchain_core_module.documents = documents_module
+    langchain_core_module.embeddings = embeddings_module
+
+    sys.modules["langchain_core"] = langchain_core_module
+    sys.modules["langchain_core.documents"] = documents_module
+    sys.modules["langchain_core.documents.base"] = documents_base_module
+    sys.modules["langchain_core.embeddings"] = embeddings_module
+
 if "langchain_community" not in sys.modules:
     community_module = types.ModuleType("langchain_community")
     vectorstores_module = types.ModuleType("langchain_community.vectorstores")

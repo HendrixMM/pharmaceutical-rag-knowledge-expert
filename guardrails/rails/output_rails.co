@@ -1,107 +1,97 @@
 # Output validation rails for medical response safety
-# Comprehensive output validation for pharmaceutical research AI responses
+# Simplified flows compatible with latest Colang parser.
 
 define flow medical disclaimer enforcement
   """
-  Add appropriate disclaimers based on response type.
-  Ensures all medical responses include context-appropriate disclaimers.
+  Ensure every response carries the appropriate medical disclaimer.
   """
   if $bot_message
     $response_type = execute classify_medical_response_type(response=$bot_message)
     $bot_message = execute ensure_disclaimer(response=$bot_message, response_type=$response_type)
 
+
 define flow hallucination detection medical
   """
-  Detect potential hallucinations using specialized medical validation against sources.
-  Enhanced validation for medical claims and pharmaceutical data.
+  Evaluate hallucination risk and apply mitigation guidance.
   """
   if $bot_message and $sources
-    $hallucination_check = execute medical_hallucination_check(response=$bot_message, sources=$sources)
+    $hallucination_result = execute evaluate_hallucination_risk(response=$bot_message, sources=$sources)
+    if $hallucination_result.block == True
+      bot refuse hallucination detected
+      stop
+    if $hallucination_result.notice
+      $bot_message = $hallucination_result.message
 
-    if $hallucination_check.detected == True
-      if $hallucination_check.severity == "high"
-        bot refuse hallucination detected
-        stop
-      elif $hallucination_check.severity == "moderate"
-        $bot_message = $bot_message + "\n\n⚠️ **Verification Note:** Some claims in this response may require additional verification. Please cross-reference with original sources."
-        bot log hallucination warning
 
 define flow fact check against pubmed
   """
-  Validate medical claims against literature using PubMed source validation.
-  Comprehensive fact-checking for pharmaceutical research responses.
+  Validate medical claims against provided sources.
   """
   if $bot_message and $sources
-    $fact_check = execute validate_against_pubmed_sources(claims=$bot_message, sources=$sources)
-
-    if $fact_check.support_ratio < 0.5
+    $fact_check_result = execute evaluate_fact_check_result(response=$bot_message, sources=$sources)
+    $bot_message = $fact_check_result.message
+    if $fact_check_result.notice == True
       bot warn unsupported claims
-      $bot_message = $bot_message + "\n\n⚠️ **Source Verification:** This response contains claims that may not be fully supported by the provided sources. Please verify with additional literature."
 
-    if $fact_check.sources_count < 2
-      $bot_message = $bot_message + "\n\n📝 **Limited Sources:** This analysis is based on limited sources. Consider reviewing additional literature for comprehensive understanding."
 
 define flow regulatory compliance check
   """
-  Check for FDA/EMA guideline adherence and regulatory compliance.
-  Ensures responses meet pharmaceutical regulatory standards.
+  Ensure responses adhere to pharmaceutical regulatory guidance.
   """
   if $bot_message
-    $compliance_check = execute assess_regulatory_compliance(response=$bot_message)
+    $compliance_result = execute evaluate_regulatory_compliance_flow(response=$bot_message)
+    if $compliance_result.block == True
+      bot refuse regulatory violation
+      stop
+    $bot_message = $compliance_result.message
 
-    if $compliance_check.compliant == False
-      if "guaranteed cure" in $bot_message.lower() or "miracle drug" in $bot_message.lower()
-        bot refuse regulatory violation
-        stop
-
-      # Moderate violations - add warnings
-      for $violation in $compliance_check.violations
-        if "medical advice" in $violation
-          $bot_message = $bot_message + "\n\n⚠️ **Regulatory Note:** This information is for research purposes and does not constitute medical advice."
-
-    # Add FDA/EMA compliance statements for drug information
-    if "efficacy" in $bot_message.lower() or "effectiveness" in $bot_message.lower()
-      $bot_message = $bot_message + "\n\n📋 **Regulatory Note:** Efficacy claims are based on published research and may not reflect FDA/EMA approved indications."
 
 define flow sensitive information filtering
   """
-  Remove inappropriate medical content and ensure patient privacy protection.
-  Final filter for sensitive medical information.
+  Filter sensitive advice or diagnostic statements directed at the user.
   """
   if $bot_message
-    # Remove any patient identifiers that might have slipped through
-    $filtered_response = execute filter_sensitive_medical_info(response=$bot_message)
-    $bot_message = $filtered_response
-
-    # Check for inappropriate medical advice - refined to reduce false positives on research narratives
-    # Rationale: Focus on second-person medical advice directed at the user to avoid flagging
-    # research statements like "patients should take X" or "studies recommend Y"
-    if regex_match($bot_message, r"(?i)\byou\b.*(should take|must take|need to take|stop taking|increase your dose|decrease your dose)")
+    $filter_result = execute filter_sensitive_response_content(response=$bot_message)
+    if $filter_result.block == True
       bot refuse medical advice given
       stop
+    $bot_message = $filter_result.message
 
-    # Check for direct recommendations to the user
-    # Rationale: Include pronoun context to catch "I recommend you take" while avoiding
-    # research statements like "Smith et al. recommend that patients..."
-    if regex_match($bot_message, r"(?i)\b(i|we)\s+(recommend|advise)\s+(you|that you|taking|stopping)")
-      bot refuse medical advice given
-      stop
 
-    # Check for diagnostic language - refined to focus on direct diagnosis of the user
-    # Rationale: Anchor to second-person phrases that suggest direct diagnosis to avoid
-    # flagging research narratives like "patients who have X" or "studies show diagnosis is Y"
-    if regex_match($bot_message, r"(?i)\byou\b.*(have|are suffering|diagnosis is|are diagnosed with)")
-      bot refuse diagnostic language
-      stop
+define flow add evidence quality indicators
+  """
+  Append evidence quality summaries for transparency.
+  """
+  if $bot_message and $sources
+    $bot_message = execute append_evidence_quality_summary(response=$bot_message, sources=$sources)
 
-    # Check for definitive diagnostic statements directed at user
-    # Rationale: Target phrases that directly address the user's condition while preserving
-    # research discussion about diagnostic criteria and patient populations
-    if regex_match($bot_message, r"(?i)(your diagnosis|you likely have|you probably have|this indicates you)")
-      bot refuse diagnostic language
-      stop
 
-# Bot response definitions for output violations
+define flow pharmaceutical safety warnings
+  """
+  Add contextual pharmaceutical safety warnings based on content.
+  """
+  if $bot_message
+    $bot_message = execute append_pharmaceutical_warnings_response(response=$bot_message)
+
+
+define flow validate source citations
+  """
+  Ensure responses include citations referencing retrieved literature.
+  """
+  if $bot_message and $sources
+    $citation_result = execute ensure_citation_block(response=$bot_message, sources=$sources)
+    $bot_message = $citation_result.message
+    if $citation_result.invalid_citations
+      bot warn invalid citations
+
+
+define flow enhance medical response quality
+  """
+  Apply formatting helpers for clarity and structure.
+  """
+  if $bot_message
+    $bot_message = execute enhance_response_quality_format(response=$bot_message)
+
 
 define bot refuse hallucination detected
   "I've detected potentially inaccurate information in my response. Let me provide a more evidence-based answer based strictly on the available sources."
@@ -112,149 +102,8 @@ define bot refuse regulatory violation
 define bot refuse medical advice given
   "I cannot provide direct medical advice. I can only share research-based pharmaceutical information. Please consult healthcare professionals for medical guidance."
 
-define bot refuse diagnostic language
-  "I cannot provide diagnostic information. I can share research about conditions and treatments, but diagnosis requires medical professional evaluation."
-
 define bot warn unsupported claims
   "Some information in this response may not be fully supported by the provided sources."
 
-define bot log hallucination warning
-  # Log the potential hallucination for review
-  execute log_safety_event(event_type="hallucination_warning", details=$hallucination_check)
-
-# Medical response enhancement flows
-
-define flow add evidence quality indicators
-  """
-  Add evidence quality indicators to medical responses.
-  Helps users understand the strength of evidence presented.
-  """
-  if $bot_message and $sources
-    $evidence_levels = execute assess_evidence_levels(sources=$sources)
-
-    # Add evidence quality summary
-    $evidence_summary = "📊 **Evidence Quality:** "
-    if $evidence_levels.high_quality > 0
-      $evidence_summary = $evidence_summary + "High quality studies: " + str($evidence_levels.high_quality) + " | "
-    if $evidence_levels.moderate_quality > 0
-      $evidence_summary = $evidence_summary + "Moderate quality studies: " + str($evidence_levels.moderate_quality) + " | "
-    if $evidence_levels.low_quality > 0
-      $evidence_summary = $evidence_summary + "Lower quality studies: " + str($evidence_levels.low_quality)
-
-    $bot_message = $bot_message + "\n\n" + $evidence_summary.rstrip(" | ")
-
-define flow pharmaceutical safety warnings
-  """
-  Add pharmaceutical-specific safety warnings based on content analysis.
-  Proactive safety messaging for drug-related content.
-  """
-  if $bot_message
-    # Check for drug interaction content
-    if regex_match($bot_message, r"(?i)interaction|contraindicated|avoid.*combination")
-      $bot_message = $bot_message + "\n\n🚨 **Drug Interaction Warning:** This information is for research purposes. Clinical drug interaction decisions should always involve healthcare professionals who can assess individual patient factors."
-
-    # Check for adverse effects content
-    if regex_match($bot_message, r"(?i)adverse|side effect|toxicity|contraindication")
-      $bot_message = $bot_message + "\n\n⚠️ **Safety Information:** Adverse effect information is based on clinical studies. Individual responses may vary. Report any concerning symptoms to healthcare providers."
-
-    # Check for pharmacokinetic content
-    if regex_match($bot_message, r"(?i)metabolism|clearance|half-life|bioavailability")
-      $bot_message = $bot_message + "\n\n🧬 **Pharmacokinetic Note:** PK parameters may vary based on individual factors including genetics, age, disease state, and concomitant medications."
-
-# Citation and source validation
-
-define flow validate source citations
-  """
-  Ensure proper citation and source attribution in responses.
-  Maintains academic integrity and traceability.
-  """
-  if $bot_message and $sources
-    # Check if response includes citations
-    if not regex_match($bot_message, r"PMID|PubMed|doi|et al")
-      $citation_list = execute format_source_citations(sources=$sources)
-      $bot_message = $bot_message + "\n\n📚 **Sources:**\n" + $citation_list
-
-    # Validate that cited sources are actually in the source list
-    $citation_validation = execute validate_citations(response=$bot_message, sources=$sources)
-    if $citation_validation.invalid_citations
-      bot warn invalid citations
-
 define bot warn invalid citations
   "⚠️ Some citations in this response may not match the provided sources. Please verify references independently."
-
-# Response quality enhancement
-
-define flow enhance medical response quality
-  """
-  Enhance response quality with structured formatting and clear organization.
-  Improves readability and comprehension of medical information.
-  """
-  if $bot_message
-    # Add structured formatting for drug information
-    if regex_match($bot_message, r"(?i)mechanism of action|MOA")
-      # Ensure MOA information is clearly structured
-      $bot_message = execute structure_moa_information(response=$bot_message)
-
-    # Add structured formatting for drug interactions
-    if regex_match($bot_message, r"(?i)(drug\s+interaction|ddi)")
-      # Ensure interaction information is clearly structured
-      $bot_message = execute structure_interaction_information(response=$bot_message)
-
-    # Add structured formatting for pharmacokinetics
-    if regex_match($bot_message, r"(?i)pharmacokinetic|ADME|absorption|distribution|metabolism|excretion")
-      # Ensure PK information is clearly structured
-      $bot_message = execute structure_pk_information(response=$bot_message)
-
-# Final safety check
-
-define flow final medical safety validation
-  """
-  Final comprehensive safety validation before response delivery.
-  Last line of defense for medical safety.
-  """
-  if $bot_message
-    # Check overall safety score
-    $safety_assessment = execute comprehensive_safety_check(response=$bot_message)
-
-    if $safety_assessment.safe == False
-      bot refuse final safety check
-      stop
-
-    if $safety_assessment.warnings
-      for $warning in $safety_assessment.warnings
-        $bot_message = $bot_message + "\n\n⚠️ " + $warning
-
-    # Add final medical safety footer
-    $bot_message = $bot_message + "\n\n---\n*This information is provided for pharmaceutical research purposes only. Always consult qualified healthcare professionals for medical decisions.*"
-
-define bot refuse final safety check
-  "I cannot provide this response due to safety concerns. Please rephrase your question to focus on research-based pharmaceutical information, or consult healthcare professionals for medical guidance."
-
-# Logging and monitoring
-
-define flow log medical response
-  """
-  Log medical responses for safety monitoring and compliance auditing.
-  """
-  if $bot_message
-    $safety_snapshot = execute comprehensive_safety_check(response=$bot_message)
-    $compliance_snapshot = execute assess_regulatory_compliance(response=$bot_message)
-
-    $logged_safety_score = None
-    $logged_compliance_status = None
-
-    if $safety_snapshot
-      $logged_safety_score = $safety_snapshot.safety_score
-
-    if $compliance_snapshot
-      $logged_compliance_status = $compliance_snapshot.compliant
-
-    # Use standardized disclaimer detection patterns
-    $disclaimer_present = regex_match($bot_message, r"(?i)\*\*medical disclaimer:\*\*|(?i)medical disclaimer:|(?i)this information is for.*educational purposes|(?i)consult.*healthcare.*professional")
-
-    execute log_medical_response(
-      response=$bot_message,
-      safety_score=$logged_safety_score,
-      disclaimers_added=$disclaimer_present,
-      compliance_status=$logged_compliance_status
-    )

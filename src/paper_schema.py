@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, Union
+import re
+import html
+from typing import Any, Dict, Iterable, Union, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+# Unified regex patterns for paper identifiers
+DOI_PATTERN = r'(?:doi[:\s]*)?10\.\d{4,9}/[^\s)>\]]+'
+PMID_PATTERN = r'(?:\()?pmid[\s:]*[-]?(\d+)(?:\))?'
+
+# Alternative PMID pattern for extraction with case-insensitive matching
+PMID_PATTERN_EXTRACT = r'(?:\()?PMID[\s:]*[-]?(\d+)(?:\))?'
 
 
 class Paper(BaseModel):
@@ -98,5 +108,184 @@ def coerce_papers(entries: Iterable[Union[Paper, Dict[str, Any]]]) -> list[Paper
     return [coerce_paper(entry) for entry in entries]
 
 
-__all__ = ["Paper", "coerce_paper", "coerce_papers"]
+def clean_identifier(identifier: str) -> str:
+    """Clean DOI/PMID by stripping zero-width characters and decoding HTML entities.
+
+    Args:
+        identifier: Raw identifier string
+
+    Returns:
+        Cleaned identifier string
+    """
+    if not identifier:
+        return identifier
+
+    # Strip zero-width characters
+    cleaned = identifier.replace('\u200b', '').replace('\u200c', '').replace('\u200d', '').replace('\ufeff', '')
+
+    # Decode common HTML entities
+    cleaned = html.unescape(cleaned)
+
+    return cleaned
+
+
+def normalize_doi(doi: str) -> str:
+    """Normalize DOI by removing prefixes and converting to lowercase.
+
+    Args:
+        doi: Raw DOI string
+
+    Returns:
+        Normalized DOI string
+    """
+    if not doi:
+        return ""
+
+    # Convert to lowercase and strip whitespace
+    normalized = doi.lower().strip()
+
+    # Strip common prefixes (case-insensitive, including trailing slash variants)
+    prefixes_to_strip = [
+        'doi:',
+        'https://doi.org/',
+        'https://doi.org',
+        'http://doi.org/',
+        'http://doi.org',
+        'doi.org/',
+        'doi.org',
+        'www.doi.org/',
+        'www.doi.org'
+    ]
+
+    for prefix in prefixes_to_strip:
+        if normalized.startswith(prefix):
+            normalized = normalized[len(prefix):]
+            # Remove leading slash if it remains after prefix removal
+            if normalized.startswith('/'):
+                normalized = normalized[1:]
+            break
+
+    # Strip trailing punctuation
+    normalized = normalized.rstrip('.,;)')
+
+    return normalized.strip()
+
+
+def normalize_pmid(pmid: str) -> str:
+    """Normalize PMID by cleaning and ensuring numeric format.
+
+    Args:
+        pmid: Raw PMID string
+
+    Returns:
+        Normalized PMID string
+    """
+    if not pmid:
+        return ""
+
+    # Clean and strip whitespace
+    normalized = clean_identifier(pmid).strip()
+
+    # Remove any non-numeric characters except digits
+    normalized = re.sub(r'[^\d]', '', normalized)
+
+    return normalized
+
+
+def extract_doi(text: str) -> Optional[str]:
+    """Extract and normalize DOI from text.
+
+    Args:
+        text: Text to search for DOI
+
+    Returns:
+        Normalized DOI if found, None otherwise
+    """
+    match = re.search(DOI_PATTERN, text, re.IGNORECASE)
+    if match:
+        raw_doi = match.group().replace('doi:', '').replace('DOI:', '').strip()
+        clean_doi = clean_identifier(raw_doi.rstrip('.,;)'))
+        return normalize_doi(clean_doi)
+
+    # Check for DOI starting with 10. directly
+    lines = text.split('\n')
+    for line in lines:
+        stripped = line.strip()
+        if stripped.lower().startswith('10.'):
+            clean_doi = clean_identifier(stripped.rstrip('.,;)'))
+            return normalize_doi(clean_doi)
+
+    return None
+
+
+def extract_pmid(text: str) -> Optional[str]:
+    """Extract and normalize PMID from text.
+
+    Args:
+        text: Text to search for PMID
+
+    Returns:
+        Normalized PMID if found, None otherwise
+    """
+    match = re.search(PMID_PATTERN_EXTRACT, text, re.IGNORECASE)
+    if match:
+        clean_pmid = clean_identifier(match.group(1))
+        return normalize_pmid(clean_pmid)
+
+    return None
+
+
+def normalize_identifier(identifier: str, identifier_type: str) -> str:
+    """Normalize identifier based on type.
+
+    Args:
+        identifier: Raw identifier string
+        identifier_type: Type of identifier ('doi' or 'pmid')
+
+    Returns:
+        Normalized identifier string
+    """
+    if identifier_type.lower() == 'doi':
+        return normalize_doi(identifier)
+    elif identifier_type.lower() == 'pmid':
+        return normalize_pmid(identifier)
+    else:
+        return clean_identifier(identifier)
+
+
+def validate_doi(doi: str) -> bool:
+    """Validate DOI format.
+
+    Args:
+        doi: DOI string to validate
+
+    Returns:
+        True if DOI is valid format, False otherwise
+    """
+    if not doi:
+        return False
+
+    normalized = normalize_doi(doi)
+    return bool(re.match(r'^10\.\d{4,9}/.+', normalized))
+
+
+def validate_pmid(pmid: str) -> bool:
+    """Validate PMID format.
+
+    Args:
+        pmid: PMID string to validate
+
+    Returns:
+        True if PMID is valid format, False otherwise
+    """
+    if not pmid:
+        return False
+
+    normalized = normalize_pmid(pmid)
+    return normalized.isdigit() and len(normalized) >= 1
+
+
+__all__ = ["Paper", "coerce_paper", "coerce_papers", "DOI_PATTERN", "PMID_PATTERN", "PMID_PATTERN_EXTRACT",
+           "clean_identifier", "normalize_doi", "normalize_pmid", "extract_doi", "extract_pmid",
+           "normalize_identifier", "validate_doi", "validate_pmid"]
 

@@ -595,9 +595,33 @@ class DDIPKProcessor:
             sig_count = sum(1 for c in auc_cmax_changes if c.get("is_significant"))
             non_sig_count = sum(1 for c in auc_cmax_changes if c.get("is_significant") is False)
 
-            # Ensure all data is JSON-serializable before returning
-            pk_parameters = {k: [asdict(p) if hasattr(p, '__dataclass_fields__') else (dict(p) if hasattr(p, 'items') else p) for p in v] for k, v in pk_parameters.items()}
-            auc_cmax_changes = [asdict(x) if hasattr(x, '__dataclass_fields__') else (dict(x) if hasattr(x, 'items') else x) for x in auc_cmax_changes]
+            # Ensure all data is JSON-serializable before returning while preserving structure
+            def _serialize_pk_entry(entry: Any) -> Any:
+                if hasattr(entry, '__dataclass_fields__'):
+                    return asdict(entry)
+                if isinstance(entry, dict):
+                    return {key: _serialize_pk_entry(value) for key, value in entry.items()}
+                if isinstance(entry, list):
+                    return [_serialize_pk_entry(value) for value in entry]
+                return entry
+
+            def _serialize_pk_parameter_map(pk_map: Dict[str, Any]) -> Dict[str, Any]:
+                serialized: Dict[str, Any] = {}
+                for param_name, param_data in pk_map.items():
+                    if isinstance(param_data, dict):
+                        param_serialized = {}
+                        for key, value in param_data.items():
+                            if key == "parameters" and isinstance(value, list):
+                                param_serialized[key] = [_serialize_pk_entry(item) for item in value]
+                            else:
+                                param_serialized[key] = _serialize_pk_entry(value)
+                        serialized[param_name] = param_serialized
+                    else:
+                        serialized[param_name] = _serialize_pk_entry(param_data)
+                return serialized
+
+            pk_parameters = _serialize_pk_parameter_map(pk_parameters)
+            auc_cmax_changes = [_serialize_pk_entry(x) for x in auc_cmax_changes]
 
             # Format comprehensive interaction report
             # Map secondary drugs back to display names
@@ -641,8 +665,8 @@ class DDIPKProcessor:
             try:
                 interaction_report_model = InteractionReport.model_validate(analysis_result)
                 logger.info("Drug interaction analysis completed successfully with schema validation")
-                # Return the validated model as a dictionary
-                return interaction_report_model.model_dump()
+                # Return the validated model as a dictionary, pruning null fields for clarity
+                return interaction_report_model.model_dump(exclude_none=True)
             except ValidationError as schema_error:
                 # Log schema validation errors but continue with unvalidated result
                 logger.error(f"DDI/PK report schema validation failed: {schema_error}")

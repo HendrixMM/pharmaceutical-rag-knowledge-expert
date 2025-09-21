@@ -1,0 +1,274 @@
+[
+  {
+    "pmid": "39845881",
+    "year": "2025",
+    "authors": "Flynn K, Hatfield J, Brown K, Vietor N, Hoang T.",
+    "abstract": "Diabetes insipidus (DI) is a rare endocrine disease involving antidiuretic hormone (ADH), encompassing both central and nephrogenic causes. ...DI cannot be cured and is an unfamiliar disease process to many clinicians. This diagnosis must be distinguis …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/39845881/",
+    "article_id": "39845881",
+    "journal": "Front Endocrinol (Lausanne)",
+    "tags": [
+      "Free PMC article.",
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Central and nephrogenic diabetes insipidus: updates on diagnosis and management.",
+    "citation_short": "Front Endocrinol (Lausanne). 2025.",
+    "citation_full": "Front Endocrinol (Lausanne). 2025 Jan 8;15:1479764. doi: 10.3389/fendo.2024.1479764. eCollection 2024.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.6000000000000001
+  },
+  {
+    "pmid": "39493778",
+    "year": "2024",
+    "authors": "Tegegne BA, Adugna A, Yenet A, Yihunie Belay W, Yibeltal Y, Dagne A, Hibstu Teffera Z, Amare GA, Abebaw D, Tewabe H, Abebe RB, Zeleke TK.",
+    "abstract": "Diabetes mellitus (DM) has emerged as an international health epidemic due to its rapid rise in prevalence. ...Data were then abstracted from these publications using words or Phrases like \"pathophysiology of diabetes\", \"Signe and symptoms of diabetes\" …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/39493778/",
+    "article_id": "39493778",
+    "journal": "Front Endocrinol (Lausanne)",
+    "tags": [
+      "Free PMC article.",
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "A critical review on diabetes mellitus type 1 and type 2 management approaches: from lifestyle modification to current and novel targets and therapeutic agents.",
+    "citation_short": "Front Endocrinol (Lausanne). 2024.",
+    "citation_full": "Front Endocrinol (Lausanne). 2024 Oct 18;15:1440456. doi: 10.3389/fendo.2024.1440456. eCollection 2024.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.5900000000000001
+  },
+  {
+    "pmid": "36683321",
+    "year": "2023",
+    "authors": "Angelousi A, Alexandraki KI, Mytareli C, Grossman AB, Kaltsas G.",
+    "abstract": "Diabetes insipidus (DI) is a disorder characterised by the excretion of large amounts of hypotonic urine, with a prevalence of 1 per 25,000 population. ...The treatment of CDI relies on desmopressin administration, whereas NDI requires the management o …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/36683321/",
+    "article_id": "36683321",
+    "journal": "J Neuroendocrinol",
+    "tags": [
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "New developments and concepts in the diagnosis and management of diabetes insipidus (AVP-deficiency and resistance).",
+    "citation_short": "J Neuroendocrinol. 2023.",
+    "citation_full": "J Neuroendocrinol. 2023 Jan;35(1):e13233. doi: 10.1111/jne.13233. Epub 2023 Jan 22.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.5800000000000001
+  },
+  {
+    "pmid": "35771962",
+    "year": "2022",
+    "authors": "Tomkins M, Lawless S, Martin-Grace J, Sherlock M, Thompson CJ.",
+    "abstract": "Central diabetes insipidus (CDI) is a clinical syndrome which results from loss or impaired function of vasopressinergic neurons in the hypothalamus/posterior pituitary, resulting in impaired synthesis and/or secretion of arginine vasopressin (AVP). ...Specific clin …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35771962/",
+    "article_id": "35771962",
+    "journal": "J Clin Endocrinol Metab",
+    "tags": [
+      "Free PMC article.",
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Diagnosis and Management of Central Diabetes Insipidus in Adults.",
+    "citation_short": "J Clin Endocrinol Metab. 2022.",
+    "citation_full": "J Clin Endocrinol Metab. 2022 Sep 28;107(10):2701-2715. doi: 10.1210/clinem/dgac381.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.5700000000000001
+  },
+  {
+    "pmid": "36007536",
+    "year": "2022",
+    "authors": "Atila C, Loughrey PB, Garrahy A, Winzeler B, Refardt J, Gildroy P, Hamza M, Pal A, Verbalis JG, Thompson CJ, Hemkens LG, Hunter SJ, Sherlock M, Levy MJ, Karavitaki N, Newell-Price J, Wass JAH, Christ-Crain M.",
+    "abstract": "BACKGROUND: Central diabetes insipidus is a rare neuroendocrine condition. Data on treatment-associated side-effects, psychological comorbidities, and incorrect management are scarce. The aim of this study was to investigate patients' perspectives on their …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/36007536/",
+    "article_id": "36007536",
+    "journal": "Lancet Diabetes Endocrinol",
+    "tags": [
+      "Free article."
+    ],
+    "mesh_terms": [],
+    "title": "Central diabetes insipidus from a patient's perspective: management, psychological co-morbidities, and renaming of the condition: results from an international web-based survey.",
+    "citation_short": "Lancet Diabetes Endocrinol. 2022.",
+    "citation_full": "Lancet Diabetes Endocrinol. 2022 Oct;10(10):700-709. doi: 10.1016/S2213-8587(22)00219-4. Epub 2022 Aug 22.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.5700000000000001
+  },
+  {
+    "pmid": "34522399",
+    "year": "2021",
+    "authors": "Almalki MH, Ahmad MM, Brema I, Almehthel M, AlDahmani KM, Mahzari M, Beshyah SA.",
+    "abstract": "Central diabetes insipidus (CDI) is a common complication after pituitary surgery. However, it is most frequently transient. ...This review outlines the evaluation and management of patients with CDI following pituitary and suprasellar tumour surgery to help …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/34522399/",
+    "article_id": "34522399",
+    "journal": "Sultan Qaboos Univ Med J",
+    "tags": [
+      "Free PMC article.",
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Management of Diabetes Insipidus following Surgery for Pituitary and Suprasellar Tumours.",
+    "citation_short": "Sultan Qaboos Univ Med J. 2021.",
+    "citation_full": "Sultan Qaboos Univ Med J. 2021 Aug;21(3):354-364. doi: 10.18295/squmj.4.2021.010. Epub 2021 Aug 29.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.56
+  },
+  {
+    "pmid": "28345986",
+    "year": "2017",
+    "authors": "Hamilton H, Knudsen G, Vaina CL, Smith M, Paul SP.",
+    "abstract": "Diabetes mellitus (type 1) is an autoimmune condition leading to absolute insulin deficiency resulting in hyperglycaemia and its associated manifestations. ...Two case studies are included to highlight some of the challenges that nurses may encounter while managi …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/28345986/",
+    "article_id": "28345986",
+    "journal": "Br J Nurs",
+    "tags": [],
+    "mesh_terms": [],
+    "title": "Children and young people with diabetes: recognition and management.",
+    "citation_short": "Br J Nurs. 2017.",
+    "citation_full": "Br J Nurs. 2017 Mar 23;26(6):340-347. doi: 10.12968/bjon.2017.26.6.340.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.52
+  },
+  {
+    "pmid": "27156767",
+    "year": "2016",
+    "authors": "Dabrowski E, Kadakia R, Zimmerman D.",
+    "abstract": "Diabetes insipidus, the inability to concentrate urine resulting in polyuria and polydipsia, can have different manifestations and management considerations in infants and children compared to adults. Central diabetes insipidus, secondary to lac …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27156767/",
+    "article_id": "27156767",
+    "journal": "Best Pract Res Clin Endocrinol Metab",
+    "tags": [
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Diabetes insipidus in infants and children.",
+    "citation_short": "Best Pract Res Clin Endocrinol Metab. 2016.",
+    "citation_full": "Best Pract Res Clin Endocrinol Metab. 2016 Mar;30(2):317-28. doi: 10.1016/j.beem.2016.02.006. Epub 2016 Feb 27.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.51
+  },
+  {
+    "pmid": "25330715",
+    "year": "2015",
+    "authors": "Karaa A, Goldstein A.",
+    "abstract": "The true prevalence is anticipated to be even higher because of the complexity of achieving a diagnosis in many patients who present with multisystemic complaints ranging from infancy to adulthood. Diabetes is a prominent feature of several of these disorders which might b …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/25330715/",
+    "article_id": "25330715",
+    "journal": "Pediatr Diabetes",
+    "tags": [
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "The spectrum of clinical presentation, diagnosis, and management of mitochondrial forms of diabetes.",
+    "citation_short": "Pediatr Diabetes. 2015.",
+    "citation_full": "Pediatr Diabetes. 2015 Feb;16(1):1-9. doi: 10.1111/pedi.12223. Epub 2014 Oct 20.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.5
+  },
+  {
+    "pmid": "20500966",
+    "year": "2010",
+    "authors": "Aleksandrov N, Audibert F, Bedard MJ, Mahone M, Goffinet F, Kadoch IJ.",
+    "abstract": "OBJECTIVE: To review the etiology, diagnosis, and management of diabetes insipidus during pregnancy. DATA SOURCES: A search of the literature was performed in PubMed using key word searching and citation snowballing to identify articles published in English b …",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/20500966/",
+    "article_id": "20500966",
+    "journal": "J Obstet Gynaecol Can",
+    "tags": [
+      "Review."
+    ],
+    "mesh_terms": [],
+    "title": "Gestational diabetes insipidus: a review of an underdiagnosed condition.",
+    "citation_short": "J Obstet Gynaecol Can. 2010.",
+    "citation_full": "J Obstet Gynaecol Can. 2010 Mar;32(3):225-31. doi: 10.1016/s1701-2163(16)34448-6.",
+    "source": "pubmed",
+    "ingestion": "apify",
+    "provider": "apify-easyapi",
+    "provider_family": "apify",
+    "actor_id": "easyapi/pubmed-search-scraper",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.45000000000000007
+  }
+]

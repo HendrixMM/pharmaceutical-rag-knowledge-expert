@@ -7,6 +7,7 @@ import streamlit as st
 import sys
 import os
 import time
+from typing import Any, Dict
 from pathlib import Path
 from datetime import datetime
 import plotly.express as px
@@ -16,8 +17,10 @@ from dotenv import load_dotenv
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
-from src.rag_agent import RAGAgent
+from src.enhanced_rag_agent import EnhancedRAGAgent
+from src.enhanced_config import EnhancedRAGConfig
 from src.nvidia_embeddings import NVIDIAEmbeddings
+from src.pharmaceutical_query_adapter import build_enhanced_rag_agent
 
 # Page configuration
 st.set_page_config(
@@ -96,8 +99,17 @@ def initialize_rag_agent():
     """Initialize the RAG agent (cached for performance)"""
     try:
         load_dotenv()
+
+        # Load enhanced configuration
+        config = EnhancedRAGConfig.from_env()
+
         api_key = os.getenv("NVIDIA_API_KEY")
         docs_folder = os.getenv("DOCS_FOLDER", "Data/Docs")
+        vector_db_path = os.getenv("VECTOR_DB_PATH", "./vector_db")
+        guardrails_config = os.getenv("MEDICAL_GUARDRAILS_CONFIG")
+        enable_synthesis = os.getenv("ENABLE_SYNTHESIS", "true").strip().lower() in ("1", "true", "yes", "on")
+        enable_ddi = os.getenv("ENABLE_DDI_ANALYSIS", "true").strip().lower() in ("1", "true", "yes", "on")
+        safety_mode = os.getenv("ENHANCED_RAG_SAFETY_MODE", "balanced")
 
         if not api_key:
             st.error("❌ NVIDIA_API_KEY not found in environment variables")
@@ -115,14 +127,26 @@ def initialize_rag_agent():
                 st.error(f"❌ NVIDIA API connection failed: {str(e)}")
                 return None
 
-        # Initialize RAG agent
-        with st.spinner("🤖 Initializing RAG Agent..."):
-            rag_agent = RAGAgent(docs_folder, api_key)
+        # Initialize RAG agent with enhanced configuration using factory method
+        with st.spinner("🤖 Initializing Enhanced RAG Agent..."):
+            rag_agent = build_enhanced_rag_agent(
+                docs_folder=docs_folder,
+                api_key=api_key,
+                vector_db_path=vector_db_path,
+                guardrails_config_path=guardrails_config,
+                enable_synthesis=enable_synthesis,
+                enable_ddi_analysis=enable_ddi,
+                safety_mode=safety_mode,
+                config=config,
+                append_disclaimer_in_answer=True,
+            )
 
         # Setup knowledge base
         with st.spinner("📚 Loading knowledge base..."):
-            if rag_agent.setup_knowledge_base():
-                st.success("✅ RAG system initialized successfully!")
+            if rag_agent.base_agent.setup_knowledge_base():
+                st.success("✅ Enhanced RAG system initialized successfully!")
+                if config.should_enable_pubmed():
+                    st.info("🔬 PubMed integration enabled - Hybrid search available!")
                 return rag_agent
             else:
                 st.error("❌ Failed to setup knowledge base")
@@ -130,7 +154,7 @@ def initialize_rag_agent():
                 return None
 
     except Exception as e:
-        st.error(f"❌ Failed to initialize RAG agent: {str(e)}")
+        st.error(f"❌ Failed to initialize Enhanced RAG agent: {str(e)}")
         st.exception(e)
         return None
 
@@ -157,7 +181,7 @@ def display_sidebar(rag_agent):
         """, unsafe_allow_html=True)
         
         # Get knowledge base stats
-        stats = rag_agent.get_knowledge_base_stats()
+        stats = rag_agent.base_agent.get_knowledge_base_stats()
         
         st.sidebar.markdown("### 📚 Knowledge Base")
         st.sidebar.metric("Documents", stats.get('document_count', 0))
@@ -166,7 +190,54 @@ def display_sidebar(rag_agent):
         # Model information
         st.sidebar.markdown("### 🤖 AI Models")
         st.sidebar.info("**Embedding**: nvidia/nv-embed-v1\n**LLM**: meta/llama-3.1-8b-instruct")
-        
+
+        # Safety metrics snapshot
+        safety_metrics = rag_agent.get_safety_metrics()
+        st.sidebar.markdown("### 🛡️ Safety Metrics")
+        st.sidebar.metric("Checks", safety_metrics.get("total_queries", 0))
+        st.sidebar.metric("Blocked", safety_metrics.get("blocked_queries", 0))
+        st.sidebar.caption(f"Mode: {safety_metrics.get('safety_mode', 'balanced').title()}")
+
+        # PubMed integration status
+        if rag_agent.config.should_enable_pubmed():
+            st.sidebar.markdown("### 🔬 PubMed Integration")
+            pubmed_status = rag_agent.get_system_status().get("pubmed", {})
+            pubmed_metrics = pubmed_status.get("metrics", {})
+
+            # Status indicator
+            pubmed_enabled = pubmed_status.get("enabled", False)
+            if pubmed_enabled:
+                st.sidebar.success("🟢 PubMed Enabled")
+
+                # Display metrics
+                st.sidebar.metric("Queries", pubmed_metrics.get("total_queries", 0))
+                st.sidebar.metric("Cache Hits", pubmed_metrics.get("cache_hits", 0))
+
+                # Show cache status if available
+                component_health = rag_agent.component_health.get("pubmed_integration", {})
+                cache_status = component_health.get("cache", {})
+                if cache_status:
+                    cache_status_text = cache_status.get("status", "unknown")
+                    if cache_status_text == "ready":
+                        st.sidebar.success("📦 Cache Ready")
+                    else:
+                        st.sidebar.warning("⚠️ Cache Issue")
+
+                # Show rate limit status
+                rate_limit_status = component_health.get("rate_limit", {})
+                if rate_limit_status:
+                    if rate_limit_status.get("status") == "ready":
+                        st.sidebar.info("⏱️ Rate Limit OK")
+                    else:
+                        st.sidebar.warning("⏱️ Rate Limit Active")
+
+                # Configuration summary
+                config_flags = rag_agent.config.summarize_flags()
+                if config_flags.get("hybrid"):
+                    st.sidebar.info("🔄 Hybrid Mode")
+            else:
+                st.sidebar.warning("⚪ PubMed Disabled")
+
         # Document types supported
         st.sidebar.markdown("### 📖 Document Types Supported")
         doc_types = [
@@ -195,12 +266,45 @@ def display_chat_interface(rag_agent):
     # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
+        initial_message = "Hello! I'm your RAG Assistant powered by NVIDIA NemoRetriever. I can help you find information from your document collection."
+        if rag_agent and rag_agent.config.should_enable_pubmed():
+            initial_message += "\n\n🔬 **PubMed Integration Available**\nI can also search PubMed for the latest medical research. Try asking about recent studies or clinical trials!"
         st.session_state.messages.append({
             "role": "assistant",
-            "content": "Hello! I'm your RAG Assistant powered by NVIDIA NemoRetriever. I can help you find information from your document collection. What would you like to know?",
+            "content": initial_message,
             "sources": [],
             "processing_time": 0
         })
+
+    # Query mode selection (only if PubMed is enabled)
+    if rag_agent and rag_agent.config.should_enable_pubmed():
+        col1, col2, col3 = st.columns([2, 2, 1])
+        with col1:
+            query_mode = st.selectbox(
+                "🔍 Search Mode:",
+                ["Auto (Hybrid)", "Local Documents Only", "PubMed Only"],
+                index=0,
+                help="Auto: Intelligently combines local documents with PubMed research\nPubMed Only: Searches only PubMed, optionally in strict mode (no fallback to local documents)"
+            )
+        with col2:
+            if query_mode != "Local Documents Only":
+                max_pubmed_results = st.slider(
+                    "Max PubMed Results:",
+                    min_value=1,
+                    max_value=20,
+                    value=5,
+                    help="Maximum number of PubMed articles to include"
+                )
+            else:
+                max_pubmed_results = 0
+        with col3:
+            st.markdown("###")
+            if rag_agent.config.is_rollout_active():
+                rollout_pct = rag_agent.config.rollout_percentage
+                st.info(f"🎲 Rollout: {rollout_pct}%")
+    else:
+        query_mode = "Local Documents Only"
+        max_pubmed_results = 0
     
     # Display chat history
     for message in st.session_state.messages:
@@ -221,7 +325,11 @@ def display_chat_interface(rag_agent):
             
             # Display sources if available
             if message.get("sources"):
-                display_sources(message["sources"], message.get("processing_time", 0))
+                display_sources(
+                    message["sources"],
+                    message.get("processing_time", 0),
+                    message.get("confidence_scores"),
+                )
     
     # Chat input
     if prompt := st.chat_input("Ask a question about your documents..."):
@@ -238,34 +346,96 @@ def display_chat_interface(rag_agent):
         
         if rag_agent:
             try:
-                # Show loading spinner
-                with st.spinner("🔍 Searching documents..."):
-                    # Get response from RAG agent
-                    response = rag_agent.ask_question(prompt)
+                # Show loading spinner with mode-specific text
+                if query_mode == "PubMed Only":
+                    spinner_text = "🔬 Searching PubMed..."
+                elif query_mode == "Auto (Hybrid)":
+                    spinner_text = "🔄 Searching documents & PubMed..."
+                else:
+                    spinner_text = "🔍 Searching documents..."
 
-                # Validate response
-                if not response or not response.answer:
+                with st.spinner(spinner_text):
+                    # Choose the appropriate query method based on mode
+                    if query_mode == "PubMed Only":
+                        response_payload = rag_agent.ask_question_pubmed_only(
+                            prompt,
+                            max_external_results=max_pubmed_results
+                        )
+                    elif query_mode == "Auto (Hybrid)":
+                        response_payload = rag_agent.ask_question_hybrid(
+                            prompt,
+                            k=5,
+                            max_external_results=max_pubmed_results
+                        )
+                    else:
+                        response_payload = rag_agent.ask_question_safe_sync(prompt, k=5)
+
+                if not response_payload:
                     st.error("❌ Failed to get a response. Please try again.")
                     return
 
-                # Add assistant response
+                error = response_payload.get("error")
+                answer = response_payload.get("answer")
+                sources = response_payload.get("sources", [])
+                processing_time = response_payload.get("processing_time", 0.0)
+                confidence_scores = response_payload.get("confidence_scores")
+
+                if error:
+                    # Handle both PubMed-style errors (with 'message') and guardrails-style errors (with 'issues')
+                    if isinstance(error, dict):
+                        if "message" in error:
+                            # PubMed-style error
+                            issues = [error["message"]]
+                        else:
+                            # Guardrails-style error
+                            issues = error.get("issues") or [error.get("message", "An error occurred")]
+                    else:
+                        # String error or other format
+                        issues = [str(error)]
+
+                    st.warning("⚠️ " + " ".join(issues))
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": "\n".join(issues),
+                        "sources": [],
+                        "processing_time": 0,
+                    })
+
+                    # Only show recommendations for guardrails-style errors
+                    if isinstance(error, dict) and "recommendations" in error:
+                        recommendations = error.get("recommendations")
+                        if recommendations:
+                            st.info("\n".join(recommendations))
+                    return
+
+                if not answer:
+                    st.error("❌ The system returned an empty answer. Please try again.")
+                    return
+
+                safety_warnings = response_payload.get("safety", {}).get("output_validation", {}).get("warnings")
+
+                # Add assistant response (answer already includes disclaimer when append_disclaimer_in_answer=True)
                 st.session_state.messages.append({
                     "role": "assistant",
-                    "content": response.answer,
-                    "sources": response.source_documents,
-                    "processing_time": response.processing_time
+                    "content": answer,
+                    "sources": sources,
+                    "processing_time": processing_time,
+                    "confidence_scores": confidence_scores,
                 })
 
                 # Display assistant response
                 st.markdown(f"""
                 <div class="chat-message assistant-message">
                     <strong>🤖 AI Assistant:</strong><br>
-                    {response.answer}
+                    {answer}
                 </div>
                 """, unsafe_allow_html=True)
 
+                if safety_warnings:
+                    st.warning("\n".join(safety_warnings))
+
                 # Display sources
-                display_sources(response.source_documents, response.processing_time)
+                display_sources(sources, processing_time, confidence_scores)
 
             except Exception as e:
                 st.error(f"❌ Error processing your question: {str(e)}")
@@ -280,145 +450,341 @@ def display_chat_interface(rag_agent):
             st.error("❌ RAG system not available. Please check the system status.")
             st.info("Try refreshing the page or contact support if the issue persists.")
 
+def _normalise_source_document(source: Any) -> Dict[str, Any]:
+    """Return a unified dictionary describing the source document."""
+    if hasattr(source, "metadata") and hasattr(source, "page_content"):
+        return {
+            "metadata": dict(source.metadata or {}),
+            "page_content": source.page_content,
+        }
+    if isinstance(source, dict):
+        return {
+            "metadata": dict(source.get("metadata", {})),
+            "page_content": source.get("page_content", ""),
+        }
+    return {"metadata": {}, "page_content": str(source)}
+
+
 def display_sources(source_documents, processing_time, confidence_scores=None):
     """Display source documents in an elegant format"""
     if not source_documents:
         st.info("ℹ️ No specific sources found for this response.")
         return
 
+    normalised_docs = [_normalise_source_document(doc) for doc in source_documents]
+
+    # Check if we have PubMed articles
+    has_pubmed = any(
+        any(key in doc["metadata"] for key in ("pubmed_id", "pmid", "id")) or
+        doc["metadata"].get("source_type") == "pubmed"
+        for doc in normalised_docs
+    )
+    local_docs = [doc for doc in normalised_docs if not any(
+        key in doc["metadata"] for key in ("pubmed_id", "pmid", "id")
+    ) and doc["metadata"].get("source_type") != "pubmed"]
+    pubmed_docs = [doc for doc in normalised_docs if any(
+        key in doc["metadata"] for key in ("pubmed_id", "pmid", "id")
+    ) or doc["metadata"].get("source_type") == "pubmed"]
+
     # Create a container for sources
     with st.container():
         st.markdown("---")
 
         # Header with metrics
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("⏱️ Processing Time", f"{processing_time:.2f}s")
         with col2:
-            st.metric("📄 Sources Found", len(source_documents))
+            st.metric("📄 Total Sources", len(normalised_docs))
         with col3:
-            if confidence_scores:
-                avg_confidence = sum(confidence_scores) / len(confidence_scores)
-                st.metric("🎯 Avg. Relevance", f"{avg_confidence:.2f}")
+            if local_docs:
+                st.metric("📁 Local Docs", len(local_docs))
+        with col4:
+            if pubmed_docs:
+                st.metric("🔬 PubMed", len(pubmed_docs))
+
+        if confidence_scores:
+            avg_confidence = sum(confidence_scores) / len(confidence_scores)
+            st.metric("🎯 Avg. Relevance", f"{avg_confidence:.2f}")
 
         st.markdown("### 📚 Sources & References")
 
         # Create tabs for different views
-        tab1, tab2, tab3 = st.tabs(["📄 Document Sources", "📊 Source Analysis", "🔍 Quick Search"])
+        if has_pubmed:
+            tab1, tab2, tab3, tab4 = st.tabs(["📄 All Sources", "📁 Local Documents", "🔬 PubMed Articles", "📊 Analysis"])
+        else:
+            tab1, tab2, tab3 = st.tabs(["📄 Document Sources", "📊 Source Analysis", "🔍 Quick Search"])
 
-        with tab1:
-            for i, doc in enumerate(source_documents, 1):
-                source_file = doc.metadata.get("source_file", "Unknown")
-                page = doc.metadata.get("page", "Unknown")
-                chunk_id = doc.metadata.get("chunk_id", "Unknown")
+        with tab1 if not has_pubmed else tab1:  # All Sources or Document Sources
+            for i, doc in enumerate(normalised_docs, 1):
+                metadata = doc["metadata"]
+                page_content = doc["page_content"]
 
-                # Clean up filename for display
-                display_name = source_file.replace("_", " ").replace("-", " ").title()
-                if display_name.endswith(".pdf"):
-                    display_name = display_name[:-4]
+                # Check if this is a PubMed article
+                if "pubmed_id" in metadata:
+                    pubmed_id = metadata.get("pubmed_id", "")
+                    title = metadata.get("title", "Untitled Article")
+                    authors = metadata.get("authors", [])
+                    journal = metadata.get("journal", "")
+                    year = metadata.get("publication_date", "")[:4] if metadata.get("publication_date") else ""
+                    url = metadata.get("url", f"https://pubmed.ncbi.nlm.nih.gov/{pubmed_id}")
 
-                # Confidence indicator
-                confidence_indicator = ""
-                if confidence_scores and i <= len(confidence_scores):
-                    score = confidence_scores[i-1]
-                    if score > 0.8:
-                        confidence_indicator = "🟢 High Relevance"
-                    elif score > 0.6:
-                        confidence_indicator = "🟡 Medium Relevance"
-                    else:
-                        confidence_indicator = "🔴 Low Relevance"
-
-                with st.expander(f"📖 Source {i}: {display_name} (Page {page}) {confidence_indicator}"):
-                    col1, col2 = st.columns([2, 1])
-
-                    with col1:
-                        st.markdown(f"**📁 File**: {source_file}")
-                        st.markdown(f"**📄 Page**: {page}")
-                        st.markdown(f"**🔢 Chunk ID**: {chunk_id}")
-                        if confidence_scores and i <= len(confidence_scores):
-                            st.markdown(f"**🎯 Relevance Score**: {confidence_scores[i-1]:.3f}")
-
-                    with col2:
-                        # Quick actions
-                        if st.button(f"📋 Copy Text {i}", key=f"copy_{i}"):
-                            st.code(doc.page_content, language="text")
-
-                    st.markdown("**📝 Content Preview**:")
-                    # Better text formatting
-                    preview_text = doc.page_content[:800]
-                    if len(doc.page_content) > 800:
-                        preview_text += "..."
-
+                    # PubMed article display
                     st.markdown(f"""
-                    <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 5px; border-left: 3px solid #2a5298;">
-                        {preview_text}
+                    <div class="source-card" style="border-left-color: #2e7d32;">
+                        <h4>🔬 {title}</h4>
+                        <p><strong>Authors:</strong> {', '.join(authors[:3])}{' et al.' if len(authors) > 3 else ''}</p>
+                        <p><strong>Journal:</strong> {journal} ({year})</p>
+                        <p><strong>PubMed ID:</strong> {pubmed_id}</p>
+                        <a href="{url}" target="_blank">View on PubMed →</a>
                     </div>
                     """, unsafe_allow_html=True)
 
-        with tab2:
-            # Create source distribution chart
-            source_files = [doc.metadata.get("source_file", "Unknown") for doc in source_documents]
-            file_counts = {}
-            for file in source_files:
-                # Clean filename for chart
-                clean_name = file.replace("_", " ").replace("-", " ")
-                if clean_name.endswith(".pdf"):
-                    clean_name = clean_name[:-4]
-                file_counts[clean_name] = file_counts.get(clean_name, 0) + 1
-
-            if file_counts:
-                # Pie chart for source distribution
-                fig_pie = px.pie(
-                    values=list(file_counts.values()),
-                    names=list(file_counts.keys()),
-                    title="📊 Source Document Distribution",
-                    color_discrete_sequence=px.colors.qualitative.Set3
-                )
-                fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-                st.plotly_chart(fig_pie, use_container_width=True)
-
-                # Bar chart for page distribution
-                pages = [doc.metadata.get("page", 0) for doc in source_documents]
-                if pages:
-                    fig_bar = px.histogram(
-                        x=pages,
-                        title="📄 Page Distribution of Sources",
-                        labels={'x': 'Page Number', 'y': 'Number of Sources'},
-                        color_discrete_sequence=['#2a5298']
-                    )
-                    st.plotly_chart(fig_bar, use_container_width=True)
-
-        with tab3:
-            st.markdown("#### 🔍 Search Within Sources")
-            search_term = st.text_input("Search for specific terms in the source documents:")
-
-            if search_term:
-                matches = []
-                for i, doc in enumerate(source_documents, 1):
-                    if search_term.lower() in doc.page_content.lower():
-                        # Find the context around the search term
-                        content = doc.page_content.lower()
-                        index = content.find(search_term.lower())
-                        start = max(0, index - 100)
-                        end = min(len(content), index + len(search_term) + 100)
-                        context = doc.page_content[start:end]
-
-                        matches.append({
-                            'source': i,
-                            'file': doc.metadata.get("source_file", "Unknown"),
-                            'page': doc.metadata.get("page", "Unknown"),
-                            'context': context
-                        })
-
-                if matches:
-                    st.success(f"Found {len(matches)} matches for '{search_term}':")
-                    for match in matches:
-                        st.markdown(f"""
-                        **Source {match['source']}** - {match['file']} (Page {match['page']})
-                        > ...{match['context']}...
-                        """)
+                    # Show abstract if available
+                    abstract = metadata.get("abstract", "")
+                    if abstract and len(abstract) > 200:
+                        with st.expander("Show Abstract"):
+                            st.markdown(f"*{abstract[:500]}{'...' if len(abstract) > 500 else ''}*")
                 else:
-                    st.info(f"No matches found for '{search_term}' in the source documents.")
+                    # Local document display
+                    source_file = metadata.get("source_file") or metadata.get("title") or metadata.get("id", "Unknown")
+                    page = metadata.get("page", "Unknown")
+                    chunk_id = metadata.get("chunk_id", "Unknown")
+
+                    display_name = str(source_file).replace("_", " ").replace("-", " ").title()
+                    if display_name.lower().endswith(".pdf"):
+                        display_name = display_name[:-4]
+
+                    confidence_indicator = ""
+                    if confidence_scores and i <= len(confidence_scores):
+                        score = confidence_scores[i - 1]
+                        if score > 0.8:
+                            confidence_indicator = "🟢 High Relevance"
+                        elif score > 0.6:
+                            confidence_indicator = "🟡 Medium Relevance"
+                        else:
+                            confidence_indicator = "🔴 Low Relevance"
+
+                    with st.expander(f"📖 Source {i}: {display_name} (Page {page}) {confidence_indicator}"):
+                        col_left, col_right = st.columns([2, 1])
+
+                        with col_left:
+                            st.markdown(f"**📁 File**: {source_file}")
+                            st.markdown(f"**📄 Page**: {page}")
+                            st.markdown(f"**🔢 Chunk ID**: {chunk_id}")
+                            if confidence_scores and i <= len(confidence_scores):
+                                st.markdown(f"**🎯 Relevance Score**: {confidence_scores[i-1]:.3f}")
+
+                        with col_right:
+                            if st.button(f"📋 Copy Text {i}", key=f"copy_{i}"):
+                                st.code(page_content, language="text")
+
+                        st.markdown("**📝 Content Preview**:")
+                        preview_text = page_content[:800]
+                        if len(page_content) > 800:
+                            preview_text += "..."
+                        st.markdown(
+                            f"""
+                            <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 5px; border-left: 3px solid #2a5298;">
+                                {preview_text}
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+
+        # Local Documents Tab (only when PubMed is available)
+        if has_pubmed:
+            with tab2:
+                if local_docs:
+                    source_files = [doc["metadata"].get("source_file", "Unknown") for doc in local_docs]
+                    file_counts: Dict[str, int] = {}
+                    for file in source_files:
+                        clean_name = str(file).replace("_", " ").replace("-", " ")
+                        if clean_name.endswith(".pdf"):
+                            clean_name = clean_name[:-4]
+                        file_counts[clean_name] = file_counts.get(clean_name, 0) + 1
+
+                    if file_counts:
+                        fig_pie = px.pie(
+                            values=list(file_counts.values()),
+                            names=list(file_counts.keys()),
+                            title="📊 Local Document Distribution",
+                            color_discrete_sequence=px.colors.qualitative.Set3,
+                        )
+                        fig_pie.update_traces(textposition="inside", textinfo="percent+label")
+                        st.plotly_chart(fig_pie, use_container_width=True)
+
+                        pages = [doc["metadata"].get("page", 0) for doc in local_docs]
+                        if pages:
+                            fig_bar = px.histogram(
+                                x=pages,
+                                title="📄 Page Distribution of Local Sources",
+                                labels={"x": "Page Number", "y": "Number of Sources"},
+                                color_discrete_sequence=['#2a5298'],
+                            )
+                            st.plotly_chart(fig_bar, use_container_width=True)
+                else:
+                    st.info("📁 No local documents used in this response")
+
+            # PubMed Articles Tab
+            with tab3:
+                if pubmed_docs:
+                    # Journal distribution
+                    journals = [doc["metadata"].get("journal", "Unknown") for doc in pubmed_docs]
+                    journal_counts: Dict[str, int] = {}
+                    for journal in journals:
+                        journal_counts[journal] = journal_counts.get(journal, 0) + 1
+
+                    if journal_counts:
+                        fig_journal = px.pie(
+                            values=list(journal_counts.values()),
+                            names=list(journal_counts.keys()),
+                            title="🔬 PubMed Articles by Journal",
+                            color_discrete_sequence=px.colors.qualitative.G10,
+                        )
+                        fig_journal.update_traces(textposition="inside", textinfo="percent+label")
+                        st.plotly_chart(fig_journal, use_container_width=True)
+
+                    # Publication years
+                    years = []
+                    for doc in pubmed_docs:
+                        pub_date = doc["metadata"].get("publication_date", "")
+                        if pub_date and len(pub_date) >= 4:
+                            years.append(int(pub_date[:4]))
+
+                    if years:
+                        fig_years = px.histogram(
+                            x=years,
+                            title="📅 Publication Years",
+                            labels={"x": "Year", "y": "Number of Articles"},
+                            color_discrete_sequence=['#2e7d32'],
+                        )
+                        st.plotly_chart(fig_years, use_container_width=True)
+
+                    # Article list with detailed info
+                    st.markdown("### 📝 Article Details")
+                    for i, doc in enumerate(pubmed_docs, 1):
+                        metadata = doc["metadata"]
+                        title = metadata.get("title", "Untitled")
+                        authors = metadata.get("authors", [])
+                        journal = metadata.get("journal", "")
+                        year = metadata.get("publication_date", "")[:4] if metadata.get("publication_date") else ""
+                        pubmed_id = metadata.get("pubmed_id", "")
+
+                        with st.expander(f"{i}. {title} ({year})"):
+                            st.markdown(f"**Authors**: {', '.join(authors[:5])}{' et al.' if len(authors) > 5 else ''}")
+                            st.markdown(f"**Journal**: {journal}")
+                            st.markdown(f"**PubMed ID**: {pubmed_id}")
+                            if metadata.get("url"):
+                                st.markdown(f"[**View on PubMed**]({metadata['url']})")
+
+                            # Show abstract if available
+                            abstract = metadata.get("abstract", "")
+                            if abstract:
+                                st.markdown("**Abstract**:")
+                                st.info(abstract[:1000] + "..." if len(abstract) > 1000 else abstract)
+                else:
+                    st.info("🔬 No PubMed articles used in this response")
+
+            # Analysis Tab
+            with tab4:
+                st.markdown("### 📊 Source Analysis")
+
+                # Comparison pie chart
+                fig_comparison = px.pie(
+                    values=[len(local_docs), len(pubmed_docs)],
+                    names=["Local Documents", "PubMed Articles"],
+                    title="📈 Source Type Distribution",
+                    color_discrete_sequence=["#2a5298", "#2e7d32"],
+                )
+                st.plotly_chart(fig_comparison, use_container_width=True)
+
+                # Additional metrics
+                col1, col2 = st.columns(2)
+                with col1:
+                    if pubmed_docs:
+                        # Calculate average publication year
+                        years = []
+                        for doc in pubmed_docs:
+                            pub_date = doc["metadata"].get("publication_date", "")
+                            if pub_date and len(pub_date) >= 4:
+                                years.append(int(pub_date[:4]))
+                        if years:
+                            avg_year = sum(years) / len(years)
+                            st.metric("📅 Avg. Publication Year", f"{int(avg_year)}")
+
+                with col2:
+                    if local_docs and pubmed_docs:
+                        ratio = len(pubmed_docs) / len(normalised_docs)
+                        st.metric("🔬 PubMed Ratio", f"{ratio:.1%}")
+
+        else:
+            # Original tabs when no PubMed
+            with tab2:
+                source_files = [doc["metadata"].get("source_file", "Unknown") for doc in normalised_docs]
+                file_counts: Dict[str, int] = {}
+                for file in source_files:
+                    clean_name = str(file).replace("_", " ").replace("-", " ")
+                    if clean_name.endswith(".pdf"):
+                        clean_name = clean_name[:-4]
+                    file_counts[clean_name] = file_counts.get(clean_name, 0) + 1
+
+                if file_counts:
+                    fig_pie = px.pie(
+                        values=list(file_counts.values()),
+                        names=list(file_counts.keys()),
+                        title="📊 Source Document Distribution",
+                        color_discrete_sequence=px.colors.qualitative.Set3,
+                    )
+                    fig_pie.update_traces(textposition="inside", textinfo="percent+label")
+                    st.plotly_chart(fig_pie, use_container_width=True)
+
+                    pages = [doc["metadata"].get("page", 0) for doc in normalised_docs]
+                    if pages:
+                        fig_bar = px.histogram(
+                            x=pages,
+                            title="📄 Page Distribution of Sources",
+                            labels={"x": "Page Number", "y": "Number of Sources"},
+                            color_discrete_sequence=['#2a5298'],
+                        )
+                        st.plotly_chart(fig_bar, use_container_width=True)
+
+            with tab3:
+                st.markdown("#### 🔍 Search Within Sources")
+                search_term = st.text_input("Search for specific terms in the source documents:")
+
+                if search_term:
+                    matches = []
+                    for i, doc in enumerate(normalised_docs, 1):
+                        page_content = doc["page_content"]
+                        if search_term.lower() in page_content.lower():
+                            content_lower = page_content.lower()
+                            index = content_lower.find(search_term.lower())
+                            start = max(0, index - 100)
+                            end = min(len(page_content), index + len(search_term) + 100)
+                            context = page_content[start:end]
+
+                            metadata = doc["metadata"]
+                            matches.append(
+                                {
+                                    "source": i,
+                                    "file": metadata.get("source_file", "Unknown"),
+                                    "page": metadata.get("page", "Unknown"),
+                                    "context": context,
+                                }
+                            )
+
+                    if matches:
+                        st.success(f"Found {len(matches)} matches for '{search_term}':")
+                        for match in matches:
+                            st.markdown(
+                                f"""
+                                **Source {match['source']}** - {match['file']} (Page {match['page']})
+                                > ...{match['context']}...
+                                """
+                            )
+                    else:
+                        st.info(f"No matches found for '{search_term}' in the source documents.")
 
 def display_document_stats(rag_agent):
     """Display detailed document statistics"""
@@ -428,7 +794,7 @@ def display_document_stats(rag_agent):
 
     st.markdown("## 📊 Document Statistics")
 
-    stats = rag_agent.get_knowledge_base_stats()
+    stats = rag_agent.base_agent.get_knowledge_base_stats()
 
     # Overview metrics
     col1, col2, col3, col4 = st.columns(4)

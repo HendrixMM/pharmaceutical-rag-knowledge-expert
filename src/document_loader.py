@@ -37,6 +37,22 @@ JOURNAL_PATTERN_ASCII: Optional[Pattern[str]] = None
 AFFILIATION_EXCLUSION_PATTERN: Optional[Pattern[str]] = None
 
 
+def _env_flag_enabled(name: str, default: bool = False) -> bool:
+    """Return True when the named environment flag is set to a truthy value."""
+
+    value = os.getenv(name)
+    if value is None:
+        return default
+
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+
+    return default
+
+
 def _setup_regex_support(regex_module: Optional[Any]) -> None:
     """Configure regex/regex fallbacks and precompiled patterns."""
 
@@ -152,10 +168,40 @@ except ImportError:
 _PENDING_REGEX_MODULE: Optional[Any] = _imported_regex
 
 # Import unified DOI/PMID patterns and utilities
-from .paper_schema import (
-    DOI_PATTERN, PMID_PATTERN, PMID_PATTERN_EXTRACT,
-    clean_identifier, normalize_doi, normalize_pmid
-)
+try:
+    from .paper_schema import (
+        DOI_PATTERN, PMID_PATTERN, PMID_PATTERN_EXTRACT,
+        clean_identifier, normalize_doi, normalize_pmid
+    )
+    PAPER_SCHEMA_AVAILABLE = True
+except ImportError:
+    # Define conservative fallback patterns when paper_schema is not available
+    PAPER_SCHEMA_AVAILABLE = False
+
+    # Conservative DOI pattern - matches 10.xxxx/xxxx format
+    DOI_PATTERN = r'\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b'
+
+    # Conservative PMID pattern - matches PMIDs in various formats
+    PMID_PATTERN = r'\b(PMID:\s*)?(\d{7,8})\b'
+    PMID_PATTERN_EXTRACT = r'(\d{7,8})'
+
+    def clean_identifier(id_str: str) -> str:
+        """Minimal identifier cleaning - strip whitespace and common prefixes"""
+        return id_str.strip().replace('doi:', '').replace('DOI:', '').replace('pmid:', '').replace('PMID:', '').strip()
+
+    def normalize_doi(doi: str) -> str:
+        """Minimal DOI normalization - strip whitespace and prefixes"""
+        return clean_identifier(doi)
+
+    def normalize_pmid(pmid: str) -> str:
+        """Minimal PMID normalization - strip whitespace and prefixes"""
+        return clean_identifier(pmid)
+
+    logger.warning("paper_schema module not available - using conservative fallback patterns for DOI/PMID extraction")
+
+# Verify patterns are available
+if not PAPER_SCHEMA_AVAILABLE:
+    logger.info("Using fallback DOI/PMID patterns - some functionality may be limited")
 
 _setup_regex_support(_PENDING_REGEX_MODULE)
 
@@ -465,9 +511,13 @@ class PDFDocumentLoader:
             Dictionary with extracted metadata
         """
         metadata = {}
+        enable_mesh_from_pdf = _env_flag_enabled("ENABLE_MESH_FROM_PDF", False)
 
         def sanitize_author_line(raw_line: str) -> str:
-            """Remove affiliations, emails, and superscripts from detected author text."""
+            """
+            Remove affiliations, emails, and superscripts from detected author text.
+            Authors are always stored as comma-separated strings for consistency with metadata standards.
+            """
             sanitized = re.sub(r'\b\S+@\S+\b', '', raw_line)
             sanitized = re.sub(r'\[[^\]]*\]', '', sanitized)
             sanitized = re.sub(r'[\d*†]+', '', sanitized)
@@ -638,7 +688,7 @@ class PDFDocumentLoader:
                 metadata['abstract'] = abstract_text
 
         # Extract MeSH terms
-        mesh_terms = []
+        mesh_terms: List[str] = []
 
         # Look for lines starting with "MeSH terms:" or "MeSH:"
         mesh_pattern1 = r'^(MeSH\s+terms?):\s*(.+)$'
@@ -661,6 +711,59 @@ class PDFDocumentLoader:
                 # Split on commas and semicolons, clean up terms
                 terms = re.split(r'[,;]', mesh_text)
                 mesh_terms.extend([term.strip() for term in terms if term.strip()])
+
+        extra_mesh_terms: List[str] = []
+        if enable_mesh_from_pdf:
+            raw_lines = text.split('\n')
+            mesh_heading_pattern = re.compile(r'^(.+?)\s*\[MeSH\s+Terms\]\s*$', re.IGNORECASE)
+            for raw_line in raw_lines:
+                stripped = raw_line.strip()
+                if not stripped:
+                    continue
+                heading_match = mesh_heading_pattern.match(stripped)
+                if heading_match:
+                    extracted = heading_match.group(1)
+                    extra_mesh_terms.extend(
+                        [term.strip() for term in re.split(r'[,;/]', extracted) if term.strip()]
+                    )
+
+            if not extra_mesh_terms:
+                heading_labels = {
+                    'mesh terms',
+                    'mesh headings',
+                    'major mesh terms',
+                }
+                for index, raw_line in enumerate(raw_lines):
+                    stripped = raw_line.strip()
+                    if stripped.lower() not in heading_labels:
+                        continue
+
+                    collected: List[str] = []
+                    for follower_raw in raw_lines[index + 1:index + 8]:
+                        follower = follower_raw.strip()
+                        if not follower:
+                            break
+                        if follower.endswith(':') and len(follower.split()) <= 4:
+                            break
+                        if re.match(r'^[A-Z][A-Za-z\s/-]+:$', follower):
+                            break
+                        cleaned = follower.lstrip('-*•').strip()
+                        if not cleaned:
+                            continue
+                        collected.extend(
+                            [term.strip() for term in re.split(r'[,;/]', cleaned) if term.strip()]
+                        )
+                    if collected:
+                        extra_mesh_terms.extend(collected)
+                        break
+
+        if extra_mesh_terms:
+            existing_lower = {existing.lower() for existing in mesh_terms}
+            for term in extra_mesh_terms:
+                lowered = term.lower()
+                if lowered not in existing_lower:
+                    mesh_terms.append(term)
+                    existing_lower.add(lowered)
 
         # Add mesh_terms to metadata if found
         if mesh_terms:
@@ -722,13 +825,14 @@ class PDFDocumentLoader:
 
     def _normalize_mesh_terms(self, mesh_terms) -> list:
         """
-        Normalize mesh_terms field to consistent list format
+        Normalize mesh_terms field to consistent list format.
+        Always returns a list of strings for consistency with metadata standards.
 
         Args:
             mesh_terms: MeSH terms field (could be string, list, or other)
 
         Returns:
-            Normalized mesh_terms list
+            Normalized mesh_terms as list[str]
         """
         if isinstance(mesh_terms, list):
             terms_list = [str(term).strip() for term in mesh_terms if str(term).strip()]
@@ -777,7 +881,11 @@ class PDFDocumentLoader:
 
     def _extract_pubmed_metadata(self, pdf_path: Path) -> Dict:
         """
-        Extract PubMed metadata from PDF file and optional sidecar JSON
+        Extract PubMed metadata from PDF file and optional sidecar JSON with deterministic precedence.
+
+        Merge order:
+        1. Start with extracted PDF/XMP metadata
+        2. Overlay sidecar fields for: doi, pmid, publication_date, authors, mesh_terms, journal, abstract
 
         Sidecar JSON schema (produced by src.pubmed_scraper.write_sidecar_for_pdf):
             - doi: str
@@ -793,76 +901,145 @@ class PDFDocumentLoader:
             pdf_path: Path to PDF file
 
         Returns:
-            Dictionary with extracted metadata
+            Dictionary with merged metadata
         """
-        metadata = {}
+        # Start with PDF/XMP extracted metadata
+        metadata = self._extract_pubmed_metadata_from_xmp(pdf_path)
 
         # Check for sidecar JSON file
         json_path = pdf_path.with_suffix('.pubmed.json')
         if json_path.exists():
-            try:
-                with open(json_path, 'r', encoding='utf-8') as f:
-                    json_data = json.load(f)
-
-                # Normalize fields from JSON with proper type handling
-                authors = json_data.get('authors')
-                if authors:
-                    metadata['authors'] = self._normalize_authors(authors)
-
-                mesh_terms = json_data.get('mesh_terms')
-                if mesh_terms:
-                    metadata['mesh_terms'] = self._normalize_mesh_terms(mesh_terms)
-
-                raw_doi = json_data.get('doi')
-                if raw_doi is not None and str(raw_doi).strip():
-                    doi_original = str(raw_doi).strip()
-                    cleaned_doi = clean_identifier(doi_original.rstrip('.,;)'))
-                    normalized_doi = normalize_doi(cleaned_doi)
-                    if normalized_doi:
-                        if normalized_doi != doi_original:
-                            logger.info(
-                                "Normalized DOI value for %s: '%s' -> '%s'",
-                                json_path.name,
-                                doi_original,
-                                normalized_doi,
-                            )
-                        metadata['doi'] = normalized_doi
-
-                raw_pmid = json_data.get('pmid')
-                if raw_pmid is not None and str(raw_pmid).strip():
-                    pmid_original = str(raw_pmid).strip()
-                    cleaned_pmid = clean_identifier(pmid_original)
-                    normalized_pmid = normalize_pmid(cleaned_pmid)
-                    if normalized_pmid:
-                        if normalized_pmid != pmid_original:
-                            logger.info(
-                                "Normalized PMID value for %s: '%s' -> '%s'",
-                                json_path.name,
-                                pmid_original,
-                                normalized_pmid,
-                            )
-                        metadata['pmid'] = normalized_pmid
-
-                # Handle other fields normally, treating empty strings as missing
-                for field in ['title', 'abstract', 'publication_date', 'journal']:
-                    value = json_data.get(field)
-                    if value is not None and str(value).strip():
-                        metadata[field] = value
-
-                # Optionally normalize publication_date via dateutil if it parses to a valid date
-                if 'publication_date' in metadata and parse_date:
-                    try:
-                        parsed_date = parse_date(str(metadata['publication_date']))
-                        if parsed_date:
-                            metadata['publication_date'] = parsed_date.isoformat()
-                    except Exception:
-                        pass  # Keep original value if parsing fails
-
+            sidecar_data = self._parse_pubmed_sidecar(json_path)
+            if sidecar_data:
                 logger.info(f"Loaded PubMed metadata from {json_path.name}")
 
-            except Exception as e:
-                logger.warning(f"Failed to load JSON metadata from {json_path.name}: {str(e)}")
+                # Overlay specific sidecar fields with defined precedence
+                overlay_fields = [
+                    'doi', 'pmid', 'publication_date', 'authors',
+                    'mesh_terms', 'journal', 'abstract'
+                ]
 
+                for field in overlay_fields:
+                    if field in sidecar_data and sidecar_data[field]:
+                        metadata[field] = sidecar_data[field]
+                        logger.debug(f"Applied sidecar value for {field}: {sidecar_data[field]}")
+
+        return metadata
+
+    def _parse_pubmed_sidecar(self, json_path: Path) -> Dict[str, Any]:
+        """
+        Parse and normalize metadata from a PubMed sidecar JSON file.
+
+        Args:
+            json_path: Path to the .pubmed.json sidecar file
+
+        Returns:
+            Dictionary with normalized metadata fields.
+            Returns empty dict if file cannot be parsed.
+        """
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                json_data = json.load(f)
+
+            # Extract and normalize metadata fields
+            metadata = {}
+
+            # Normalize authors field
+            authors = json_data.get('authors')
+            if authors:
+                metadata['authors'] = self._normalize_authors(authors)
+
+            # Normalize MeSH terms
+            mesh_terms = json_data.get('mesh_terms')
+            if mesh_terms:
+                metadata['mesh_terms'] = self._normalize_mesh_terms(mesh_terms)
+
+            # Normalize DOI
+            raw_doi = json_data.get('doi')
+            if raw_doi is not None and str(raw_doi).strip():
+                doi_original = str(raw_doi).strip()
+                cleaned_doi = clean_identifier(doi_original.rstrip('.,;)'))
+                normalized_doi = normalize_doi(cleaned_doi)
+                if normalized_doi:
+                    if normalized_doi != doi_original:
+                        logger.info(
+                            "Normalized DOI value for %s: '%s' -> '%s'",
+                            json_path.name,
+                            doi_original,
+                            normalized_doi,
+                        )
+                    metadata['doi'] = normalized_doi
+
+            # Normalize PMID
+            raw_pmid = json_data.get('pmid')
+            if raw_pmid is not None and str(raw_pmid).strip():
+                pmid_original = str(raw_pmid).strip()
+                cleaned_pmid = clean_identifier(pmid_original)
+                normalized_pmid = normalize_pmid(cleaned_pmid)
+                if normalized_pmid:
+                    if normalized_pmid != pmid_original:
+                        logger.info(
+                            "Normalized PMID value for %s: '%s' -> '%s'",
+                            json_path.name,
+                            pmid_original,
+                            normalized_pmid,
+                        )
+                    metadata['pmid'] = normalized_pmid
+
+            # Handle other fields, treating empty strings as missing
+            for field in ['title', 'abstract', 'publication_date', 'journal']:
+                value = json_data.get(field)
+                if value is not None and str(value).strip():
+                    metadata[field] = value
+
+            # Optionally normalize publication_date via dateutil if it parses to a valid date
+            if 'publication_date' in metadata and parse_date:
+                try:
+                    parsed_date = parse_date(str(metadata['publication_date']))
+                    if parsed_date:
+                        metadata['publication_date'] = parsed_date.isoformat()
+                except Exception:
+                    pass  # Keep original value if parsing fails
+
+            return metadata
+
+        except Exception as e:
+            logger.warning(f"Failed to load JSON metadata from {json_path.name}: {str(e)}")
+            return {}
+
+    def read_pubmed_sidecar(self, pdf_path: Path) -> Dict[str, Any]:
+        """
+        Read PubMed metadata from a PDF sidecar JSON file.
+
+        This method provides a public API for accessing sidecar metadata without
+        exposing private implementation details.
+
+        Args:
+            pdf_path: Path to the PDF file (should have corresponding .pubmed.json sidecar)
+
+        Returns:
+            Dictionary with PubMed metadata from the sidecar file.
+            Returns empty dict if sidecar doesn't exist or cannot be parsed.
+
+        Sidecar JSON schema:
+            - doi: str
+            - pmid: str
+            - title: str
+            - authors: str or list[str]
+            - abstract: str
+            - publication_date: ISO8601 string
+            - journal: str
+            - mesh_terms: list[str]
+        """
+        # Check for sidecar JSON file
+        json_path = pdf_path.with_suffix('.pubmed.json')
+        if not json_path.exists():
+            logger.debug(f"No sidecar file found for {pdf_path.name}")
+            return {}
+
+        metadata = self._parse_pubmed_sidecar(json_path)
+        if metadata:
+            logger.debug(f"Loaded PubMed metadata from {json_path.name}")
         return metadata
 
     def load_documents(self) -> List[Document]:

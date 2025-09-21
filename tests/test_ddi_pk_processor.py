@@ -202,15 +202,15 @@ class TestDDIPKProcessor:
 
     def test_normalize_pk_measurement_unit_variants(self, processor):
         """Handle unit variants such as ng·mL^-1 and geometric mean ratios."""
-        value, canonical = processor._normalize_pk_measurement("cmax", 2.0, "ng·mL^-1")
+        value, canonical, *_ = processor._normalize_pk_measurement("cmax", 2.0, "ng·mL^-1")
         assert canonical == "ng/mL"
         assert value == 2.0
 
-        value, canonical = processor._normalize_pk_measurement("cmax", 0.5, "mg/L")
+        value, canonical, *_ = processor._normalize_pk_measurement("cmax", 0.5, "mg/L")
         assert canonical == "ng/mL"
         assert value == 500.0
 
-        value, canonical = processor._normalize_pk_measurement("auc", 1.8, "geometric mean ratio")
+        value, canonical, *_ = processor._normalize_pk_measurement("auc", 1.8, "geometric mean ratio")
         assert canonical == "fold"
         assert value == 1.8
 

@@ -2,12 +2,61 @@
 
 from __future__ import annotations
 
+import hashlib
+import logging
 import math
+import os
 import re
 from dataclasses import dataclass
 from datetime import datetime
 from difflib import SequenceMatcher
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any, Dict, Iterable, List, Optional, Set, Literal
+
+logger = logging.getLogger(__name__)
+
+# Optional dependencies for enhanced MinHash performance
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+
+try:
+    from datasketch import MinHash, MinHashLSH
+    HAS_DATASKETCH = True
+except ImportError:
+    HAS_DATASKETCH = False
+
+# Helper function to parse environment variables as truthy values
+def _env_true(env_var: str, default: bool = False) -> bool:
+    """Parse environment variable as boolean."""
+    value = os.getenv(env_var, str(default).lower()).lower()
+    return value in ("true", "1", "t", "yes", "y")
+
+
+# Configuration for MinHash diversity filtering
+ENABLE_MINHASH_DIVERSITY = _env_true("ENABLE_MINHASH_DIVERSITY", True)
+MINHASH_NUM_PERMUTATIONS = int(os.getenv("MINHASH_NUM_PERMUTATIONS", "128"))
+MINHASH_MIN_INPUT_SIZE = int(os.getenv("MINHASH_MIN_INPUT_SIZE", "500"))
+MINHASH_NUM_BANDS = int(os.getenv("MINHASH_NUM_BANDS", "16"))
+MINHASH_LSH_THRESHOLD = float(os.getenv("MINHASH_LSH_THRESHOLD", "0.8"))
+MINHASH_OPTIMIZE_MEMORY = _env_true("MINHASH_OPTIMIZE_MEMORY", True)
+MINHASH_CACHE_SIGNATURES = _env_true("MINHASH_CACHE_SIGNATURES", False)
+
+# Validate MinHash configuration with fallbacks
+if MINHASH_NUM_PERMUTATIONS < 64 or MINHASH_NUM_PERMUTATIONS > 256:
+    logger.warning("MINHASH_NUM_PERMUTATIONS must be between 64 and 256, using default 128")
+    MINHASH_NUM_PERMUTATIONS = 128
+if MINHASH_MIN_INPUT_SIZE < 100:
+    logger.warning("MINHASH_MIN_INPUT_SIZE must be at least 100, using default 500")
+    MINHASH_MIN_INPUT_SIZE = 500
+if MINHASH_NUM_BANDS < 4 or MINHASH_NUM_BANDS > MINHASH_NUM_PERMUTATIONS:
+    logger.warning("MINHASH_NUM_BANDS must be between 4 and NUM_PERMUTATIONS, using default 16")
+    MINHASH_NUM_BANDS = 16
+if not (0.0 < MINHASH_LSH_THRESHOLD < 1.0):
+    logger.warning("MINHASH_LSH_THRESHOLD must be between 0 and 1, using default 0.8")
+    MINHASH_LSH_THRESHOLD = 0.8
+
 
 DEFAULT_WEIGHTS = {
     "quality": 0.4,
@@ -20,15 +69,23 @@ DEFAULT_WEIGHTS = {
 _HIGH_QUALITY_TAGS = {
     "systematic review": 0.95,
     "meta-analysis": 0.95,
+    "meta analysis": 0.95,  # Common variant without hyphen
     "randomized controlled trial": 0.9,
+    "rct": 0.9,  # Common abbreviation
     "clinical trial": 0.8,
     "phase iv clinical trial": 0.88,
+    "phase 4 clinical trial": 0.88,
     "phase iii clinical trial": 0.88,
+    "phase 3 clinical trial": 0.88,
     "phase ii clinical trial": 0.82,
+    "phase 2 clinical trial": 0.82,
     "phase i clinical trial": 0.78,
+    "phase 1 clinical trial": 0.78,
     "observational study": 0.7,
     "case-control studies": 0.7,
+    "case control study": 0.7,
     "cohort studies": 0.7,
+    "cohort study": 0.7,
 }
 
 _LOWER_QUALITY_TAGS = {
@@ -186,11 +243,34 @@ class StudyRankingFilter:
         *,
         threshold: Optional[float] = None,
         max_pairs: Optional[int] = None,
+        method: Literal["signature", "minhash"] = "signature",
     ) -> List[Dict[str, Any]]:
-        """Drop near duplicates based on title/abstract similarity with optimizations for large sets."""
+        """Drop near duplicates based on title/abstract similarity with optimizations for large sets.
+
+        Args:
+            papers: Iterable of paper dictionaries
+            threshold: Similarity threshold (default: from constructor)
+            max_pairs: Maximum number of pairwise comparisons (adaptive by default)
+            method: Detection method - "signature" (default) or "minhash" for large sets
+
+        Returns:
+            List of papers with near duplicates removed
+        """
         threshold = self.diversity_threshold if threshold is None else float(threshold)
         papers_list = list(papers)
         input_size = len(papers_list)
+
+          # Use minhash method for large sets to improve performance
+        # Check if MinHash is enabled, datasketch is available, and input size meets minimum requirement
+        use_minhash = (
+            method == "minhash" and
+            ENABLE_MINHASH_DIVERSITY and
+            HAS_DATASKETCH and
+            input_size >= MINHASH_MIN_INPUT_SIZE
+        )
+
+        if use_minhash:
+            return self._apply_minhash_diversity(papers_list, threshold, max_pairs)
 
         # Adaptive max_pairs based on input size
         if max_pairs is None:
@@ -208,7 +288,7 @@ class StudyRankingFilter:
         filtered: List[Dict[str, Any]] = []
         seen_texts: List[str] = []
         seen_signatures: List[Set[str]] = []
-        seen_hashes: List[int] = []  # Fast prefilter using hash
+        seen_hashes: List[str] = []  # Fast prefilter using hash
         comparisons = 0
 
         for paper in papers_list:
@@ -220,8 +300,8 @@ class StudyRankingFilter:
                 filtered.append(paper)
                 continue
 
-            # Fast prefilter using simple hash
-            text_hash = hash(normalised)
+            # Fast prefilter using md5 hash (deterministic across Python runs)
+            text_hash = hashlib.md5(normalised.encode('utf-8')).hexdigest()
             if text_hash in seen_hashes:
                 # Potential exact duplicate, skip detailed comparison
                 continue
@@ -265,6 +345,291 @@ class StudyRankingFilter:
             filtered.append(paper)
 
         return filtered
+
+    def _apply_minhash_diversity(
+        self,
+        papers: List[Dict[str, Any]],
+        threshold: float,
+        max_pairs: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """Apply minhash-based diversity filtering for large document sets.
+
+        Uses locality-sensitive hashing to cluster similar documents before
+        detailed comparison, significantly reducing pairwise comparisons.
+        Uses configurable parameters from environment for optimization.
+        Optionally uses datasketch library if available for better performance.
+
+        Args:
+            papers: List of paper dictionaries
+            threshold: Similarity threshold for considering duplicates
+            max_pairs: Maximum number of pairwise comparisons
+
+        Returns:
+            List of papers with near duplicates removed
+        """
+        if not papers:
+            return []
+
+        # Use optimized datasketch implementation if available
+        if HAS_DATASKETCH and ENABLE_MINHASH_DIVERSITY:
+            try:
+                return self._apply_minhash_datasketch(papers, threshold, max_pairs)
+            except Exception as e:
+                logger.debug("datasketch MinHash failed, falling back to pure Python: %s", e)
+
+        # Minhash parameters from configuration
+        num_permutations = MINHASH_NUM_PERMUTATIONS
+        num_bands = MINHASH_NUM_BANDS
+        rows_per_band = num_permutations // num_bands
+
+        # Check for optional optimization features
+        use_lsh_threshold = MINHASH_LSH_THRESHOLD < threshold
+
+        # Generate minhash signatures for all documents
+        minhash_signatures = []
+        text_to_paper = []
+
+        # Pre-compile regex for better performance
+        whitespace_regex = re.compile(r"\s+")
+
+        for paper in papers:
+            full_text = " ".join(
+                str(paper.get(key, "")) for key in ("title", "abstract", "summary")
+            ).strip()
+            normalised = whitespace_regex.sub(" ", full_text.lower())
+
+            if not normalised:
+                minhash_signatures.append(None)
+                text_to_paper.append(paper)
+                continue
+
+            # Create minhash signature with optimized hashing
+            words = set(normalised.split())
+            if not words:
+                minhash_signatures.append(None)
+                text_to_paper.append(paper)
+                continue
+
+            # Optimized hash-based minhash with early exit for memory optimization
+            signature = []
+            if MINHASH_OPTIMIZE_MEMORY and len(words) > 1000:
+                # For large documents, use sampling to improve performance
+                words = set(list(words)[:1000])
+
+            for i in range(num_permutations):
+                min_hash = float('inf')
+                # Use a more efficient hash combination
+                hash_input = f"{i}_".encode()
+                for word in words:
+                    combined = hash_input + word.encode()
+                    hash_val = int(hashlib.md5(combined).hexdigest()[:8], 16)
+                    min_hash = min(min_hash, hash_val)
+                signature.append(min_hash)
+
+            minhash_signatures.append(signature)
+            text_to_paper.append(paper)
+
+        # Banding for LSH with optimized memory usage
+        bands = {}
+        if MINHASH_OPTIMIZE_MEMORY:
+            # Use dictionary with estimated capacity for better performance
+            bands = {}
+            estimated_buckets = len(papers) // 10  # Estimate bucket count
+            if estimated_buckets > 1000:
+                # For very large datasets, consider memory usage
+                logger.debug("Using optimized memory mode for MinHash LSH with %d documents", len(papers))
+
+        for idx, signature in enumerate(minhash_signatures):
+            if signature is None:
+                continue
+
+            paper = text_to_paper[idx]
+            for band_idx in range(num_bands):
+                start = band_idx * rows_per_band
+                end = start + rows_per_band
+                band = tuple(signature[start:end])
+
+                # Create band key with threshold optimization
+                if use_lsh_threshold:
+                    # Apply additional threshold to reduce false positives
+                    band_key = (band_idx, band, hash(str(band)) % 1000 < int(MINHASH_LSH_THRESHOLD * 1000))
+                else:
+                    band_key = (band_idx, band)
+
+                if band_key not in bands:
+                    bands[band_key] = []
+                bands[band_key].append((idx, paper))
+
+        # Find candidate pairs from LSH buckets with size optimization
+        candidate_pairs = set()
+        large_buckets = 0
+
+        for band_key, bucket in bands.items():
+            if len(bucket) > 1:
+                # Skip extremely large buckets to avoid O(n²) explosion
+                if len(bucket) > 100:
+                    large_buckets += 1
+                    if large_buckets <= 5:  # Log first few occurrences
+                        logger.warning("MinHash LSH bucket too large (%d items), skipping some pairs", len(bucket))
+                    continue
+
+                # All pairs in this bucket are candidates
+                for i in range(len(bucket)):
+                    for j in range(i + 1, len(bucket)):
+                        pair = tuple(sorted([bucket[i][0], bucket[j][0]]))
+                        candidate_pairs.add(pair)
+
+        # Verify candidate pairs with SequenceMatcher
+        comparisons = 0
+        removed_indices = set()
+
+        for idx1, idx2 in candidate_pairs:
+            if max_pairs and comparisons >= max_pairs:
+                break
+
+            if idx1 in removed_indices or idx2 in removed_indices:
+                continue
+
+            sig1 = minhash_signatures[idx1]
+            sig2 = minhash_signatures[idx2]
+
+            if sig1 is None or sig2 is None:
+                continue
+
+            # Calculate actual similarity
+            text1 = " ".join(
+                str(text_to_paper[idx1].get(key, ""))
+                for key in ("title", "abstract", "summary")
+            ).strip().lower()
+            text2 = " ".join(
+                str(text_to_paper[idx2].get(key, ""))
+                for key in ("title", "abstract", "summary")
+            ).strip().lower()
+
+            similarity = SequenceMatcher(None, text1, text2).ratio()
+            comparisons += 1
+
+            if similarity >= threshold:
+                # Remove the second document
+                removed_indices.add(idx2)
+
+        # Return filtered list
+        result = []
+        for idx, paper in enumerate(text_to_paper):
+            if idx not in removed_indices:
+                result.append(paper)
+
+        return result
+
+    def _apply_minhash_datasketch(
+        self,
+        papers: List[Dict[str, Any]],
+        threshold: float,
+        max_pairs: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """Apply MinHash using datasketch library for optimized performance.
+
+        Args:
+            papers: List of paper dictionaries
+            threshold: Similarity threshold for considering duplicates
+            max_pairs: Maximum number of pairwise comparisons (not used in datasketch)
+
+        Returns:
+            List of papers with near duplicates removed
+        """
+        if not papers:
+            return []
+
+        # Create LSH index with configurable parameters
+        lsh = MinHashLSH(
+            num_perm=MINHASH_NUM_PERMUTATIONS,
+            num_bands=MINHASH_NUM_BANDS,
+            threshold=threshold
+        )
+
+        # Track minhashes and papers for later retrieval
+        minhashes = []
+        paper_map = {}
+
+        # Process each paper
+        whitespace_regex = re.compile(r"\s+")
+
+        for idx, paper in enumerate(papers):
+            # Extract and normalize text
+            full_text = " ".join(
+                str(paper.get(key, "")) for key in ("title", "abstract", "summary")
+            ).strip()
+            normalised = whitespace_regex.sub(" ", full_text.lower())
+
+            if not normalised:
+                continue
+
+            # Create MinHash
+            mh = MinHash(num_perm=MINHASH_NUM_PERMUTATIONS)
+            words = set(normalised.split())
+
+            # Optimize large documents
+            if MINHASH_OPTIMIZE_MEMORY and len(words) > 1000:
+                words = set(list(words)[:1000])
+
+            # Add words to MinHash
+            for word in words:
+                mh.update(word.encode('utf-8'))
+
+            # Insert into LSH
+            try:
+                lsh.insert(str(idx), mh)
+                minhashes.append(mh)
+                paper_map[str(idx)] = (idx, paper)
+            except Exception as e:
+                logger.debug("Failed to insert paper %d into LSH: %s", idx, e)
+
+        # Find duplicates
+        removed_indices = set()
+        comparisons = 0
+
+        for idx_str, (orig_idx, paper) in paper_map.items():
+            if orig_idx in removed_indices:
+                continue
+
+            # Query for near duplicates
+            try:
+                result = lsh.query(minhashes[int(idx_str)])
+                for dup_idx_str in result:
+                    dup_idx = paper_map.get(dup_idx_str, (None, None))[0]
+                    if (dup_idx is not None and
+                        dup_idx != orig_idx and
+                        dup_idx not in removed_indices):
+
+                        # Verify with actual similarity to avoid false positives
+                        text1 = " ".join(
+                            str(paper.get(key, "")) for key in ("title", "abstract", "summary")
+                        ).strip().lower()
+                        text2 = " ".join(
+                            str(papers[dup_idx].get(key, "")) for key in ("title", "abstract", "summary")
+                        ).strip().lower()
+
+                        similarity = SequenceMatcher(None, text1, text2).ratio()
+                        comparisons += 1
+
+                        if similarity >= threshold:
+                            removed_indices.add(dup_idx)
+
+                            # Check max_pairs if specified
+                            if max_pairs and comparisons >= max_pairs:
+                                break
+            except Exception as e:
+                logger.debug("LSH query failed for paper %d: %s", orig_idx, e)
+
+        # Return filtered papers
+        result = []
+        for idx, paper in enumerate(papers):
+            if idx not in removed_indices:
+                result.append(paper)
+
+        logger.debug("Datasketch MinHash processed %d papers with %d comparisons",
+                    len(papers), comparisons)
+        return result
 
     def filter_by_criteria(
         self,
@@ -312,7 +677,10 @@ class StudyRankingFilter:
         def _meets_ranking(paper: Dict[str, Any]) -> bool:
             if min_ranking_score is None:
                 return True
-            return paper.get("ranking_score", 0.0) >= float(min_ranking_score)
+            score = paper.get("relevance_score")
+            if score is None:
+                score = paper.get("ranking_score", 0.0)
+            return score >= float(min_ranking_score)
 
         filtered: List[Dict[str, Any]] = []
         for paper in papers:
@@ -401,13 +769,66 @@ class StudyRankingFilter:
         scores: List[float] = []
         for tag in tags_iterable:
             lower = str(tag).lower()
+
+            # First try exact matching
             if lower in _HIGH_QUALITY_TAGS:
                 scores.append(_HIGH_QUALITY_TAGS[lower])
             elif lower in _LOWER_QUALITY_TAGS:
                 scores.append(_LOWER_QUALITY_TAGS[lower])
             else:
-                scores.append(0.6)
+                # Try pattern-based matching for unrecognized tags
+                score = self._match_tag_with_patterns(lower)
+                scores.append(score)
+
         return sum(scores) / len(scores)
+
+    def _match_tag_with_patterns(self, tag: str) -> float:
+        """Use pattern matching to identify study types from non-standard tags."""
+        # High-quality patterns
+        if re.search(r'\brandomized.*trial\b', tag, re.IGNORECASE) or re.search(r'\brandomised.*trial\b', tag, re.IGNORECASE) or re.search(r'\brct\b', tag, re.IGNORECASE):
+            return 0.9
+        elif re.search(r'\bphase\s+([ivx]+|\d+)', tag, re.IGNORECASE):
+            # Extract phase number for scoring
+            phase_match = re.search(r'\bphase\s+([ivx]+|\d+)', tag, re.IGNORECASE)
+            if phase_match:
+                phase = phase_match.group(1).lower()
+                # Normalize roman numerals to digits
+                roman_map = {'iv': '4', 'iii': '3', 'ii': '2', 'i': '1'}
+                normalized_phase = roman_map.get(phase, phase)
+
+                if normalized_phase in ['4', 'iv']:
+                    return 0.88
+                elif normalized_phase in ['3', 'iii']:
+                    return 0.88
+                elif normalized_phase in ['2', 'ii']:
+                    return 0.82
+                elif normalized_phase in ['1', 'i']:
+                    return 0.78
+        elif re.search(r'\bmeta\s*-?\s*analysis\b', tag, re.IGNORECASE):
+            return 0.95
+        elif re.search(r'\bsystematic\s+review\b', tag, re.IGNORECASE):
+            return 0.95
+        elif re.search(r'\bcohort\b', tag, re.IGNORECASE):
+            return 0.7
+        elif re.search(r'\bcase\s*-?\s*control\b', tag, re.IGNORECASE):
+            return 0.7
+        elif re.search(r'\bobservational\b', tag, re.IGNORECASE):
+            return 0.7
+        elif re.search(r'\bobservational\s+(?:study|studies)\b', tag, re.IGNORECASE):
+            return 0.7
+
+        # Lower-quality patterns
+        elif re.search(r'\bcase\s+report\b', tag):
+            return 0.4
+        elif re.search(r'\banimal\b', tag):
+            return 0.4
+        elif re.search(r'\bin\s+vitro\b', tag):
+            return 0.35
+        elif tag in ['letter', 'editorial', 'comment']:
+            return 0.3
+
+        # Default score for unknown patterns
+        return 0.6
 
     def _calculate_recency_score(self, year: Any) -> float:
         current_year = datetime.utcnow().year
@@ -450,13 +871,38 @@ class StudyRankingFilter:
         if not text:
             return None
 
+        # Keywords that indicate valid sample size context
+        context_keywords = [
+            'patients', 'subjects', 'participants', 'enrolled', 'included',
+            'sample', 'cohort', 'population', 'n=', 'n =', 'total'
+        ]
+
         counts_by_priority: Dict[str, List[int]] = {name: [] for name, _ in _SAMPLE_SIZE_PATTERNS}
         for name, pattern in _SAMPLE_SIZE_PATTERNS:
             for match in pattern.finditer(text):
                 raw_value = match.group("count")
-                parsed = self._parse_sample_size_candidate(raw_value)
+                # Extract context around the match for year detection
+                match_start = match.start()
+                match_end = match.end()
+                context_window = 50  # Characters before and after
+                context_start = max(0, match_start - context_window)
+                context_end = min(len(text), match_end + context_window)
+                context = text[context_start:context_end]
+
+                parsed = self._parse_sample_size_candidate(raw_value, context)
                 if parsed is not None:
-                    counts_by_priority[name].append(parsed)
+                    # Check proximity to keywords for better scoring
+                    context_lower = context.lower()
+
+                    # Score based on keyword proximity
+                    keyword_score = 0
+                    for keyword in context_keywords:
+                        if keyword in context:
+                            keyword_score += 1
+
+                    # Only accept if there's at least one keyword in context
+                    if keyword_score > 0:
+                        counts_by_priority[name].append(parsed)
 
         for priority_name in ("n_equals", "term_assignment", "term_trailing"):
             values = counts_by_priority.get(priority_name, [])
@@ -464,7 +910,7 @@ class StudyRankingFilter:
                 return max(values)
         return None
 
-    def _parse_sample_size_candidate(self, raw_value: Optional[str]) -> Optional[int]:
+    def _parse_sample_size_candidate(self, raw_value: Optional[str], context: str = "") -> Optional[int]:
         if not raw_value:
             return None
         normalized = raw_value.replace(",", "")
@@ -472,8 +918,27 @@ class StudyRankingFilter:
             value = int(normalized)
         except ValueError:
             return None
+
+        # Filter out years (already present)
         if len(normalized) == 4 and 1900 <= value <= 2100:
+            # Additional check for date context words
+            date_context_keywords = [
+                'year', 'years', 'period', 'duration', 'follow-up', 'followup',
+                'study period', 'from', 'to', 'between', 'during', 'until'
+            ]
+            context_lower = context.lower()
+
+            # If near date context words, definitely treat as year, not sample size
+            if any(keyword in context_lower for keyword in date_context_keywords):
+                return None
+
+        # Add plausibility checks - discard unrealistic sample sizes
+        # Most studies have sample sizes between 1 and 100,000
+        if value < 1:
             return None
+        if value > 100000:  # High percentile cutoff
+            return None
+
         return value
 
     def _calculate_species_preference_score(self, text: str) -> float:
@@ -483,17 +948,30 @@ class StudyRankingFilter:
         # Tokenize text for stricter matching
         import re
         tokens = set(re.findall(r'\b[a-zA-Z]+\b', text.lower()))
+        lower_text = text.lower()
 
-        # Check for negation terms
-        negation_terms = {"in vitro", "cell culture", "cultured cells", "tissue culture", "cell line"}
-        has_negation = any(term in text.lower() for term in negation_terms)
+        # Check for negation terms including non-human variants
+        negation_patterns = [
+            r'\bin vitro\b',
+            r'\bcell culture\b',
+            r'\bcultured cells\b',
+            r'\btissue culture\b',
+            r'\bcell line\b',
+            r'\bnon-?human\b',  # Handles both 'non-human' and 'nonhuman'
+        ]
+
+        has_negation = any(re.search(pattern, lower_text) for pattern in negation_patterns)
+
+        # Special handling for non-human detection
+        non_human_match = re.search(r'\bnon-?human\b', lower_text)
 
         # Check for exact token matches to reduce false positives
         for species, weight in _SPECIES_PRIORITIES.items():
             if species in tokens:
-                # Down-rank human scores if negation terms present
-                if species in ("human", "humans") and has_negation:
-                    return weight * 0.3  # Significantly reduce score
+                # Down-rank human scores if negation terms present OR if non-human detected
+                if species in ("human", "humans"):
+                    if has_negation or non_human_match:
+                        return weight * 0.3  # Significantly reduce score
                 return weight
         return 0.45
 

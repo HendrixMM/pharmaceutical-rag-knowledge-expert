@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
 
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from langchain.llms.base import LLM
@@ -108,7 +108,8 @@ class RAGAgent:
         chunk_overlap: int = 200,
         embedding_model_name: Optional[str] = None,
         enable_preflight_embedding: Optional[bool] = None,
-        # To avoid duplicate disclaimer rendering, UIs should set this to False and render RAGResponse.disclaimer separately
+        # WARNING: To avoid duplicate disclaimer rendering, UIs that render RAGResponse.disclaimer
+        # MUST set append_disclaimer_in_answer=False. Default is True for backward compatibility.
         append_disclaimer_in_answer: Optional[bool] = None,
     ):
         """
@@ -146,16 +147,21 @@ class RAGAgent:
         self.base_vector_db_path = vector_db_path
         self.use_per_model_path = os.getenv("VECTOR_DB_PER_MODEL", "false").lower() in ("true", "1", "yes", "on")
         disable_preflight_env = os.getenv("DISABLE_PREFLIGHT_EMBEDDING")
-        env_falsey_values = ("false", "0", "no", "off")
+        enable_preflight_env = os.getenv("ENABLE_PREFLIGHT_EMBEDDING")
+        env_truthy = ("true", "1", "yes", "on")
+        env_falsey = ("false", "0", "no", "off")
         if enable_preflight_embedding is not None:
             self.enable_preflight_embedding = enable_preflight_embedding
         else:
-            if disable_preflight_env is None:
-                # Default to skipping the extra embed per question to minimize latency and cost.
-                self.enable_preflight_embedding = False
-            else:
+            if enable_preflight_env is not None:
+                normalized_enable = enable_preflight_env.strip().lower()
+                self.enable_preflight_embedding = normalized_enable in env_truthy
+            elif disable_preflight_env is not None:
                 normalized_disable = disable_preflight_env.strip().lower()
-                self.enable_preflight_embedding = normalized_disable in env_falsey_values
+                self.enable_preflight_embedding = normalized_disable not in env_truthy
+            else:
+                # default to disabled for latency/cost reasons
+                self.enable_preflight_embedding = False
 
         # Set disclaimer append behavior from parameter or environment
         if append_disclaimer_in_answer is not None:
@@ -167,6 +173,13 @@ class RAGAgent:
             else:
                 self.append_disclaimer_in_answer = True  # Default to True to ensure answers carry the disclaimer
         self._guardrail_metadata: Dict[str, Any] = {}
+
+        # Set force preflight on first query behavior from environment
+        env_force_preflight_first = os.getenv("FORCE_PREFLIGHT_ON_FIRST_QUERY")
+        if env_force_preflight_first is not None:
+            self.force_preflight_on_first_query = env_force_preflight_first.strip().lower() in ("true", "1", "yes", "on")
+        else:
+            self.force_preflight_on_first_query = True  # Default to True to maintain existing behavior
 
         falsey_values = ("false", "0", "no", "off")
         env_probe_setting = os.getenv("EMBEDDING_PROBE_ON_INIT")
@@ -228,7 +241,7 @@ Answer: """
         if self.enable_preflight_embedding:
             if enable_preflight_embedding is not None:
                 logger.info("Question preflight embedding enabled via constructor override.")
-            elif disable_preflight_env is not None and disable_preflight_env.strip().lower() in env_falsey_values:
+            elif disable_preflight_env is not None and disable_preflight_env.strip().lower() in env_falsey:
                 logger.info(
                     "Question preflight embedding enabled because DISABLE_PREFLIGHT_EMBEDDING was set false in the environment."
                 )
@@ -300,8 +313,43 @@ Answer: """
                 normalized = text.lower()
                 if "medical disclaimer" in normalized or MEDICAL_DISCLAIMER.lower() in normalized:
                     return text
-            return f"{text}\n\n{MEDICAL_DISCLAIMER}"
+            separator = "\n\n---\n"
+            if text.endswith("\n"):
+                separator = "\n---\n"
+            return f"{text}{separator}{MEDICAL_DISCLAIMER}"
         return text
+
+    def get_answer_and_disclaimer(self, answer_text: str) -> tuple[str, str]:
+        """
+        Separate answer and disclaimer to prevent duplication in UI rendering.
+
+        Args:
+            answer_text: The answer text that may contain a disclaimer
+
+        Returns:
+            tuple[str, str]: (clean_answer, disclaimer)
+                - clean_answer: Answer text with disclaimer removed
+                - disclaimer: Disclaimer text if enabled, empty string otherwise
+        """
+        if not self.append_disclaimer_in_answer:
+            # Disclaimer not enabled, return original answer and empty disclaimer
+            return answer_text, ""
+
+        # Check if disclaimer is already present using the same logic as _apply_disclaimer
+        try:
+            from guardrails.actions import contains_medical_disclaimer
+            if contains_medical_disclaimer(answer_text):
+                # Remove disclaimer - this is simplified since the actual disclaimer format may vary
+                # In practice, UIs should use RAGResponse.disclaimer field instead
+                return answer_text, MEDICAL_DISCLAIMER
+        except ImportError:
+            # Fallback to original detection
+            normalized = answer_text.lower()
+            if "medical disclaimer" in normalized or MEDICAL_DISCLAIMER.lower() in normalized:
+                return answer_text, MEDICAL_DISCLAIMER
+
+        # No disclaimer found
+        return answer_text, ""
 
     def _write_embeddings_metadata(self) -> None:
         """Write embeddings metadata to file"""
@@ -343,8 +391,12 @@ Answer: """
             current_model = self.embeddings.model_name
 
             if stored_model != current_model:
-                logger.warning(f"Embedding model mismatch: stored='{stored_model}', current='{current_model}'")
-                logger.warning("Will force rebuild of index due to model change")
+                logger.warning(f"⚠️  EMBEDDING MODEL CHANGE DETECTED!")
+                logger.warning(f"   Stored model: {stored_model}")
+                logger.warning(f"   Current model: {current_model}")
+                logger.warning("   This will require a FULL INDEX REBUILD which may take considerable time.")
+                logger.warning("   Consumer impact: All queries will be slower until rebuild completes.")
+                logger.warning("   To avoid this, set VECTOR_DB_PER_MODEL=true or use the same embedding model.")
                 return False
 
             # Optionally check dimension too (only if both stored and current are valid)
@@ -354,8 +406,12 @@ Answer: """
                     current_dimension = self.embeddings.get_embedding_dimension()
                     if current_dimension is not None and isinstance(current_dimension, int):
                         if stored_dimension != current_dimension:
-                            logger.warning(f"Embedding dimension mismatch: stored={stored_dimension}, current={current_dimension}")
-                            logger.warning("Will force rebuild of index due to dimension change")
+                            logger.warning(f"⚠️  EMBEDDING DIMENSION MISMATCH DETECTED!")
+                            logger.warning(f"   Stored dimension: {stored_dimension}")
+                            logger.warning(f"   Current dimension: {current_dimension}")
+                            logger.warning("   This will require a FULL INDEX REBUILD which may take considerable time.")
+                            logger.warning("   Consumer impact: All queries will be slower until rebuild completes.")
+                            logger.warning("   This typically occurs when switching between different embedding model families.")
                             return False
                 except Exception as e:
                     logger.warning(f"Could not verify current dimension: {str(e)}")
@@ -760,13 +816,19 @@ Answer: """
     
 
     
-    def ask_question(self, question: str, k: int = 4) -> RAGResponse:
+    def ask_question(
+        self,
+        question: str,
+        k: int = 4,
+        disclaimer_already_present: Optional[bool] = None,
+    ) -> RAGResponse:
         """
         Ask a question and get an answer from the knowledge base
 
         Args:
             question: The question to ask
             k: Number of relevant documents to retrieve
+            disclaimer_already_present: When True, skip adding disclaimer text to the answer
 
         Returns:
             RAGResponse with answer and source documents
@@ -780,7 +842,7 @@ Answer: """
 
         try:
             preflight_snippet = question[:64] if question else ""
-            force_preflight = self.use_per_model_path or not self.vector_db.vectorstore or not self._did_one_time_preflight
+            force_preflight = self.use_per_model_path or (not self.vector_db.vectorstore and self.force_preflight_on_first_query) or (not self._did_one_time_preflight and self.force_preflight_on_first_query)
             if preflight_snippet and (self.enable_preflight_embedding or force_preflight):
                 preflight_model_name = self.embeddings.model_name
                 try:
@@ -795,6 +857,8 @@ Answer: """
                             self.embeddings.model_name,
                         )
                         self._active_vector_db_model = self.embeddings.model_name
+                        # Persist updated embedding model information
+                        self._write_embeddings_metadata()
                         # If models diverge, reconcile paths and signal rebuild when necessary.
                         (
                             reconciled,
@@ -807,7 +871,10 @@ Answer: """
                             or "Embedding model changed after fallback. Please rebuild the knowledge base to ensure dimension compatibility."
                         )
                         return RAGResponse(
-                            answer=self._apply_disclaimer(advisory),
+                            answer=self._apply_disclaimer(
+                                advisory,
+                                disclaimer_already_present=disclaimer_already_present,
+                            ),
                             source_documents=[],
                             query=question,
                             processing_time=time.time() - start_time,
@@ -833,7 +900,10 @@ Answer: """
                     "Returning rebuild guidance to caller instead of querying vector store due to metadata mismatch."
                 )
                 return RAGResponse(
-                    answer=self._apply_disclaimer(rebuild_message),
+                    answer=self._apply_disclaimer(
+                        rebuild_message,
+                        disclaimer_already_present=disclaimer_already_present,
+                    ),
                     source_documents=[],
                     query=question,
                     processing_time=time.time() - start_time,
@@ -851,7 +921,8 @@ Answer: """
                     )
                     return RAGResponse(
                         answer=self._apply_disclaimer(
-                            "The active embedding model changed at runtime. Please rebuild the knowledge base to ensure compatibility."
+                            "The active embedding model changed at runtime. Please rebuild the knowledge base to ensure compatibility.",
+                            disclaimer_already_present=disclaimer_already_present,
                         ),
                         source_documents=[],
                         query=question,
@@ -861,14 +932,39 @@ Answer: """
                     )
 
             if not self.vector_db.vectorstore:
-                logger.error("Vector database not initialized. Please setup knowledge base first.")
-                return RAGResponse(
-                    answer=self._apply_disclaimer("Knowledge base not initialized. Please setup the knowledge base first."),
-                    source_documents=[],
-                    query=question,
-                    processing_time=time.time() - start_time,
-                    disclaimer=MEDICAL_DISCLAIMER,
-                )
+                # Try explicit lazy load when uninitialized but files exist
+                logger.info("Vector database not initialized - attempting lazy load...")
+                if self.vector_db.load_index():
+                    logger.info("✅ Lazy load successful, proceeding with query")
+                    # Continue with the query processing
+                else:
+                    # Respect rebuild advisories from _reconcile_before_query
+                    if rebuild_required or rebuild_message:
+                        guidance_text = rebuild_message or "Please rebuild the knowledge base to ensure compatibility."
+                        logger.error("Lazy load failed and rebuild is required.")
+                        return RAGResponse(
+                            answer=self._apply_disclaimer(
+                                guidance_text,
+                                disclaimer_already_present=disclaimer_already_present,
+                            ),
+                            source_documents=[],
+                            query=question,
+                            processing_time=time.time() - start_time,
+                            disclaimer=MEDICAL_DISCLAIMER,
+                            needs_rebuild=True,
+                        )
+                    else:
+                        logger.error("Vector database not initialized and lazy load failed. Please setup knowledge base first.")
+                        return RAGResponse(
+                            answer=self._apply_disclaimer(
+                                "Knowledge base not initialized. Please setup the knowledge base first.",
+                                disclaimer_already_present=disclaimer_already_present,
+                            ),
+                            source_documents=[],
+                            query=question,
+                            processing_time=time.time() - start_time,
+                            disclaimer=MEDICAL_DISCLAIMER,
+                        )
 
             logger.info(f"Processing question: {question}")
 
@@ -884,7 +980,10 @@ Answer: """
                         "Please rebuild the knowledge base to regenerate FAISS indexes with the current embedding dimensions."
                     )
                     return RAGResponse(
-                        answer=self._apply_disclaimer(guidance),
+                        answer=self._apply_disclaimer(
+                            guidance,
+                            disclaimer_already_present=disclaimer_already_present,
+                        ),
                         source_documents=[],
                         query=question,
                         processing_time=time.time() - start_time,
@@ -895,7 +994,10 @@ Answer: """
 
             if not scored_docs:
                 return RAGResponse(
-                    answer=self._apply_disclaimer("I couldn't find any relevant information to answer your question."),
+                    answer=self._apply_disclaimer(
+                        "I couldn't find any relevant information to answer your question.",
+                        disclaimer_already_present=disclaimer_already_present,
+                    ),
                     source_documents=[],
                     query=question,
                     processing_time=time.time() - start_time,
@@ -914,7 +1016,10 @@ Answer: """
 
             # Generate answer using LLM
             answer = self.llm.generate_response(prompt)
-            answer = self._apply_disclaimer(answer)
+            answer = self._apply_disclaimer(
+                answer,
+                disclaimer_already_present=disclaimer_already_present,
+            )
 
             processing_time = time.time() - start_time
 
@@ -933,7 +1038,8 @@ Answer: """
             logger.error(f"Failed to answer question: {str(e)}")
             return RAGResponse(
                 answer=self._apply_disclaimer(
-                    f"I encountered an error while processing your question: {str(e)}"
+                    f"I encountered an error while processing your question: {str(e)}",
+                    disclaimer_already_present=disclaimer_already_present,
                 ),
                 source_documents=[],
                 query=question,
@@ -966,7 +1072,8 @@ Answer: """
         # Add document loader stats if available
         try:
             if os.path.exists(self.docs_folder):
-                pdf_files = list(Path(self.docs_folder).glob("*.pdf"))
+                docs_path = Path(self.docs_folder)
+                pdf_files = list(docs_path.glob("*.pdf")) + list(docs_path.glob("*.PDF"))
                 vector_stats["pdf_files_available"] = len(pdf_files)
                 vector_stats["docs_folder"] = self.docs_folder
         except Exception:
@@ -1016,6 +1123,117 @@ Answer: """
             The medical disclaimer text
         """
         return MEDICAL_DISCLAIMER
+
+    def get_guardrail_metadata(self) -> Dict[str, Any]:
+        """Get current guardrail metadata.
+
+        Returns:
+            Copy of current guardrail metadata dictionary
+        """
+        return dict(self._guardrail_metadata)
+
+    def apply_disclaimer(self, text: str, *, disclaimer_already_present: Optional[bool] = None) -> str:
+        """Apply medical disclaimer to text when configured to do so.
+
+        Args:
+            text: Text to potentially append disclaimer to
+            disclaimer_already_present: If True, disclaimer won't be added; if None, checks metadata
+
+        Returns:
+            Text with disclaimer appended if needed
+        """
+        return self._apply_disclaimer(text, disclaimer_already_present=disclaimer_already_present)
+
+    # ------------------------------------------------------------------
+    # Pharmaceutical filter methods - delegate to VectorDatabase
+    # ------------------------------------------------------------------
+
+    def similarity_search_with_pharmaceutical_filters(
+        self,
+        query: str,
+        k: int = 4,
+        filters: Optional[Dict[str, Any]] = None,
+        oversample: int = 5,
+    ) -> List[Document]:
+        """
+        Similarity search with pharmaceutical metadata filtering.
+
+        Delegates to VectorDatabase's similarity_search_with_pharmaceutical_filters method.
+
+        Args:
+            query: Search query string
+            k: Number of results to return
+            filters: Pharmaceutical metadata filters (drug_names, species, etc.)
+            oversample: Oversampling factor for filter refinement
+
+        Returns:
+            List of filtered documents
+        """
+        try:
+            # Ensure vector database is initialized
+            if not self.vector_db.vectorstore:
+                if not self.vector_db.load_index():
+                    logger.warning("Vector database not available for pharmaceutical search")
+                    return []
+
+            return self.vector_db.similarity_search_with_pharmaceutical_filters(
+                query=query,
+                k=k,
+                filters=filters,
+                oversample=oversample,
+            )
+
+        except Exception as e:
+            logger.error(f"Pharmaceutical similarity search failed: {str(e)}")
+            return []
+
+    def search_by_drug_name(self, drug_name: str, k: int = 10) -> List[Document]:
+        """
+        Targeted search for documents mentioning a specific drug.
+
+        Delegates to VectorDatabase's search_by_drug_name method.
+
+        Args:
+            drug_name: Name of the drug to search for
+            k: Number of results to return
+
+        Returns:
+            List of documents mentioning the specified drug
+        """
+        try:
+            # Ensure vector database is initialized
+            if not self.vector_db.vectorstore:
+                if not self.vector_db.load_index():
+                    logger.warning("Vector database not available for drug name search")
+                    return []
+
+            return self.vector_db.search_by_drug_name(drug_name=drug_name, k=k)
+
+        except Exception as e:
+            logger.error(f"Drug name search failed: {str(e)}")
+            return []
+
+    def get_pharmaceutical_stats(self) -> Dict[str, Any]:
+        """
+        Get pharmaceutical statistics about the knowledge base.
+
+        Delegates to VectorDatabase's get_pharmaceutical_stats method.
+
+        Returns:
+            Dictionary with pharmaceutical annotation statistics
+        """
+        try:
+            # Ensure vector database is initialized
+            if not self.vector_db.vectorstore:
+                if not self.vector_db.load_index():
+                    logger.warning("Vector database not available for pharmaceutical stats")
+                    return {"status": "No index loaded"}
+
+            return self.vector_db.get_pharmaceutical_stats()
+
+        except Exception as e:
+            logger.error(f"Pharmaceutical stats retrieval failed: {str(e)}")
+            return {"status": "Error", "error": str(e)}
 
 
 def main():

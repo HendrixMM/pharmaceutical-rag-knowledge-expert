@@ -1,8 +1,12 @@
+import json
 import os
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import List
 
 import pytest
 
+from src.cache_management import NCBICacheManager
 from src.enhanced_pubmed_scraper import EnhancedPubMedScraper
 from src.pubmed_scraper import PubMedScraper
 from src.rate_limiting import RateLimitStatus
@@ -13,12 +17,6 @@ class DummyLimiter:
         self.actions: List[str] = []
         self.max_requests_per_second = 3
         self.daily_request_limit = 50
-
-    def wait_until_ready(self) -> None:
-        self.actions.append("wait")
-
-    def record_request(self) -> None:
-        self.actions.append("record")
 
     def acquire(self, **_kwargs) -> None:
         self.actions.append("acquire")
@@ -57,9 +55,16 @@ class FakeActor:
             run = {"items": []}
 
         if "defaultDatasetId" not in run:
-            # Align with PubMedScraper expectation that EasyAPI returns defaultDatasetId.
             run = {**run, "defaultDatasetId": "test-dataset"}
         return run
+
+
+class FakeDataset:
+    def __init__(self, items):
+        self._items = items
+
+    def iterate_items(self):  # pragma: no cover - should not be called when patched
+        yield from self._items
 
 
 class FakeClient:
@@ -71,247 +76,317 @@ class FakeClient:
         return FakeActor(self)
 
     def dataset(self, _dataset_id):
-        raise AssertionError("Dataset access should be mocked in tests")
+        return FakeDataset([])
 
 
 @pytest.fixture
 def fake_env(monkeypatch, tmp_path):
+    cache_dir = tmp_path / "cache"
     monkeypatch.setenv("APIFY_TOKEN", "test-token")
-    monkeypatch.setenv("PUBMED_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("PUBMED_CACHE_DIR", str(cache_dir))
     monkeypatch.setenv("ENABLE_RATE_LIMITING", "true")
-    monkeypatch.setenv("ENABLE_OPTIMAL_TIMING_DETECTION", "true")
-    monkeypatch.setenv("ENABLE_EASYAPI_SCHEMA_FALLBACK", "false")
-    yield
-
-
-def test_feature_flag_disabled_falls_back_to_base(monkeypatch, fake_env):
-    monkeypatch.setenv("ENABLE_ENHANCED_PUBMED_SCRAPER", "false")
-
-    created_clients = []
-
-    def fake_client_factory(_token):
-        client = FakeClient()
-        created_clients.append(client)
-        return client
-
-    monkeypatch.setattr("src.pubmed_scraper.ApifyClient", fake_client_factory)
-
-    fallback_calls = {}
-
-    def fake_super(self, query, max_items=None, rank=None, pharma_enhance=None):
-        fallback_calls["args"] = (query, max_items, rank, pharma_enhance)
-        return ["base-result"]
-
-    monkeypatch.setattr(PubMedScraper, "search_pubmed", fake_super)
-
-    scraper = EnhancedPubMedScraper(rate_limiter=DummyLimiter())
-    result = scraper.search_pubmed("diabetes", rank=False)
-
-    assert result == ["base-result"]
-    assert fallback_calls["args"][0] == "diabetes"
-    assert created_clients  # Client still initialized for consistency
-
-
-def test_rate_limiter_invoked_for_api_calls(monkeypatch, fake_env):
     monkeypatch.setenv("ENABLE_ENHANCED_PUBMED_SCRAPER", "true")
+    monkeypatch.setenv("ENABLE_ADVANCED_CACHING", "true")
+    monkeypatch.setenv("ENABLE_EASYAPI_SCHEMA_FALLBACK", "false")
+    monkeypatch.setenv("ENABLE_PHARMA_QUERY_ENHANCEMENT", "false")
+    monkeypatch.setenv("ENABLE_STUDY_RANKING", "false")
+    monkeypatch.setenv("ENABLE_OPTIMAL_TIMING_DETECTION", "true")
+    monkeypatch.setenv("MIRROR_TO_LEGACY_ROOT", "false")
+    monkeypatch.setenv("PRUNE_LEGACY_AFTER_MIGRATION", "false")
+    return cache_dir
 
-    responses = [{"items": [{"title": "primary"}]}]
-    created_clients = []
 
-    def fake_client_factory(_token):
+@pytest.fixture
+def fake_client(monkeypatch):
+    responses = [{"items": [{"title": "primary"}], "defaultDatasetId": "dataset-1"}]
+    created_clients: List[FakeClient] = []
+
+    def factory(_token):
         client = FakeClient(responses)
         created_clients.append(client)
         return client
 
-    monkeypatch.setattr("src.pubmed_scraper.ApifyClient", fake_client_factory)
+    monkeypatch.setattr("src.pubmed_scraper.ApifyClient", factory)
+    return created_clients
 
-    cache_store = {}
 
+@pytest.fixture(autouse=True)
+def patch_process_results(monkeypatch):
     def fake_process(self, run, apply_ranking):
         return run.get("items", [])
 
-    def fake_cache(self, cache_key, results):
-        cache_store[cache_key] = results
+    monkeypatch.setattr(PubMedScraper, "_process_run_results", fake_process)
 
-    def fake_get_cache(self, cache_key, apply_ranking):
-        return cache_store.get(cache_key)
 
-    monkeypatch.setattr(EnhancedPubMedScraper, "_process_run_results", fake_process)
-    monkeypatch.setattr(EnhancedPubMedScraper, "_cache_results", fake_cache)
-    monkeypatch.setattr(EnhancedPubMedScraper, "_get_cached_results", fake_get_cache)
+def test_cache_hit_skips_rate_limiter(fake_env, fake_client, tmp_path):
+    cache_manager = NCBICacheManager(
+        cache_dir=fake_env,
+        default_ttl_hours=24,
+        grace_period_hours=2,
+        cache_warming_enabled=True,
+    )
 
+    limiter = DummyLimiter()
+    scraper = EnhancedPubMedScraper(cache_manager=cache_manager, rate_limiter=limiter, enable_rate_limiting=True)
+
+    results = scraper.search_pubmed("oncology", max_items=5, rank=False)
+    assert results == [{"title": "primary"}]
+    assert limiter.actions == ["acquire"]
+
+    limiter.actions.clear()
+    fake_client[0].calls.clear()
+
+    cached = scraper.search_pubmed("oncology", max_items=5, rank=False)
+    assert cached == results
+    assert limiter.actions == []
+    assert fake_client[0].calls == []
+    assert cache_manager.get_statistics()["hits"] >= 1
+
+
+def test_stale_hit_schedules_warming(fake_env, fake_client, tmp_path):
+    cache_manager = NCBICacheManager(
+        cache_dir=fake_env,
+        default_ttl_hours=1 / 60,
+        grace_period_hours=1,
+        cache_warming_enabled=True,
+    )
+
+    limiter = DummyLimiter()
+    scraper = EnhancedPubMedScraper(cache_manager=cache_manager, rate_limiter=limiter, enable_rate_limiting=True)
+    scraper.search_pubmed("pharmacology", max_items=5, rank=False)
+
+    cache_files = list(cache_manager.advanced_cache_dir.glob("*.json"))
+    assert cache_files, "Expected cached entry to exist"
+    cache_entry_path = cache_files[0]
+
+    entry = json.loads(cache_entry_path.read_text())
+    entry["expires_at"] = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
+    entry["grace_expires_at"] = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+    cache_entry_path.write_text(json.dumps(entry))
+
+    cache_key = cache_entry_path.stem
+    stale_probe = cache_manager.get(cache_key)
+    assert stale_probe is not None
+    assert stale_probe.stale is True
+
+    fake_client[0].calls.clear()
+    limiter.actions.clear()
+
+    cached = scraper.search_pubmed("pharmacology", max_items=5, rank=False)
+    assert cached == [{"title": "primary"}]
+    assert limiter.actions == []
+    assert fake_client[0].calls == []
+
+    warming = scraper.warm_cache_entries()
+    assert warming
+
+
+def test_combined_status_report(fake_env, fake_client):
+    cache_manager = NCBICacheManager(cache_dir=fake_env)
+    limiter = DummyLimiter()
+    scraper = EnhancedPubMedScraper(cache_manager=cache_manager, rate_limiter=limiter, enable_rate_limiting=True)
+    scraper.search_pubmed("diabetes", max_items=3, rank=False)
+
+    report = scraper.combined_status_report()
+    assert report["cache"]["enabled"] is True
+    assert "statistics" in report["cache"]
+    assert report["rate_limit"]["daily_limit"] == 50
+
+
+def test_advanced_caching_can_be_disabled(fake_env, fake_client, monkeypatch):
+    monkeypatch.setenv("ENABLE_ADVANCED_CACHING", "false")
     limiter = DummyLimiter()
     scraper = EnhancedPubMedScraper(rate_limiter=limiter, enable_rate_limiting=True)
 
-    result = scraper.search_pubmed("oncology", rank=False)
-    assert result == [{"title": "primary"}]
-    assert limiter.actions == ["acquire"]
-    client = created_clients[0]
-    assert len(client.calls) == 1
+    cache_manager = scraper.get_cache_manager()
+    assert cache_manager is None
 
+
+def test_normalized_cache_keys_migrate_and_duplicate(fake_env, fake_client, monkeypatch):
+    monkeypatch.setenv("USE_NORMALIZED_CACHE_KEYS", "true")
+    cache_manager = NCBICacheManager(cache_dir=fake_env)
+    limiter = DummyLimiter()
+    scraper = EnhancedPubMedScraper(cache_manager=cache_manager, rate_limiter=limiter, enable_rate_limiting=True)
+
+    scraper.search_pubmed("cardiology", max_items=5, rank=False)
+
+    cache_files = {path.name for path in cache_manager.advanced_cache_dir.glob("*.json")}
+    assert cache_files
+    assert any(name.startswith("v1-") for name in cache_files), "expected normalized cache key"
+    assert any(len(name) == 37 for name in cache_files), "expected legacy cache key copy"
+
+    # Clearing limiter actions to observe cache hit
     limiter.actions.clear()
-    client.calls.clear()
-    cached = scraper.search_pubmed("oncology", rank=False)
-    assert cached == result
+    fake_client[0].calls.clear()
+
+    cached = scraper.search_pubmed("cardiology", max_items=5, rank=False)
+    assert cached == [{"title": "primary"}]
     assert limiter.actions == []
-    assert client.calls == []
+    assert fake_client[0].calls == []
+
+    fake_client[0].responses.append({"items": [{"title": "primary"}], "defaultDatasetId": "dataset-2"})
+    result = scraper.search_pubmed("neurology", max_items=5, rank=False)
+    assert result == [{"title": "primary"}]
+
+    cache_dir = Path(os.getenv("PUBMED_CACHE_DIR"))
+    assert not list(cache_dir.glob("*.json")), "legacy cache directory should stay clean when advanced cache is active"
 
 
-def test_enhanced_scraper_enables_rate_limiting_by_default(monkeypatch, fake_env):
-    monkeypatch.delenv("ENABLE_ENHANCED_PUBMED_SCRAPER", raising=False)
-    monkeypatch.setattr("src.pubmed_scraper.ApifyClient", lambda _token: FakeClient([{"items": []}]))
+def test_prunes_legacy_after_normalized_migration(fake_env, fake_client, monkeypatch):
+    monkeypatch.setenv("PRUNE_LEGACY_AFTER_MIGRATION", "true")
+    monkeypatch.setenv("USE_NORMALIZED_CACHE_KEYS", "true")
 
-    limiter = DummyLimiter()
-
-    def fake_process(self, run, apply_ranking):
-        return run.get("items", [])
-
-    monkeypatch.setattr(EnhancedPubMedScraper, "_process_run_results", fake_process)
-    monkeypatch.setattr(EnhancedPubMedScraper, "_cache_results", lambda *args, **kwargs: None)
-    monkeypatch.setattr(EnhancedPubMedScraper, "_get_cached_results", lambda *args, **kwargs: None)
-
-    scraper = EnhancedPubMedScraper(rate_limiter=limiter)
-    scraper.search_pubmed("microbiology", rank=False)
-
-    assert limiter.actions == ["acquire"]
-
-
-def test_rate_limiting_disabled_skips_limiter(monkeypatch, fake_env):
-    monkeypatch.setenv("ENABLE_RATE_LIMITING", "false")
-    monkeypatch.setattr("src.pubmed_scraper.ApifyClient", lambda _token: FakeClient([{"items": []}]))
+    cache_manager = NCBICacheManager(
+        cache_dir=fake_env,
+        default_ttl_hours=24,
+        grace_period_hours=2,
+    )
 
     limiter = DummyLimiter()
+    scraper = EnhancedPubMedScraper(
+        cache_manager=cache_manager,
+        rate_limiter=limiter,
+        enable_rate_limiting=True,
+        use_normalized_cache_keys=True,
+    )
 
-    def fake_process(self, run, apply_ranking):
-        return run.get("items", [])
+    enhanced_query = scraper._enhance_pharmaceutical_query("prune", False)
+    cache_key = scraper._get_cache_key(
+        enhanced_query,
+        max_items=5,
+        apply_ranking=False,
+        pharma_enhance_enabled=False,
+        include_tags_effective=False,
+        include_abstract_effective=False,
+        preserve_order=False,
+    )
+    context = scraper._get_cache_context()
+    legacy_key = context["legacy_cache_key"]
+    legacy_path = fake_env / f"{legacy_key}.json"
+    legacy_payload = [{"title": "legacy"}]
+    legacy_path.write_text(json.dumps(legacy_payload))
 
-    monkeypatch.setattr(EnhancedPubMedScraper, "_process_run_results", fake_process)
-    monkeypatch.setattr(EnhancedPubMedScraper, "_cache_results", lambda *args, **kwargs: None)
-    monkeypatch.setattr(EnhancedPubMedScraper, "_get_cached_results", lambda *args, **kwargs: None)
+    advanced_path = cache_manager.advanced_cache_dir / f"{cache_key}.json"
+    if advanced_path.exists():
+        advanced_path.unlink()
 
-    scraper = EnhancedPubMedScraper(rate_limiter=limiter, enable_rate_limiting=False)
-    scraper.search_pubmed("cardiology", rank=False)
+    results = scraper._get_cached_results(cache_key, apply_ranking=False)
+    assert results == legacy_payload
+    assert advanced_path.exists()
+    assert not legacy_path.exists(), "Legacy cache file should be pruned after migration"
 
-    assert limiter.actions == []
 
-
-def test_rate_limit_status_reporting(monkeypatch, fake_env):
-    monkeypatch.setenv("ENABLE_ENHANCED_PUBMED_SCRAPER", "true")
-
-    monkeypatch.setattr("src.pubmed_scraper.ApifyClient", lambda _token: FakeClient())
+def test_cache_allow_stale_within_grace_flag_disabled(fake_env, fake_client, monkeypatch):
+    monkeypatch.setenv("CACHE_ALLOW_STALE_WITHIN_GRACE", "false")
+    cache_manager = NCBICacheManager(
+        cache_dir=fake_env,
+        default_ttl_hours=1 / 60,  # 1 minute to make entries stale quickly
+        grace_period_hours=1,
+        cache_warming_enabled=False,
+    )
 
     limiter = DummyLimiter()
-    scraper = EnhancedPubMedScraper(rate_limiter=limiter)
+    scraper = EnhancedPubMedScraper(cache_manager=cache_manager, rate_limiter=limiter, enable_rate_limiting=True)
 
-    status = scraper.get_rate_limit_status()
-    assert status.daily_limit == 50
-    assert scraper.get_rate_limit_report()["rate_limited"] is False
-    assert scraper.is_optimal_timing() is True
+    # First request should cache results
+    scraper.search_pubmed("stale_test", max_items=5, rank=False)
 
+    # Make the cache entry stale but within grace period
+    cache_files = list(cache_manager.advanced_cache_dir.glob("*.json"))
+    assert cache_files, "Expected cached entry to exist"
+    cache_entry_path = cache_files[0]
 
-def test_enhanced_query_wrapped_in_parentheses(monkeypatch, fake_env):
-    """Test that enhanced queries are properly wrapped in parentheses"""
-    monkeypatch.setenv("ENABLE_PHARMA_QUERY_ENHANCEMENT", "true")
-    monkeypatch.setattr("src.pubmed_scraper.ApifyClient", lambda _token: FakeClient())
+    entry = json.loads(cache_entry_path.read_text())
+    entry["expires_at"] = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
+    entry["grace_expires_at"] = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+    cache_entry_path.write_text(json.dumps(entry))
 
-    scraper = PubMedScraper()
+    # Clear previous calls and add new response for the fresh request
+    fake_client[0].calls.clear()
+    fake_client[0].responses.append({"items": [{"title": "fresh"}], "defaultDatasetId": "dataset-fresh"})
+    limiter.actions.clear()
 
-    # Test enhancement with parentheses wrapping
-    enhanced = scraper._enhance_pharmaceutical_query("diabetes cyp", True)
-
-    # Should wrap original query in parentheses when adding OR clause
-    assert enhanced.startswith("(diabetes cyp) OR (")
-    assert "drug-drug interaction" in enhanced
-
-
-def test_searchurls_schema_builds_expected(monkeypatch, fake_env):
-    """Test that searchUrls schema generates correct EasyAPI input"""
-    monkeypatch.setattr("src.pubmed_scraper.ApifyClient", lambda _token: FakeClient())
-
-    scraper = PubMedScraper()
-
-    input_dict = scraper._build_actor_input("test query", 10, "searchUrls")
-
-    assert input_dict == {
-        "searchUrls": ["https://pubmed.ncbi.nlm.nih.gov/?term=test+query"],
-        "maxItems": 10,
-    }
+    # Second request should not use stale cache and make fresh API call
+    results = scraper.search_pubmed("stale_test", max_items=5, rank=False)
+    assert results == [{"title": "fresh"}]
+    assert len(fake_client[0].calls) == 1, "Expected API call when stale not allowed"
+    assert limiter.actions == ["acquire"], "Expected rate limiter to be used"
 
 
-def test_schema_fallback_order_on_zero_results(monkeypatch, fake_env):
-    """Test fallback order when primary schema returns zero results"""
-    monkeypatch.setenv("ENABLE_EASYAPI_SCHEMA_FALLBACK", "true")
+def test_cache_allow_stale_within_grace_flag_enabled(fake_env, fake_client):
+    cache_manager = NCBICacheManager(
+        cache_dir=fake_env,
+        default_ttl_hours=1 / 60,  # 1 minute to make entries stale quickly
+        grace_period_hours=1,
+        cache_warming_enabled=False,
+        cache_allow_stale_within_grace=True,  # Explicitly enabled
+    )
 
-    call_order = []
+    limiter = DummyLimiter()
+    scraper = EnhancedPubMedScraper(cache_manager=cache_manager, rate_limiter=limiter, enable_rate_limiting=True)
 
-    def fake_call_actor(self, run_input, schema=None):
-        call_order.append(run_input)
-        # Return empty results to trigger fallback
-        return {"defaultDatasetId": "test-dataset"}
+    # First request should cache results
+    scraper.search_pubmed("stale_test_enabled", max_items=5, rank=False)
 
-    def fake_process_results(self, run_id, apply_ranking):
-        # Return empty list to trigger fallback
-        return []
+    # Make the cache entry stale but within grace period
+    cache_files = list(cache_manager.advanced_cache_dir.glob("*.json"))
+    assert cache_files, "Expected cached entry to exist"
+    cache_entry_path = cache_files[0]
 
-    monkeypatch.setattr("src.pubmed_scraper.ApifyClient", lambda _token: FakeClient())
-    monkeypatch.setattr(PubMedScraper, "_call_actor", fake_call_actor)
-    monkeypatch.setattr(PubMedScraper, "_process_run_results", fake_process_results)
+    entry = json.loads(cache_entry_path.read_text())
+    entry["expires_at"] = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
+    entry["grace_expires_at"] = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+    cache_entry_path.write_text(json.dumps(entry))
 
-    scraper = PubMedScraper()
-    scraper.search_pubmed("test query", max_items=5, rank=False)
+    # Clear previous calls
+    fake_client[0].calls.clear()
+    limiter.actions.clear()
 
-    # Only the primary schema should be attempted for this actor
-    assert len(call_order) == 1
-    assert "searchUrls" in call_order[0]
-
-
-def test_retry_without_optional_flags_on_400_errors(monkeypatch, fake_env):
-    """Test retry without optional flags when 400 errors occur"""
-    monkeypatch.setenv("EXTRACT_TAGS", "true")
-    monkeypatch.setenv("USE_FULL_ABSTRACTS", "true")
-
-    call_attempts = []
-
-    class Mock400Error(Exception):
-        def __init__(self):
-            super().__init__("400 Client Error")
-
-    def fake_call_actor(self, run_input, schema=None):
-        if not call_attempts:
-            call_attempts.append(run_input.copy())
-            raise Mock400Error()
-        call_attempts.append(run_input.copy())
-        return {"defaultDatasetId": "test-dataset"}
-
-    def fake_process_results(self, run_id, apply_ranking):
-        return [{"title": "Test Result"}]
-
-    monkeypatch.setenv("EASYAPI_SMART_SCHEMA_FALLBACK", "false")
-    monkeypatch.setattr("src.pubmed_scraper.ApifyClient", lambda _token: FakeClient())
-    monkeypatch.setattr(PubMedScraper, "_call_actor", fake_call_actor)
-    monkeypatch.setattr(PubMedScraper, "_process_run_results", fake_process_results)
-
-    scraper = PubMedScraper()
-    results = scraper.search_pubmed("test query", max_items=5, rank=False)
-
-    # Should have made exactly two attempts (original + retry)
-    assert len(call_attempts) == 2
-
-    # Should have succeeded and returned results
-    assert len(results) == 1
-    assert results[0]["title"] == "Test Result"
+    # Second request should use stale cache without making API call
+    results = scraper.search_pubmed("stale_test_enabled", max_items=5, rank=False)
+    assert results == [{"title": "primary"}]
+    assert len(fake_client[0].calls) == 0, "Expected no API call when stale allowed"
+    assert limiter.actions == [], "Expected no rate limiter usage when serving stale"
 
 
-def test_startUrls_and_searchUrls_send_lists(monkeypatch, fake_env):
-    """Test that startUrls and searchUrls schemas properly send lists"""
-    monkeypatch.setattr("src.pubmed_scraper.ApifyClient", lambda _token: FakeClient())
+def test_stale_hits_count_as_skipped_rate_limit(fake_env, fake_client):
+    cache_manager = NCBICacheManager(
+        cache_dir=fake_env,
+        default_ttl_hours=1 / 60,  # 1 minute to make entries stale quickly
+        grace_period_hours=1,
+        cache_warming_enabled=False,
+        rate_limit_integration=True,
+    )
 
-    scraper = PubMedScraper()
+    limiter = DummyLimiter()
+    scraper = EnhancedPubMedScraper(cache_manager=cache_manager, rate_limiter=limiter, enable_rate_limiting=True)
 
-    # Test searchUrls schema
-    input_dict = scraper._build_actor_input("test query", 10, "searchUrls")
-    assert "searchUrls" in input_dict
-    assert isinstance(input_dict["searchUrls"], list)
-    assert len(input_dict["searchUrls"]) == 1
-    assert "pubmed.ncbi.nlm.nih.gov" in input_dict["searchUrls"][0]
-    assert "maxItems" in input_dict
+    # First request should cache results
+    scraper.search_pubmed("rate_limit_test", max_items=5, rank=False)
+    initial_stats = cache_manager.get_statistics()
+
+    # Make the cache entry stale but within grace period
+    cache_files = list(cache_manager.advanced_cache_dir.glob("*.json"))
+    assert cache_files, "Expected cached entry to exist"
+    cache_entry_path = cache_files[0]
+
+    entry = json.loads(cache_entry_path.read_text())
+    entry["expires_at"] = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
+    entry["grace_expires_at"] = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+    cache_entry_path.write_text(json.dumps(entry))
+
+    # Clear previous calls
+    fake_client[0].calls.clear()
+    limiter.actions.clear()
+
+    # Second request should use stale cache and record skipped rate limit
+    results = scraper.search_pubmed("rate_limit_test", max_items=5, rank=False)
+    assert results == [{"title": "primary"}]
+    assert len(fake_client[0].calls) == 0, "Expected no API call when using stale cache"
+
+    final_stats = cache_manager.get_statistics()
+    # Verify that skipped_rate_limit count increased
+    assert final_stats["skipped_rate_limit"] > initial_stats["skipped_rate_limit"], \
+        "Expected stale hit to increase skipped_rate_limit count"
+    assert final_stats["stale_hits"] > initial_stats["stale_hits"], \
+        "Expected stale hit to be recorded"

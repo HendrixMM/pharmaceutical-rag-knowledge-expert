@@ -15,6 +15,19 @@ from typing import Any, Dict, List, Optional, Tuple, Literal, Iterable, Set
 from .pharmaceutical_processor import PharmaceuticalProcessor
 from .pubmed_scraper import PubMedScraper
 from .ranking_filter import StudyRankingFilter
+from .paper_schema import normalize_doi, normalize_pmid
+from .pharma_utils import (
+    _PK_FILTERING_ENABLED,
+    _SPECIES_KEYWORDS,
+    _CLINICAL_STUDY_TAGS,
+    _NEGATION_TERMS,
+    _tokenize_species_string,
+    normalize_text,
+    CacheSizeConfig,
+    DrugNameChecker,
+    get_cache_dir_size_mb,
+    cleanup_oldest_cache_files,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,32 +39,6 @@ _SORT_FIELD_ALIASES = {
     "relevance": "ranking_score",
 }
 
-_SPECIES_KEYWORDS = {
-    "human": {"human", "humans"},  # Removed generic "patient", "patients"
-    "mouse": {"mouse", "mice"},
-    "rat": {"rat", "rats"},
-    "dog": {"dog", "dogs", "canine", "canines"},
-    "monkey": {"monkey", "monkeys", "nonhuman primate", "macaque"},
-}
-
-_CLINICAL_STUDY_TAGS = {
-    "clinical trial", "randomized controlled trial", "controlled clinical trial",
-    "phase i", "phase ii", "phase iii", "phase iv", "rct", "clinical study",
-    "human study", "patient study", "clinical investigation"
-}
-
-_NEGATION_TERMS = {
-    "in vitro", "cell culture", "cultured cells", "tissue culture",
-    "cell line", "isolated cells", "artificial"
-}
-
-
-def _tokenize_species_string(text: str) -> Set[str]:
-    """Normalize species strings by tokenizing on non-alphanumeric characters."""
-    import re
-    if not text:
-        return set()
-    return set(re.findall(r'\b[a-zA-Z]+\b', text.lower()))
 
 
 @dataclass
@@ -86,6 +73,8 @@ class EnhancedQueryEngine:
         cache_dir: Optional[str] = None,
         cache_ttl_hours: Optional[int] = None,
         ranking_filter: Optional[StudyRankingFilter] = None,
+        ranking_weights: Optional[Dict[str, float]] = None,
+        recency_decay_years: Optional[float] = None,
         pharma_processor: Optional[PharmaceuticalProcessor] = None,
         enable_pharma_enrichment: bool = True,
         enable_query_enhancement: bool = True,
@@ -97,15 +86,27 @@ class EnhancedQueryEngine:
         re_rank: bool = True,
         species_unknown_default: Optional[bool] = None,
         runtime_extraction_doc_cap: int = 200,
+        runtime_extraction_char_limit: Optional[int] = None,
         cache_filtered_results: bool = True,
     ) -> None:
         self.scraper = scraper
-        ttl_hours = max(1, int(cache_ttl_hours or _DEFAULT_CACHE_TTL_HOURS))
+        if cache_ttl_hours is not None:
+            ttl_hours = max(1, int(cache_ttl_hours))
+        else:
+            # Use environment variable if cache_ttl_hours not explicitly provided
+            env_ttl_hours = os.getenv("QUERY_ENGINE_CACHE_TTL_HOURS")
+            if env_ttl_hours is not None:
+                ttl_hours = max(1, int(env_ttl_hours))
+            else:
+                ttl_hours = _DEFAULT_CACHE_TTL_HOURS
         self.cache_ttl = timedelta(hours=ttl_hours)
         cache_root = os.getenv("QUERY_ENGINE_CACHE_DIR", cache_dir or "./query_cache")
         self.cache_dir = Path(cache_root)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.ranking_filter = ranking_filter or StudyRankingFilter()
+        self.ranking_filter = ranking_filter or StudyRankingFilter(
+            weights=ranking_weights,
+            recency_decay_years=recency_decay_years,
+        )
         self.enable_pharma_enrichment = enable_pharma_enrichment
         normalized_mode = enhancement_mode.lower()
         if normalized_mode not in {"and", "or", "none"}:
@@ -114,15 +115,35 @@ class EnhancedQueryEngine:
         self.enable_query_enhancement = enable_query_enhancement and normalized_mode != "none"
         self.query_enhancement_disable_threshold = query_enhancement_disable_threshold
         self.query_enhancement_min_terms = query_enhancement_min_terms
-        self.pharma_processor = pharma_processor or (
-            PharmaceuticalProcessor() if self.enable_pharma_enrichment else None
-        )
+        self.pharma_processor = pharma_processor
         self.infer_species_on_filter = infer_species_on_filter
         self.strict_species_inference = strict_species_inference
         self.re_rank = re_rank
         self.species_unknown_default = species_unknown_default
         self.runtime_extraction_doc_cap = runtime_extraction_doc_cap if runtime_extraction_doc_cap > 0 else 200
+        # Support runtime extraction char limit from env var or parameter
+        if runtime_extraction_char_limit is None:
+            self.runtime_extraction_char_limit = int(os.getenv("QUERY_ENGINE_RUNTIME_EXTRACTION_CHAR_LIMIT", "4000"))
+        else:
+            self.runtime_extraction_char_limit = runtime_extraction_char_limit
         self.cache_filtered_results = cache_filtered_results
+        # Initialize cache size config
+        self.cache_config = CacheSizeConfig()
+        # Cache write counter for opportunistic cleanup
+        self._cache_write_count = 0
+
+    def _get_pharma_processor(self, ignore_enrichment_flag: bool = False) -> Optional[PharmaceuticalProcessor]:
+        """Lazy-initialize PharmaceuticalProcessor only when needed.
+
+        Args:
+            ignore_enrichment_flag: If True, bypass enrichment check and initialize processor
+                even when enable_pharma_enrichment is False. Used for runtime extraction.
+        """
+        if not self.enable_pharma_enrichment and self.pharma_processor is None and not ignore_enrichment_flag:
+            return None
+        if self.pharma_processor is None:
+            self.pharma_processor = PharmaceuticalProcessor()
+        return self.pharma_processor
 
     # ------------------------------------------------------------------
     # Public API
@@ -135,18 +156,52 @@ class EnhancedQueryEngine:
         sort_by: str = "relevance",
         filters: Optional[Dict[str, Any]] = None,
         include_unknown_species: Optional[bool] = None,
+        allow_runtime_extraction_for_filters: bool = False,
+        include_explanations: bool = False,
+        explanation_limit: Optional[int] = None,
+        apply_diversity_filter: bool = False,
     ) -> Dict[str, Any]:
         """Execute pharmaceutical PubMed workflow with caching and ranking.
+
+        Supported filter keys:
+            - drug_names: List of drug names to match
+            - therapeutic_areas: List of therapeutic areas
+            - species: Species preference (human, mouse, etc.)
+            - species_preference: Alternative species filter with more options
+            - include_unknown_species: Whether to include documents without species info
+            - study_types: List of study types (clinical trial, etc.)
+            - year_range: [start_year, end_year] for publication dates
+            - min_sample_size: Minimum study sample size
+            - min_ranking_score: Minimum ranking score threshold
+            - pharmacokinetics: PK filtering (only when ENABLE_PK_FILTERING=true)
+                * True/False: Any PK data presence
+                * Dict: {"half_life": True, "auc": True} for specific parameters
+                * List: ["half_life", "auc"] for required parameters
 
         Species filtering retains unknown-species documents by default unless a
         ``species_preference`` is provided, in which case unknown entries are
         excluded unless ``include_unknown_species`` is set or the constructor's
         ``species_unknown_default`` overrides the behaviour. The vector database
-        exposes the same configuration so both layers can stay aligned.
+        exposes the same configuration so both layers can stay aligned. Default
+        species behavior is controlled by ``pharma_utils.SPECIES_UNKNOWN_DEFAULT``.
 
         When runtime drug-name extraction is enabled, the number of documents
         processed is capped by ``runtime_extraction_doc_cap`` (default 200) to
         avoid excessive CPU usage on large result sets.
+
+        Args:
+            allow_runtime_extraction_for_filters: If True, enables runtime drug-name
+                extraction during filtering when enrichment is disabled. This has
+                significant CPU cost implications and should be used cautiously.
+            include_explanations: If True, adds ranking explanations to each result
+                detailing how the ranking score was calculated.
+            explanation_limit: Optional limit on number of explanations to generate.
+                If None and include_explanations is True, explanations are generated for
+                all results. When re_rank is False and no ranking_score fields exist,
+                explanations are skipped regardless of this parameter.
+            apply_diversity_filter: If True, applies diversity filtering to reduce
+                near-duplicates in ranked results. Uses text similarity to identify
+                similar papers and keeps the highest-ranked from each cluster.
         """
         if query is None or not str(query).strip():
             raise ValueError("Query string must be provided.")
@@ -224,7 +279,12 @@ class EnhancedQueryEngine:
             ranked_results = self._maybe_enrich_results(raw_cached_payload.get("results", []), metadata=raw_cached_payload.get("metadata"))
             dedup_info = (raw_cached_payload.get("metadata") or {}).get("deduplication")
             resorted_results = self._sort_ranked_results(ranked_results, sort_by)
-            filtered_results, applied_filters = self._apply_filters(resorted_results, filters)
+            filtered_results, applied_filters = self._apply_filters(resorted_results, filters, allow_runtime_extraction_for_filters=allow_runtime_extraction_for_filters)
+
+            # Apply diversity filtering if requested
+            if apply_diversity_filter and filtered_results:
+                filtered_results = self._apply_diversity_filter(filtered_results)
+
             cache_metadata = CacheMetadata(
                 created_at=raw_cache_metadata.created_at,
                 expires_at=raw_cache_metadata.expires_at,
@@ -247,6 +307,10 @@ class EnhancedQueryEngine:
                     },
                 }
                 self._cache_result(filtered_cache_key, filtered_payload)
+
+            # Add ranking explanations if requested
+            if include_explanations:
+                filtered_results = self._add_ranking_explanations(filtered_results, query=normalized_query, explanation_limit=explanation_limit)
 
             processing_end = datetime.now(timezone.utc)
             return self._build_response(
@@ -300,7 +364,16 @@ class EnhancedQueryEngine:
         else:
             # Skip ranking since scraper already provided ranking scores
             ranked_results = self._sort_ranked_results(enriched_results, sort_by)
-        filtered_results, applied_filters = self._apply_filters(ranked_results, filters)
+        filtered_results, applied_filters = self._apply_filters(
+            ranked_results,
+            filters,
+            allow_runtime_extraction_for_filters=allow_runtime_extraction_for_filters,
+            runtime_extraction_char_limit=self.runtime_extraction_char_limit
+        )
+
+        # Apply diversity filtering if requested
+        if apply_diversity_filter and filtered_results:
+            filtered_results = self._apply_diversity_filter(filtered_results)
         created_at = datetime.now(timezone.utc)
         cache_metadata = CacheMetadata(
             created_at=created_at,
@@ -338,6 +411,10 @@ class EnhancedQueryEngine:
             }
             self._cache_result(filtered_cache_key, cache_payload)
 
+        # Add ranking explanations if requested
+        if include_explanations:
+            filtered_results = self._add_ranking_explanations(filtered_results, query=normalized_query, explanation_limit=explanation_limit)
+
         processing_end = datetime.now(timezone.utc)
         return self._build_response(
             query=normalized_query,
@@ -355,6 +432,45 @@ class EnhancedQueryEngine:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _add_ranking_explanations(self, results: List[Dict[str, Any]], *, query: str, explanation_limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Add ranking explanations to results when requested.
+
+        Args:
+            results: List of ranked result documents
+            query: The original query string for context
+
+        Returns:
+            Results with ranking explanations added
+        """
+        if not results or not hasattr(self.ranking_filter, 'get_ranking_explanation'):
+            return results
+
+        # Performance guard: early return if no ranking scores exist and re_rank is False
+        if not self.re_rank:
+            has_ranking_scores = any('ranking_score' in result for result in results)
+            if not has_ranking_scores:
+                logger.debug("Skipping explanations: no ranking scores found and re_rank is False")
+                return results
+
+        # Apply explanation limit if specified
+        limited_results = results
+        if explanation_limit is not None and explanation_limit > 0:
+            limited_results = results[:explanation_limit]
+
+        # Create a copy to avoid modifying cached results
+        explained_results = []
+        for i, result in enumerate(limited_results):
+            result_copy = dict(result)
+            try:
+                explanation = self.ranking_filter.get_ranking_explanation(result_copy, query=query, verbose=True)
+                result_copy["ranking_explanation"] = explanation
+            except Exception as exc:
+                logger.warning("Failed to generate ranking explanation: %s", exc)
+                result_copy["ranking_explanation"] = "Explanation unavailable due to error"
+            explained_results.append(result_copy)
+
+        return explained_results
 
     def _validate_max_items(self, value: int) -> int:
         if value <= 0:
@@ -379,7 +495,7 @@ class EnhancedQueryEngine:
             "sort_by": sort_by,
             "filters": self._normalize_for_cache(filters),
         }
-        payload_str = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+        payload_str = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
         return hashlib.md5(payload_str.encode("utf-8")).hexdigest()
 
     def _generate_raw_cache_key(
@@ -460,8 +576,35 @@ class EnhancedQueryEngine:
         try:
             with open(cache_file, "w", encoding="utf-8") as handle:
                 json.dump(payload, handle, ensure_ascii=False, indent=2)
+
+            # Increment cache write counter and check if cleanup is needed
+            self._cache_write_count += 1
+            if self._cache_write_count % self.cache_config.check_frequency == 0:
+                self._check_cache_size()
         except Exception as exc:  # pragma: no cover - defensive path
             logger.warning("Failed to write cache file %s: %s", cache_file, exc)
+
+    def _check_cache_size(self) -> None:
+        """Check cache size and clean up if exceeding limits."""
+        try:
+            current_size_mb = get_cache_dir_size_mb(self.cache_dir)
+            if current_size_mb > self.cache_config.max_size_mb:
+                logger.info(
+                    "Cache size %.2f MB exceeds limit %d MB, cleaning up oldest files",
+                    current_size_mb,
+                    self.cache_config.max_size_mb
+                )
+                stats = cleanup_oldest_cache_files(
+                    self.cache_dir,
+                    self.cache_config.cleanup_threshold_mb
+                )
+                logger.info(
+                    "Cache cleanup completed: removed %d files, freed %.2f MB",
+                    stats["files_removed"],
+                    stats["bytes_freed"] / (1024 * 1024)
+                )
+        except Exception as exc:
+            logger.warning("Failed to check cache size: %s", exc)
 
     def _enhance_pharmaceutical_query(self, query: str) -> Tuple[str, bool]:
         normalized = query.strip()
@@ -483,10 +626,10 @@ class EnhancedQueryEngine:
         if "cyp" in lower:
             signal_count += 1
 
-        # Check for known drug names using PharmaceuticalProcessor
-        if self.pharma_processor:
-            drug_names = self.pharma_processor.extract_drug_name_strings(normalized)
-            signal_count += len(drug_names)
+        # Check for drug-like terms using lightweight checker
+        drug_checker = DrugNameChecker()
+        drug_signals = drug_checker.extract_drug_signals(normalized)
+        signal_count += drug_signals["signal_count"]
 
         # If signal count meets or exceeds disable threshold, return original query
         if signal_count >= self.query_enhancement_disable_threshold:
@@ -522,7 +665,8 @@ class EnhancedQueryEngine:
     def _maybe_enrich_results(self, results: List[Dict[str, Any]], *, metadata: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         if not results:
             return []
-        if not self.enable_pharma_enrichment or self.pharma_processor is None:
+        pharma_processor = self._get_pharma_processor()
+        if not pharma_processor:
             return list(results)
 
         # Check if results are already pharma enriched
@@ -541,35 +685,36 @@ class EnhancedQueryEngine:
         ]
         combined_text = "\n".join(fragment for fragment in text_fragments if fragment)
 
+        pharma_processor = self._get_pharma_processor()
         mesh_terms = enriched.get("mesh_terms") or enriched.get("mesh") or []
-        normalized_mesh = self.pharma_processor.normalize_mesh_terms(mesh_terms)
+        normalized_mesh = pharma_processor.normalize_mesh_terms(mesh_terms)
         if mesh_terms:
             enriched["mesh_terms"] = normalized_mesh
         if not enriched.get("therapeutic_areas") and normalized_mesh:
-            enriched["therapeutic_areas"] = self.pharma_processor.identify_therapeutic_areas(normalized_mesh)
+            enriched["therapeutic_areas"] = pharma_processor.identify_therapeutic_areas(normalized_mesh)
 
         if combined_text:
             # Skip drug extraction if annotations already exist
             if not enriched.get("drug_annotations"):
                 if not enriched.get("drug_names"):
-                    annotations = self.pharma_processor.extract_drug_names(combined_text)
+                    annotations = pharma_processor.extract_drug_names(combined_text)
                     if annotations:
                         enriched["drug_names"] = [entry["name"] for entry in annotations]
                         enriched["drug_annotations"] = annotations
                 elif enriched.get("drug_names"):
                     # Only extract annotations if drug names exist but annotations don't
-                    annotations = self.pharma_processor.extract_drug_names(combined_text)
+                    annotations = pharma_processor.extract_drug_names(combined_text)
                     if annotations:
                         enriched["drug_annotations"] = annotations
 
             if not enriched.get("cyp_enzymes"):
-                enriched["cyp_enzymes"] = self.pharma_processor.extract_cyp_enzymes(combined_text)
+                enriched["cyp_enzymes"] = pharma_processor.extract_cyp_enzymes(combined_text)
 
             if not enriched.get("pharmacokinetics"):
-                enriched["pharmacokinetics"] = self.pharma_processor.extract_pharmacokinetic_parameters(combined_text)
+                enriched["pharmacokinetics"] = pharma_processor.extract_pharmacokinetic_parameters(combined_text)
 
             if not enriched.get("dosage_information"):
-                enriched["dosage_information"] = self.pharma_processor.extract_dosage_information(combined_text)
+                enriched["dosage_information"] = pharma_processor.extract_dosage_information(combined_text)
 
         if self.infer_species_on_filter and not enriched.get("species"):
             inferred_species = self._infer_species_from_text(enriched, normalized_mesh)
@@ -636,51 +781,66 @@ class EnhancedQueryEngine:
             for key in key_order:
                 value = normalized_item.get(key)
                 if value:
-                    identifier = f"{key}:{str(value).strip()}".lower()
+                    # Normalize DOI and PMID values to handle prefixes and formatting variations
+                    if key == 'doi':
+                        normalized_value = normalize_doi(str(value).strip())
+                    elif key == 'pmid':
+                        normalized_value = normalize_pmid(str(value).strip())
+                    else:
+                        normalized_value = str(value).strip()
+                    identifier = f"{key}:{normalized_value}".lower()
                     break
             if not identifier:
                 title_value = normalized_item.get("title")
                 if title_value:
-                    normalized_title = self._normalize_title_identifier(str(title_value))
-                    if normalized_title:
+                    # Skip title-based identifiers for very short titles to avoid over-merging
+                    title_str = str(title_value).strip()
+                    if len(title_str) < 10:
+                        # Title too short, skip title-based deduplication
+                        identifier = json.dumps(item, sort_keys=True)
+                    else:
+                        normalized_title = self._normalize_title_identifier(title_str)
                         year_value = normalized_item.get("publication_year") or normalized_item.get("year")
-                        if isinstance(year_value, (list, tuple)) and year_value:
-                            year_value = year_value[0]
-                        year_normalized = None
-                        if year_value is not None:
-                            year_text = str(year_value).strip()
-                            if year_text:
-                                year_normalized = year_text[:4]
+                        if normalized_title:
+                            if isinstance(year_value, (list, tuple)) and year_value:
+                                year_value = year_value[0]
+                            year_normalized = None
+                            if year_value is not None:
+                                year_text = str(year_value).strip()
+                                if year_text:
+                                    year_normalized = year_text[:4]
 
-                        author_normalized = None
-                        authors_value = normalized_item.get("authors") or normalized_item.get("author")
-                        if isinstance(authors_value, (list, tuple)) and authors_value:
-                            first_author = authors_value[0]
-                            if isinstance(first_author, dict):
-                                author_normalized = str(
-                                    first_author.get("name")
-                                    or first_author.get("full_name")
-                                    or first_author.get("last_name")
+                            author_normalized = None
+                            authors_value = normalized_item.get("authors") or normalized_item.get("author")
+                            if isinstance(authors_value, (list, tuple)) and authors_value:
+                                first_author = authors_value[0]
+                                if isinstance(first_author, dict):
+                                    author_raw = str(
+                                        first_author.get("name")
+                                        or first_author.get("full_name")
+                                        or first_author.get("last_name")
+                                        or ""
+                                    )
+                                    author_normalized = self._normalize_author_identifier(author_raw)
+                                else:
+                                    author_normalized = self._normalize_author_identifier(str(first_author))
+                            elif isinstance(authors_value, dict):
+                                author_raw = str(
+                                    authors_value.get("name")
+                                    or authors_value.get("full_name")
+                                    or authors_value.get("last_name")
                                     or ""
-                                ).strip().lower()
-                            else:
-                                author_normalized = str(first_author).strip().lower()
-                        elif isinstance(authors_value, dict):
-                            author_normalized = str(
-                                authors_value.get("name")
-                                or authors_value.get("full_name")
-                                or authors_value.get("last_name")
-                                or ""
-                            ).strip().lower()
-                        elif isinstance(authors_value, str):
-                            author_normalized = authors_value.strip().lower()
+                                )
+                                author_normalized = self._normalize_author_identifier(author_raw)
+                            elif isinstance(authors_value, str):
+                                author_normalized = self._normalize_author_identifier(authors_value)
 
-                        if year_normalized:
-                            identifier = f"title_year:{normalized_title}:{year_normalized}"
-                        elif author_normalized:
-                            identifier = f"title_author:{normalized_title}:{author_normalized}"
-                        else:
-                            identifier = f"title:{normalized_title}"
+                            if year_normalized:
+                                identifier = f"title_year:{normalized_title}:{year_normalized}"
+                            elif author_normalized:
+                                identifier = f"title_author:{normalized_title}:{author_normalized}"
+                            else:
+                                identifier = f"title:{normalized_title}"
             if not identifier:
                 identifier = json.dumps(item, sort_keys=True)
             if identifier in seen_ids:
@@ -694,6 +854,80 @@ class EnhancedQueryEngine:
             "duplicates_removed": duplicates,
         }
         return deduped, dedup_info
+
+    def _apply_diversity_filter(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Apply diversity filtering to reduce near-duplicates in ranked results.
+
+        Uses text similarity on titles and abstracts to identify similar papers
+        and keeps the highest-ranked result from each similarity cluster.
+
+        Args:
+            results: List of ranked result documents
+
+        Returns:
+            Filtered results with near-duplicates removed
+        """
+        if len(results) <= 1:
+            return results
+
+        filtered = []
+        seen_signatures = []
+
+        # Sort by ranking_score to ensure we keep the highest ranked
+        sorted_results = sorted(results, key=lambda x: x.get("ranking_score", 0), reverse=True)
+
+        for result in sorted_results:
+            # Create text signature for similarity comparison
+            title = str(result.get("title", "")).lower().strip()
+            abstract = str(result.get("abstract", "")).lower().strip()
+
+            # Use first 300 chars of abstract for similarity comparison
+            abstract_summary = abstract[:300] if abstract else ""
+
+            # Create combined text signature (title carries more weight)
+            text_signature = f"{title} {abstract_summary}".strip()
+
+            # Check if this text is too similar to anything we've already seen
+            is_duplicate = False
+            for seen_signature in seen_signatures:
+                # Calculate similarity ratio
+                longer_len = max(len(text_signature), len(seen_signature))
+                if longer_len == 0:
+                    continue
+
+                # Check for overlapping words (simple but effective)
+                signature_words = set(text_signature.split())
+                seen_words = set(seen_signature.split())
+
+                if signature_words and seen_words:
+                    # Calculate Jaccard similarity
+                    intersection = signature_words.intersection(seen_words)
+                    union = signature_words.union(seen_words)
+                    jaccard_similarity = len(intersection) / len(union)
+
+                    # Consider duplicate if Jaccard similarity > 0.85
+                    if jaccard_similarity > 0.85:
+                        # Additional check: title should be very similar for high confidence
+                        title_words = set(title.split()[:10])  # First 10 words of title
+                        seen_title_words = set(seen_signature.split()[:10])
+                        if title_words and seen_title_words:
+                            title_intersection = title_words.intersection(seen_title_words)
+                            title_union = title_words.union(seen_title_words)
+                            title_jaccard = len(title_intersection) / len(title_union)
+                            if title_jaccard > 0.9:
+                                is_duplicate = True
+                                break
+
+            if not is_duplicate:
+                filtered.append(result)
+                seen_signatures.append(text_signature)
+
+        # Maintain original order as much as possible (just remove duplicates)
+        result_ids = {id(r): True for r in filtered}
+        final_results = [r for r in results if id(r) in result_ids]
+
+        logger.info("Diversity filtering: %d -> %d results", len(results), len(final_results))
+        return final_results
 
     def _rank_results(
         self,
@@ -750,6 +984,15 @@ class EnhancedQueryEngine:
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         if not results:
             return [], {}
+
+        # Handle species alias for backward compatibility
+        if filters.get('species') and not filters.get('species_preference'):
+            filters = dict(filters)
+            filters['species_preference'] = filters['species']
+
+        # Set default character limit for runtime extraction to prevent memory issues
+        if allow_runtime_extraction_for_filters and runtime_extraction_char_limit is None:
+            runtime_extraction_char_limit = 4000
 
         applied: Dict[str, Any] = {}
         year_range = filters.get("year_range")
@@ -808,8 +1051,9 @@ class EnhancedQueryEngine:
                 if not value_str:
                     continue
                 canonical_filters.add(value_str.lower())
-                if self.pharma_processor:
-                    for entry in self.pharma_processor.extract_drug_names(value_str):
+                pharma_processor = self._get_pharma_processor()
+                if pharma_processor:
+                    for entry in pharma_processor.extract_drug_names(value_str):
                         canonical_filters.add(entry["name"].lower())
 
             # Skip filtering if canonical_filters is empty to avoid dropping all results
@@ -848,29 +1092,37 @@ class EnhancedQueryEngine:
                             elif entry:
                                 names.add(str(entry).lower())
                         # Only run extract_drug_names if enrichment is disabled AND runtime extraction is enabled
-                        if (self.pharma_processor and not self.enable_pharma_enrichment and
+                        pharma_processor = self._get_pharma_processor(ignore_enrichment_flag=allow_runtime_extraction_for_filters)
+                        if (pharma_processor and
                             allow_runtime_extraction_for_filters and
                             runtime_extraction_docs_processed < self.runtime_extraction_doc_cap):
-                            doc_text = " ".join(
-                                filter(
-                                    None,
-                                    [
-                                        item.get("title"),
-                                        item.get("abstract"),
-                                        item.get("summary"),
-                                    ],
+                            # Safety check for very long abstracts to prevent memory issues
+                            abstract = item.get("abstract")
+                            if abstract and len(str(abstract)) > 50000:  # 50KB sanity check
+                                logger.warning("Skipping runtime extraction for document with extremely long abstract (%d chars)", len(str(abstract)))
+                                # Add empty names set for this document
+                                pass
+                            else:
+                                doc_text = " ".join(
+                                    filter(
+                                        None,
+                                        [
+                                            item.get("title"),
+                                            abstract,
+                                            item.get("summary"),
+                                        ],
+                                    )
                                 )
-                            )
-                            if doc_text:
-                                # Apply character limit if specified
-                                if runtime_extraction_char_limit and len(doc_text) > runtime_extraction_char_limit:
-                                    doc_text = doc_text[:runtime_extraction_char_limit]
+                                if doc_text:
+                                    # Apply character limit if specified
+                                    if runtime_extraction_char_limit and len(doc_text) > runtime_extraction_char_limit:
+                                        doc_text = doc_text[:runtime_extraction_char_limit]
 
-                                for annotation in self.pharma_processor.extract_drug_names(doc_text):
-                                    names.add(annotation["name"].lower())
+                                    for annotation in pharma_processor.extract_drug_names(doc_text):
+                                        names.add(annotation["name"].lower())
 
-                                # Increment document counter
-                                runtime_extraction_docs_processed += 1
+                                    # Increment document counter
+                                    runtime_extraction_docs_processed += 1
 
                     # Cache the result
                     doc_drug_cache[cache_key] = names
@@ -933,23 +1185,101 @@ class EnhancedQueryEngine:
                     filtered_items.append(item)
             ranked_filtered = filtered_items
 
+        # PK-aware filtering (optional feature - behind feature flag for consistency)
+        pharmacokinetics = filters.get("pharmacokinetics")
+        if pharmacokinetics and _PK_FILTERING_ENABLED:
+            applied["pharmacokinetics"] = pharmacokinetics
+
+            pk_filtered_items = []
+            for item in ranked_filtered:
+                doc_pk = item.get("pharmacokinetics", {})
+                doc_pk_values = item.get("pharmacokinetic_values", {})
+
+                include_item = False
+
+                if isinstance(pharmacokinetics, dict):
+                    # Support filtering by presence of PK parameters
+                    include_item = True
+                    for pk_param, required in pharmacokinetics.items():
+                        if required is True:
+                            # Check if parameter exists in either pharmacokinetics or pharmacokinetic_values
+                            if not (pk_param in doc_pk or pk_param in doc_pk_values):
+                                include_item = False
+                                break
+                        elif isinstance(required, (str, dict)):
+                            # Support regex/value matching (for future enhancement)
+                            # For now, just check presence
+                            if not (pk_param in doc_pk or pk_param in doc_pk_values):
+                                include_item = False
+                                break
+                elif isinstance(pharmacokinetics, (list, tuple)):
+                    # Support list of required PK parameters
+                    include_item = True
+                    for pk_param in pharmacokinetics:
+                        if not (pk_param in doc_pk or pk_param in doc_pk_values):
+                            include_item = False
+                            break
+                else:
+                    # Boolean check - any PK data present
+                    include_item = pharmacokinetics and (doc_pk or doc_pk_values)
+
+                if include_item:
+                    pk_filtered_items.append(item)
+
+            ranked_filtered = pk_filtered_items
+
         if not ranked_filtered:
             applied = applied or {}
         return ranked_filtered, applied
 
     @staticmethod
     def _normalize_title_identifier(title: str) -> str:
-        lowered = title.lower()
-        # Normalize and strip diacritics
-        nfkd = unicodedata.normalize('NFKD', lowered)
-        ascii_only = ''.join(ch for ch in nfkd if not unicodedata.combining(ch))
-        cleaned = ''.join(ch if ch.isalnum() or ch.isspace() else ' ' for ch in ascii_only)
+        # Use shared normalize_text function for consistency
+        normalized = normalize_text(title, remove_diacritics=True, lowercase=True)
+        # Additional cleaning for identifier consistency
+        cleaned = ''.join(ch if ch.isalnum() or ch.isspace() else ' ' for ch in normalized)
         return ' '.join(cleaned.split())
+
+    @staticmethod
+    def _normalize_author_identifier(author: str) -> str:
+        """Normalize author string by collapsing punctuation and whitespace.
+
+        Args:
+            author: Raw author string
+
+        Returns:
+            Normalized author string with punctuation/whitespace collapsed
+        """
+        if not author:
+            return ""
+
+        # Convert to lowercase and normalize diacritics
+        normalized = normalize_text(author, remove_diacritics=True, lowercase=True)
+
+        # Collapse punctuation and whitespace
+        # Remove all punctuation except apostrophes and hyphens within names
+        cleaned = []
+        prev_char = None
+        for char in normalized:
+            if char.isalnum():
+                cleaned.append(char)
+                prev_char = char
+            elif char in ["'", "-"] and prev_char and prev_char.isalnum():
+                # Keep apostrophes and hyphens within names
+                cleaned.append(char)
+                prev_char = char
+            elif char.isspace():
+                # Collapse multiple spaces to single space
+                if prev_char != " ":
+                    cleaned.append(" ")
+                    prev_char = " "
+
+        return "".join(cleaned).strip()
 
     @staticmethod
     def _cache_sort_key(item: Any) -> str:
         try:
-            return json.dumps(item, sort_keys=True, ensure_ascii=False)
+            return json.dumps(item, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
         except TypeError:
             return repr(item)
 
@@ -1015,6 +1345,80 @@ class EnhancedQueryEngine:
         if error is not None:
             response["error"] = error
         return response
+
+    def purge_expired_cache(self) -> Dict[str, Any]:
+        """Remove expired cache files from the cache directory.
+
+        Scans all cache files and removes those where the cached_at timestamp
+        plus the TTL has passed. Returns statistics about the cleanup operation.
+
+        Returns:
+            Dict with cleanup statistics:
+            - files_removed: Number of expired files removed
+            - files_kept: Number of valid files kept
+            - errors: List of errors encountered during cleanup
+        """
+        stats = {
+            "files_removed": 0,
+            "files_kept": 0,
+            "errors": [],
+        }
+
+        if not self.cache_dir.exists():
+            return stats
+
+        now = datetime.now(timezone.utc)
+
+        for cache_file in self.cache_dir.glob("*.json"):
+            try:
+                # Read the cache file to get metadata
+                with open(cache_file, "r", encoding="utf-8") as f:
+                    cache_data = json.load(f)
+
+                # Get cached timestamp
+                cached_at_str = None
+                if isinstance(cache_data, dict):
+                    metadata = cache_data.get("metadata", {})
+                    cached_at_str = metadata.get("cached_at")
+
+                if not cached_at_str:
+                    # No timestamp, remove the file
+                    cache_file.unlink()
+                    stats["files_removed"] += 1
+                    continue
+
+                # Parse timestamp
+                try:
+                    cached_at = datetime.fromisoformat(cached_at_str)
+                    # Normalize naive datetime to UTC timezone-aware
+                    if cached_at.tzinfo is None:
+                        cached_at = cached_at.replace(tzinfo=timezone.utc)
+                except ValueError:
+                    # Invalid timestamp, remove the file
+                    cache_file.unlink()
+                    stats["files_removed"] += 1
+                    continue
+
+                # Check if expired
+                expires_at = cached_at + self.cache_ttl
+                if now >= expires_at:
+                    cache_file.unlink()
+                    stats["files_removed"] += 1
+                else:
+                    stats["files_kept"] += 1
+
+            except Exception as exc:
+                error_msg = f"Failed to process cache file {cache_file.name}: {str(exc)}"
+                stats["errors"].append(error_msg)
+                logger.warning(error_msg)
+
+        logger.info(
+            "Cache purge completed: removed %d expired files, kept %d valid files",
+            stats["files_removed"],
+            stats["files_kept"]
+        )
+
+        return stats
 
 
 __all__ = ["EnhancedQueryEngine"]

@@ -8,7 +8,19 @@ Note: The scraper now preserves native PubMed ordering by default. Pass
 Usage:
   python -m src.pubmed_scraper "query"
   python src/pubmed_scraper.py "query"
+
+  # With options:
+  python -m src.pubmed_scraper "cancer immunotherapy" --max-items 50 --rank --cache-ttl-hours 12
+  python -m src.pubmed_scraper "cancer immunotherapy" --no-docs --write-sidecars
+
 Set APIFY_TOKEN environment variable before running.
+
+Flags:
+  --max-items N          Maximum number of items to retrieve (default: configured value)
+  --rank/--no-rank       Enable/disable study ranking (default: environment setting)
+  --cache-ttl-hours H    Cache TTL in hours (default: configured value)
+  --no-docs              Output raw PubMed data without converting to LangChain documents
+  --write-sidecars       Write .pubmed.json sidecars for PDFs in DOCS_FOLDER
 """
 
 import os
@@ -21,13 +33,16 @@ import re
 import argparse
 import urllib.parse
 from datetime import datetime
-from typing import List, Dict, Optional, Tuple, Union, Set, Literal
+from typing import List, Dict, Optional, Tuple, Union, Set, Literal, Any
 from pathlib import Path
 
 try:
     from apify_client import ApifyClient
-except ImportError:
+except ImportError as e:
     ApifyClient = None
+    logging.getLogger(__name__).warning(
+        "apify-client>=1.7.0,<2.0.0 recommended for EasyAPI integration: %s", e
+    )
 
 try:
     from apify_client import ApifyApiError  # type: ignore[attr-defined]
@@ -37,7 +52,15 @@ except ImportError:
     except ImportError:
         ApifyApiError = None
 
-from langchain.schema import Document
+try:
+    import requests
+except ImportError:  # pragma: no cover - optional fallback path when requests unavailable
+    requests = None
+
+from langchain_core.documents import Document
+
+# Import unified DOI/PMID patterns and utilities
+from .paper_schema import normalize_doi, normalize_pmid
 
 
 def _env_true(name: str, default: bool = True) -> bool:
@@ -53,6 +76,23 @@ def _env_true(name: str, default: bool = True) -> bool:
         return False
 
     return default
+
+
+def _get_env_int(name: str, default: int) -> int:
+    """Return positive integer configuration from environment with fallback."""
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return default
+
+    try:
+        parsed = int(value.strip())
+        if parsed <= 0:
+            logger.warning("Environment variable %s must be positive. Using default %s.", name, default)
+            return default
+        return parsed
+    except ValueError:
+        logger.warning("Environment variable %s=%s is not an integer. Using default %s.", name, value, default)
+        return default
 
 try:
     from .rate_limiting import (
@@ -128,6 +168,31 @@ SUBSCRIPTION_ERROR_MESSAGE = (
     "EasyAPI actor may require an active subscription or access. Verify APIFY_TOKEN and EasyAPI plan."
 )
 
+_DEFAULT_APIFY_SUBSCRIPTION_PATTERNS = (
+    "rent a paid actor",
+    "paid actor",
+    "subscription",
+    "payment required",
+    "forbidden",
+    "plan limit",
+    "plan limits",
+    "plan quota",
+    "limit reached",
+    "upgrade required",
+    "upgrade your plan",
+    "upgrade to continue",
+)
+
+_subscription_patterns_override = os.getenv("APIFY_SUBSCRIPTION_PATTERNS")
+if _subscription_patterns_override:
+    APIFY_SUBSCRIPTION_PATTERNS = tuple(
+        pattern.strip().lower()
+        for pattern in _subscription_patterns_override.split(',')
+        if pattern.strip()
+    )
+else:
+    APIFY_SUBSCRIPTION_PATTERNS = tuple(pattern.lower() for pattern in _DEFAULT_APIFY_SUBSCRIPTION_PATTERNS)
+
 
 class PubMedScraper:
     """PubMed scraper using Apify with caching and deduplication"""
@@ -166,10 +231,13 @@ class PubMedScraper:
         """
         self.apify_token = apify_token or os.getenv("APIFY_TOKEN")
         if not self.apify_token:
-            raise ValueError("Apify token is required. Set APIFY_TOKEN environment variable.")
+            raise ValueError(
+                "APIFY_TOKEN is required. Obtain an API token from https://console.apify.com/ and set it"
+                " via the APIFY_TOKEN environment variable before running the PubMed scraper."
+            )
 
         if not ApifyClient:
-            raise ImportError("apify_client is required. Install with: pip install apify-client>=1.6.0,<2.0.0")
+            raise ImportError("apify_client is required. Install with: pip install apify-client>=1.7.0,<2.0.0")
 
         self.client = ApifyClient(self.apify_token)
         self.actor_id = os.getenv("EASYAPI_ACTOR_ID", "easyapi/pubmed-search-scraper")
@@ -179,25 +247,45 @@ class PubMedScraper:
         # Load configuration from environment
         self.default_max_items = int(os.getenv("DEFAULT_MAX_ITEMS", "30"))
         self.hard_cap_max_items = int(os.getenv("HARD_CAP_MAX_ITEMS", "100"))
-        self.enable_study_ranking = os.getenv("ENABLE_STUDY_RANKING", "false").lower() == "true"
+        self.enable_study_ranking = _env_true("ENABLE_STUDY_RANKING", False)
         if self.enable_study_ranking:
             logger.info(
                 "Study ranking enabled; set ENABLE_STUDY_RANKING=false or PRESERVE_PUBMED_ORDER=true to retain raw PubMed ordering."
             )
         # Support both new and old environment variable names for backward compatibility
-        enable_dedup = os.getenv("ENABLE_DEDUPLICATION")
+        def _parse_truthy(value: str) -> bool:
+            return value.strip().lower() in {"1", "true", "yes", "on"}
+
+        enable_dedup_env = os.getenv("ENABLE_DEDUPLICATION")
         legacy_dedup_env = os.getenv("ENABLE_PMID_DEDUPLICATION")
-        if enable_dedup is None:
-            # Fallback to old variable name for backward compatibility
-            enable_dedup = legacy_dedup_env or "true"
+
         if legacy_dedup_env is not None:
             logger.warning(
                 "ENABLE_PMID_DEDUPLICATION is deprecated; use ENABLE_DEDUPLICATION instead."
             )
-        self.enable_deduplication = enable_dedup.lower() == "true"
-        self.use_full_abstracts = os.getenv("USE_FULL_ABSTRACTS", "true").lower() == "true"
-        self.extract_tags = os.getenv("EXTRACT_TAGS", "true").lower() == "true"
-        self.enable_pharma_query_enhancement = os.getenv("ENABLE_PHARMA_QUERY_ENHANCEMENT", "true").lower() == "true"
+
+        if enable_dedup_env is None:
+            if legacy_dedup_env is not None:
+                enable_deduplication = _parse_truthy(legacy_dedup_env)
+                logger.info(
+                    "Applying legacy ENABLE_PMID_DEDUPLICATION=%s; set ENABLE_DEDUPLICATION explicitly to override.",
+                    legacy_dedup_env,
+                )
+            else:
+                enable_deduplication = True
+                logger.info(
+                    "ENABLE_DEDUPLICATION not set; defaulting to true (duplicate PMIDs will be removed). "
+                    "Set ENABLE_DEDUPLICATION=false to retain raw PubMed ordering and counts.",
+                )
+        else:
+            enable_deduplication = _parse_truthy(enable_dedup_env)
+
+        self.enable_deduplication = enable_deduplication
+        # Default false to reduce Apify usage cost; override with env var when needed
+        self.use_full_abstracts = _env_true("USE_FULL_ABSTRACTS", False)
+        self.extract_tags = _env_true("EXTRACT_TAGS", True)
+        self.include_tags_with_preserve_order = _env_true("INCLUDE_TAGS_WITH_PRESERVE_ORDER", False)
+        self.enable_pharma_query_enhancement = _env_true("ENABLE_PHARMA_QUERY_ENHANCEMENT", True)
         self.pharma_terms: List[str] = list(PHARMACEUTICAL_ENHANCEMENT_TERMS)
         extra_terms_env = os.getenv("PHARMA_EXTRA_TERMS", "")
         if extra_terms_env:
@@ -223,7 +311,7 @@ class PubMedScraper:
                     seen_mesh.add(qualifier_lower)
         self.pharma_max_terms = int(os.getenv("PHARMA_MAX_TERMS", "8"))
         self.max_query_length = int(os.getenv("MAX_QUERY_LENGTH", "1800"))
-        self.enable_schema_fallback = os.getenv("ENABLE_EASYAPI_SCHEMA_FALLBACK", "false").lower() == "true"
+        self.enable_schema_fallback = _env_true("ENABLE_EASYAPI_SCHEMA_FALLBACK", False)
         self.scraper_provider = os.getenv("SCRAPER_PROVIDER", "apify-easyapi")
         self.smart_schema_fallback = _env_true("EASYAPI_SMART_SCHEMA_FALLBACK", True)
         fallback_schemas_env = os.getenv("EASYAPI_FALLBACK_SCHEMAS", "")
@@ -391,7 +479,7 @@ class PubMedScraper:
         try:
             # Call the EasyAPI actor and return the run object
             actor_client = self.client.actor(self.actor_id)
-            run = actor_client.call(run_input)
+            run = actor_client.call(run_input=run_input)
             if not run or not run.get("defaultDatasetId"):
                 run_repr = list(run.keys()) if isinstance(run, dict) else run
                 logger.warning(
@@ -405,7 +493,7 @@ class PubMedScraper:
                     retry_input = {k: v for k, v in run_input.items() if k not in optional_flags}
                     if retry_input != run_input:
                         logger.debug("Retrying actor call without optional flags after missing datasetId")
-                        retry_run = actor_client.call(retry_input)
+                        retry_run = actor_client.call(run_input=retry_input)
                         if retry_run and retry_run.get("defaultDatasetId"):
                             return retry_run
                 raise RuntimeError(
@@ -430,7 +518,7 @@ class PubMedScraper:
                         )
                         # Create new input without optional flags
                         retry_input = {k: v for k, v in run_input.items() if k not in optional_flags}
-                        retry_run = actor_client.call(retry_input)
+                        retry_run = actor_client.call(run_input=retry_input)
                         if retry_run and retry_run.get("defaultDatasetId"):
                             return retry_run
                         logger.warning("Retry without optional flags still missing defaultDatasetId or failed")
@@ -442,6 +530,175 @@ class PubMedScraper:
 
             # Re-raise the original exception if not a validation error or retry failed
             raise
+
+    def _entrez_fetch_abstract(self, pmid: str) -> Optional[str]:
+        """Fetch abstract text from NCBI when requested."""
+
+        if requests is None:
+            return None
+
+        try:
+            # Apply rate limiting if enabled
+            if self._rate_limit_active():
+                logger.debug("Applying NCBI rate limiting to Entrez abstract fetch")
+                self.rate_limiter.acquire()  # type: ignore
+
+            fetch_params = {
+                'db': 'pubmed',
+                'id': pmid,
+                'retmode': 'text',
+                'rettype': 'abstract',
+            }
+            response = requests.get(
+                'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi',
+                params=fetch_params,
+                timeout=30,
+            )
+            response.raise_for_status()
+            abstract_text = response.text.strip()
+            return abstract_text or None
+        except Exception as exc:  # pragma: no cover - network dependent fallback
+            logger.debug("Entrez abstract fetch failed for PMID %s: %s", pmid, exc)
+            return None
+
+    def _fallback_entrez_search(
+        self,
+        query: str,
+        max_items: int,
+        *,
+        apply_ranking: bool,
+        include_abstract: bool,
+    ) -> List[Dict[str, Any]]:
+        """Fallback to NCBI E-utilities when the EasyAPI actor is unavailable."""
+
+        if requests is None:
+            logger.error("requests library unavailable; cannot execute Entrez fallback")
+            return []
+
+        esearch_params = {
+            'db': 'pubmed',
+            'term': query,
+            'retmode': 'json',
+            'retmax': max(1, max_items),
+        }
+
+        try:
+            # Apply rate limiting if enabled
+            if self._rate_limit_active():
+                logger.debug("Applying NCBI rate limiting to Entrez esearch")
+                self.rate_limiter.acquire()  # type: ignore
+
+            esearch_resp = requests.get(
+                'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi',
+                params=esearch_params,
+                timeout=30,
+            )
+            esearch_resp.raise_for_status()
+            esearch_data = esearch_resp.json()
+        except Exception as exc:  # pragma: no cover - network dependent fallback
+            logger.error("Entrez esearch fallback failed: %s", exc)
+            return []
+
+        id_list = esearch_data.get('esearchresult', {}).get('idlist', [])
+        if not id_list:
+            logger.info("Entrez fallback returned no PubMed IDs for query '%s'", query)
+            return []
+
+        # Note: When rate limiting is enabled, all Entrez requests will be rate limited
+        # to ensure NCBI compliance. This includes esearch, esummary, and efetch calls.
+        if self._rate_limit_active():
+            logger.info("NCBI rate limiting is active - Entrez fallback requests will comply with rate limits")
+
+        summary_params = {
+            'db': 'pubmed',
+            'id': ','.join(id_list),
+            'retmode': 'json',
+        }
+
+        try:
+            # Apply rate limiting if enabled
+            if self._rate_limit_active():
+                logger.debug("Applying NCBI rate limiting to Entrez esummary")
+                self.rate_limiter.acquire()  # type: ignore
+
+            summary_resp = requests.get(
+                'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi',
+                params=summary_params,
+                timeout=30,
+            )
+            summary_resp.raise_for_status()
+            summary_data = summary_resp.json()
+        except Exception as exc:  # pragma: no cover - network dependent fallback
+            logger.error("Entrez esummary fallback failed: %s", exc)
+            return []
+
+        result_payload = summary_data.get('result', {})
+        normalized_results: List[Dict[str, Any]] = []
+
+        for uid in id_list:
+            doc = result_payload.get(uid)
+            if not doc:
+                continue
+
+            article_ids = doc.get('articleids') or []
+            doi_value = None
+            for article_id in article_ids:
+                if article_id.get('idtype') == 'doi' and article_id.get('value'):
+                    doi_value = article_id['value']
+                    break
+
+            authors = doc.get('authors') or []
+            author_entries = [
+                {'name': author.get('name')}
+                for author in authors
+                if isinstance(author, dict) and author.get('name')
+            ]
+
+            raw_item: Dict[str, Any] = {
+                'title': doc.get('title') or doc.get('sorttitle') or '',
+                'journal': doc.get('fulljournalname') or doc.get('source'),
+                'source': doc.get('fulljournalname') or doc.get('source'),
+                'publicationDate': doc.get('pubdate') or doc.get('epubdate') or doc.get('sortpubdate'),
+                'pmid': uid,
+                'articleids': article_ids,
+                'authors': author_entries,
+                'url': doc.get('availablefromurl') or f'https://pubmed.ncbi.nlm.nih.gov/{uid}/',
+                'meshHeadings': doc.get('meshheadinglist') or [],
+                'tags': doc.get('pubtype') or [],
+            }
+
+            if doi_value:
+                raw_item['doi'] = doi_value
+
+            if include_abstract:
+                abstract_text = self._entrez_fetch_abstract(uid)
+                if abstract_text:
+                    raw_item['abstract'] = abstract_text
+
+            normalized = self._normalize_item(raw_item)
+
+            # Override provider fields to identify Entrez fallback results
+            normalized['provider'] = 'entrez'
+            normalized['provider_detail'] = 'ncbi-eutils'
+            normalized['provider_variant'] = 'esearch/esummary'
+            normalized['source_pipeline'] = 'entrez_fallback'
+            normalized['ingestion'] = 'entrez'
+
+            if not normalized.get('year'):
+                pubdate = raw_item.get('publicationDate') or ''
+                extracted_year = self._extract_year_from_citation(str(pubdate))
+                if extracted_year:
+                    normalized['year'] = str(extracted_year)
+
+            if apply_ranking:
+                normalized = self._apply_study_ranking(normalized)
+
+            normalized_results.append(normalized)
+
+        if self.enable_deduplication and normalized_results:
+            normalized_results = self._deduplicate_by_doi_pmid(normalized_results)
+
+        return normalized_results
 
     def get_rate_limit_status(self) -> Optional["RateLimitStatus"]:
         if not self._rate_limit_active() or RateLimitStatus is None:
@@ -472,26 +729,20 @@ class PubMedScraper:
         self,
         enhanced_query: str,
         max_items: int,
-        schema: Literal['searchUrls'],
-        include_tags: Optional[bool] = None,
-        include_abstract: Optional[bool] = None,
-        force_include_tags: bool = False,
-        force_include_abstract: bool = False,
+        include_tags_effective: bool,
+        include_abstract_effective: bool,
     ) -> dict:
-        """Build actor input dictionary for EasyAPI (searchUrls only)."""
+        """Build actor input dictionary for EasyAPI."""
         encoded_query = urllib.parse.quote_plus(enhanced_query)
         pubmed_url = f"https://pubmed.ncbi.nlm.nih.gov/?term={encoded_query}"
         run_input: Dict[str, object] = {
             "searchUrls": [pubmed_url],
             "maxItems": max_items,
         }
-        include_tags_gate = force_include_tags or _env_true("EASYAPI_INCLUDE_TAGS", True)
-        include_abstract_gate = force_include_abstract or _env_true("EASYAPI_INCLUDE_ABSTRACT", True)
-
-        if include_tags is not None and include_tags_gate:
-            run_input["includeTags"] = include_tags
-        if include_abstract is not None and include_abstract_gate:
-            run_input["includeAbstract"] = include_abstract
+        if include_tags_effective:
+            run_input["includeTags"] = True
+        if include_abstract_effective:
+            run_input["includeAbstract"] = True
         return run_input
 
     def _get_cache_key(
@@ -502,12 +753,14 @@ class PubMedScraper:
         pharma_enhance_enabled: bool,
         include_tags_effective: bool,
         include_abstract_effective: bool,
+        preserve_order: bool,
     ) -> str:
         """Generate cache key for enhanced query"""
         content = (
             f"{enhanced_query}:{max_items}:actor={self.actor_id}:"
             f"tags={int(include_tags_effective)}:"
             f"abstract={int(include_abstract_effective)}:"
+            f"preserve={int(preserve_order)}:"
             f"enhance={int(pharma_enhance_enabled)}:rank={int(apply_ranking)}:"
             f"dedup={int(self.enable_deduplication)}:"
             f"pharmaMax={self.pharma_max_terms}:"
@@ -517,6 +770,14 @@ class PubMedScraper:
 
     def _get_cached_results(self, cache_key: str, apply_ranking: bool) -> Optional[List[Dict]]:
         """Get cached results if they exist and are not expired"""
+        advanced_cache_file = (self.cache_dir / "advanced" / f"{cache_key}.json")
+        if advanced_cache_file.exists():
+            # Advanced caching takes precedence when present so that newer backends own the key lifecycle.
+            logger.debug(
+                "Ignoring advanced cache entry for key %s in legacy cache lookup", cache_key
+            )
+            return None
+
         cache_file = self.cache_dir / f"{cache_key}.json"
 
         if not cache_file.exists():
@@ -550,6 +811,23 @@ class PubMedScraper:
             logger.info(f"Using cached results for key: {cache_key}")
             return cached_data
 
+        except json.JSONDecodeError as e:
+            # Handle JSON corruption specifically
+            logger.warning(f"Cache file {cache_file.name} is corrupted (invalid JSON): {str(e)}")
+            # Move corrupt file to .bad extension
+            bad_file = cache_file.with_suffix('.json.bad')
+            try:
+                cache_file.rename(bad_file)
+                logger.info(f"Moved corrupt cache file to {bad_file.name}")
+            except Exception as rename_error:
+                logger.warning(f"Failed to rename corrupt cache file: {str(rename_error)}")
+                try:
+                    cache_file.unlink()  # Fallback to deletion
+                    logger.info(f"Deleted corrupt cache file {cache_file.name}")
+                except Exception as delete_error:
+                    logger.error(f"Failed to delete corrupt cache file {cache_file.name}: {str(delete_error)}")
+            return None
+
         except Exception as e:
             logger.warning(f"Failed to load cache: {str(e)}")
             return None
@@ -575,60 +853,10 @@ class PubMedScraper:
             logger.warning(f"Failed to cache results: {str(e)}")
 
     def _normalize_doi(self, doi: str) -> str:
-        """Normalize DOI by removing prefixes and converting to lowercase"""
-        if not doi:
-            return ""
+        """Normalize DOI using shared utility function"""
+        return normalize_doi(doi)
 
-        # Convert to lowercase and strip whitespace
-        normalized = doi.lower().strip()
-
-        # Strip common prefixes (case-insensitive, including trailing slash variants)
-        prefixes_to_strip = [
-            'doi:',
-            'https://doi.org/',
-            'https://doi.org',
-            'http://doi.org/',
-            'http://doi.org',
-            'doi.org/',
-            'doi.org',
-            'www.doi.org/',
-            'www.doi.org'
-        ]
-
-        for prefix in prefixes_to_strip:
-            if normalized.startswith(prefix):
-                normalized = normalized[len(prefix):]
-                # Remove leading slash if it remains after prefix removal
-                if normalized.startswith('/'):
-                    normalized = normalized[1:]
-                break
-
-        # Strip trailing punctuation
-        normalized = normalized.rstrip('.,;)')
-
-        return normalized.strip()
-
-    def _deduplicate_results(self, items: List[Dict]) -> List[Dict]:
-        if not self.enable_deduplication or not items:
-            return items or []
-        by_doi, by_pmid, by_title = {}, {}, {}
-        out = []
-        for it in items:
-            doi = self._normalize_doi(str(it.get('doi','')))
-            pmid = str(it.get('pmid','')).strip()
-            title_key = (it.get('title') or '').strip().lower()
-            if doi:
-                if doi in by_doi: continue
-                by_doi[doi] = True
-            elif pmid:
-                if pmid in by_pmid: continue
-                by_pmid[pmid] = True
-            elif title_key:
-                if title_key in by_title: continue
-                by_title[title_key] = True
-            out.append(it)
-        return out
-
+  
     def _enhance_pharmaceutical_query(self, query: str, enhancement_enabled: bool) -> str:
         """Enhance pharmaceutical queries with relevant synonyms and keywords."""
         if not enhancement_enabled:
@@ -723,11 +951,13 @@ class PubMedScraper:
                 existing_terms_lower.add(term_lower)
 
         mesh_qualifiers = self.pharma_mesh_qualifiers
-        for qualifier in mesh_qualifiers:
-            qualifier_lower = qualifier.lower()
-            if qualifier_lower not in existing_terms_lower and qualifier_lower not in query_lower:
-                enhanced_terms.append(qualifier)
-                existing_terms_lower.add(qualifier_lower)
+        # Only add MeSH qualifiers if explicitly enabled
+        if _env_true("ENABLE_PHARMA_MESH_QUALIFIERS", False):
+            for qualifier in mesh_qualifiers:
+                qualifier_lower = qualifier.lower()
+                if qualifier_lower not in existing_terms_lower and qualifier_lower not in query_lower:
+                    enhanced_terms.append(qualifier)
+                    existing_terms_lower.add(qualifier_lower)
 
         if enhanced_terms:
             # Prioritize key pharmacology signals before enforcing a maximum list size.
@@ -797,11 +1027,15 @@ class PubMedScraper:
         # MeSH term to study type mapping for fallback
         mesh_study_mapping = {
             'randomized controlled trials as topic': ('RCT', 0.85),
+            'randomised controlled trials as topic': ('RCT', 0.85),
             'randomized controlled trial': ('RCT', 0.85),
+            'randomised controlled trial': ('RCT', 0.85),
             'systematic reviews as topic': ('Systematic Review', 0.8),
             'systematic review': ('Systematic Review', 0.8),
             'meta-analysis as topic': ('Meta-Analysis', 0.8),
+            'meta analysis as topic': ('Meta-Analysis', 0.8),
             'meta-analysis': ('Meta-Analysis', 0.8),
+            'meta analysis': ('Meta-Analysis', 0.8),
             'clinical trials as topic': ('Clinical Trial', 0.75),
             'clinical trial': ('Clinical Trial', 0.75),
             'cohort studies': ('Cohort Study', 0.7),
@@ -819,22 +1053,38 @@ class PubMedScraper:
         tags_lower = [tag.lower() for tag in tags]
         tags_str = ' '.join(tags_lower)
 
+        structured_tag_mapping = {
+            'clinical trial, phase i': ('Phase I Clinical Trial', 0.82),
+            'clinical trial, phase ii': ('Phase II Clinical Trial', 0.84),
+            'clinical trial, phase iii': ('Phase III Clinical Trial', 0.86),
+            'clinical trial, phase iv': ('Phase IV Clinical Trial', 0.86),
+            'clinical trial, phase i/ii': ('Phase I/II Clinical Trial', 0.83),
+            'clinical trial, phase ii/iii': ('Phase II/III Clinical Trial', 0.85),
+            'clinical trial, phase iii/iv': ('Phase III/IV Clinical Trial', 0.85),
+            'guideline': ('Guideline', 0.6),
+            'practice guideline': ('Practice Guideline', 0.65),
+        }
+        for tag_value in tags_lower:
+            normalized_tag = tag_value.strip()
+            if normalized_tag in structured_tag_mapping:
+                return structured_tag_mapping[normalized_tag]
+
         # Check for specific study types in order of priority
-        if any('randomized controlled trial' in tag for tag in tags_lower) or 'rct' in tags_str:
+        if any('randomized controlled trial' in tag or 'randomised controlled trial' in tag for tag in tags_lower) or 'rct' in tags_str:
             return ('RCT', 0.9)
-        elif any('systematic review' in tag for tag in tags_lower):
+        elif any('systematic review' in tag or 'systematic review' in tag for tag in tags_lower):
             return ('Systematic Review', 0.85)
-        elif any('meta-analysis' in tag for tag in tags_lower):
+        elif any('meta-analysis' in tag or 'meta analysis' in tag for tag in tags_lower):
             return ('Meta-Analysis', 0.85)
-        elif any('clinical trial' in tag for tag in tags_lower):
+        elif any('clinical trial' in tag or 'clinical trial' in tag for tag in tags_lower):
             return ('Clinical Trial', 0.8)
-        elif any('cohort study' in tag for tag in tags_lower):
+        elif any(re.search(r'\bcohort stud(?:y|ies)\b', tag) for tag in tags_lower):
             return ('Cohort Study', 0.75)
-        elif any('case-control study' in tag for tag in tags_lower):
+        elif any(re.search(r'\bcase-?control stud(?:y|ies)\b', tag) for tag in tags_lower):
             return ('Case-Control Study', 0.7)
         elif any('observational study' in tag for tag in tags_lower):
             return ('Observational Study', 0.6)
-        elif any('cross-sectional' in tag for tag in tags_lower):
+        elif any(re.search(r'cross[-\s]?sectional(?: stud(?:y|ies))?', tag) for tag in tags_lower):
             return ('Cross-Sectional Study', 0.6)
         review_exclusions = {'peer review', 'peer-review', 'reviewer', 'reviewers', 'reviewing'}
 
@@ -864,7 +1114,7 @@ class PubMedScraper:
 
             # Check for partial matches in MeSH terms
             for mesh_term in mesh_lower:
-                if 'randomized' in mesh_term and 'trial' in mesh_term:
+                if ('randomized' in mesh_term or 'randomised' in mesh_term) and 'trial' in mesh_term:
                     return ('RCT', 0.75)
                 elif 'systematic' in mesh_term and 'review' in mesh_term:
                     return ('Systematic Review', 0.7)
@@ -889,6 +1139,86 @@ class PubMedScraper:
 
         return ('Other', 0.4)
 
+    def _extract_all_study_types(self, tags: List[str], mesh_terms: List[str]) -> List[str]:
+        """Extract all matched study types from tags and MeSH terms.
+
+        Returns a list of all study types found, ordered by confidence.
+        """
+        study_types = set()
+        tags_lower = [tag.lower() for tag in tags] if tags else []
+        tags_str = ' '.join(tags_lower)
+
+        # Define study type patterns
+        study_type_patterns = {
+            'RCT': ['randomized controlled trial', 'randomised controlled trial', 'rct'],
+            'Systematic Review': ['systematic review'],
+            'Meta-Analysis': ['meta-analysis', 'meta analysis'],
+            'Clinical Trial': ['clinical trial'],
+            'Phase I Clinical Trial': ['clinical trial, phase i', 'phase i clinical trial'],
+            'Phase II Clinical Trial': ['clinical trial, phase ii', 'phase ii clinical trial'],
+            'Phase III Clinical Trial': ['clinical trial, phase iii', 'phase iii clinical trial'],
+            'Phase IV Clinical Trial': ['clinical trial, phase iv', 'phase iv clinical trial'],
+            'Cohort Study': ['cohort study', 'cohort studies'],
+            'Case-Control Study': ['case-control study', 'case-control studies'],
+            'Observational Study': ['observational study', 'observational studies'],
+            'Cross-Sectional Study': ['cross-sectional study', 'cross-sectional studies'],
+            'Review': ['review'],
+            'Case Report': ['case report'],
+            'Pilot Study': ['pilot study'],
+        }
+
+        # Check each pattern against tags
+        for study_type, patterns in study_type_patterns.items():
+            for pattern in patterns:
+                if any(pattern in tag for tag in tags_lower) or pattern in tags_str:
+                    study_types.add(study_type)
+                    break
+
+        # Check MeSH terms
+        mesh_study_mapping = {
+            'randomized controlled trials as topic': 'RCT',
+            'randomized controlled trial': 'RCT',
+            'systematic reviews as topic': 'Systematic Review',
+            'systematic review': 'Systematic Review',
+            'meta-analysis as topic': 'Meta-Analysis',
+            'meta-analysis': 'Meta-Analysis',
+            'clinical trials as topic': 'Clinical Trial',
+            'clinical trial': 'Clinical Trial',
+            'cohort studies': 'Cohort Study',
+            'case-control studies': 'Case-Control Study',
+            'observational study': 'Observational Study',
+            'cross-sectional studies': 'Cross-Sectional Study',
+            'review literature as topic': 'Review',
+            'pilot projects': 'Pilot Study',
+            'case reports': 'Case Report',
+        }
+
+        for mesh_term in mesh_terms:
+            mesh_lower = mesh_term.lower()
+            if mesh_lower in mesh_study_mapping:
+                study_types.add(mesh_study_mapping[mesh_lower])
+
+        # Return sorted by typical confidence order
+        confidence_order = [
+            'Systematic Review', 'Meta-Analysis', 'RCT',
+            'Phase III Clinical Trial', 'Phase II Clinical Trial', 'Phase I Clinical Trial',
+            'Phase IV Clinical Trial', 'Clinical Trial', 'Cohort Study',
+            'Case-Control Study', 'Observational Study', 'Cross-Sectional Study',
+            'Review', 'Pilot Study', 'Case Report'
+        ]
+
+        sorted_types = []
+        for stype in confidence_order:
+            if stype in study_types:
+                sorted_types.append(stype)
+
+        # Add any remaining types not in the confidence order
+        for stype in study_types:
+            if stype not in sorted_types:
+                sorted_types.append(stype)
+
+        return sorted_types
+
     def _apply_study_ranking(self, paper: Dict) -> Dict:
         """Apply study ranking based on multiple factors"""
         base_score = 0.5
@@ -896,10 +1226,15 @@ class PubMedScraper:
         # Study type score
         tags = paper.get('tags', [])
         mesh_terms = paper.get('mesh_terms', [])
+
+        # Get primary study type for scoring
         study_type, type_score = self._classify_study_type(tags, mesh_terms)
         paper['study_type'] = study_type
         paper['study_type_confidence'] = type_score
-        paper['study_types'] = [study_type]
+
+        # Collect ALL matched study types from tags
+        all_study_types = self._extract_all_study_types(tags, mesh_terms)
+        paper['study_types'] = all_study_types if all_study_types else [study_type]
         base_score = type_score
 
         # Recency bonus (from year)
@@ -977,12 +1312,15 @@ class PubMedScraper:
         year_pattern = r'\b(?:19|20)\d{2}\b'
         matches = re.findall(year_pattern, citation_str)
         if matches:
-            # Return the first valid year found
-            upper_bound = datetime.now().year + 1
+            current_year = datetime.now().year
+            upper_bound = current_year + 1
+            valid_years = []
             for match in matches:
                 year = int(match)
                 if 1900 <= year <= upper_bound:  # Reasonable year range
-                    return year
+                    valid_years.append(year)
+            if valid_years:
+                return max(valid_years)
 
         return None
 
@@ -1062,7 +1400,7 @@ class PubMedScraper:
         processed_results: List[Dict] = []
 
         for item in dataset_client.iterate_items():
-            normalized_item = self._normalize_item(item)
+            normalized_item = self._normalize_item(item, prefer_full_abstract=apply_ranking)
             if apply_ranking:
                 normalized_item = self._apply_study_ranking(normalized_item)
             processed_results.append(normalized_item)
@@ -1129,7 +1467,7 @@ class PubMedScraper:
                 permission issue (HTTP 401/402/403).
         """
         # Check for PRESERVE_PUBMED_ORDER override and tag extraction constraints
-        preserve_order = os.getenv('PRESERVE_PUBMED_ORDER', 'false').lower() == 'true'
+        preserve_order = _env_true('PRESERVE_PUBMED_ORDER', False)
 
         if rank is True:
             apply_ranking = True
@@ -1138,17 +1476,27 @@ class PubMedScraper:
         else:
             apply_ranking = self.enable_study_ranking
 
-        if preserve_order and apply_ranking:
+        if preserve_order and apply_ranking and rank is None:
             logger.info(
-                "PRESERVE_PUBMED_ORDER=true; ignoring rank override and returning results in crawl order."
+                "PRESERVE_PUBMED_ORDER=true; using default behavior and returning results in crawl order."
             )
             apply_ranking = False
 
-        should_include_tags = bool(apply_ranking) or bool(self.extract_tags and not preserve_order)
-        should_include_abstracts = bool(self.use_full_abstracts) and (apply_ranking or not preserve_order)
-        if not apply_ranking and not preserve_order and self.use_full_abstracts:
+        should_include_tags = bool(apply_ranking) or bool(self.extract_tags and (not preserve_order or self.include_tags_with_preserve_order))
+        should_include_abstracts = bool(apply_ranking) or (bool(self.use_full_abstracts) and not preserve_order)
+        if apply_ranking and not self.use_full_abstracts:
+            logger.info(
+                "Ranking requested; forcing abstract retrieval despite USE_FULL_ABSTRACTS=false to preserve scoring signals."
+            )
+        elif not apply_ranking and not preserve_order and self.use_full_abstracts:
             logger.info(
                 "Including full abstracts (USE_FULL_ABSTRACTS=true, PRESERVE_PUBMED_ORDER=false). Set USE_FULL_ABSTRACTS=false or PRESERVE_PUBMED_ORDER=true to skip abstracts."
+            )
+
+        # Log when tags are included due to INCLUDE_TAGS_WITH_PRESERVE_ORDER
+        if not apply_ranking and preserve_order and self.extract_tags and self.include_tags_with_preserve_order:
+            logger.info(
+                "INCLUDE_TAGS_WITH_PRESERVE_ORDER=true; including tags despite PRESERVE_PUBMED_ORDER to support metadata goals."
             )
         effective_enhance = (
             self.enable_pharma_query_enhancement if pharma_enhance is None else pharma_enhance
@@ -1189,16 +1537,24 @@ class PubMedScraper:
         # Enhance pharmaceutical queries first
         enhanced_query = self._enhance_pharmaceutical_query(query, effective_enhance)
 
-        include_tags = should_include_tags
-        include_abstract = should_include_abstracts
+        include_tags = bool(should_include_tags)
+        include_abstract = bool(should_include_abstracts)
+        force_include_tags = bool(apply_ranking)
+        force_include_abstract = bool(apply_ranking)
+
+        include_tags_gate = _env_true("EASYAPI_INCLUDE_TAGS", True)
+        include_abstract_gate = _env_true("EASYAPI_INCLUDE_ABSTRACT", True)
+        include_tags_effective = force_include_tags or (include_tags and include_tags_gate)
+        include_abstract_effective = force_include_abstract or (include_abstract and include_abstract_gate)
 
         cache_key = self._get_cache_key(
             enhanced_query,
             effective_max,
             apply_ranking,
             effective_enhance,
-            include_tags_effective=include_tags,
-            include_abstract_effective=include_abstract,
+            include_tags_effective=include_tags_effective,
+            include_abstract_effective=include_abstract_effective,
+            preserve_order=preserve_order,
         )
 
         # Try to get cached results first
@@ -1214,11 +1570,8 @@ class PubMedScraper:
         run_input = self._build_actor_input(
             enhanced_query,
             effective_max,
-            'searchUrls',
-            include_tags=include_tags,
-            include_abstract=include_abstract,
-            force_include_tags=apply_ranking,
-            force_include_abstract=apply_ranking,
+            include_tags_effective=include_tags_effective,
+            include_abstract_effective=include_abstract_effective,
         )
 
         logger.debug(f"EasyAPI actor input (searchUrls primary): {run_input}")
@@ -1238,7 +1591,6 @@ class PubMedScraper:
                 run = self._call_actor(run_input, schema='searchUrls')
 
                 results = self._process_run_results(run, apply_ranking)
-                results = self._deduplicate_results(results)
 
                 # Check for zero results and attempt schema fallback if enabled
                 if len(results) == 0 and self.enable_schema_fallback and not schema_fallback_tried:
@@ -1259,7 +1611,7 @@ class PubMedScraper:
                 if self.enable_schema_fallback and not schema_fallback_tried:
                     schema_fallback_tried = True
                     results = _perform_schema_fallback()
-                    results = self._deduplicate_results(results)
+                    results = self._deduplicate_by_doi_pmid(results)
                     if results:
                         self._cache_results(cache_key, results)
                     elif self.cache_empty_results:
@@ -1267,6 +1619,22 @@ class PubMedScraper:
                     return results
                 raise
             except Exception as e:
+                def _attempt_entrez_fallback() -> Optional[List[Dict[str, Any]]]:
+                    fallback_results = self._fallback_entrez_search(
+                        enhanced_query,
+                        effective_max,
+                        apply_ranking=apply_ranking,
+                        include_abstract=include_abstract,
+                    )
+                    if fallback_results:
+                        self._cache_results(cache_key, fallback_results)
+                        logger.info(
+                            "Retrieved %s PubMed articles via Entrez fallback after actor failure",
+                            len(fallback_results),
+                        )
+                        return fallback_results
+                    return None
+
                 if ApifyApiError and isinstance(e, ApifyApiError):
                     status_code = getattr(e, 'status_code', None)
                     if status_code == 429:
@@ -1293,23 +1661,48 @@ class PubMedScraper:
                                     delay,
                                 )
 
-                        logger.warning(f"Apify rate limit hit (429). Retrying in {delay}s...")
+                        logger.warning(
+                            "Apify rate limit hit (429). Retrying in %ss. Reduce --max-items or try again later.",
+                            delay,
+                        )
                         time.sleep(delay)
                         continue
 
                 # Check for subscription/permission errors first
                 if ApifyApiError and isinstance(e, ApifyApiError):
                     if hasattr(e, 'status_code') and e.status_code in [401, 402, 403]:
-                        logger.error(SUBSCRIPTION_ERROR_MESSAGE)
+                        logger.error(
+                            "%s (status %s). Verify APIFY_TOKEN credentials or upgrade EasyAPI subscription.",
+                            SUBSCRIPTION_ERROR_MESSAGE,
+                            getattr(e, 'status_code', 'unknown'),
+                        )
+                        fallback_results = _attempt_entrez_fallback()
+                        if fallback_results is not None:
+                            return fallback_results
                         raise PubMedAccessError(SUBSCRIPTION_ERROR_MESSAGE) from e
 
                 # Fallback heuristic when ApifyApiError is None or not available
                 error_msg = str(e)
+                error_msg_lower = error_msg.lower()
                 if ApifyApiError is None or not isinstance(e, ApifyApiError):
-                    error_msg_lower = error_msg.lower()
                     if any(term in error_msg_lower for term in ['unauthorized', 'payment', 'subscription', 'forbidden']):
-                        logger.error(SUBSCRIPTION_ERROR_MESSAGE)
+                        logger.error(
+                            "%s (detected in error message). Verify token or subscription access.",
+                            SUBSCRIPTION_ERROR_MESSAGE,
+                        )
+                        fallback_results = _attempt_entrez_fallback()
+                        if fallback_results is not None:
+                            return fallback_results
                         raise PubMedAccessError(SUBSCRIPTION_ERROR_MESSAGE) from e
+
+                if any(pattern in error_msg_lower for pattern in APIFY_SUBSCRIPTION_PATTERNS):
+                    logger.warning(
+                        "Detected Apify subscription restriction (%s). Attempting Entrez fallback.",
+                        error_msg,
+                    )
+                    fallback_results = _attempt_entrez_fallback()
+                    if fallback_results is not None:
+                        return fallback_results
 
                 # Log additional context for input-related errors
                 status_code = getattr(e, 'status_code', None) if ApifyApiError and isinstance(e, ApifyApiError) else None
@@ -1326,7 +1719,7 @@ class PubMedScraper:
                 if is_schema_mismatch and self.enable_schema_fallback and not schema_fallback_tried:
                     schema_fallback_tried = True
                     results = _perform_schema_fallback()
-                    results = self._deduplicate_results(results)
+                    results = self._deduplicate_by_doi_pmid(results)
                     if results:
                         self._cache_results(cache_key, results)
                         logger.info(
@@ -1346,19 +1739,23 @@ class PubMedScraper:
                     time.sleep(delay)
                 else:
                     logger.error(f"Failed to search PubMed after {max_retries} attempts: {str(e)}")
+                    fallback_results = _attempt_entrez_fallback()
+                    if fallback_results is not None:
+                        return fallback_results
                     raise
 
         return []
 
     def _normalize_authors(self, authors) -> str:
         """
-        Normalize authors field to consistent string format
+        Normalize authors field to consistent string format.
+        Always returns a comma-separated string for consistency with metadata standards.
 
         Args:
             authors: Authors field (could be string, list, dict, or other)
 
         Returns:
-            Normalized authors string
+            Normalized authors string (comma-separated)
         """
         if isinstance(authors, list):
             # Handle list of strings or objects with fullName/name
@@ -1413,17 +1810,35 @@ class PubMedScraper:
             ).strip()
         return str(author).strip()
 
-    def _normalize_item(self, item: dict) -> dict:
+    def _normalize_item(self, item: dict, *, prefer_full_abstract: bool = False) -> dict:
         """
         Normalize actor items with fallbacks for common key variants
 
         Args:
             item: Raw item dictionary from Apify actor
+            prefer_full_abstract: When True, prefer full abstract if available for ranking
 
         Returns:
             Normalized item dictionary
         """
         normalized = {}
+
+        # Title with fallbacks - extract from multiple sources
+        title = item.get('title') or item.get('articleTitle') or item.get('titleText') or ''
+        if not title and 'citation' in item and item['citation']:
+            # Try to extract title from citation
+            citation = item['citation']
+            if isinstance(citation, dict):
+                title = citation.get('title') or citation.get('titleText') or ''
+
+        # Basic title sanitization
+        if title:
+            title_str = str(title).strip()
+            # Collapse multiple spaces and remove leading/trailing whitespace
+            title_str = ' '.join(title_str.split())
+            # Reject invalid values
+            if title_str and title_str.lower() not in {'pubmed', '', 'unknown', 'not available'}:
+                normalized['title'] = title_str
 
         # DOI with fallbacks - always normalize before setting
         doi = item.get('doi') or item.get('DOI') or ''
@@ -1513,7 +1928,8 @@ class PubMedScraper:
         # Abstract with EasyAPI structure handling
         abstract = item.get('abstract', '')
         if isinstance(abstract, dict):
-            if self.use_full_abstracts and 'full' in abstract:
+            # When ranking is enabled, prefer full abstract even if use_full_abstracts is False
+            if (prefer_full_abstract or self.use_full_abstracts) and 'full' in abstract:
                 normalized['abstract'] = str(abstract['full']).strip()
             else:
                 # Fall back to short or summary
@@ -1534,7 +1950,38 @@ class PubMedScraper:
             normalized['article_id'] = str(article_id).strip()
 
         # Journal extraction with improved robustness
-        journal = item.get('journal', '')
+        def _coerce_journal_value(candidate: object) -> str:
+            if isinstance(candidate, list) and candidate:
+                return _coerce_journal_value(candidate[0])
+            if isinstance(candidate, dict):
+                for key in ('name', 'title', 'full', 'label', 'value', 'text', 'short'):
+                    value = candidate.get(key)
+                    if value:
+                        return str(value).strip()
+                return str(candidate).strip()
+            return str(candidate).strip()
+
+        structured_journal_candidates = (
+            item.get('journal'),
+            item.get('journalTitle'),
+            item.get('journal_title'),
+            item.get('source'),
+            item.get('sourceTitle'),
+            item.get('publication'),
+            item.get('publicationTitle'),
+        )
+
+        journal = ''
+        for candidate in structured_journal_candidates:
+            if not candidate:
+                continue
+            candidate_text = _coerce_journal_value(candidate)
+            if candidate_text:
+                normalized_candidate = candidate_text.strip()
+                if normalized_candidate and normalized_candidate.lower() not in {'pubmed', 'apify'}:
+                    journal = normalized_candidate
+                    break
+
         if not journal and 'citation' in item and item['citation']:
             citation = item['citation']
             if isinstance(citation, dict):
@@ -1622,10 +2069,16 @@ class PubMedScraper:
         normalized_mesh_terms = self._normalize_mesh_terms_to_strings(mesh_terms)
         normalized['mesh_terms'] = normalized_mesh_terms if normalized_mesh_terms else []
 
-        # Title with fallbacks for alternate keys
-        title = item.get('title') or item.get('articleTitle') or ''
-        if title:
-            normalized['title'] = str(title).strip()
+        # Title with fallbacks for alternate keys - only set if not already set
+        if 'title' not in normalized:
+            title = item.get('title') or item.get('articleTitle') or ''
+            if title:
+                title_str = str(title).strip()
+                # Collapse multiple spaces and remove leading/trailing whitespace
+                title_str = ' '.join(title_str.split())
+                # Reject invalid values
+                if title_str and title_str.lower() not in {'pubmed', '', 'unknown', 'not available'}:
+                    normalized['title'] = title_str
 
         # Citation handling for downstream display
         citation = item.get('citation')
@@ -1641,8 +2094,12 @@ class PubMedScraper:
         # Add source/provider information for downstream filters
         normalized['source'] = 'pubmed'
         normalized['ingestion'] = 'apify'
-        normalized['provider'] = self.scraper_provider
+        # Set provider to 'apify' for backward compatibility with downstream filters
+        normalized['provider'] = 'apify'
         normalized['provider_family'] = 'apify'
+        # Use provider_detail/variant to distinguish specific scraper implementation
+        normalized['provider_detail'] = self.scraper_provider
+        normalized['provider_variant'] = self.actor_id
         if self.actor_id:
             normalized['actor_id'] = self.actor_id
 
@@ -1650,8 +2107,9 @@ class PubMedScraper:
 
     def _normalize_mesh_terms_to_strings(self, mesh_terms) -> List[str]:
         """
-        Normalize mesh_terms to List[str] by coercing dicts/objects to string labels
-        De-duplicates case-insensitively while preserving original casing and stable ordering
+        Normalize mesh_terms to List[str] by coercing dicts/objects to string labels.
+        De-duplicates case-insensitively while preserving original casing and stable ordering.
+        Always returns a list of strings for consistency with metadata standards.
 
         Args:
             mesh_terms: MeSH terms field (could be strings, dicts, or mixed)
@@ -1696,145 +2154,110 @@ class PubMedScraper:
         return normalized
 
     def to_documents(self, results: List[Dict]) -> List[Document]:
-        """
-        Convert PubMed results to LangChain Documents
+        """Convert scraped PubMed items into LangChain ``Document`` objects."""
 
-        Args:
-            results: List of PubMed article dictionaries
+        documents: List[Document] = []
 
-        Returns:
-            List of Document objects
-        """
-        documents = []
-
-        for result in results:
-            # Create document content
-            content_parts = []
-
-            title = result.get('title', '').strip()
-            if title:
-                content_parts.append(f"Title: {title}")
-
-            authors = self._normalize_authors(result.get('authors', ''))
-            if authors:
-                content_parts.append(f"Authors: {authors}")
-
-            abstract = result.get('abstract', '').strip()
-            if abstract:
-                content_parts.append(f"Abstract: {abstract}")
-
-            journal = result.get('journal', '').strip()
-            if journal:
-                content_parts.append(f"Journal: {journal}")
-
-            # Add Identifiers block if DOI, PMID, or PMCID present
-            identifiers = []
-            doi = result.get('doi', '').strip()
-            if doi:
-                identifiers.append(f"DOI: {doi}")
-
-            pmid = result.get('pmid', '').strip()
-            if pmid:
-                identifiers.append(f"PMID: {pmid}")
-
-            pmcid = result.get('pmcid', '').strip()
-            if pmcid:
-                identifiers.append(f"PMCID: {pmcid}")
-
-            if identifiers:
-                content_parts.append(f"Identifiers: {', '.join(identifiers)}")
-
-            # Combine content
-            content = "\n\n".join(content_parts)
-
-            if not content.strip():
+        for item in results:
+            if not isinstance(item, dict):
+                logger.debug("Skipping non-dict result when building documents: %r", item)
                 continue
 
-            # Prepare metadata
-            metadata = {
-                'source': 'pubmed',
-                'ingestion': 'apify',
-                # provider: concrete scraper identifier (e.g., apify-easyapi)
-                'provider': self.scraper_provider,
-                # provider_family: logical family for backward compatibility with filters expecting 'apify'
-                'provider_family': 'apify',
-                # scraper_provider: legacy alias retained for downstream compatibility
-                'scraper_provider': self.scraper_provider,
-                'title': title,
-                'authors': authors,
-                'journal': journal,
-                'publication_date': result.get('publication_date', ''),
-                'url': result.get('url', '')
-            }
+            abstract = item.get("abstract")
+            title = item.get("title")
 
-            actor_id = result.get('actor_id')
-            if actor_id:
-                metadata['actor_id'] = actor_id
+            page_content = ""
+            if isinstance(abstract, str) and abstract.strip():
+                page_content = abstract.strip()
+            elif isinstance(title, str) and title.strip():
+                page_content = title.strip()
 
-            # Add year if present
-            year = result.get('year', '').strip()
-            if year:
-                metadata['year'] = year
+            if not page_content:
+                logger.debug("Skipping PubMed item with no abstract/title content: %s", item.get("pmid"))
+                continue
 
-            # Add optional fields
-            doi = result.get('doi', '').strip()
-            if doi:
-                metadata['doi'] = doi
+            metadata: Dict[str, Any] = {"provider": item.get("provider") or self.scraper_provider}
 
-            pmid = result.get('pmid', '').strip()
-            if pmid:
-                metadata['pmid'] = pmid
+            if isinstance(title, str) and title.strip():
+                metadata["title"] = title.strip()
 
-            pmcid = result.get('pmcid', '').strip()
-            if pmcid:
-                metadata['pmcid'] = pmcid
+            doi_value = item.get("doi") or item.get("raw_doi")
+            if doi_value:
+                try:
+                    normalized_doi = normalize_doi(str(doi_value))
+                except Exception:  # pragma: no cover - defensive against unexpected DOI values
+                    normalized_doi = None
+                if normalized_doi:
+                    metadata["doi"] = normalized_doi
 
-            # Always include tags and mesh_terms as lists
-            tags = result.get('tags', [])
-            metadata['tags'] = tags if isinstance(tags, list) else []
+            pmid_value = item.get("pmid")
+            if pmid_value:
+                try:
+                    normalized_pmid = normalize_pmid(str(pmid_value))
+                except Exception:  # pragma: no cover - defensive against unexpected PMID values
+                    normalized_pmid = None
+                if normalized_pmid:
+                    metadata["pmid"] = normalized_pmid
 
-            mesh_terms = result.get('mesh_terms', [])
-            if mesh_terms:
-                if isinstance(mesh_terms, list) and all(isinstance(term, str) for term in mesh_terms):
-                    metadata['mesh_terms'] = mesh_terms
-                else:
-                    normalized_mesh = self._normalize_mesh_terms_to_strings(mesh_terms)
-                    metadata['mesh_terms'] = normalized_mesh if normalized_mesh else []
-            else:
-                metadata['mesh_terms'] = []
+            journal = item.get("journal")
+            if isinstance(journal, str) and journal.strip():
+                metadata["journal"] = journal.strip()
 
-            # Add study type, ranking score, and confidence if present
+            publication_date = item.get("publication_date") or item.get("published")
+            if isinstance(publication_date, str) and publication_date.strip():
+                metadata["publication_date"] = publication_date.strip()
 
-            if 'study_type' in result and result['study_type']:
-                metadata['study_type'] = result['study_type']
+            authors_raw = item.get("authors")
+            normalized_authors = self._normalize_authors(authors_raw)
+            if normalized_authors:
+                metadata["authors"] = normalized_authors
+            elif isinstance(authors_raw, list):
+                simplified_authors = [self._get_author_name(author) for author in authors_raw]
+                simplified_authors = [author for author in simplified_authors if author]
+                if simplified_authors:
+                    metadata["authors"] = simplified_authors
 
-            if 'study_types' in result and isinstance(result['study_types'], list) and result['study_types']:
-                metadata['study_types'] = result['study_types']
-            elif metadata.get('study_type'):
-                metadata['study_types'] = [metadata['study_type']]
+            mesh_terms_raw = item.get("mesh_terms")
+            normalized_mesh_terms = self._normalize_mesh_terms_to_strings(mesh_terms_raw)
+            if normalized_mesh_terms:
+                metadata["mesh_terms"] = normalized_mesh_terms
 
-            if 'study_type_confidence' in result and result['study_type_confidence'] is not None:
-                metadata['study_type_confidence'] = result['study_type_confidence']
+            url = item.get("url")
+            if isinstance(url, str) and url.strip():
+                metadata["url"] = url.strip()
 
-            if 'ranking_score' in result and result['ranking_score'] is not None:
-                metadata['ranking_score'] = result['ranking_score']
+            ranking_score = item.get("ranking_score")
+            if ranking_score is not None:
+                metadata["ranking_score"] = ranking_score
 
-            # Add citation fields if present
-            if 'citation_short' in result and result['citation_short']:
-                metadata['citation_short'] = result['citation_short']
+            # Add study metadata when present
+            study_type = item.get("study_type")
+            if study_type:
+                metadata["study_type"] = study_type
 
-            if 'citation_full' in result and result['citation_full']:
-                metadata['citation_full'] = result['citation_full']
+            study_type_confidence = item.get("study_type_confidence")
+            if study_type_confidence is not None:
+                metadata["study_type_confidence"] = study_type_confidence
 
-            # Add authors_list to metadata if available
-            if result.get('authors_list') and isinstance(result['authors_list'], list) and result['authors_list']:
-                metadata['authors_list'] = result['authors_list']
+            study_types = item.get("study_types")
+            if study_types:
+                # Ensure study_types is a list
+                if isinstance(study_types, list):
+                    metadata["study_types"] = study_types
+                elif isinstance(study_types, str):
+                    metadata["study_types"] = [study_types]
 
-            # Create document
-            doc = Document(page_content=content, metadata=metadata)
-            documents.append(doc)
+            tags = item.get("tags")
+            if tags:
+                # Ensure tags is a list
+                if isinstance(tags, list):
+                    metadata["tags"] = tags
+                elif isinstance(tags, str):
+                    metadata["tags"] = [tags]
 
-        logger.info(f"Converted {len(results)} results to {len(documents)} documents")
+            documents.append(Document(page_content=page_content, metadata=metadata))
+
+        logger.info("Converted %s PubMed items into %s LangChain documents", len(results), len(documents))
         return documents
 
     def get_cache_info(self) -> Dict:
@@ -1851,53 +2274,79 @@ class PubMedScraper:
             "total_size_mb": round(total_size / (1024 * 1024), 2)
         }
 
-    def write_sidecar_for_pdf(self, pdf_path: Path, article: Dict) -> Path:
+    def write_sidecar_for_pdf(self, pdf_path: Path, article: Dict[str, Any]) -> Path:
         """
-        Write sidecar JSON file for a PDF with normalized PubMed metadata
+        Write sidecar JSON file for a PDF with normalized PubMed metadata.
 
         Args:
             pdf_path: Path to the PDF file
             article: Article dictionary from PubMed search
 
         Returns:
-            Path to the created sidecar file
+            Path to the created sidecar file.
         """
         sidecar_path = pdf_path.with_suffix('.pubmed.json')
+
+        sidecar_data: Dict[str, Any] = {}
+
+        doi = str(article.get('doi', '')).strip()
+        if doi:
+            normalized_doi = normalize_doi(doi)
+            if normalized_doi:
+                sidecar_data['doi'] = normalized_doi
+
+        pmid = str(article.get('pmid', '')).strip()
+        if pmid:
+            normalized_pmid = normalize_pmid(pmid)
+            if normalized_pmid:
+                sidecar_data['pmid'] = normalized_pmid
+
+        title = str(article.get('title', '')).strip()
+        if title:
+            sidecar_data['title'] = title
+
+        normalized_authors = self._normalize_authors(article.get('authors', ''))
+        if normalized_authors:
+            sidecar_data['authors'] = normalized_authors
+
+        abstract = str(article.get('abstract', '')).strip()
+        if abstract:
+            sidecar_data['abstract'] = abstract
+
+        publication_date = str(article.get('publication_date', '')).strip()
+        if publication_date:
+            sidecar_data['publication_date'] = publication_date
+
+        journal = str(article.get('journal', '')).strip()
+        if journal:
+            sidecar_data['journal'] = journal
 
         mesh_terms_raw = article.get('mesh_terms', [])
         mesh_terms: List[str] = []
         if isinstance(mesh_terms_raw, str):
             mesh_terms = [term.strip() for term in re.split(r'[;,]', mesh_terms_raw) if term.strip()]
-        elif isinstance(mesh_terms_raw, list):
+        elif isinstance(mesh_terms_raw, (list, tuple, set)):
             for term in mesh_terms_raw:
                 term_str = str(term).strip()
                 if term_str:
                     mesh_terms.append(term_str)
+        elif mesh_terms_raw is not None:
+            term_str = str(mesh_terms_raw).strip()
+            if term_str:
+                mesh_terms = [term_str]
 
-        authors_value = self._normalize_authors(article.get('authors', ''))
-        normalized_data = {
-            'doi': str(article.get('doi', '')).strip() or None,
-            'pmid': str(article.get('pmid', '')).strip() or None,
-            'title': str(article.get('title', '')).strip() or None,
-            'authors': authors_value or None,
-            'abstract': str(article.get('abstract', '')).strip() or None,
-            'publication_date': str(article.get('publication_date', '')).strip() or None,
-            'journal': str(article.get('journal', '')).strip() or None,
-            'mesh_terms': mesh_terms,
-        }
-
-        # Remove None values
-        normalized_data = {k: v for k, v in normalized_data.items() if v is not None}
+        if mesh_terms:
+            sidecar_data['mesh_terms'] = mesh_terms
 
         try:
             with open(sidecar_path, 'w', encoding='utf-8') as f:
-                json.dump(normalized_data, f, indent=2, ensure_ascii=False)
+                json.dump(sidecar_data, f, indent=2, ensure_ascii=False)
 
             logger.info(f"Wrote sidecar file: {sidecar_path.name}")
             return sidecar_path
 
-        except Exception as e:
-            logger.error(f"Failed to write sidecar for {pdf_path.name}: {str(e)}")
+        except Exception as exc:
+            logger.error(f"Failed to write sidecar for {pdf_path.name}: {exc}")
             raise
 
     def _extract_pubmed_metadata_from_text(self, text: str) -> Dict:
@@ -1930,6 +2379,7 @@ class PubMedScraper:
             metadata['pmid'] = pmid_match.group(1)
 
         return metadata
+
 
     def export_sidecars(self, docs_dir: str, results: List[Dict]) -> int:
         """
@@ -1988,9 +2438,10 @@ class PubMedScraper:
                     loader = PyPDFLoader(str(pdf_path))
                     pdf_documents = loader.load()
 
-                    # Get text from first 3 pages
+                    # Get text from first PUBMED_SCAN_PAGES pages
                     text_to_analyze = ""
-                    for i, page in enumerate(pdf_documents[:3]):
+                    scan_pages = _get_env_int("PUBMED_SCAN_PAGES", 3)
+                    for i, page in enumerate(pdf_documents[:scan_pages]):
                         text_to_analyze += page.page_content + "\n"
 
                     # Extract DOI/PMID from PDF
@@ -2018,8 +2469,9 @@ class PubMedScraper:
 
                 # Create sidecar if we found a match
                 if matched_article:
-                    self.write_sidecar_for_pdf(pdf_path, matched_article)
-                    created_count += 1
+                    sidecar_path = self.write_sidecar_for_pdf(pdf_path, matched_article)
+                    if sidecar_path:
+                        created_count += 1
                 else:
                     logger.debug(f"No PubMed match found for {pdf_path.name}")
 
@@ -2031,95 +2483,197 @@ class PubMedScraper:
         return created_count
 
 
-def main():
-    """CLI interface for PubMed scraper"""
-    parser = argparse.ArgumentParser(
-        description="PubMed scraper using Apify",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""Examples:
-  python -m src.pubmed_scraper "covid-19 treatment"
-  python -m src.pubmed_scraper "covid-19 treatment" --max-items 50
-  python -m src.pubmed_scraper "covid-19 treatment" --no-rank
-  python -m src.pubmed_scraper "covid-19 treatment" --export-sidecars ./Data/Docs
+def test_sidecar_standardization():
+    """
+    Lightweight test to verify JSON sidecar field standardization between scraper and loader.
+    Tests write_sidecar_for_pdf() with a mocked article and verifies field compatibility.
+    """
+    import tempfile
+    import os
+    from pathlib import Path
 
-Note: Results are ranked by study quality/relevance by default. Use --no-rank to preserve original PubMed ordering.
-        """
-    )
+    # Mock article dictionary with all expected fields
+    mock_article = {
+        'doi': 'DOI: 10.1016/j.example.2023.01.001',  # With prefix to test normalization
+        'pmid': '12345678',
+        'title': 'Test Article Title',
+        'authors': ['Smith, John', 'Doe, Jane'],  # List format to test normalization
+        'abstract': 'This is a test abstract for validation purposes.',
+        'publication_date': '2023-01-15',
+        'journal': 'Test Journal of Medicine',
+        'mesh_terms': ['Drug Therapy', 'Clinical Trial', 'Humans']  # List format
+    }
 
-    parser.add_argument(
-        "query",
-        type=str,
-        help="PubMed search query"
-    )
+    # Create a temporary test environment
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_pdf_path = Path(temp_dir) / "test_article.pdf"
+        sidecar_path = test_pdf_path.with_suffix('.pubmed.json')
 
+        # Create a dummy PDF file (just for path testing)
+        test_pdf_path.touch()
+
+        try:
+            # Create scraper instance and write sidecar
+            scraper = PubMedScraper()
+            generated_sidecar_path = scraper.write_sidecar_for_pdf(test_pdf_path, mock_article)
+
+            # Verify sidecar file was created
+            assert sidecar_path.exists(), "Sidecar file was not created"
+            assert generated_sidecar_path == sidecar_path, "Returned sidecar path mismatch"
+
+            # Load and verify sidecar content
+            with open(sidecar_path, 'r', encoding='utf-8') as f:
+                sidecar_data = json.load(f)
+
+            # Verify all expected fields are present with correct types
+            expected_fields = ['doi', 'pmid', 'title', 'authors', 'abstract', 'publication_date', 'journal', 'mesh_terms']
+            for field in expected_fields:
+                assert field in sidecar_data, f"Field '{field}' missing from sidecar"
+
+            # Verify field types and normalization
+            assert isinstance(sidecar_data['doi'], str), "DOI should be string"
+            assert sidecar_data['doi'] == '10.1016/j.example.2023.01.001', "DOI not properly normalized"
+
+            assert isinstance(sidecar_data['pmid'], str), "PMID should be string"
+            assert sidecar_data['pmid'] == '12345678', "PMID not properly normalized"
+
+            assert isinstance(sidecar_data['authors'], str), "Authors should be normalized to string"
+            assert 'Smith, John' in sidecar_data['authors'], "Authors not properly normalized"
+
+            assert isinstance(sidecar_data['mesh_terms'], list), "MeSH terms should be list"
+            assert len(sidecar_data['mesh_terms']) == 3, "MeSH terms list should have 3 items"
+
+            # Now test if PDFDocumentLoader can read the sidecar correctly
+            # Import here to avoid circular imports
+            try:
+                from .document_loader import PDFDocumentLoader
+                loader = PDFDocumentLoader(temp_dir)
+                metadata = loader._extract_pubmed_metadata(test_pdf_path)
+
+                # Verify loader can read all fields correctly
+                for field in expected_fields:
+                    assert field in metadata, f"Loader failed to read field '{field}' from sidecar"
+
+                # Verify field types after loader processing
+                assert isinstance(metadata['authors'], str), "Loader should return authors as string"
+                assert isinstance(metadata['mesh_terms'], list), "Loader should return mesh_terms as list"
+
+                print("✅ Sidecar standardization test passed!")
+                print(f"   - Created sidecar with {len(sidecar_data)} fields")
+                print(f"   - Loader successfully read {len(metadata)} fields")
+                return True
+
+            except ImportError:
+                print("⚠️  Could not import PDFDocumentLoader for loader test")
+                print("✅ Sidecar creation test passed!")
+                return True
+
+        except Exception as e:
+            print(f"❌ Sidecar standardization test failed: {str(e)}")
+            return False
+
+
+def main() -> int:
+    """CLI entry point for running the PubMed scraper via ``python -m src.pubmed_scraper``."""
+
+    parser = argparse.ArgumentParser(description="Run the PubMed scraper using the EasyAPI actor.")
+    parser.add_argument("query", help="PubMed search query string")
     parser.add_argument(
         "--max-items",
         type=int,
         default=None,
-        help="Maximum number of items to retrieve (default: from DEFAULT_MAX_ITEMS env var, capped by HARD_CAP_MAX_ITEMS)"
+        help="Maximum number of items to retrieve (defaults to configured value)",
     )
 
-    parser.add_argument(
-        "--no-rank",
+    rank_group = parser.add_mutually_exclusive_group()
+    rank_group.set_defaults(rank=None)
+    rank_group.add_argument(
+        "--rank",
+        dest="rank",
         action="store_true",
-        help="Disable study ranking and preserve original PubMed result order. "
-             "By default, results are ranked by study quality/relevance/recency. "
-             "Can also be disabled globally with ENABLE_STUDY_RANKING=false."
+        help="Force EasyAPI study ranking regardless of environment defaults.",
+    )
+    rank_group.add_argument(
+        "--no-rank",
+        dest="rank",
+        action="store_false",
+        help="Disable study ranking and preserve raw PubMed ordering.",
     )
 
     parser.add_argument(
-        "--export-sidecars",
-        type=str,
-        metavar="DOCS_DIR",
-        help="Export sidecar JSON files for PDFs in specified directory"
+        "--cache-ttl-hours",
+        type=float,
+        default=None,
+        help="Cache TTL in hours (defaults to configured value)",
     )
 
-    try:
-        args = parser.parse_args()
-    except SystemExit as e:
-        return e.code
+    parser.add_argument(
+        "--no-docs",
+        action="store_true",
+        help="Output raw PubMed data without converting to LangChain documents",
+    )
+
+    parser.add_argument(
+        "--write-sidecars",
+        action="store_true",
+        help="Write .pubmed.json sidecars for PDFs in DOCS_FOLDER",
+    )
+
+    args = parser.parse_args()
 
     try:
-        scraper = PubMedScraper()
-
-        print(f"Searching PubMed for: '{args.query}' (max_items: {args.max_items})")
-        results = scraper.search_pubmed(args.query, args.max_items, rank=not args.no_rank)
-
-        print(f"\nFound {len(results)} articles")
-
-        # Convert to documents
-        documents = scraper.to_documents(results)
-        print(f"Converted to {len(documents)} documents")
-
-        # Show cache info
-        cache_info = scraper.get_cache_info()
-        print(f"\nCache info:")
-        print(f"  Directory: {cache_info['cache_dir']}")
-        print(f"  Files: {cache_info['total_files']}")
-        print(f"  Size: {cache_info['total_size_mb']} MB")
-
-        # Export sidecars if requested
-        if args.export_sidecars:
-            print(f"\nExporting sidecars to: {args.export_sidecars}")
-            created_count = scraper.export_sidecars(args.export_sidecars, results)
-            print(f"Created {created_count} sidecar files")
-
-        # Show first few results
-        print(f"\nFirst 3 results:")
-        for i, result in enumerate(results[:3]):
-            print(f"\n{i+1}. {result.get('title', 'No title')}")
-            print(f"   Authors: {result.get('authors', 'No authors')}")
-            print(f"   Journal: {result.get('journal', 'No journal')}")
-            print(f"   DOI: {result.get('doi', 'No DOI')}")
-            print(f"   PMID: {result.get('pmid', 'No PMID')}")
-
-    except PubMedAccessError as e:
-        print(f"Access Error: {str(e)}")
-        print("Please check your APIFY_TOKEN and verify your EasyAPI subscription status.")
+        # Convert hours to seconds for cache_ttl
+        cache_ttl_seconds = int(args.cache_ttl_hours * 3600) if args.cache_ttl_hours else None
+        scraper = PubMedScraper(cache_ttl_seconds=cache_ttl_seconds)
+        results = scraper.search_pubmed(
+            args.query,
+            max_items=args.max_items,
+            rank=args.rank,
+        )
+    except Exception as exc:
+        print(f"Error running PubMed scraper: {exc}", file=sys.stderr)
         return 1
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return 1
+
+    total_results = len(results)
+    print(f"Retrieved {total_results} PubMed results for query: '{args.query}'")
+
+    if total_results == 0:
+        return 0
+
+    # Store raw results for potential sidecar writing
+    raw_results = results
+
+    # Convert to documents if --no-docs is not specified
+    if not args.no_docs:
+        results = scraper.to_documents(results)
+        print(f"Converted to {len(results)} LangChain documents")
+
+    # Write sidecars if requested
+    if args.write_sidecars:
+        docs_dir = os.getenv("DOCS_FOLDER", "Data/Docs")
+        created = scraper.export_sidecars(docs_dir, raw_results)
+        print(f"Created {created} sidecar files in {docs_dir}")
+
+    print("Top results:")
+    for index, item in enumerate(results[:3], start=1):
+        if args.no_docs:
+            # Raw PubMed data
+            title = (item.get("title") or "(no title)").strip() if isinstance(item.get("title"), str) else "(no title)"
+            doi = item.get("doi") or "n/a"
+            pmid = item.get("pmid") or "n/a"
+            print(f" {index}. {title}")
+            print(f"    DOI: {doi} | PMID: {pmid}")
+        else:
+            # LangChain document
+            title = item.metadata.get("title", "(no title)")
+            doi = item.metadata.get("doi", "n/a")
+            pmid = item.metadata.get("pmid", "n/a")
+            print(f" {index}. {title}")
+            print(f"    DOI: {doi} | PMID: {pmid}")
+            if hasattr(item, 'page_content') and item.page_content:
+                # Show first 100 characters of content
+                content_preview = item.page_content[:100].replace('\n', ' ')
+                print(f"    Content: {content_preview}...")
 
     return 0
 

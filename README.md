@@ -14,7 +14,11 @@ A powerful **Retrieval-Augmented Generation (RAG)** template built with **NVIDIA
 - 🔍 **Vector Search**: FAISS-based similarity search with persistence
 - 💬 **Interactive Web UI**: Beautiful Streamlit interface with chat functionality
 - 📊 **Advanced Analytics**: Document statistics and source visualization
-- 🧪 **PubMed Study Ranking**: Optional pharmaceutical study ranking (enable with `rank=True` or `ENABLE_STUDY_RANKING=true`)
+- 🧪 **Pharmaceutical-Aware Search**: Advanced filtering for drug names, species, therapeutic areas, and study types
+- 📊 **Drug Interaction Analysis**: Extract and analyze pharmaceutical metadata from documents
+- 🔬 **Clinical Study Filtering**: Filter by study types, year ranges, and ranking scores
+- 🧬 **Species-Specific Search**: Target human, animal, or in vitro studies
+- 💊 **Drug-Centric Queries**: Search by specific drug names with metadata tie-breaking
 - 🔒 **Secure**: Environment-based API key management
 - 📱 **Responsive**: Mobile-friendly design
 - 🚀 **Production Ready**: Comprehensive error handling and logging
@@ -27,6 +31,17 @@ A powerful **Retrieval-Augmented Generation (RAG)** template built with **NVIDIA
 - Educational content exploration
 - Technical documentation search
 - Any domain-specific document collection
+
+## 📢 **Release Notes & Important Changes**
+
+### **Behavior Changes in v2.1+**
+- **PubMed Deduplication**: `ENABLE_DEDUPLICATION` now defaults to `true` (was `false` in legacy versions). This removes duplicate articles by DOI/PMID, reducing result counts but improving data quality. To retain raw PubMed results with duplicates, set `ENABLE_DEDUPLICATION=false` in your `.env` file.
+- **Ranking Behavior**: When `rank=True` is explicitly passed to PubMed searches, ranking now proceeds even if `PRESERVE_PUBMED_ORDER=true`. This ensures explicit API requests are honored.
+
+### **Developer Notes**
+- The PubMed scraper now includes hardened error handling for missing dependencies
+- Vector database defaults to single-folder layout for compatibility; set `VECTOR_DB_PER_MODEL=true` for per-model indexing
+- CLI entrypoint added: `python -m src.pubmed_scraper "query" --write-sidecars`
 
 ## 📋 **Prerequisites**
 
@@ -122,12 +137,18 @@ When medical dependencies are installed, the system automatically uses Presidio 
    ```env
    # NVIDIA API Configuration
    NVIDIA_API_KEY=your_nvidia_api_key_here
-   
+
    # Configuration (optional - defaults provided)
    DOCS_FOLDER=Data/Docs
    VECTOR_DB_PATH=./vector_db
    CHUNK_SIZE=1000
    CHUNK_OVERLAP=200
+
+   # Drug Lexicon Configuration (optional - for pharmaceutical processing)
+   # DRUG_GENERIC_LEXICON=/path/to/custom/generic_drugs.txt
+   # DRUG_BRAND_LEXICON=/path/to/custom/brand_drugs.txt
+   # AUTO_FETCH_DRUG_LEXICONS=true
+
    # Guardrails actions (optional)
    # Set only if you host a remote actions server; leave unset to use bundled actions
    ACTIONS_SERVER_URL=http://localhost:8001
@@ -286,6 +307,18 @@ To use these features:
 - **`VECTOR_DB_PER_MODEL`**: When set to `true`, FAISS indexes live in sanitized per-model folders (e.g., `./vector_db/nvidia_llama-3.2-nemoretriever-1b-vlm-embed-v1`). Leaving it `false` keeps the legacy single-folder layout in `VECTOR_DB_PATH`.
 - **`embeddings_meta.json`**: Saved next to each index. It records the embedding model name and vector dimension so the agent can detect mismatches before loading older data.
 - **Rebuilds & migrations**: On first run with per-model paths, compatible legacy data is migrated automatically; mismatched metadata or dimension changes trigger a rebuild at the reconciled path. Runtime fallback to another embedding model updates the vector DB base path, and logs will tell you to rerun `setup_knowledge_base(force_rebuild=True)` when a rebuild is the safest choice.
+
+### **⚠️ Important: Embedding Model Changes**
+Switching embedding models will trigger an automatic index rebuild. This rebuild:
+- May take considerable time for large document collections
+- Will temporarily slow down all queries until completion
+- Is required when model dimensions differ
+- Can be avoided by using `VECTOR_DB_PER_MODEL=true`
+
+**Best practices**:
+1. Set `VECTOR_DB_PER_MODEL=true` if you frequently switch between models
+2. Test new models with small document sets first
+3. Monitor logs for rebuild warnings and performance impacts
 
 ### **PubMed Scraper CLI**
 Run the scraper directly to fetch and cache PubMed results:
@@ -472,6 +505,67 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **LangChain** for the RAG framework
 - **Streamlit** for the beautiful web interface framework
 - **FAISS** for efficient vector search capabilities
+
+## 📚 **API Reference**
+
+### **Pharmaceutical-Aware Search Methods**
+
+The RAGAgent class now includes powerful pharmaceutical filtering methods:
+
+#### **similarity_search_with_pharmaceutical_filters()**
+```python
+results = rag_agent.similarity_search_with_pharmaceutical_filters(
+    query="drug interactions",
+    k=10,
+    filters={
+        "drug_names": ["aspirin", "warfarin"],
+        "species_preference": "human",
+        "therapeutic_areas": ["cardiology"],
+        "study_types": ["clinical trial"],
+        "year_range": [2020, 2024],
+        "min_ranking_score": 0.7
+    }
+)
+```
+
+#### **search_by_drug_name()**
+```python
+# Targeted search for documents about a specific drug
+drug_docs = rag_agent.search_by_drug_name("metformin", k=5)
+```
+
+#### **get_pharmaceutical_stats()**
+```python
+# Get comprehensive pharmaceutical statistics
+stats = rag_agent.get_pharmaceutical_stats()
+print(f"Drug annotation ratio: {stats['drug_annotation_ratio']}")
+print(f"Top drugs: {stats['top_drug_names']}")
+```
+
+### **Available Filters**
+
+- **drug_names**: Filter by specific drug names
+- **species_preference**: Target species (human, mouse, rat, etc.)
+- **therapeutic_areas**: Filter by medical domains
+- **study_types**: Include specific study designs
+- **year_range**: Limit by publication years
+- **min_ranking_score**: Set minimum relevance threshold
+- **include_unknown_species**: Control handling of unspecified species
+
+### **Example Usage**
+```python
+# Find high-quality human clinical trials about cardiovascular drugs
+results = rag_agent.similarity_search_with_pharmaceutical_filters(
+    query="treatment outcomes",
+    k=10,
+    filters={
+        "therapeutic_areas": ["cardiology"],
+        "species_preference": "human",
+        "study_types": ["randomized controlled trial"],
+        "min_ranking_score": 0.8
+    }
+)
+```
 
 ## 📞 **Support**
 

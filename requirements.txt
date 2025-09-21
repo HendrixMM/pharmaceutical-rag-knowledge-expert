@@ -17,7 +17,7 @@ PyPDF2>=3.0.0,<4.0.0
 regex>=2023.0.0
 python-dateutil>=2.8.0,<3.0.0
 pytz>=2023.3  # Rate limiting timezone calculations
-apify-client>=1.7.0,<2.0.0
+apify-client>=1.7.0,<2.0.0  # Tested with EasyAPI integration (1.6.0 may work but unvalidated)
 
 # NVIDIA integration
 langchain-nvidia-ai-endpoints>=0.3.0,<0.4.0
@@ -30,6 +30,10 @@ opentelemetry-sdk>=1.20.0
 structlog>=23.1.0
 
 # See requirements-medical.txt for PII/PHI tooling when medical guardrails are enabled
+
+# Medical guardrails dependencies (install when ENABLE_MEDICAL_GUARDRAILS=true)
+# Run: pip install -r requirements.txt -r requirements-medical.txt
+# Or use extras: pip install -e .[medical]
 
 # Optional interfaces (install when needed)
 # streamlit>=1.28.0,<2.0.0
