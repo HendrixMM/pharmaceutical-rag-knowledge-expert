@@ -1,0 +1,231 @@
+{
+  "timestamp": "2025-09-21T19:44:49.328329",
+  "overall_status": "BLOCKED",
+  "summary": {
+    "total_checks": 25,
+    "passed": 16,
+    "warnings": 6,
+    "failed": 3
+  },
+  "results": [
+    {
+      "component": "Python Version",
+      "status": "WARN",
+      "message": "Python 3.13 detected, some packages may have compatibility issues",
+      "details": null,
+      "fix_suggestion": "Consider using Python 3.9-3.11 for best compatibility"
+    },
+    {
+      "component": "Virtual Environment",
+      "status": "PASS",
+      "message": "Virtual environment active: /Users/hendrixmm/RAG-Template-for-NVIDIA-nemoretriever/venv",
+      "details": null,
+      "fix_suggestion": null
+    },
+    {
+      "component": "NVIDIA API Key",
+      "status": "FAIL",
+      "message": "NVIDIA_API_KEY environment variable not found",
+      "details": null,
+      "fix_suggestion": "Set NVIDIA_API_KEY environment variable with your API key"
+    },
+    {
+      "component": "GPU Hardware",
+      "status": "WARN",
+      "message": "Could not check GPU status: [Errno 2] No such file or directory: 'nvidia-smi'",
+      "details": null,
+      "fix_suggestion": "Install NVIDIA drivers and nvidia-smi if GPU acceleration is needed"
+    },
+    {
+      "component": "Package: langchain",
+      "status": "PASS",
+      "message": "Found langchain version 0.3.27",
+      "details": {
+        "required": ">=0.3,<0.4",
+        "installed": "0.3.27"
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Package: langchain-nvidia-ai-endpoints",
+      "status": "FAIL",
+      "message": "Required package langchain-nvidia-ai-endpoints not found",
+      "details": null,
+      "fix_suggestion": "Install with: pip install 'langchain-nvidia-ai-endpoints>=0.3.0,<0.4.0'"
+    },
+    {
+      "component": "Package: langchain-community",
+      "status": "PASS",
+      "message": "Found langchain-community version 0.3.29",
+      "details": {
+        "required": ">=0.3,<0.4",
+        "installed": "0.3.29"
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Package: langchain-core",
+      "status": "PASS",
+      "message": "Found langchain-core version 0.3.76",
+      "details": {
+        "required": ">=0.3,<0.4",
+        "installed": "0.3.76"
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Package: faiss-cpu",
+      "status": "FAIL",
+      "message": "Required package faiss-cpu not found",
+      "details": null,
+      "fix_suggestion": "Install with: pip install 'faiss-cpu>=1.7.4,<1.8.0'"
+    },
+    {
+      "component": "Package: numpy",
+      "status": "PASS",
+      "message": "Found numpy version 2.3.3",
+      "details": {
+        "required": ">=1.21.0,<2.0.0",
+        "installed": "2.3.3"
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Package: requests",
+      "status": "PASS",
+      "message": "Found requests version 2.32.5",
+      "details": {
+        "required": ">=2.31.0,<3.0.0",
+        "installed": "2.32.5"
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Package: tqdm",
+      "status": "PASS",
+      "message": "Found tqdm version 4.67.1",
+      "details": {
+        "required": ">=4.65.0,<5.0.0",
+        "installed": "4.67.1"
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Package: pydantic",
+      "status": "PASS",
+      "message": "Found pydantic version 2.11.9",
+      "details": {
+        "required": ">=2.0.0",
+        "installed": "2.11.9"
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Optional: cupy",
+      "status": "WARN",
+      "message": "Optional package cupy not found (GPU acceleration for cuVS)",
+      "details": null,
+      "fix_suggestion": "Install for enhanced performance: pip install cupy"
+    },
+    {
+      "component": "Optional: cudf",
+      "status": "WARN",
+      "message": "Optional package cudf not found (GPU DataFrame operations)",
+      "details": null,
+      "fix_suggestion": "Install for enhanced performance: pip install cudf"
+    },
+    {
+      "component": "Optional: cuvs",
+      "status": "WARN",
+      "message": "Optional package cuvs not found (NVIDIA cuVS for vector search)",
+      "details": null,
+      "fix_suggestion": "Install for enhanced performance: pip install cuvs"
+    },
+    {
+      "component": "Config: .env",
+      "status": "PASS",
+      "message": "Found existing .env",
+      "details": {
+        "size_bytes": 1278
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Config: requirements.txt",
+      "status": "PASS",
+      "message": "Found existing requirements.txt",
+      "details": {
+        "size_bytes": 1743
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Config: src/enhanced_config.py",
+      "status": "PASS",
+      "message": "Found existing src/enhanced_config.py",
+      "details": {
+        "size_bytes": 14306
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Config: src/nvidia_embeddings.py",
+      "status": "PASS",
+      "message": "Found existing src/nvidia_embeddings.py",
+      "details": {
+        "size_bytes": 48573
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Config: src/vector_database.py",
+      "status": "PASS",
+      "message": "Found existing src/vector_database.py",
+      "details": {
+        "size_bytes": 65383
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Vector Database",
+      "status": "WARN",
+      "message": "No existing vector database found",
+      "details": null,
+      "fix_suggestion": "Will need to rebuild vector database during migration"
+    },
+    {
+      "component": "Network: NVIDIA API",
+      "status": "PASS",
+      "message": "Can reach NVIDIA API",
+      "details": {
+        "response_time_ms": 311.45099999999996
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Network: Microsoft Learn (MCP)",
+      "status": "PASS",
+      "message": "Can reach Microsoft Learn (MCP)",
+      "details": {
+        "response_time_ms": 44.16
+      },
+      "fix_suggestion": null
+    },
+    {
+      "component": "Network: PubMed API",
+      "status": "PASS",
+      "message": "Can reach PubMed API",
+      "details": {
+        "response_time_ms": 152.058
+      },
+      "fix_suggestion": null
+    }
+  ],
+  "recommendations": [
+    "\ud83d\udea8 CRITICAL: Address all failed validations before proceeding with migration",
+    "   \u2022 NVIDIA API Key: Set NVIDIA_API_KEY environment variable with your API key",
+    "   \u2022 Package: langchain-nvidia-ai-endpoints: Install with: pip install 'langchain-nvidia-ai-endpoints>=0.3.0,<0.4.0'",
+    "   \u2022 Package: faiss-cpu: Install with: pip install 'faiss-cpu>=1.7.4,<1.8.0'",
+    "\ud83d\udca1 Consider cloud GPU instances for better performance"
+  ]
+}
