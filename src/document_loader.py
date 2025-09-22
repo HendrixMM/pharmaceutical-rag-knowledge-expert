@@ -1276,6 +1276,8 @@ class PDFDocumentLoader:
                 pdf_reader: Optional[Any] = None
                 pdf_documents: List[Document] = []
                 used_nemo = False
+                # Reset any NeMo metadata from prior file to prevent leakage
+                self._last_nemo_meta = None
                 if self._nemo_enabled:
                     nemo_docs = self._extract_with_nemo_sync(pdf_file)
                     if nemo_docs:
@@ -1330,8 +1332,9 @@ class PDFDocumentLoader:
                 # Extract PubMed metadata from JSON sidecar
                 pubmed_metadata = self._extract_pubmed_metadata(pdf_file)
 
-                # Merge in NeMo-provided pharmaceutical metadata when present, but do not override PMIDs/DOIs
-                if self._nemo_enabled and getattr(self, "_last_nemo_meta", None):
+                # Merge in NeMo-provided pharmaceutical metadata when present for this file only,
+                # but do not override PMIDs/DOIs. Guard with used_nemo to avoid stale leakage.
+                if used_nemo and getattr(self, "_last_nemo_meta", None):
                     nemo_meta = dict(self._last_nemo_meta)
                     pharma = nemo_meta.pop("pharmaceutical", None)
                     # Preserve authoritative identifiers from PubMed if already present
@@ -1343,6 +1346,8 @@ class PDFDocumentLoader:
                     if isinstance(pharma, dict) and pharma:
                         # Nest under 'pharmaceutical' to avoid collisions
                         pubmed_metadata.setdefault("pharmaceutical", pharma)
+                    # Clear after merge to avoid reuse in subsequent files
+                    self._last_nemo_meta = None
 
                 # Extract metadata from PDF text if not already in JSON
                 missing_fields = {
