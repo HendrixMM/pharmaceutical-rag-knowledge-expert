@@ -30,6 +30,20 @@ def test_species_filter_accepts_iterable_preferences(tmp_path):
     assert applied["species_preference"] == ["human"]
 
 
+def test_infer_species_allows_non_human_in_vitro(tmp_path):
+    scraper = StubScraper([])
+    engine = EnhancedQueryEngine(scraper, cache_dir=str(tmp_path / "cache_in_vitro"))
+
+    paper = {
+        "title": "In vitro mouse hepatocyte metabolism",
+        "abstract": "In vitro mouse liver cells were exposed to the compound.",
+    }
+
+    inferred = engine._infer_species_from_text(paper)
+    # Even with negation phrases, non-human matches should be preserved for mechanistic studies.
+    assert inferred == ["mouse"]
+
+
 def test_raw_cache_reuse_applies_new_filters(tmp_path):
     current_year = datetime.now(UTC).year
     scraper = StubScraper(

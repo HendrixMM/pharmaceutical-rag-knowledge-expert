@@ -10,24 +10,121 @@ import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Literal, Iterable, Set
+from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Set, Tuple
 
 from .pharmaceutical_processor import PharmaceuticalProcessor
 from .pubmed_scraper import PubMedScraper
-from .ranking_filter import StudyRankingFilter
-from .paper_schema import normalize_doi, normalize_pmid
-from .pharma_utils import (
-    _PK_FILTERING_ENABLED,
-    _SPECIES_KEYWORDS,
-    _CLINICAL_STUDY_TAGS,
-    _NEGATION_TERMS,
-    _tokenize_species_string,
-    normalize_text,
-    CacheSizeConfig,
-    DrugNameChecker,
-    get_cache_dir_size_mb,
-    cleanup_oldest_cache_files,
+from .ranking_filter import (
+    StudyRankingFilter,
+    ENABLE_MINHASH_DIVERSITY,
+    HAS_DATASKETCH,
+    MINHASH_MIN_INPUT_SIZE,
 )
+
+try:  # pragma: no cover - import guard for optional dependency
+    from .paper_schema import normalize_doi, normalize_pmid
+except ImportError as exc:  # pragma: no cover
+    logging.getLogger(__name__).error(
+        "paper_schema module unavailable; falling back to identity DOI/PMID normalisation."
+        " Install the pharma utilities extras to restore full functionality. Error: %s",
+        exc,
+    )
+
+    def normalize_doi(doi: str) -> str:
+        return "" if doi is None else str(doi)
+
+    def normalize_pmid(pmid: str) -> str:
+        return "" if pmid is None else str(pmid)
+
+
+try:  # pragma: no cover - import guard for optional dependency
+    from . import pharma_utils as _pharma_utils
+except ImportError as exc:  # pragma: no cover
+    logging.getLogger(__name__).error(
+        "pharma_utils module unavailable; advanced pharmaceutical filtering is disabled."
+        " Error: %s",
+        exc,
+    )
+    _pharma_utils = None
+
+if _pharma_utils is not None:
+    _PK_FILTERING_ENABLED = _pharma_utils._PK_FILTERING_ENABLED
+    _SPECIES_KEYWORDS = _pharma_utils._SPECIES_KEYWORDS
+    _CLINICAL_STUDY_TAGS = _pharma_utils._CLINICAL_STUDY_TAGS
+    _NEGATION_TERMS = _pharma_utils._NEGATION_TERMS
+    _tokenize_species_string = _pharma_utils._tokenize_species_string
+    normalize_text = _pharma_utils.normalize_text
+    CacheSizeConfig = _pharma_utils.CacheSizeConfig
+    DrugNameChecker = _pharma_utils.DrugNameChecker
+    get_cache_dir_size_mb = _pharma_utils.get_cache_dir_size_mb
+    cleanup_oldest_cache_files = _pharma_utils.cleanup_oldest_cache_files
+    match_species_preference = _pharma_utils.match_species_preference
+else:  # pragma: no cover - degraded fallback
+    logging.getLogger(__name__).warning(
+        "Running with limited pharma utilities. Install optional pharma extras for full support."
+    )
+
+    _PK_FILTERING_ENABLED = False
+    _SPECIES_KEYWORDS = {}
+    _CLINICAL_STUDY_TAGS = set()
+    _NEGATION_TERMS = set()
+
+    def _tokenize_species_string(text: str) -> Set[str]:
+        if not text:
+            return set()
+        return set(str(text).lower().split())
+
+    def normalize_text(text: str, *, remove_diacritics: bool = True, lowercase: bool = True) -> str:
+        if text is None:
+            return ""
+        normalized = unicodedata.normalize("NFKC", str(text))
+        if remove_diacritics:
+            normalized = "".join(
+                ch for ch in unicodedata.normalize("NFKD", normalized)
+                if not unicodedata.combining(ch)
+            )
+        if lowercase:
+            normalized = normalized.lower()
+        return " ".join(normalized.split())
+
+    @dataclass
+    class CacheSizeConfig:  # type: ignore[override]
+        max_size_mb: int = 1000
+        cleanup_threshold_mb: int = 900
+        check_frequency: int = 50
+        opportunistic_cleanup_frequency: int = 0
+
+    class DrugNameChecker:  # pragma: no cover - simplified fallback
+        def is_drug_like(self, text: str) -> bool:
+            return False
+
+        def extract_drug_signals(self, text: str) -> Dict[str, Any]:
+            return {
+                "cyp_enzymes": [],
+                "drug_suffix_matches": [],
+                "common_drug_names": [],
+                "signal_count": 0,
+            }
+
+    def get_cache_dir_size_mb(cache_dir_path: str) -> float:
+        return 0.0
+
+    def cleanup_oldest_cache_files(cache_dir_path: str, target: Any) -> Dict[str, int]:
+        return {"files_removed": 0, "bytes_freed": 0, "final_size_mb": 0.0}
+
+    @dataclass
+    class _FallbackSpeciesMatchResult:
+        matches: bool
+        species_values: List[str]
+        was_inferred: bool = False
+
+    def match_species_preference(
+        metadata: Dict[str, Any],
+        filters: Dict[str, Any],
+        **_: Any,
+    ) -> _FallbackSpeciesMatchResult:
+        include_unknown = bool(filters.get("include_unknown_species", True))
+        return _FallbackSpeciesMatchResult(include_unknown, [], False)
 
 logger = logging.getLogger(__name__)
 
@@ -574,15 +671,44 @@ class EnhancedQueryEngine:
         metadata.setdefault("cached_at", datetime.now(timezone.utc).isoformat())
         metadata["ttl_hours"] = self.cache_ttl.total_seconds() / 3600
         try:
-            with open(cache_file, "w", encoding="utf-8") as handle:
+            temp_file = cache_file.with_suffix(".json.tmp")
+            with open(temp_file, "w", encoding="utf-8") as handle:
                 json.dump(payload, handle, ensure_ascii=False, indent=2)
+
+            os.replace(temp_file, cache_file)
 
             # Increment cache write counter and check if cleanup is needed
             self._cache_write_count += 1
-            if self._cache_write_count % self.cache_config.check_frequency == 0:
+            if (
+                self.cache_config.check_frequency > 0
+                and self._cache_write_count % self.cache_config.check_frequency == 0
+            ):
                 self._check_cache_size()
+
+            opportunistic_freq = getattr(
+                self.cache_config,
+                "opportunistic_cleanup_frequency",
+                0,
+            )
+            if (
+                opportunistic_freq
+                and opportunistic_freq > 0
+                and self._cache_write_count % opportunistic_freq == 0
+            ):
+                try:
+                    stats = cleanup_oldest_cache_files(self.cache_dir, self.cache_config)
+                    if stats.get("files_removed"):
+                        logger.debug(
+                            "Opportunistic cache cleanup removed %d files (%.2f MB freed)",
+                            stats.get("files_removed", 0),
+                            stats.get("bytes_freed", 0) / (1024 * 1024),
+                        )
+                except Exception as cleanup_exc:  # pragma: no cover - defensive path
+                    logger.debug("Opportunistic cache cleanup skipped: %s", cleanup_exc)
         except Exception as exc:  # pragma: no cover - defensive path
             logger.warning("Failed to write cache file %s: %s", cache_file, exc)
+            temp_path = cache_file.with_suffix(".json.tmp")
+            temp_path.unlink(missing_ok=True)
 
     def _check_cache_size(self) -> None:
         """Check cache size and clean up if exceeding limits."""
@@ -764,7 +890,8 @@ class EnhancedQueryEngine:
             else:
                 # For non-human species, use standard matching
                 if any(keyword in tokens for keyword in keywords):
-                    if not (has_negation and species != "human"):  # Allow in vitro for non-human
+                    # Only suppress human inference when negation phrases indicate an in-vitro context.
+                    if not (has_negation and species == "human"):
                         if species not in matches:
                             matches.append(species)
 
@@ -855,79 +982,6 @@ class EnhancedQueryEngine:
         }
         return deduped, dedup_info
 
-    def _apply_diversity_filter(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Apply diversity filtering to reduce near-duplicates in ranked results.
-
-        Uses text similarity on titles and abstracts to identify similar papers
-        and keeps the highest-ranked result from each similarity cluster.
-
-        Args:
-            results: List of ranked result documents
-
-        Returns:
-            Filtered results with near-duplicates removed
-        """
-        if len(results) <= 1:
-            return results
-
-        filtered = []
-        seen_signatures = []
-
-        # Sort by ranking_score to ensure we keep the highest ranked
-        sorted_results = sorted(results, key=lambda x: x.get("ranking_score", 0), reverse=True)
-
-        for result in sorted_results:
-            # Create text signature for similarity comparison
-            title = str(result.get("title", "")).lower().strip()
-            abstract = str(result.get("abstract", "")).lower().strip()
-
-            # Use first 300 chars of abstract for similarity comparison
-            abstract_summary = abstract[:300] if abstract else ""
-
-            # Create combined text signature (title carries more weight)
-            text_signature = f"{title} {abstract_summary}".strip()
-
-            # Check if this text is too similar to anything we've already seen
-            is_duplicate = False
-            for seen_signature in seen_signatures:
-                # Calculate similarity ratio
-                longer_len = max(len(text_signature), len(seen_signature))
-                if longer_len == 0:
-                    continue
-
-                # Check for overlapping words (simple but effective)
-                signature_words = set(text_signature.split())
-                seen_words = set(seen_signature.split())
-
-                if signature_words and seen_words:
-                    # Calculate Jaccard similarity
-                    intersection = signature_words.intersection(seen_words)
-                    union = signature_words.union(seen_words)
-                    jaccard_similarity = len(intersection) / len(union)
-
-                    # Consider duplicate if Jaccard similarity > 0.85
-                    if jaccard_similarity > 0.85:
-                        # Additional check: title should be very similar for high confidence
-                        title_words = set(title.split()[:10])  # First 10 words of title
-                        seen_title_words = set(seen_signature.split()[:10])
-                        if title_words and seen_title_words:
-                            title_intersection = title_words.intersection(seen_title_words)
-                            title_union = title_words.union(seen_title_words)
-                            title_jaccard = len(title_intersection) / len(title_union)
-                            if title_jaccard > 0.9:
-                                is_duplicate = True
-                                break
-
-            if not is_duplicate:
-                filtered.append(result)
-                seen_signatures.append(text_signature)
-
-        # Maintain original order as much as possible (just remove duplicates)
-        result_ids = {id(r): True for r in filtered}
-        final_results = [r for r in results if id(r) in result_ids]
-
-        logger.info("Diversity filtering: %d -> %d results", len(results), len(final_results))
-        return final_results
 
     def _rank_results(
         self,
@@ -957,6 +1011,41 @@ class EnhancedQueryEngine:
         else:  # default to ranking score ordering
             sorted_results.sort(key=lambda item: item.get("ranking_score", 0.0), reverse=True)
         return sorted_results
+
+    def _apply_diversity_filter(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Delegate diversity filtering to the shared StudyRankingFilter."""
+
+        if len(results) <= 1:
+            return results
+
+        method = "signature"
+        if (
+            len(results) >= MINHASH_MIN_INPUT_SIZE
+            and ENABLE_MINHASH_DIVERSITY
+            and HAS_DATASKETCH
+        ):
+            method = "minhash"
+
+        filtered_results = self.ranking_filter.apply_diversity_filter(
+            results,
+            method=method,
+        )
+
+        filtered_id_set = {id(item) for item in filtered_results}
+        final_results = [item for item in results if id(item) in filtered_id_set]
+
+        if len(final_results) != len(filtered_results):
+            # Preserve fallback ordering from ranking filter if it reorders items
+            final_results = list(filtered_results)
+
+        if len(final_results) != len(results):
+            logger.info(
+                "Diversity filtering (%s): %d -> %d results",
+                method,
+                len(results),
+                len(final_results),
+            )
+        return final_results
 
     def _recency_sort_key(self, item: Dict[str, Any]) -> float:
         year = item.get("publication_year") or item.get("year")
@@ -1138,51 +1227,44 @@ class EnhancedQueryEngine:
         species_preference = filters.get("species_preference")
         if species_preference:
             if isinstance(species_preference, (list, tuple, set)):
-                preferred_values = [str(value).lower() for value in species_preference if value]
                 applied["species_preference"] = list(species_preference)
             else:
-                preferred_values = [str(species_preference).lower()]
                 applied["species_preference"] = species_preference
 
-            def _normalise_species(value: Any) -> List[str]:
-                if value is None:
-                    return []
-                if isinstance(value, str):
-                    return [value.lower()]
-                if isinstance(value, (list, tuple, set)):
-                    return [str(item).lower() for item in value if item]
-                return [str(value).lower()]
+            default_unknown = (
+                self.species_unknown_default
+                if self.species_unknown_default is not None
+                else True
+            )
 
-            # Check include_unknown_species flag
-            include_unknown_species = filters.get("include_unknown_species", True)
+            infer_callback: Optional[
+                Callable[[Dict[str, Any], Optional[str]], Optional[List[str]]]
+            ] = None
+            if self.infer_species_on_filter:
+
+                def _infer_species(meta: Dict[str, Any], _page: Optional[str] = None) -> Optional[List[str]]:
+                    inferred = self._infer_species_from_text(meta)
+                    if not inferred:
+                        return None
+                    return [str(value).strip() for value in inferred if value]
+
+                infer_callback = _infer_species
 
             filtered_items: List[Dict[str, Any]] = []
             for item in ranked_filtered:
-                species_values = _normalise_species(item.get("species"))
-                if not species_values and self.infer_species_on_filter:
-                    inferred = self._infer_species_from_text(item)
-                    if inferred:
-                        item = dict(item)
-                        item.setdefault("species", inferred)
-                        species_values = [value.lower() for value in inferred]
-
-                # Handle unknown species based on flag
-                if not species_values:
-                    if include_unknown_species:
-                        # Include documents with unknown species when flag is True
-                        filtered_items.append(item)
-                    # Exclude when flag is False (skip this document)
+                result = match_species_preference(
+                    item,
+                    filters,
+                    page_content=item.get("abstract") or item.get("summary"),
+                    infer_species=infer_callback,
+                    default_include_unknown=default_unknown,
+                )
+                if not result.matches:
                     continue
-
-                # Use tokenized matching to reduce false positives
-                species_tokens = set()
-                for value in species_values:
-                    species_tokens.update(_tokenize_species_string(value))
-                preferred_tokens = set()
-                for pref in preferred_values:
-                    preferred_tokens.update(_tokenize_species_string(pref))
-                if preferred_tokens.intersection(species_tokens):
-                    filtered_items.append(item)
+                if result.was_inferred and result.species_values:
+                    item = dict(item)
+                    item.setdefault("species", result.species_values)
+                filtered_items.append(item)
             ranked_filtered = filtered_items
 
         # PK-aware filtering (optional feature - behind feature flag for consistency)

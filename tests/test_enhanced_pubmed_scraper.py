@@ -390,3 +390,93 @@ def test_stale_hits_count_as_skipped_rate_limit(fake_env, fake_client):
         "Expected stale hit to increase skipped_rate_limit count"
     assert final_stats["stale_hits"] > initial_stats["stale_hits"], \
         "Expected stale hit to be recorded"
+
+
+def test_search_pubmed_batch_reuses_results(fake_env, fake_client):
+    cache_manager = NCBICacheManager(cache_dir=fake_env)
+    limiter = DummyLimiter()
+    scraper = EnhancedPubMedScraper(cache_manager=cache_manager, rate_limiter=limiter, enable_rate_limiting=True)
+
+    fake_client[0].responses = [
+        {"items": [{"title": "oncology result"}], "defaultDatasetId": "dataset-oncology"},
+        {"items": [{"title": "cardiology result"}], "defaultDatasetId": "dataset-cardiology"},
+    ]
+    fake_client[0].calls.clear()
+    limiter.actions.clear()
+
+    batch_requests = [
+        {"query": "oncology", "max_items": 5, "rank": False},
+        {"query": "oncology", "max_items": 5, "rank": False},
+        {"query": "cardiology", "max_items": 5, "rank": False},
+    ]
+
+    batch_results = scraper.search_pubmed_batch(batch_requests)
+    assert len(batch_results) == 3
+    assert batch_results[0]["query"] == "oncology"
+    assert batch_results[0]["reused"] is False
+    assert batch_results[1]["reused"] is True
+    assert batch_results[1]["results"] == batch_results[0]["results"]
+    assert batch_results[2]["query"] == "cardiology"
+    assert limiter.actions.count("acquire") == 2
+    assert len(fake_client[0].calls) == 2
+
+
+def test_preload_cache_reports_status(fake_env, fake_client):
+    cache_manager = NCBICacheManager(cache_dir=fake_env)
+    limiter = DummyLimiter()
+    scraper = EnhancedPubMedScraper(cache_manager=cache_manager, rate_limiter=limiter, enable_rate_limiting=True)
+
+    fake_client[0].responses = [
+        {"items": [{"title": "oncology result"}], "defaultDatasetId": "dataset-oncology"},
+    ]
+    fake_client[0].calls.clear()
+    limiter.actions.clear()
+
+    first_summary = scraper.preload_cache(["oncology"], max_items=5)
+    assert len(first_summary) == 1
+    assert first_summary[0]["status"] in {"stored", "executed"}
+    assert limiter.actions == ["acquire"]
+    assert len(fake_client[0].calls) == 1
+
+    limiter.actions.clear()
+    fake_client[0].calls.clear()
+
+    second_summary = scraper.preload_cache(["oncology"], max_items=5)
+    assert len(second_summary) == 1
+    assert second_summary[0]["status"] == "hit"
+    assert limiter.actions == []
+    assert fake_client[0].calls == []
+
+
+def test_get_performance_metrics_reports_cache_and_rate_limit(fake_env, fake_client):
+    cache_manager = NCBICacheManager(cache_dir=fake_env)
+    limiter = DummyLimiter()
+    scraper = EnhancedPubMedScraper(cache_manager=cache_manager, rate_limiter=limiter, enable_rate_limiting=True)
+
+    metrics_initial = scraper.get_performance_metrics()
+    assert metrics_initial["cache"] == {
+        "hits": 0,
+        "stale_hits": 0,
+        "misses": 0,
+        "writes": 0,
+        "evictions": 0,
+        "warmed": 0,
+        "skipped_rate_limit": 0,
+        "exported": 0,
+        "imported": 0,
+    }
+    assert metrics_initial["cache_hit_rate"] is None
+    assert metrics_initial["rate_limit"]["daily_limit"] == 50
+    assert metrics_initial["rate_limit"]["skipped_due_to_cache"] == 0
+
+    fake_client[0].responses = [
+        {"items": [{"title": "oncology result"}], "defaultDatasetId": "dataset-oncology"},
+    ]
+    scraper.search_pubmed("oncology", max_items=5, rank=False)
+
+    metrics_after = scraper.get_performance_metrics()
+    assert metrics_after["cache"]["misses"] >= 1
+    assert metrics_after["cache_hit_rate"] in {0.0, None}
+    assert metrics_after["cache_rate_limit_skips"] == 0
+    assert metrics_after["rate_limit"]["daily_limit"] == 50
+    assert metrics_after["rate_limit"]["skipped_due_to_cache"] == 0

@@ -569,9 +569,9 @@ results = rag_agent.similarity_search_with_pharmaceutical_filters(
 
 ## 📞 **Support**
 
-- **Issues**: [GitHub Issues](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/discussions)
-- **Documentation**: Check the `WEB_INTERFACE_GUIDE.md` and `SETUP_GUIDE.md` files for additional guides
+- **Issues**: [GitHub Issues](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/discussions)
+- **Documentation**: Review the in-repo guides such as [`WEB_INTERFACE_GUIDE.md`](WEB_INTERFACE_GUIDE.md) and [`SETUP_GUIDE.md`](SETUP_GUIDE.md) for detailed walkthroughs
 
 ---
 
