@@ -24,87 +24,20 @@ except ImportError:
     logger.info("Presidio not available - using regex-based PII/PHI detection")
 
 
-# Import unified disclaimer constants
-from .constants import (
-    MEDICAL_DISCLAIMER_MARKDOWN as STANDARD_MEDICAL_DISCLAIMER,
-    DISCLAIMER_DETECTION_PATTERNS
+# Import modular components for better maintainability
+from .modules.disclaimer_management import (
+    contains_medical_disclaimer,
+    insert_medical_disclaimer,
+    format_disclaimer_consistently
 )
-
-
-def contains_medical_disclaimer(text: Optional[str]) -> bool:
-    """
-    Standardized disclaimer detection across all components.
-
-    Args:
-        text: Text to check for medical disclaimers
-
-    Returns:
-        True if text contains a medical disclaimer, False otherwise
-    """
-    if not text:
-        return False
-
-    for pattern in DISCLAIMER_DETECTION_PATTERNS:
-        if re.search(pattern, text):
-            return True
-
-    return False
-
-
-def insert_medical_disclaimer(text: str, disclaimer_type: str = "general") -> str:
-    """
-    Insert standardized medical disclaimer into text.
-
-    Args:
-        text: Text to add disclaimer to
-        disclaimer_type: Type of disclaimer (general, drug_information, etc.)
-
-    Returns:
-        Text with disclaimer appended
-    """
-    if contains_medical_disclaimer(text):
-        return text  # Disclaimer already present
-
-    # Use standard disclaimer format
-    disclaimer = STANDARD_MEDICAL_DISCLAIMER
-
-    # Add type-specific disclaimers if needed
-    if disclaimer_type == "drug_information":
-        disclaimer = (
-            "**Medical Disclaimer:** This drug information is for educational purposes only. "
-            "Always consult your healthcare provider before starting, stopping, or changing any medication."
-        )
-    elif disclaimer_type == "interactions":
-        disclaimer = (
-            "**Medical Disclaimer:** Drug interaction information is for educational purposes. "
-            "Always inform your healthcare provider about all medications and supplements you are taking."
-        )
-
-    return f"{text}\n\n{disclaimer}"
-
-
-def format_disclaimer_consistently(text: str) -> str:
-    """
-    Ensure disclaimer follows consistent formatting (bold markdown).
-
-    Args:
-        text: Text potentially containing disclaimers
-
-    Returns:
-        Text with consistently formatted disclaimers
-    """
-    # Replace various disclaimer formats with standard format
-    replacements = [
-        (r"(?i)medical disclaimer:\s*", "**Medical Disclaimer:** "),
-        (r"(?i)\*medical disclaimer:\*", "**Medical Disclaimer:**"),
-        (r"(?i)medical disclaimer\s*-\s*", "**Medical Disclaimer:** "),
-    ]
-
-    result = text
-    for pattern, replacement in replacements:
-        result = re.sub(pattern, replacement, result)
-
-    return result
+from .modules.source_metadata_utils import (
+    update_source_metadata,
+    set_source_flag,
+    append_source_warning,
+    _get_source_value,
+    _clone_source_for_update,
+    _ensure_metadata_dict
+)
 
 
     AnalyzerEngine = None
@@ -531,123 +464,8 @@ class MedicalSafetyActions:
 
 
 # ---------------------------------------------------------------------------
-# Source manipulation helpers
+# Medical Content Evaluation Functions (using imported utilities)
 # ---------------------------------------------------------------------------
-
-def _clone_source_for_update(source: Any) -> Any:
-    """Return a shallowly cloned source object to avoid in-place mutations."""
-    try:
-        return deepcopy(source)
-    except Exception:
-        if isinstance(source, dict):
-            cloned = dict(source)
-            if 'metadata' in source and isinstance(source['metadata'], dict):
-                cloned['metadata'] = dict(source['metadata'])
-            return cloned
-        return source
-
-
-def _ensure_metadata_dict(source: Any) -> Dict[str, Any]:
-    """Ensure the source exposes a mutable metadata dictionary and return it."""
-    if isinstance(source, dict):
-        metadata = dict(source.get('metadata', {}))
-        source['metadata'] = metadata
-        return metadata
-
-    metadata = getattr(source, 'metadata', None)
-    if metadata is None:
-        metadata = {}
-    elif not isinstance(metadata, dict):
-        try:
-            metadata = dict(metadata)
-        except Exception:
-            metadata = {'raw_metadata': metadata}
-    setattr(source, 'metadata', metadata)
-    return metadata
-
-
-def _get_source_value(source: Any, key: str, default: Any = None) -> Any:
-    """Fetch a value from a source dict/object, falling back to metadata."""
-    if isinstance(source, dict):
-        if key in source:
-            return source[key]
-        metadata = source.get('metadata', {})
-        if isinstance(metadata, dict):
-            return metadata.get(key, default)
-        return default
-
-    if hasattr(source, key):
-        return getattr(source, key)
-    metadata = getattr(source, 'metadata', {})
-    if isinstance(metadata, dict):
-        return metadata.get(key, default)
-    return default
-
-
-async def update_source_metadata(source: Any, updates: Optional[Dict[str, Any]] = None, key: Optional[str] = None, value: Any = None) -> Any:
-    """Return a copy of the source with metadata updated without in-place mutation."""
-    try:
-        update_map: Dict[str, Any] = updates.copy() if updates else {}
-        if key is not None:
-            update_map[key] = value
-
-        if not update_map:
-            return source
-
-        updated_source = _clone_source_for_update(source)
-        metadata = _ensure_metadata_dict(updated_source)
-        metadata.update(update_map)
-        return updated_source
-    except Exception as exc:
-        logger.error(f"Error updating source metadata: {exc}")
-        return source
-
-
-async def set_source_flag(source: Any, key: str, value: Any) -> Any:
-    """Return a copy of the source with a top-level attribute/key set."""
-    try:
-        updated_source = _clone_source_for_update(source)
-        if isinstance(updated_source, dict):
-            updated_source[key] = value
-        else:
-            try:
-                setattr(updated_source, key, value)
-            except Exception:
-                metadata = _ensure_metadata_dict(updated_source)
-                metadata[key] = value
-        return updated_source
-    except Exception as exc:
-        logger.error(f"Error setting source flag '{key}': {exc}")
-        return source
-
-
-async def append_source_warning(source: Any, warning: str) -> Any:
-    """Add a warning message to the source metadata without duplicates."""
-    if not warning:
-        return source
-
-    try:
-        updated_source = _clone_source_for_update(source)
-
-        if hasattr(updated_source, 'add_warning') and callable(getattr(updated_source, 'add_warning')):
-            existing_warnings = getattr(updated_source, 'warnings', None)
-            if isinstance(existing_warnings, list) and warning in existing_warnings:
-                return updated_source
-            updated_source.add_warning(warning)
-            return updated_source
-
-        metadata = _ensure_metadata_dict(updated_source)
-        warnings = metadata.get('warnings', [])
-        if not isinstance(warnings, list):
-            warnings = [warnings]
-        if warning not in warnings:
-            warnings.append(warning)
-        metadata['warnings'] = warnings
-        return updated_source
-    except Exception as exc:
-        logger.error(f"Error appending source warning: {exc}")
-        return source
-
 
 async def ensure_disclaimer(response: str, response_type: str) -> str:
     """Ensure the response contains a single appropriate disclaimer and risk notices."""

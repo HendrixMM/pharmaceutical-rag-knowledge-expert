@@ -17,38 +17,17 @@ Key Features:
 Based on latest NVIDIA NeMo Retriever documentation patterns and best practices.
 """
 
-import asyncio
-import hashlib
 import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union, Tuple
 import json
-import numpy as np
 
 from langchain_core.embeddings import Embeddings
 from langchain_core.documents import Document
 
 from .nemo_retriever_client import NeMoRetrieverClient, create_nemo_client
 from .nvidia_embeddings import NVIDIAEmbeddings as LegacyNVIDIAEmbeddings
-from .multi_model_embedding_strategy import (
-    MultiModelEmbeddingStrategy,
-    select_optimal_embedding_model,
-    ModelSelectionResult
-)
-from .pharmaceutical_embedding_optimizer import (
-    PharmaceuticalEmbeddingOptimizer,
-    optimize_pharmaceutical_texts,
-    PharmaceuticalContentType,
-    OptimizationResult
-)
-from .embedding_performance_monitor import (
-    EmbeddingPerformanceMonitor,
-    performance_monitor,
-    monitor_embedding_request,
-    ServiceHealth,
-    SLAConfiguration
-)
 
 logger = logging.getLogger(__name__)
 

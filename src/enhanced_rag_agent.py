@@ -122,6 +122,10 @@ class EnhancedRAGAgent:
         config: Optional[EnhancedRAGConfig] = None,
         pubmed_query_engine: Optional[EnhancedQueryEngine] = None,
         pubmed_scraper: Optional[EnhancedPubMedScraper] = None,
+        # NeMo extraction integration (optional; passed through to base agent)
+        enable_nemo_extraction: Optional[bool] = None,
+        nemo_extraction_config: Optional[dict] = None,
+        nemo_client: Optional[Any] = None,
     ) -> None:
         """Initialize Enhanced RAG Agent with medical safety and analysis capabilities.
 
@@ -156,6 +160,9 @@ class EnhancedRAGAgent:
             embedding_model_name=embedding_model_name,
             enable_preflight_embedding=enable_preflight_embedding,
             append_disclaimer_in_answer=append_disclaimer_in_answer,
+            enable_nemo_extraction=enable_nemo_extraction,
+            nemo_extraction_config=nemo_extraction_config,
+            nemo_client=nemo_client,
         )
 
         self.guardrails_config_path = guardrails_config_path
@@ -319,6 +326,32 @@ class EnhancedRAGAgent:
         # Initialize PubMed component health
         self._update_pubmed_component_health()
 
+        # NeMo extraction component health
+        nemo_status: Dict[str, Any] = {"status": "disabled"}
+        try:
+            loader = getattr(self.base_agent, "document_loader", None)
+            get_metrics = getattr(loader, "get_nemo_metrics", None)
+            if callable(get_metrics):
+                metrics = get_metrics()
+                if metrics.get("enabled"):
+                    success = int(metrics.get("success_count", 0))
+                    used = int(metrics.get("used_count", 0)) or 1
+                    nemo_status = {
+                        "status": "ready",
+                        "strategy": metrics.get("strategy"),
+                        "chunk_strategy": metrics.get("chunk_strategy"),
+                        "pharma_analysis": metrics.get("pharma_analysis"),
+                        "success_rate": round(success / used, 3),
+                        "used_count": int(metrics.get("used_count", 0)),
+                        "fallback_count": int(metrics.get("fallback_count", 0)),
+                        "last_error": metrics.get("last_error"),
+                    }
+                else:
+                    nemo_status = {"status": "disabled"}
+        except Exception as exc:
+            nemo_status = {"status": "error", "message": str(exc)}
+        self.component_health["nemo_extraction"] = nemo_status
+
         self._components_initialized = True
 
     # ------------------------------------------------------------------
@@ -353,6 +386,19 @@ class EnhancedRAGAgent:
             self.pubmed_metrics["last_result_count"] = len(info.get("results") or [])
             self.pubmed_metrics["last_error"] = None
             self.pubmed_metrics["last_updated"] = time.time()
+            # Track provider of last successful external fetch (eutils/openalex)
+            try:
+                results = info.get("results") or []
+                if results:
+                    meta = dict(results[0])
+                    provider = meta.get("provider") or (meta.get("metadata", {}) or {}).get("provider")
+                    provider_family = meta.get("provider_family") or (meta.get("metadata", {}) or {}).get("provider_family")
+                    if provider:
+                        self.pubmed_metrics["last_provider"] = provider
+                    if provider_family:
+                        self.pubmed_metrics["last_provider_family"] = provider_family
+            except Exception:
+                pass
 
     def _record_pubmed_failure(self, mode: str, info: Dict[str, Any]) -> None:
         with self._metrics_lock:

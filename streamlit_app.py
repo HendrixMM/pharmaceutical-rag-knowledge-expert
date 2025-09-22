@@ -212,6 +212,11 @@ def display_sidebar(rag_agent):
                 # Display metrics
                 st.sidebar.metric("Queries", pubmed_metrics.get("total_queries", 0))
                 st.sidebar.metric("Cache Hits", pubmed_metrics.get("cache_hits", 0))
+                last_provider = pubmed_metrics.get("last_provider") or "eutils/openalex"
+                last_latency = pubmed_metrics.get("last_latency_ms")
+                st.sidebar.caption(f"Provider: {last_provider}")
+                if isinstance(last_latency, (int, float)):
+                    st.sidebar.caption(f"Last latency: {int(last_latency)} ms")
 
                 # Show cache status if available
                 component_health = rag_agent.component_health.get("pubmed_integration", {})
@@ -670,11 +675,13 @@ def display_sources(source_documents, processing_time, confidence_scores=None):
                         journal = metadata.get("journal", "")
                         year = metadata.get("publication_date", "")[:4] if metadata.get("publication_date") else ""
                         pubmed_id = metadata.get("pubmed_id", "")
+                        provider = metadata.get("provider") or metadata.get("provider_family") or "pubmed"
 
                         with st.expander(f"{i}. {title} ({year})"):
                             st.markdown(f"**Authors**: {', '.join(authors[:5])}{' et al.' if len(authors) > 5 else ''}")
                             st.markdown(f"**Journal**: {journal}")
                             st.markdown(f"**PubMed ID**: {pubmed_id}")
+                            st.caption(f"Provider: {provider}")
                             if metadata.get("url"):
                                 st.markdown(f"[**View on PubMed**]({metadata['url']})")
 

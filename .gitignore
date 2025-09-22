@@ -1,5 +1,6 @@
 # Environment variables
-.env
+# NOTE: We intentionally track .env to allow CI/secrets workflow per user request.
+!.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -167,7 +168,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+!.env
 .envrc
 .venv
 env/

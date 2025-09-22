@@ -60,7 +60,7 @@ class CacheMetadata:
 
 
 class EnhancedQueryEngine:
-    """Coordinates EasyAPI PubMed searches with caching, enrichment, and ranking.
+    """Coordinates PubMed (E-utilities) searches with caching, enrichment, and ranking.
 
     Accepted ``sort_by`` values are ``"ranking_score"`` (default), ``"recency"``,
     or ``"date"`` which both favour recent publications.

@@ -2,9 +2,9 @@
 
 Environment variables
 ---------------------
-- APIFY_TOKEN: required by `PubMedScraper` to authenticate with EasyAPI/Apify.
+- PUBMED_EMAIL: optional contact email for NCBI E-utilities
+- PUBMED_EUTILS_API_KEY: optional API key for higher rate limits
 - QUERY_ENGINE_CACHE_DIR: optional override for the on-disk JSON cache directory.
-- EASYAPI_ACTOR_ID: optional Apify actor id for the PubMed integration.
 """
 
 from __future__ import annotations

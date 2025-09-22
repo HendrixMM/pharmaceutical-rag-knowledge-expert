@@ -1,0 +1,19 @@
+[
+  {
+    "title": "From Apify",
+    "pmid": "",
+    "doi": "",
+    "abstract": "",
+    "authors": "",
+    "publication_date": "",
+    "journal": "",
+    "full_text_url": "",
+    "provider": "apify",
+    "study_type": "Other",
+    "study_type_confidence": 0.4,
+    "study_types": [
+      "Other"
+    ],
+    "ranking_score": 0.4
+  }
+]

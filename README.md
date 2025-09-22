@@ -9,19 +9,27 @@ A powerful **Retrieval-Augmented Generation (RAG)** template built with **NVIDIA
 
 ## 🌟 **Features**
 
-- 🤖 **NVIDIA AI Integration**: Uses NVIDIA's high-quality embedding models
-- 📄 **PDF Document Processing**: Automatic loading and intelligent chunking
-- 🔍 **Vector Search**: FAISS-based similarity search with persistence
-- 💬 **Interactive Web UI**: Beautiful Streamlit interface with chat functionality
-- 📊 **Advanced Analytics**: Document statistics and source visualization
-- 🧪 **Pharmaceutical-Aware Search**: Advanced filtering for drug names, species, therapeutic areas, and study types
+### **🚀 2025 NeMo 2.0 Hybrid Architecture**
+- 🤖 **NVIDIA NeMo Retriever**: Latest 2025 NIM-based embedding and reranking models
+- ⚡ **Hybrid Approach**: Leverages NeMo's best-in-class parsing while preserving pharmaceutical expertise
+- 🧠 **Multi-Model Intelligence**: E5-v5, Mistral7B-v2, and Arctic-Embed-L model selection
+- 🔄 **Backward Compatibility**: Seamless fallback to legacy NVIDIA API endpoints
+
+### **💊 Pharmaceutical Domain Excellence**
+- 🧪 **Medical Guardrails**: Modular safety validation with FDA compliance
 - 📊 **Drug Interaction Analysis**: Extract and analyze pharmaceutical metadata from documents
 - 🔬 **Clinical Study Filtering**: Filter by study types, year ranges, and ranking scores
 - 🧬 **Species-Specific Search**: Target human, animal, or in vitro studies
 - 💊 **Drug-Centric Queries**: Search by specific drug names with metadata tie-breaking
-- 🔒 **Secure**: Environment-based API key management
-- 📱 **Responsive**: Mobile-friendly design
-- 🚀 **Production Ready**: Comprehensive error handling and logging
+- 🛡️ **Safety-First**: All outputs undergo medical validation and disclaimer insertion
+
+### **🏗️ Modern Architecture**
+- 📄 **Advanced Document Processing**: VLM-based OCR and structured data extraction
+- 🔍 **GPU-Accelerated Search**: cuVS vector search with FAISS fallback
+- 💬 **Interactive Web UI**: Beautiful Streamlit interface with chat functionality
+- 📊 **Real-Time Analytics**: Performance monitoring and pharmaceutical insights
+- 🔒 **Enterprise Security**: Environment-based configuration and authentication
+- 📱 **Production Ready**: Comprehensive error handling, logging, and testing
 
 ## 🎯 **Perfect For**
 
@@ -31,6 +39,45 @@ A powerful **Retrieval-Augmented Generation (RAG)** template built with **NVIDIA
 - Educational content exploration
 - Technical documentation search
 - Any domain-specific document collection
+
+## 📁 **Clean Architecture**
+
+### **🗂️ Directory Structure**
+```
+RAG-Template-for-NVIDIA-nemoretriever/
+├── 📄 README.md                    # This documentation
+├── 📄 requirements.txt             # Core dependencies
+├── 📄 requirements-nemo.txt        # NeMo-specific GPU acceleration
+├── 📄 requirements-medical.txt     # Medical guardrails dependencies
+├── 📄 streamlit_app.py            # Main web interface
+├── 📄 main.py                     # CLI interface
+├── 📁 src/                        # Core source code
+│   ├── 📄 enhanced_rag_agent.py   # Main RAG orchestration
+│   ├── 📄 nvidia_embeddings.py    # Hybrid NVIDIA embedding service
+│   ├── 📄 medical_guardrails.py   # Safety & compliance system
+│   ├── 📄 pubmed_scraper.py       # PubMed integration & scraping
+│   ├── 📁 integrations/           # External service integrations
+│   │   ├── 📄 agent_integration.py # Agent system integration
+│   │   └── 📄 mcp_client.py        # Model Control Protocol client
+│   └── 📁 utils/                  # Utility functions
+├── 📁 tests/                      # Comprehensive test suite
+├── 📁 examples/                   # Usage examples
+├── 📁 scripts/                    # Utility scripts
+│   ├── 📄 nemo_environment_validator.py # Environment validation
+│   └── 📄 check_deps.py           # Dependency checker
+└── 📁 guardrails/                 # Medical safety framework
+    ├── 📄 actions.py              # Main safety actions
+    └── 📁 modules/                # Modular safety components
+        ├── 📄 disclaimer_management.py # Disclaimer utilities
+        └── 📄 source_metadata_utils.py # Metadata handling
+```
+
+### **🏗️ Modular Design Principles**
+- **Separation of Concerns**: Each module has a focused responsibility
+- **Backward Compatibility**: Existing imports continue to work
+- **Pharmaceutical Safety**: Medical guardrails are modular and maintainable
+- **Testing**: Comprehensive test coverage in organized structure
+- **Examples**: Clear usage patterns in dedicated directory
 
 ## 📢 **Release Notes & Important Changes**
 
@@ -100,15 +147,37 @@ source rag_env/bin/activate
 ```
 
 ### **Step 3: Install Dependencies**
-```bash
-# Install core dependencies
-pip install -r requirements.txt
 
-# Optional: Install medical safety validation dependencies (for medical/pharmaceutical applications)
-# These include advanced PII/PHI detection using Presidio and biomedical NLP with scispaCy
-# To enable medical guardrails, run:
-pip install -r requirements.txt && pip install -r requirements-medical.txt
+#### **🎯 Choose Your Installation Type**
+
+**🔥 Standard Installation (CPU-only)**
+```bash
+# Core dependencies - works on any system
+pip install -r requirements.txt
 ```
+
+**⚡ NeMo GPU Acceleration (Recommended)**
+```bash
+# GPU-accelerated NeMo Retriever with cuVS vector search
+pip install -r requirements.txt -r requirements-nemo.txt
+```
+
+**🏥 Medical/Pharmaceutical Complete**
+```bash
+# Full medical safety validation with PII/PHI detection
+pip install -r requirements.txt -r requirements-medical.txt
+```
+
+**🚀 Full Enterprise Setup**
+```bash
+# Everything: Core + NeMo GPU + Medical Guardrails
+pip install -r requirements.txt -r requirements-nemo.txt -r requirements-medical.txt
+```
+
+#### **💡 Installation Notes**
+- **requirements.txt**: Core functionality, backward-compatible
+- **requirements-nemo.txt**: GPU acceleration, CUDA 12.x optimized (deduplicated)
+- **requirements-medical.txt**: Advanced medical safety, Presidio PII detection
 
 **Medical Dependencies Details:**
 - `presidio-analyzer` and `presidio-anonymizer`: Advanced PII/PHI detection and anonymization
@@ -343,10 +412,9 @@ The CLI prints the number of articles found, cache directory statistics, and a p
 
 This template provides seamless integration with PubMed for academic and research workflows. Follow these steps to scrape PubMed articles and integrate them with your RAG system:
 
-### **Step 1: Configure APIFY_TOKEN**
-1. **Sign up for Apify**: Visit [https://console.apify.com](https://console.apify.com)
-2. **Get your API token**: Navigate to Settings → Integrations → API tokens
-3. **Add to environment**: Set `APIFY_TOKEN=your_apify_token_here` in your `.env` file
+### **Step 1: Configure PubMed E-utilities**
+1. Optionally set `PUBMED_EUTILS_API_KEY=your_ncbi_api_key` in `.env` for higher rate limits
+2. Set `PUBMED_EMAIL=you@example.com` in `.env` (recommended for courteous usage)
 
 ### **Step 2: Scrape PubMed Articles**
 ```bash
@@ -376,8 +444,9 @@ streamlit run streamlit_app.py
 - **Medical Disclaimers**: Built-in medical disclaimers for healthcare applications
 
 ### **Environment Examples**
-The `.env.template` file includes comprehensive PubMed configuration options:
-- `APIFY_TOKEN`: Your Apify API token for PubMed scraping
+The `.env` file includes comprehensive PubMed configuration options:
+- `PUBMED_EUTILS_API_KEY`: Optional NCBI API key for higher rate limits
+- `PUBMED_EMAIL`: Contact email for E-utilities usage
 - `PUBMED_CACHE_DIR`: Local cache directory for results
 - `ENABLE_STUDY_RANKING`: Enable/disable automatic study quality ranking
 - `ENABLE_DEDUPLICATION`: Control duplicate article removal
@@ -1117,4 +1186,3 @@ This project is licensed under the **MIT License**
 ---
 
 ⭐ **Star this repository if it helps with your research!** ⭐
-

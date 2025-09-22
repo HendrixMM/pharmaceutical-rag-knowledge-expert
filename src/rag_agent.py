@@ -111,6 +111,11 @@ class RAGAgent:
         # WARNING: To avoid duplicate disclaimer rendering, UIs that render RAGResponse.disclaimer
         # MUST set append_disclaimer_in_answer=False. Default is True for backward compatibility.
         append_disclaimer_in_answer: Optional[bool] = None,
+        # NeMo extraction integration (optional; backward-compatible defaults)
+        *,
+        enable_nemo_extraction: Optional[bool] = None,
+        nemo_extraction_config: Optional[Dict[str, Any]] = None,
+        nemo_client: Optional[Any] = None,
     ):
         """
         Initialize RAG Agent
@@ -140,7 +145,21 @@ class RAGAgent:
         self.api_key = api_key
 
         # Initialize components
-        self.document_loader = PDFDocumentLoader(docs_folder, chunk_size, chunk_overlap)
+        try:
+            self.document_loader = PDFDocumentLoader(
+                docs_folder,
+                chunk_size,
+                chunk_overlap,
+                enable_nemo_extraction=enable_nemo_extraction,
+                nemo_extraction_config=nemo_extraction_config,
+                nemo_client=nemo_client,
+            )
+            # Log extraction path for observability
+            mode_label = getattr(self.document_loader, "get_extraction_mode", lambda: "pypdf")()
+            logger.info("Document extraction mode: %s", mode_label)
+        except TypeError:
+            # For maximum backward compatibility if older PDFDocumentLoader signature is present
+            self.document_loader = PDFDocumentLoader(docs_folder, chunk_size, chunk_overlap)
 
         # Store base path and determine per-model behavior early so we can
         # finalize the embedding model before deriving a path.
@@ -1093,9 +1112,19 @@ Answer: """
         """
         try:
             folder = new_docs_folder or self.docs_folder
-            
-            # Load new documents
-            loader = PDFDocumentLoader(folder)
+
+            # Load new documents (mirror current extraction configuration when possible)
+            try:
+                loader = PDFDocumentLoader(
+                    folder,
+                    getattr(self.document_loader, "chunk_size", 1000),
+                    getattr(self.document_loader, "chunk_overlap", 200),
+                    enable_nemo_extraction=getattr(self.document_loader, "_nemo_enabled", False),
+                    nemo_extraction_config=getattr(self.document_loader, "_nemo_config", None),
+                    nemo_client=getattr(self.document_loader, "_nemo_client", None),
+                )
+            except TypeError:
+                loader = PDFDocumentLoader(folder)
             new_documents = loader.load_and_split()
             
             if not new_documents:

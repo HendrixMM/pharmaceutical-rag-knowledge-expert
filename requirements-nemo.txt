@@ -1,8 +1,8 @@
 # NVIDIA NeMo Retriever Integration Requirements
 # Install after base requirements: pip install -r requirements.txt -r requirements-nemo.txt
+# Note: langchain-nvidia-ai-endpoints and faiss-cpu are already included in requirements.txt
 
-# Core NeMo Integration (required)
-langchain-nvidia-ai-endpoints>=0.3.0,<0.4.0  # Official NVIDIA LangChain integration
+# Core NeMo Integration (additional packages)
 nvidia-riva-client>=2.14.0  # For NeMo NIM services (if self-hosting)
 
 # GPU-Accelerated Vector Search (recommended for performance)
@@ -10,8 +10,7 @@ cupy-cuda12x>=12.0.0  # GPU acceleration for vector operations (CUDA 12.x)
 cuvs-cu12>=24.04.0  # NVIDIA cuVS for GPU-accelerated vector search
 cudf-cu12>=24.04.0  # GPU DataFrame operations
 
-# Alternative CPU fallbacks (auto-selected if GPU not available)
-faiss-cpu>=1.7.4,<1.8.0  # CPU fallback for vector search
+# Scientific computing for embeddings (CPU fallback)
 scipy>=1.9.0  # Scientific computing for embeddings
 
 # Enhanced Document Processing

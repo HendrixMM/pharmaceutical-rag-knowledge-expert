@@ -797,8 +797,8 @@ class CacheConfigValidator:
         backend = config.get("cache_backend")
         if backend not in {None, "file"}:
             raise ValueError(
-                "Unsupported cache backend configured (supported: {'file'}). "
-                "TODO: extend validator when new backends are implemented."
+                f"Unsupported cache backend '{backend}'. Supported backends: {{'file'}}. "
+                "Contact development team to add support for additional backends."
             )
 
         ttl_hours = float(config.get("default_ttl_hours", 24))

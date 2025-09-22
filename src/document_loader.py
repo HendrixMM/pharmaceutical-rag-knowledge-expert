@@ -317,7 +317,16 @@ except ImportError:
 class PDFDocumentLoader:
     """Handles loading and processing PDF documents"""
     
-    def __init__(self, docs_folder: str, chunk_size: int = 1000, chunk_overlap: int = 200):
+    def __init__(
+        self,
+        docs_folder: str,
+        chunk_size: int = 1000,
+        chunk_overlap: int = 200,
+        *,
+        enable_nemo_extraction: Optional[bool] = None,
+        nemo_extraction_config: Optional[Dict[str, Any]] = None,
+        nemo_client: Optional[Any] = None,
+    ):
         """
         Initialize the PDF document loader
         
@@ -325,10 +334,52 @@ class PDFDocumentLoader:
             docs_folder: Path to folder containing PDF documents
             chunk_size: Size of text chunks for splitting
             chunk_overlap: Overlap between chunks
+            enable_nemo_extraction: When True, use NeMo extraction/analysis; when False, use legacy PyPDF.
+                When None, reads ENABLE_NEMO_EXTRACTION from environment (default False).
+            nemo_extraction_config: Optional dict overriding environment for:
+                - extraction_strategy: "auto" | "nemo" | "unstructured"
+                - enable_pharmaceutical_analysis: bool
+                - chunk_strategy: "semantic" | "title" | "page"
+                - preserve_tables: bool
+                - extract_images: bool
+            nemo_client: Optional initialized NeMo client passed through to NeMoExtractionService.
         """
         self.docs_folder = Path(docs_folder)
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self._nemo_enabled: bool = (
+            enable_nemo_extraction
+            if enable_nemo_extraction is not None
+            else _env_flag_enabled("ENABLE_NEMO_EXTRACTION", False)
+        )
+        # Resolve NeMo extraction configuration with env fallbacks
+        self._nemo_config: Dict[str, Any] = {
+            "extraction_strategy": os.getenv("NEMO_EXTRACTION_STRATEGY", "auto").strip().lower(),
+            "enable_pharmaceutical_analysis": _env_flag_enabled("NEMO_PHARMACEUTICAL_ANALYSIS", True),
+            "chunk_strategy": os.getenv("NEMO_CHUNK_STRATEGY", "semantic").strip().lower(),
+            "preserve_tables": _env_flag_enabled("NEMO_PRESERVE_TABLES", True),
+            "extract_images": _env_flag_enabled("NEMO_EXTRACT_IMAGES", True),
+        }
+        if isinstance(nemo_extraction_config, dict):
+            self._nemo_config.update({k: v for k, v in nemo_extraction_config.items() if v is not None})
+        # Guard invalid values lightly
+        if self._nemo_config.get("extraction_strategy") not in {"auto", "nemo", "unstructured"}:
+            self._nemo_config["extraction_strategy"] = "auto"
+        if self._nemo_config.get("chunk_strategy") not in {"semantic", "title", "page"}:
+            self._nemo_config["chunk_strategy"] = "semantic"
+        self._nemo_client = nemo_client
+        self._nemo_service = None  # lazy init
+        # Simple metrics/observability
+        self._nemo_metrics: Dict[str, Any] = {
+            "enabled": bool(self._nemo_enabled),
+            "used_count": 0,
+            "success_count": 0,
+            "fallback_count": 0,
+            "last_error": None,
+            "strategy": self._nemo_config.get("extraction_strategy"),
+            "chunk_strategy": self._nemo_config.get("chunk_strategy"),
+            "pharma_analysis": bool(self._nemo_config.get("enable_pharmaceutical_analysis", True)),
+        }
         
         # Initialize text splitter
         self.text_splitter = RecursiveCharacterTextSplitter(
@@ -346,6 +397,95 @@ class PDFDocumentLoader:
         # Ensure docs folder exists
         self.docs_folder.mkdir(parents=True, exist_ok=True)
         logger.info(f"Initialized PDF loader for folder: {self.docs_folder}")
+
+    # -----------------------------
+    # NeMo extraction helpers
+    # -----------------------------
+    def _ensure_nemo_service(self) -> Optional[Any]:
+        """Instantiate NeMoExtractionService lazily."""
+        if not self._nemo_enabled:
+            return None
+        if self._nemo_service is not None:
+            return self._nemo_service
+        try:
+            from .nemo_extraction_service import NeMoExtractionService
+            self._nemo_service = NeMoExtractionService(self._nemo_client)
+            return self._nemo_service
+        except Exception as e:
+            self._nemo_metrics["last_error"] = str(e)
+            logger.warning("Failed to initialize NeMoExtractionService; will fallback to PyPDF: %s", e)
+            self._nemo_service = None
+            return None
+
+    def _extract_with_nemo_sync(self, pdf_file: Path) -> Optional[List[Document]]:
+        """Run NeMo async extraction synchronously with fallback handling.
+
+        Returns list of Documents on success, or None on failure.
+        """
+        service = self._ensure_nemo_service()
+        if service is None:
+            return None
+
+        # Prepare kwargs from resolved configuration
+        kwargs = dict(
+            extraction_strategy=self._nemo_config.get("extraction_strategy", "auto"),
+            enable_pharmaceutical_analysis=bool(self._nemo_config.get("enable_pharmaceutical_analysis", True)),
+            chunk_strategy=self._nemo_config.get("chunk_strategy", "semantic"),
+            preserve_tables=bool(self._nemo_config.get("preserve_tables", True)),
+            extract_images=bool(self._nemo_config.get("extract_images", True)),
+        )
+
+        self._nemo_metrics["used_count"] += 1
+
+        import asyncio
+        try:
+            coro = service.extract_document(pdf_file, **kwargs)  # type: ignore[attr-defined]
+            try:
+                # Preferred path: create and run a dedicated event loop
+                result = asyncio.run(coro)
+            except RuntimeError:
+                # An event loop may already be running (e.g., Streamlit/Jupyter). Use it if idle.
+                loop = asyncio.get_event_loop()
+                if not loop.is_running():
+                    result = loop.run_until_complete(coro)
+                else:
+                    # Can't safely run async extraction in current context; fallback
+                    raise RuntimeError("Async loop already running; cannot run NeMo extraction synchronously")
+        except Exception as e:
+            self._nemo_metrics["fallback_count"] += 1
+            self._nemo_metrics["last_error"] = str(e)
+            logger.warning("NeMo extraction raised; falling back to PyPDF for %s: %s", pdf_file.name, e)
+            return None
+
+        if getattr(result, "success", False) and getattr(result, "documents", None):
+            self._nemo_metrics["success_count"] += 1
+            # Tag docs with extraction method for downstream visibility
+            docs: List[Document] = result.documents  # type: ignore[attr-defined]
+            for d in docs:
+                d.metadata = dict(d.metadata or {})
+                d.metadata.setdefault("extraction_method", getattr(result, "extraction_method", "nemo"))
+                d.metadata.setdefault("source_file", pdf_file.name)
+                d.metadata.setdefault("file_path", str(pdf_file))
+                d.metadata.setdefault("source", d.metadata.get("file_path", str(pdf_file)))
+            # Attach top-level pharmaceutical metadata if present for merging later
+            self._last_nemo_meta = getattr(result, "metadata", {}) or {}
+            return docs
+
+        # Failure path
+        self._nemo_metrics["fallback_count"] += 1
+        self._nemo_metrics["last_error"] = getattr(result, "error", "unknown error")
+        logger.warning("NeMo extraction failed for %s; falling back to PyPDF. Error: %s", pdf_file.name, self._nemo_metrics["last_error"])
+        return None
+
+    def get_nemo_metrics(self) -> Dict[str, Any]:
+        """Expose NeMo extraction metrics for health reporting."""
+        return dict(self._nemo_metrics)
+
+    def get_extraction_mode(self) -> str:
+        """Return current extraction mode label for diagnostics."""
+        if self._nemo_enabled:
+            return f"nemo:{self._nemo_config.get('extraction_strategy','auto')}"
+        return "pypdf"
 
     def _detect_pdf_reader(self) -> Optional[Any]:
         """Return a PdfReader implementation if available."""
@@ -904,7 +1044,22 @@ class PDFDocumentLoader:
             Dictionary with merged metadata
         """
         # Start with PDF/XMP extracted metadata
-        metadata = self._extract_pubmed_metadata_from_xmp(pdf_path)
+        def sanitize_author_line(raw_line: str) -> str:
+            sanitized = re.sub(r'\b\S+@\S+\b', '', raw_line)
+            sanitized = re.sub(r'\[[^\]]*\]', '', sanitized)
+            sanitized = re.sub(r'[\d*†]+', '', sanitized)
+            sanitized = re.sub(r'\s+', ' ', sanitized).strip(' ,;')
+            if len(sanitized) > 200:
+                trimmed = sanitized[:197].rstrip(',; ')
+                sanitized = f"{trimmed}..."
+            return sanitized
+
+        metadata = self._extract_pubmed_metadata_from_xmp(
+            pdf_path,
+            DOI_PATTERN,
+            sanitize_author_line,
+            pdf_reader=None,
+        )
 
         # Check for sidecar JSON file
         json_path = pdf_path.with_suffix('.pubmed.json')
@@ -1082,32 +1237,44 @@ class PDFDocumentLoader:
 
                 pdf_reader: Optional[Any] = None
                 pdf_documents: List[Document] = []
+                used_nemo = False
+                if self._nemo_enabled:
+                    nemo_docs = self._extract_with_nemo_sync(pdf_file)
+                    if nemo_docs:
+                        used_nemo = True
+                        pdf_documents = nemo_docs
+                        # Best-effort reader for supplemental XMP-based metadata (optional)
+                        pdf_reader = self._create_pdf_reader(pdf_file)
+                    else:
+                        logger.info("Falling back to legacy PDF extraction for %s", pdf_file.name)
 
-                if self._use_parser and self._pdf_parser and Blob is not None:
-                    try:
-                        pdf_bytes = pdf_file.read_bytes()
-                    except Exception as read_error:
-                        logger.error(f"Error reading {pdf_file.name}: {str(read_error)}")
-                        continue
+                if not pdf_documents:
+                    # Legacy PyPDF path
+                    if self._use_parser and self._pdf_parser and Blob is not None:
+                        try:
+                            pdf_bytes = pdf_file.read_bytes()
+                        except Exception as read_error:
+                            logger.error(f"Error reading {pdf_file.name}: {str(read_error)}")
+                            continue
 
-                    blob = Blob.from_data(pdf_bytes, path=str(pdf_file))
+                        blob = Blob.from_data(pdf_bytes, path=str(pdf_file))
 
-                    try:
-                        pdf_documents = list(self._pdf_parser.lazy_parse(blob))
-                    except Exception as parse_error:
-                        logger.error(f"Error parsing {pdf_file.name}: {str(parse_error)}")
-                        continue
+                        try:
+                            pdf_documents = list(self._pdf_parser.lazy_parse(blob))
+                        except Exception as parse_error:
+                            logger.error(f"Error parsing {pdf_file.name}: {str(parse_error)}")
+                            continue
 
-                    pdf_reader = self._create_pdf_reader(pdf_file, pdf_bytes)
-                else:
-                    try:
-                        loader = PyPDFLoader(str(pdf_file))
-                        pdf_documents = loader.load()
-                    except Exception as loader_error:
-                        logger.error(f"Error loading {pdf_file.name} with PyPDFLoader: {str(loader_error)}")
-                        continue
+                        pdf_reader = self._create_pdf_reader(pdf_file, pdf_bytes)
+                    else:
+                        try:
+                            loader = PyPDFLoader(str(pdf_file))
+                            pdf_documents = loader.load()
+                        except Exception as loader_error:
+                            logger.error(f"Error loading {pdf_file.name} with PyPDFLoader: {str(loader_error)}")
+                            continue
 
-                    pdf_reader = self._create_pdf_reader(pdf_file)
+                        pdf_reader = self._create_pdf_reader(pdf_file)
 
                 if pdf_documents:
                     first_doc = pdf_documents[0]
@@ -1118,6 +1285,20 @@ class PDFDocumentLoader:
 
                 # Extract PubMed metadata from JSON sidecar
                 pubmed_metadata = self._extract_pubmed_metadata(pdf_file)
+
+                # Merge in NeMo-provided pharmaceutical metadata when present, but do not override PMIDs/DOIs
+                if self._nemo_enabled and getattr(self, "_last_nemo_meta", None):
+                    nemo_meta = dict(self._last_nemo_meta)
+                    pharma = nemo_meta.pop("pharmaceutical", None)
+                    # Preserve authoritative identifiers from PubMed if already present
+                    for id_field in ("doi", "pmid"):
+                        nemo_meta.pop(id_field, None)
+                    # Add remaining NeMo-level metadata additively
+                    for k, v in nemo_meta.items():
+                        pubmed_metadata.setdefault(k, v)
+                    if isinstance(pharma, dict) and pharma:
+                        # Nest under 'pharmaceutical' to avoid collisions
+                        pubmed_metadata.setdefault("pharmaceutical", pharma)
 
                 # Extract metadata from PDF text if not already in JSON
                 missing_fields = {
@@ -1158,6 +1339,11 @@ class PDFDocumentLoader:
                     doc.metadata.setdefault("source", doc.metadata.get("file_path", str(pdf_file)))
                     # Merge PubMed metadata
                     doc.metadata.update(pubmed_metadata)
+                    # Explicitly tag extraction path for observability
+                    if self._nemo_enabled and used_nemo:
+                        doc.metadata.setdefault("extraction_method", "nemo")
+                    else:
+                        doc.metadata.setdefault("extraction_method", "pypdf")
 
                 documents.extend(pdf_documents)
                 logger.info(f"Loaded {len(pdf_documents)} pages from {pdf_file.name}")
@@ -1185,8 +1371,13 @@ class PDFDocumentLoader:
         
         logger.info(f"Splitting {len(documents)} documents into chunks")
         
-        # Split documents
-        split_docs = self.text_splitter.split_documents(documents)
+        # If documents are already pre-chunked (e.g., by NeMo with semantic/title chunks),
+        # avoid double-splitting and just annotate chunk metadata.
+        prechunked = any(isinstance(doc.metadata, dict) and doc.metadata.get("chunk_type") for doc in documents)
+        if prechunked:
+            split_docs = list(documents)
+        else:
+            split_docs = self.text_splitter.split_documents(documents)
         
         # Add chunk metadata
         for i, doc in enumerate(split_docs):
@@ -1194,7 +1385,7 @@ class PDFDocumentLoader:
                 "chunk_id": i,
                 "chunk_size": len(doc.page_content)
             })
-        
+
         logger.info(f"Created {len(split_docs)} document chunks")
         return split_docs
     

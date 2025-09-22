@@ -17,7 +17,6 @@ PyPDF2>=3.0.0,<4.0.0
 regex>=2023.0.0
 python-dateutil>=2.8.0,<3.0.0
 pytz>=2023.3  # Rate limiting timezone calculations
-apify-client>=1.7.0,<2.0.0  # Tested with EasyAPI integration (1.6.0 may work but unvalidated)
 
 # NVIDIA integration
 langchain-nvidia-ai-endpoints>=0.3.0,<0.4.0

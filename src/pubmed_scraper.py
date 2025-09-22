@@ -1,8 +1,8 @@
 """
-PubMed Scraper using Apify
-Handles scraping PubMed search results with caching and deduplication.
+PubMed Scraper using NCBI E-utilities (OpenAlex fallback)
+Handles PubMed search and retrieval with caching and deduplication.
 
-Note: The scraper now preserves native PubMed ordering by default. Pass
+Note: The scraper preserves native PubMed ordering by default. Pass
 ``rank=True`` or set ``ENABLE_STUDY_RANKING=true`` to enable study ranking.
 
 Usage:
@@ -13,7 +13,9 @@ Usage:
   python -m src.pubmed_scraper "cancer immunotherapy" --max-items 50 --rank --cache-ttl-hours 12
   python -m src.pubmed_scraper "cancer immunotherapy" --no-docs --write-sidecars
 
-Set APIFY_TOKEN environment variable before running.
+Environment (recommended):
+  PUBMED_EMAIL=you@example.com
+  PUBMED_EUTILS_API_KEY=your_ncbi_api_key  # optional
 
 Flags:
   --max-items N          Maximum number of items to retrieve (default: configured value)
@@ -36,21 +38,8 @@ from datetime import datetime
 from typing import List, Dict, Optional, Tuple, Union, Set, Literal, Any
 from pathlib import Path
 
-try:
-    from apify_client import ApifyClient
-except ImportError as e:
-    ApifyClient = None
-    logging.getLogger(__name__).warning(
-        "apify-client>=1.7.0,<2.0.0 recommended for EasyAPI integration: %s", e
-    )
-
-try:
-    from apify_client import ApifyApiError  # type: ignore[attr-defined]
-except ImportError:
-    try:
-        from apify_client._errors import ApifyApiError  # type: ignore[attr-defined]
-    except ImportError:
-        ApifyApiError = None
+ApifyClient = None  # Apify removed
+ApifyApiError = None  # Apify removed
 
 try:
     import requests
@@ -58,6 +47,14 @@ except ImportError:  # pragma: no cover - optional fallback path when requests u
     requests = None
 
 from langchain_core.documents import Document
+try:
+    from .pubmed_eutils_client import PubMedEutilsClient
+except Exception:
+    PubMedEutilsClient = None  # type: ignore
+try:
+    from .openalex_client import OpenAlexClient
+except Exception:
+    OpenAlexClient = None  # type: ignore
 
 # Import unified DOI/PMID patterns and utilities
 from .paper_schema import normalize_doi, normalize_pmid
@@ -160,48 +157,22 @@ KNOWN_DRUG_LEXICON: Set[str] = {
 }
 
 
-class PubMedAccessError(RuntimeError):
-    """Raised when Apify indicates the PubMed actor requires elevated access."""
+# Legacy Apify/EasyAPI-specific exceptions removed.
 
-
-SUBSCRIPTION_ERROR_MESSAGE = (
-    "EasyAPI actor may require an active subscription or access. Verify APIFY_TOKEN and EasyAPI plan."
-)
-
-_DEFAULT_APIFY_SUBSCRIPTION_PATTERNS = (
-    "rent a paid actor",
-    "paid actor",
-    "subscription",
-    "payment required",
-    "forbidden",
-    "plan limit",
-    "plan limits",
-    "plan quota",
-    "limit reached",
-    "upgrade required",
-    "upgrade your plan",
-    "upgrade to continue",
-)
-
-_subscription_patterns_override = os.getenv("APIFY_SUBSCRIPTION_PATTERNS")
-if _subscription_patterns_override:
-    APIFY_SUBSCRIPTION_PATTERNS = tuple(
-        pattern.strip().lower()
-        for pattern in _subscription_patterns_override.split(',')
-        if pattern.strip()
-    )
-else:
-    APIFY_SUBSCRIPTION_PATTERNS = tuple(pattern.lower() for pattern in _DEFAULT_APIFY_SUBSCRIPTION_PATTERNS)
+APIFY_SUBSCRIPTION_PATTERNS: tuple[str, ...] = tuple()
 
 
 class PubMedScraper:
-    """PubMed scraper using Apify with caching and deduplication"""
+    """PubMed scraper using NCBI E-utilities with OpenAlex fallback.
+
+    Note: Legacy Apify/EasyAPI paths have been removed from active use. The
+    scraper no longer requires APIFY_TOKEN or apify-client.
+    """
 
     class PubMedQuotaExceeded(RuntimeError):
         """Raised when the shared PubMed daily quota is exhausted."""
 
-    class SchemaValidationError(RuntimeError):
-        """Raised when the actor rejects a request due to schema validation issues."""
+    # Legacy EasyAPI validation error removed.
 
     def __init__(
         self,
@@ -229,18 +200,10 @@ class PubMedScraper:
         `src.rate_limiting.get_process_limiter()`) so every scraper in the
         process adheres to a unified budget.
         """
-        self.apify_token = apify_token or os.getenv("APIFY_TOKEN")
-        if not self.apify_token:
-            raise ValueError(
-                "APIFY_TOKEN is required. Obtain an API token from https://console.apify.com/ and set it"
-                " via the APIFY_TOKEN environment variable before running the PubMed scraper."
-            )
-
-        if not ApifyClient:
-            raise ImportError("apify_client is required. Install with: pip install apify-client>=1.7.0,<2.0.0")
-
-        self.client = ApifyClient(self.apify_token)
-        self.actor_id = os.getenv("EASYAPI_ACTOR_ID", "easyapi/pubmed-search-scraper")
+        # Legacy Apify parameters are accepted for backward compatibility but ignored.
+        self.apify_token = None
+        self.client = None
+        self.actor_id = None
         self.cache_dir = Path(cache_dir or os.getenv("PUBMED_CACHE_DIR", "./pubmed_cache"))
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -281,7 +244,7 @@ class PubMedScraper:
             enable_deduplication = _parse_truthy(enable_dedup_env)
 
         self.enable_deduplication = enable_deduplication
-        # Default false to reduce Apify usage cost; override with env var when needed
+        # (Legacy EasyAPI flags removed)
         self.use_full_abstracts = _env_true("USE_FULL_ABSTRACTS", False)
         self.extract_tags = _env_true("EXTRACT_TAGS", True)
         self.include_tags_with_preserve_order = _env_true("INCLUDE_TAGS_WITH_PRESERVE_ORDER", False)
@@ -311,25 +274,11 @@ class PubMedScraper:
                     seen_mesh.add(qualifier_lower)
         self.pharma_max_terms = int(os.getenv("PHARMA_MAX_TERMS", "8"))
         self.max_query_length = int(os.getenv("MAX_QUERY_LENGTH", "1800"))
-        self.enable_schema_fallback = _env_true("ENABLE_EASYAPI_SCHEMA_FALLBACK", False)
-        self.scraper_provider = os.getenv("SCRAPER_PROVIDER", "apify-easyapi")
-        self.smart_schema_fallback = _env_true("EASYAPI_SMART_SCHEMA_FALLBACK", True)
-        fallback_schemas_env = os.getenv("EASYAPI_FALLBACK_SCHEMAS", "")
-        raw_fallback_schemas = [schema.strip() for schema in fallback_schemas_env.split(',') if schema.strip()]
-        supported_schemas = {'searchUrls'}
-        invalid_schemas = [schema for schema in raw_fallback_schemas if schema not in supported_schemas]
-        if invalid_schemas:
-            logger.warning(
-                "Ignoring unsupported fallback schemas %s (see https://apify.com/easyapi/pubmed-search-scraper#input)",
-                invalid_schemas,
-            )
-        self.easyapi_fallback_schemas = [schema for schema in raw_fallback_schemas if schema in supported_schemas]
-        logger.info(
-            "EasyAPI fallback schemas: %s",
-            ', '.join(self.easyapi_fallback_schemas) if self.easyapi_fallback_schemas else 'none'
-        )
-        if not self.enable_schema_fallback:
-            logger.info("EasyAPI schema fallback disabled; only searchUrls will be used.")
+        # EasyAPI schema fallback deprecated; unused with E-utilities backend.
+        self.enable_schema_fallback = False
+        self.scraper_provider = "eutils"
+        self.smart_schema_fallback = False
+        self.easyapi_fallback_schemas = []
         monthly_budget_limit = os.getenv("MONTHLY_BUDGET_LIMIT")
         if monthly_budget_limit:
             logger.info(f"Monthly budget limit configured: ${monthly_budget_limit}")
@@ -436,100 +385,14 @@ class PubMedScraper:
 
         logger.info(f"Initialized PubMed scraper with cache dir: {self.cache_dir}")
         logger.info(
-            "PubMed scraper configured (cache_dir=%s, ttl_seconds=%s, actor=%s, default_max_items=%s)",
+            "PubMed scraper configured (cache_dir=%s, ttl_seconds=%s, backend=eutils, default_max_items=%s)",
             self.cache_dir,
             self.cache_ttl,
-            self.actor_id,
             self.default_max_items,
         )
 
-        # Verify ApifyApiError import compatibility for error handling
-        if ApifyApiError is None:
-            logger.warning("ApifyApiError could not be imported; HTTP status code error handling may be limited")
-        else:
-            # Lightweight self-check: ensure we can create a mock error with status_code attribute
-            try:
-                mock_error = type('MockApifyApiError', (ApifyApiError,), {'status_code': 429})()
-                if not hasattr(mock_error, 'status_code'):
-                    logger.warning("ApifyApiError compatibility issue: status_code attribute not accessible")
-            except Exception as e:
-                logger.warning(f"ApifyApiError compatibility check failed: {str(e)}")
-            else:
-                logger.debug("ApifyApiError import compatibility verified")
-
     def _rate_limit_active(self) -> bool:
         return bool(self.rate_limiter and self._rate_limiting_enabled)
-
-    def _call_actor(self, run_input: Dict, schema: Optional[str] = None) -> Dict:
-        if self._rate_limit_active():
-            acquire_kwargs = {}
-            if self._rate_limit_raise_on_daily_limit is not None:
-                acquire_kwargs["raise_on_daily_limit"] = self._rate_limit_raise_on_daily_limit
-            if self._rate_limit_max_wait_seconds is not None:
-                acquire_kwargs["max_wait_seconds"] = self._rate_limit_max_wait_seconds
-            try:
-                self.rate_limiter.acquire(**acquire_kwargs)
-            except DailyQuotaExceeded as exc:  # type: ignore[arg-type]
-                reset_seconds = int(self.rate_limiter.seconds_until_daily_reset()) if self.rate_limiter else 0
-                raise PubMedScraper.PubMedQuotaExceeded(
-                    "Daily PubMed quota reached. Try again after the reset window (~"
-                    f"{reset_seconds}s remaining) or adjust RATE_LIMIT_RAISE_ON_DAILY_LIMIT / "
-                    "RATE_LIMIT_MAX_DAILY_WAIT_SECONDS to change behaviour."
-                ) from exc
-        try:
-            # Call the EasyAPI actor and return the run object
-            actor_client = self.client.actor(self.actor_id)
-            run = actor_client.call(run_input=run_input)
-            if not run or not run.get("defaultDatasetId"):
-                run_repr = list(run.keys()) if isinstance(run, dict) else run
-                logger.warning(
-                    "Actor response missing defaultDatasetId (schema=%s, run keys=%s)",
-                    schema or 'unknown',
-                    run_repr,
-                )
-                try_optional_retry = _env_true("EASYAPI_RETRY_ON_MISSING_DATASET", True)
-                if try_optional_retry:
-                    optional_flags = ['includeTags', 'includeAbstract']
-                    retry_input = {k: v for k, v in run_input.items() if k not in optional_flags}
-                    if retry_input != run_input:
-                        logger.debug("Retrying actor call without optional flags after missing datasetId")
-                        retry_run = actor_client.call(run_input=retry_input)
-                        if retry_run and retry_run.get("defaultDatasetId"):
-                            return retry_run
-                raise RuntimeError(
-                    f"Actor run missing defaultDatasetId (actor={self.actor_id}, schema={schema or 'unknown'}, run_keys={run_repr})."
-                )
-            return run
-        except Exception as e:
-            # Check for validation errors due to unknown actor parameters
-            if (ApifyApiError and isinstance(e, ApifyApiError) and
-                hasattr(e, 'status_code') and 400 <= e.status_code < 500):
-                # Check if error message suggests parameter validation issues
-                error_msg = str(e).lower()
-                if any(keyword in error_msg for keyword in ['parameter', 'unknown', 'invalid', 'validation']):
-                    optional_flags = ['includeTags', 'includeAbstract']
-                    offending_flags = [flag for flag in optional_flags if flag in run_input]
-
-                    if offending_flags:
-                        logger.warning(
-                            "Actor parameter validation error, retrying without optional flags (%s). Error: %s",
-                            offending_flags,
-                            str(e),
-                        )
-                        # Create new input without optional flags
-                        retry_input = {k: v for k, v in run_input.items() if k not in optional_flags}
-                        retry_run = actor_client.call(run_input=retry_input)
-                        if retry_run and retry_run.get("defaultDatasetId"):
-                            return retry_run
-                        logger.warning("Retry without optional flags still missing defaultDatasetId or failed")
-
-                    if self.smart_schema_fallback:
-                        raise PubMedScraper.SchemaValidationError(
-                            f"Actor validation error for schema '{schema or 'unknown'}': {str(e)}"
-                        ) from e
-
-            # Re-raise the original exception if not a validation error or retry failed
-            raise
 
     def _entrez_fetch_abstract(self, pmid: str) -> Optional[str]:
         """Fetch abstract text from NCBI when requested."""
@@ -725,25 +588,7 @@ class PubMedScraper:
             return None
         return self.rate_limiter.remaining_daily_requests()
 
-    def _build_actor_input(
-        self,
-        enhanced_query: str,
-        max_items: int,
-        include_tags_effective: bool,
-        include_abstract_effective: bool,
-    ) -> dict:
-        """Build actor input dictionary for EasyAPI."""
-        encoded_query = urllib.parse.quote_plus(enhanced_query)
-        pubmed_url = f"https://pubmed.ncbi.nlm.nih.gov/?term={encoded_query}"
-        run_input: Dict[str, object] = {
-            "searchUrls": [pubmed_url],
-            "maxItems": max_items,
-        }
-        if include_tags_effective:
-            run_input["includeTags"] = True
-        if include_abstract_effective:
-            run_input["includeAbstract"] = True
-        return run_input
+    # EasyAPI input construction removed
 
     def _get_cache_key(
         self,
@@ -1386,37 +1231,7 @@ class PubMedScraper:
             )
         return deduplicated
 
-    def _process_run_results(self, run_id_or_run: Union[str, Dict], apply_ranking: bool) -> List[Dict]:
-        """Normalize, optionally rank, sort, and deduplicate results from a run"""
-        if isinstance(run_id_or_run, dict):
-            dataset_id = run_id_or_run.get("defaultDatasetId")
-        else:
-            dataset_id = run_id_or_run
-
-        if not dataset_id:
-            raise ValueError("Run object missing defaultDatasetId for result processing")
-
-        dataset_client = self.client.dataset(dataset_id)
-        processed_results: List[Dict] = []
-
-        for item in dataset_client.iterate_items():
-            normalized_item = self._normalize_item(item, prefer_full_abstract=apply_ranking)
-            if apply_ranking:
-                normalized_item = self._apply_study_ranking(normalized_item)
-            processed_results.append(normalized_item)
-
-        if apply_ranking:
-            # Sort once prior to deduplication so the highest-quality duplicate wins.
-            processed_results.sort(key=lambda r: r.get('ranking_score', 0), reverse=True)
-
-        if self.enable_deduplication:
-            processed_results = self._deduplicate_by_doi_pmid(processed_results)
-
-        if apply_ranking:
-            # Maintain ranking order for downstream consumers after duplicates are removed.
-            processed_results.sort(key=lambda r: r.get('ranking_score', 0), reverse=True)
-
-        return processed_results
+    # Apify result processing removed
 
     def _try_alternative_inputs(
         self,
@@ -1439,105 +1254,55 @@ class PubMedScraper:
         rank: Optional[bool] = None,
         pharma_enhance: Optional[bool] = None,
     ) -> List[Dict]:
-        """Search PubMed through the EasyAPI actor with caching, ranking, and enrichment.
+        """Search PubMed via E-utilities with OpenAlex fallback.
 
-        By default the scraper preserves native PubMed ordering. Enable study
-        ranking by passing ``rank=True`` or setting ``ENABLE_STUDY_RANKING=true``.
-        ``PRESERVE_PUBMED_ORDER=true`` always disables ranking regardless of the
-        other settings.
-
-        When ``EXTRACT_TAGS=false`` and ranking is requested, tags are still
-        fetched to keep scoring signals available. With preserve-order runs the
-        scraper skips tag collection to reduce latency and cost, and abstracts
-        are omitted unless ranking is enabled.
-
-        Args:
-            query: PubMed search term.
-            max_items: Maximum items to request (clamped by ``HARD_CAP_MAX_ITEMS``).
-            rank: Optional override for study ranking. ``None`` respects
-                ``ENABLE_STUDY_RANKING`` / ``PRESERVE_PUBMED_ORDER`` behaviour.
-            pharma_enhance: Optional override for pharmaceutical query expansion.
-
-        Returns:
-            List of normalized PubMed article dictionaries. Ranked results include
-            ``ranking_score`` metadata.
-
-        Raises:
-            PubMedAccessError: Raised when the actor indicates a subscription or
-                permission issue (HTTP 401/402/403).
+        Preserves native PubMed ordering by default. Optional study ranking is handled downstream.
         """
-        # Check for PRESERVE_PUBMED_ORDER override and tag extraction constraints
         preserve_order = _env_true('PRESERVE_PUBMED_ORDER', False)
-
-        if rank is True:
-            apply_ranking = True
-        elif rank is False:
-            apply_ranking = False
-        else:
-            apply_ranking = self.enable_study_ranking
-
+        apply_ranking = self.enable_study_ranking if rank is None else bool(rank)
         if preserve_order and apply_ranking and rank is None:
-            logger.info(
-                "PRESERVE_PUBMED_ORDER=true; using default behavior and returning results in crawl order."
-            )
+            logger.info("PRESERVE_PUBMED_ORDER=true; returning results in crawl order.")
             apply_ranking = False
 
-        should_include_tags = bool(apply_ranking) or bool(self.extract_tags and (not preserve_order or self.include_tags_with_preserve_order))
-        should_include_abstracts = bool(apply_ranking) or (bool(self.use_full_abstracts) and not preserve_order)
-        if apply_ranking and not self.use_full_abstracts:
-            logger.info(
-                "Ranking requested; forcing abstract retrieval despite USE_FULL_ABSTRACTS=false to preserve scoring signals."
-            )
-        elif not apply_ranking and not preserve_order and self.use_full_abstracts:
-            logger.info(
-                "Including full abstracts (USE_FULL_ABSTRACTS=true, PRESERVE_PUBMED_ORDER=false). Set USE_FULL_ABSTRACTS=false or PRESERVE_PUBMED_ORDER=true to skip abstracts."
-            )
-
-        # Log when tags are included due to INCLUDE_TAGS_WITH_PRESERVE_ORDER
-        if not apply_ranking and preserve_order and self.extract_tags and self.include_tags_with_preserve_order:
-            logger.info(
-                "INCLUDE_TAGS_WITH_PRESERVE_ORDER=true; including tags despite PRESERVE_PUBMED_ORDER to support metadata goals."
-            )
-        effective_enhance = (
-            self.enable_pharma_query_enhancement if pharma_enhance is None else pharma_enhance
-        )
-
-        # Check for ranking/tag extraction mismatch
-        if apply_ranking and not self.extract_tags:
-            logger.info(
-                "EXTRACT_TAGS=false but ranking is enabled; includeTags will be requested to support ranking signals."
-            )
-
-        # Apply defaults and caps to enforce HARD_CAP_MAX_ITEMS
         requested_max = self.default_max_items if max_items is None else max_items
-        requested_label = requested_max if max_items is not None else f"default({requested_max})"
-
-        if requested_max < 1:
-            logger.warning(
-                "Requested max_items %s is below 1; adjusting to minimum of 1.",
-                requested_label,
-            )
-        effective_max = max(1, requested_max)
-
-        if effective_max > self.hard_cap_max_items:
-            logger.warning(
-                "Clamping max_items from %s to HARD_CAP_MAX_ITEMS=%s to limit actor cost.",
-                requested_label,
-                self.hard_cap_max_items,
-            )
-            effective_max = self.hard_cap_max_items
-
+        effective_max = max(1, min(int(requested_max), self.hard_cap_max_items))
         logger.info(
             "Using effective_max=%s (requested=%s, hard_cap=%s)",
             effective_max,
-            requested_label,
+            requested_max,
             self.hard_cap_max_items,
         )
 
-        # Enhance pharmaceutical queries first
-        enhanced_query = self._enhance_pharmaceutical_query(query, effective_enhance)
+        enhanced_query = self._enhance_pharmaceutical_query(
+            query,
+            self.enable_pharma_query_enhancement if pharma_enhance is None else bool(pharma_enhance),
+        )
 
-        include_tags = bool(should_include_tags)
+        try:
+            if PubMedEutilsClient is not None:
+                eutils = PubMedEutilsClient()
+                results = eutils.search_and_fetch(enhanced_query, max_items=effective_max)
+                if results:
+                    logger.info("E-utilities returned %s results; skipping fallback.", len(results))
+                    return results
+                logger.info("E-utilities returned no results; falling back to OpenAlex.")
+        except Exception as exc:
+            logger.warning("E-utilities path failed (%s); falling back to OpenAlex.", exc)
+
+        if OpenAlexClient is not None:
+            try:
+                oa = OpenAlexClient()
+                works = oa.search_works(enhanced_query, max_items=effective_max)
+                if works:
+                    normalized = [oa.normalize_work(w) for w in works]
+                    logger.info("OpenAlex returned %s results.", len(normalized))
+                    return normalized
+            except Exception as exc:
+                logger.warning("OpenAlex fallback failed: %s", exc)
+
+        return []
+
+    
         include_abstract = bool(should_include_abstracts)
         force_include_tags = bool(apply_ranking)
         force_include_abstract = bool(apply_ranking)
@@ -1810,18 +1575,9 @@ class PubMedScraper:
             ).strip()
         return str(author).strip()
 
+    # Legacy Apify item normalization removed (no longer used)
     def _normalize_item(self, item: dict, *, prefer_full_abstract: bool = False) -> dict:
-        """
-        Normalize actor items with fallbacks for common key variants
-
-        Args:
-            item: Raw item dictionary from Apify actor
-            prefer_full_abstract: When True, prefer full abstract if available for ranking
-
-        Returns:
-            Normalized item dictionary
-        """
-        normalized = {}
+        return {}
 
         # Title with fallbacks - extract from multiple sources
         title = item.get('title') or item.get('articleTitle') or item.get('titleText') or ''
@@ -2576,7 +2332,7 @@ def test_sidecar_standardization():
 def main() -> int:
     """CLI entry point for running the PubMed scraper via ``python -m src.pubmed_scraper``."""
 
-    parser = argparse.ArgumentParser(description="Run the PubMed scraper using the EasyAPI actor.")
+    parser = argparse.ArgumentParser(description="Run the PubMed scraper using NCBI E-utilities (OpenAlex fallback).")
     parser.add_argument("query", help="PubMed search query string")
     parser.add_argument(
         "--max-items",
