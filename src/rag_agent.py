@@ -133,6 +133,17 @@ class RAGAgent:
                 When None, reads APPEND_DISCLAIMER_IN_ANSWER environment variable (defaults to True so answers include
                 the disclaimer by default). UIs should avoid duplicating the disclaimer by either rendering only
                 RAGResponse.disclaimer or setting APPEND_DISCLAIMER_IN_ANSWER=false when they present the separate field.
+            enable_nemo_extraction: When True, enable NeMo/VLM-based PDF extraction in the
+                document loader. When False, use a basic PyPDF parsing path. When None (default),
+                consult ENABLE_NEMO_EXTRACTION from the environment.
+            nemo_extraction_config: Optional dict to fine-tune NeMo extraction behavior.
+                Supported keys (with ENV fallbacks):
+                  - extraction_strategy (ENV NEMO_EXTRACTION_STRATEGY): "auto" | "nemo" | "unstructured"
+                  - enable_pharmaceutical_analysis (ENV NEMO_PHARMACEUTICAL_ANALYSIS): bool
+                  - chunk_strategy (ENV NEMO_CHUNK_STRATEGY): "semantic" | "title" | "page"
+                  - preserve_tables (ENV NEMO_PRESERVE_TABLES): bool
+                  - extract_images (ENV NEMO_EXTRACT_IMAGES): bool
+            nemo_client: Optional preconfigured NeMoRetrieverClient to reuse existing auth/config.
 
         Configuration Notes:
             - VECTOR_DB_PER_MODEL (default: "false") stores the FAISS index in a sanitized
@@ -157,6 +168,11 @@ class RAGAgent:
             # Log extraction path for observability
             mode_label = getattr(self.document_loader, "get_extraction_mode", lambda: "pypdf")()
             logger.info("Document extraction mode: %s", mode_label)
+            # Recommend enabling NeMo when not active
+            if not getattr(self.document_loader, "_nemo_enabled", False):
+                logger.info(
+                    "NeMo extraction is disabled. For best results, set ENABLE_NEMO_EXTRACTION=true"
+                )
         except TypeError:
             # For maximum backward compatibility if older PDFDocumentLoader signature is present
             self.document_loader = PDFDocumentLoader(docs_folder, chunk_size, chunk_overlap)

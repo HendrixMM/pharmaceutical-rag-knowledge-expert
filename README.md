@@ -223,6 +223,49 @@ When medical dependencies are installed, the system automatically uses Presidio 
    ACTIONS_SERVER_URL=http://localhost:8001
    ```
 
+#### NeMo Extraction (optional)
+- Enable advanced VLM-based PDF parsing using NVIDIA NeMo (no fine-tuning):
+  - Set `ENABLE_NEMO_EXTRACTION=true`
+  - Optional tuning via:
+    - `NEMO_EXTRACTION_STRATEGY` = `auto` | `nemo` | `unstructured` (default `auto`)
+    - `NEMO_PHARMACEUTICAL_ANALYSIS` = `true|false` (default `true`)
+    - `NEMO_CHUNK_STRATEGY` = `semantic` | `title` | `page` (default `semantic`)
+    - `NEMO_PRESERVE_TABLES` = `true|false` (default `true`)
+    - `NEMO_EXTRACT_IMAGES` = `true|false` (default `true`)
+
+  The loader uses `NeMoExtractionService` for document parsing. By default, a non‑NVIDIA fallback may be used only if NeMo is unavailable; set `NEMO_EXTRACTION_STRICT=true` to disable all non‑NVIDIA fallbacks (no PyPDF/Unstructured). All pages/chunks include `extraction_method` metadata for debugging.
+
+  Recommended best practice (default): NeMo is the primary path. Defaults are set to `ENABLE_NEMO_EXTRACTION=true`, `NEMO_EXTRACTION_STRATEGY=nemo`, `NEMO_EXTRACTION_STRICT=true` in `.env.template`. You can relax strict mode in development if needed.
+
+  Production lock: when `APP_ENV=production` (or `ENVIRONMENT=production`), strict NeMo mode is enforced regardless of `NEMO_EXTRACTION_STRICT`. This guarantees zero non‑NVIDIA fallback in production. For local development or tests, keep `APP_ENV=development` and optionally set `NEMO_EXTRACTION_STRICT=false` to allow a lightweight fallback.
+
+  Performance note: NeMo extraction yields higher‑quality parsing for complex PDFs; strict mode avoids non‑NVIDIA fallbacks but may surface failures earlier (intended in production).
+
+**Deployment Checklist**
+- Set `APP_ENV=production` (or `ENVIRONMENT=production`) to enforce strict NeMo mode.
+- Ensure NeMo extraction is fully enabled and strict:
+  - `ENABLE_NEMO_EXTRACTION=true`
+  - `NEMO_EXTRACTION_STRATEGY=nemo`
+  - `NEMO_EXTRACTION_STRICT=true`
+- Provide required secrets and contacts:
+  - `NVIDIA_API_KEY` (required)
+  - `PUBMED_EMAIL` and optional `PUBMED_EUTILS_API_KEY`
+  - `OPENALEX_EMAIL` (mailto best practice)
+- Keep inference‑only posture (no model fine‑tuning). All NeMo usage is runtime inference.
+- Optional: set `LOG_LEVEL=INFO` (or `WARNING`) for production verbosity.
+- Tests/dev only: if you need non‑NVIDIA fallback, use `APP_ENV=development` and set `NEMO_EXTRACTION_STRICT=false` locally.
+
+  Note: The system performs zero model fine‑tuning. It uses NVIDIA NIM endpoints for inference only and does not update model weights. Configuration options above are runtime behaviors, not training.
+
+#### External Literature APIs
+- PubMed E-utilities (primary):
+  - `PUBMED_EUTILS_BASE_URL` (default provided)
+  - `PUBMED_EMAIL` (recommended by NCBI; set to your contact email)
+  - `PUBMED_EUTILS_API_KEY` (optional for higher rate limits)
+- OpenAlex (fallback):
+  - `OPENALEX_BASE_URL` (default provided)
+  - `OPENALEX_EMAIL` (used as `mailto` parameter per OpenAlex best practices)
+
 ### **Step 5: Add Your Documents**
 1. **Create the documents folder** (if not exists):
    ```bash

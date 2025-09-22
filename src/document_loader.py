@@ -334,8 +334,8 @@ class PDFDocumentLoader:
             docs_folder: Path to folder containing PDF documents
             chunk_size: Size of text chunks for splitting
             chunk_overlap: Overlap between chunks
-            enable_nemo_extraction: When True, use NeMo extraction/analysis; when False, use legacy PyPDF.
-                When None, reads ENABLE_NEMO_EXTRACTION from environment (default False).
+            enable_nemo_extraction: When True, use NeMo extraction/analysis; when False, use basic PyPDF parsing.
+                When None, reads ENABLE_NEMO_EXTRACTION from environment (default True).
             nemo_extraction_config: Optional dict overriding environment for:
                 - extraction_strategy: "auto" | "nemo" | "unstructured"
                 - enable_pharmaceutical_analysis: bool
@@ -350,11 +350,11 @@ class PDFDocumentLoader:
         self._nemo_enabled: bool = (
             enable_nemo_extraction
             if enable_nemo_extraction is not None
-            else _env_flag_enabled("ENABLE_NEMO_EXTRACTION", False)
+            else _env_flag_enabled("ENABLE_NEMO_EXTRACTION", True)
         )
         # Resolve NeMo extraction configuration with env fallbacks
         self._nemo_config: Dict[str, Any] = {
-            "extraction_strategy": os.getenv("NEMO_EXTRACTION_STRATEGY", "auto").strip().lower(),
+            "extraction_strategy": os.getenv("NEMO_EXTRACTION_STRATEGY", "nemo").strip().lower(),
             "enable_pharmaceutical_analysis": _env_flag_enabled("NEMO_PHARMACEUTICAL_ANALYSIS", True),
             "chunk_strategy": os.getenv("NEMO_CHUNK_STRATEGY", "semantic").strip().lower(),
             "preserve_tables": _env_flag_enabled("NEMO_PRESERVE_TABLES", True),
@@ -367,6 +367,20 @@ class PDFDocumentLoader:
             self._nemo_config["extraction_strategy"] = "auto"
         if self._nemo_config.get("chunk_strategy") not in {"semantic", "title", "page"}:
             self._nemo_config["chunk_strategy"] = "semantic"
+        # Strict mode disables non-NVIDIA fallbacks for extraction
+        strict_env = os.getenv("NEMO_EXTRACTION_STRICT")
+        strict_flag = True
+        if strict_env is not None:
+            strict_flag = strict_env.strip().lower() in ("true", "1", "yes", "on")
+        if isinstance(nemo_extraction_config, dict) and nemo_extraction_config.get("strict") is True:
+            strict_flag = True
+        # Enforce strict mode automatically in production
+        prod_env = (os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "").strip().lower()
+        if prod_env in {"production", "prod"}:
+            if not strict_flag:
+                logger.info("Strict NeMo mode enforced due to APP_ENV=%s", prod_env)
+            strict_flag = True
+
         self._nemo_client = nemo_client
         self._nemo_service = None  # lazy init
         # Simple metrics/observability
@@ -379,7 +393,9 @@ class PDFDocumentLoader:
             "strategy": self._nemo_config.get("extraction_strategy"),
             "chunk_strategy": self._nemo_config.get("chunk_strategy"),
             "pharma_analysis": bool(self._nemo_config.get("enable_pharmaceutical_analysis", True)),
+            "strict": bool(strict_flag),
         }
+        self._nemo_strict: bool = bool(strict_flag)
         
         # Initialize text splitter
         self.text_splitter = RecursiveCharacterTextSplitter(
@@ -454,7 +470,18 @@ class PDFDocumentLoader:
         except Exception as e:
             self._nemo_metrics["fallback_count"] += 1
             self._nemo_metrics["last_error"] = str(e)
-            logger.warning("NeMo extraction raised; falling back to PyPDF for %s: %s", pdf_file.name, e)
+            if getattr(self, "_nemo_strict", False):
+                logger.warning(
+                    "NeMo extraction raised for %s; strict mode active -> no non-NVIDIA fallback: %s",
+                    pdf_file.name,
+                    e,
+                )
+            else:
+                logger.warning(
+                    "NeMo extraction raised for %s; attempting basic PDF fallback: %s",
+                    pdf_file.name,
+                    e,
+                )
             return None
 
         if getattr(result, "success", False) and getattr(result, "documents", None):
@@ -474,7 +501,18 @@ class PDFDocumentLoader:
         # Failure path
         self._nemo_metrics["fallback_count"] += 1
         self._nemo_metrics["last_error"] = getattr(result, "error", "unknown error")
-        logger.warning("NeMo extraction failed for %s; falling back to PyPDF. Error: %s", pdf_file.name, self._nemo_metrics["last_error"])
+        if getattr(self, "_nemo_strict", False):
+            logger.warning(
+                "NeMo extraction failed for %s; strict mode active -> no non-NVIDIA fallback. Error: %s",
+                pdf_file.name,
+                self._nemo_metrics["last_error"],
+            )
+        else:
+            logger.warning(
+                "NeMo extraction failed for %s; attempting basic PDF fallback. Error: %s",
+                pdf_file.name,
+                self._nemo_metrics["last_error"],
+            )
         return None
 
     def get_nemo_metrics(self) -> Dict[str, Any]:
@@ -1246,10 +1284,16 @@ class PDFDocumentLoader:
                         # Best-effort reader for supplemental XMP-based metadata (optional)
                         pdf_reader = self._create_pdf_reader(pdf_file)
                     else:
-                        logger.info("Falling back to legacy PDF extraction for %s", pdf_file.name)
+                        logger.info("NeMo extraction unavailable; using basic PDF parsing for %s", pdf_file.name)
 
                 if not pdf_documents:
-                    # Legacy PyPDF path
+                    # Basic PyPDF path (disabled in strict NeMo mode)
+                    if self._nemo_enabled and self._nemo_strict:
+                        logger.warning(
+                            "Strict NeMo mode active; skipping non-NVIDIA fallback for %s",
+                            pdf_file.name,
+                        )
+                        continue
                     if self._use_parser and self._pdf_parser and Blob is not None:
                         try:
                             pdf_bytes = pdf_file.read_bytes()

@@ -145,6 +145,17 @@ class EnhancedRAGAgent:
             enable_ddi_analysis: Whether to enable DDI/PK analysis (default: False)
             safety_mode: Safety validation mode ("strict", "balanced", "permissive")
             default_safe: Deprecated flag for backward compatibility
+            enable_nemo_extraction: When True, enable NeMo/VLM-based PDF extraction in the
+                document loader. When False, use a basic PyPDF parsing path. When None (default),
+                consult ENABLE_NEMO_EXTRACTION from the environment.
+            nemo_extraction_config: Optional dict to fine-tune NeMo extraction behavior.
+                Supported keys (with ENV fallbacks):
+                  - extraction_strategy (ENV NEMO_EXTRACTION_STRATEGY): "auto" | "nemo" | "unstructured"
+                  - enable_pharmaceutical_analysis (ENV NEMO_PHARMACEUTICAL_ANALYSIS): bool
+                  - chunk_strategy (ENV NEMO_CHUNK_STRATEGY): "semantic" | "title" | "page"
+                  - preserve_tables (ENV NEMO_PRESERVE_TABLES): bool
+                  - extract_images (ENV NEMO_EXTRACT_IMAGES): bool
+            nemo_client: Optional preconfigured NeMoRetrieverClient to reuse existing auth/config.
 
         Note:
             Advanced analysis (synthesis, DDI/PK) is disabled by default to avoid
@@ -351,6 +362,24 @@ class EnhancedRAGAgent:
         except Exception as exc:
             nemo_status = {"status": "error", "message": str(exc)}
         self.component_health["nemo_extraction"] = nemo_status
+
+        # Mirror NeMo extraction snapshot into safety metrics for unified reporting
+        try:
+            with self._metrics_lock:
+                self.safety_metrics.setdefault("nemo_extraction", {})
+                self.safety_metrics["nemo_extraction"] = {
+                    "status": nemo_status.get("status"),
+                    "strategy": nemo_status.get("strategy"),
+                    "chunk_strategy": nemo_status.get("chunk_strategy"),
+                    "pharma_analysis": nemo_status.get("pharma_analysis"),
+                    "success_rate": nemo_status.get("success_rate", 0.0),
+                    "used_count": nemo_status.get("used_count", 0),
+                    "fallback_count": nemo_status.get("fallback_count", 0),
+                    "last_error": nemo_status.get("last_error"),
+                }
+        except Exception:
+            # Safety first: metrics population should never break init
+            pass
 
         self._components_initialized = True
 

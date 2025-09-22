@@ -111,6 +111,15 @@ def initialize_rag_agent():
         enable_ddi = os.getenv("ENABLE_DDI_ANALYSIS", "true").strip().lower() in ("1", "true", "yes", "on")
         safety_mode = os.getenv("ENHANCED_RAG_SAFETY_MODE", "balanced")
 
+        # Production guard for NeMo strict configuration
+        app_env = (os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "").strip().lower()
+        if app_env in ("production", "prod"):
+            strategy = (os.getenv("NEMO_EXTRACTION_STRATEGY") or "nemo").strip().lower()
+            enable_nemo = (os.getenv("ENABLE_NEMO_EXTRACTION") or "true").strip().lower() in ("true","1","yes","on")
+            strict = (os.getenv("NEMO_EXTRACTION_STRICT") or "true").strip().lower() in ("true","1","yes","on")
+            if (strategy != "nemo") or (not enable_nemo) or (not strict):
+                st.warning("Production requires NeMo strict: ENABLE_NEMO_EXTRACTION=true, NEMO_EXTRACTION_STRATEGY=nemo, NEMO_EXTRACTION_STRICT=true")
+
         if not api_key:
             st.error("❌ NVIDIA_API_KEY not found in environment variables")
             st.info("Please check your .env file and ensure the API key is set correctly.")

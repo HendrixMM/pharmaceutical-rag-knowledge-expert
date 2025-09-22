@@ -264,3 +264,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # Production guard for NeMo strict configuration
+    app_env = (os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "").strip().lower()
+    if app_env in ("production", "prod"):
+        strategy = (os.getenv("NEMO_EXTRACTION_STRATEGY") or "nemo").strip().lower()
+        enable_nemo = (os.getenv("ENABLE_NEMO_EXTRACTION") or "true").strip().lower() in ("true","1","yes","on")
+        strict = (os.getenv("NEMO_EXTRACTION_STRICT") or "true").strip().lower() in ("true","1","yes","on")
+        if (strategy != "nemo") or (not enable_nemo) or (not strict):
+            print("⚠️  Production requires NeMo strict: ENABLE_NEMO_EXTRACTION=true, NEMO_EXTRACTION_STRATEGY=nemo, NEMO_EXTRACTION_STRICT=true")

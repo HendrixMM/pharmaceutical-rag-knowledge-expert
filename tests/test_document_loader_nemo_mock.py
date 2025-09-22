@@ -144,6 +144,8 @@ def test_nemo_enabled_uses_nemo_and_merges_pharma(monkeypatch, tmp_path):
 def test_nemo_failure_falls_back_to_pypdf(monkeypatch, tmp_path):
     # Arrange: create dummy PDF and enable NeMo
     os.environ.pop("ENABLE_NEMO_EXTRACTION", None)
+    # Allow fallback only in tests
+    monkeypatch.setenv("NEMO_EXTRACTION_STRICT", "false")
     docs_dir = tmp_path / "docs"
     docs_dir.mkdir(parents=True, exist_ok=True)
     _make_dummy_pdf(docs_dir)

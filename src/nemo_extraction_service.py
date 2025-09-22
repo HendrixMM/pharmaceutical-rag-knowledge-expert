@@ -2,6 +2,8 @@
 NVIDIA NeMo Extraction Service
 
 Advanced document processing using NVIDIA NeMo Retriever Extraction (NV-Ingest).
+Favors NeMo for supported formats by default; a strict mode is available to
+disable any non-NVIDIA fallback in production.
 Replaces PyPDF2 with VLM-based OCR and structured data extraction optimized
 for pharmaceutical and medical documents.
 
@@ -229,23 +231,33 @@ class NeMoExtractionService:
             )
 
     def _choose_extraction_strategy(self, file_path: Path) -> str:
-        """Choose optimal extraction strategy based on file characteristics."""
-        file_ext = file_path.suffix.lower()
-        file_size = file_path.stat().st_size
+        """Choose optimal extraction strategy based on file type (trust NeMo by default).
 
-        # Use NeMo for complex documents that benefit from VLM processing
-        if file_ext == ".pdf" and file_size > 1024 * 1024:  # > 1MB PDFs
+        Best practice: Prefer NVIDIA NeMo for rich documents. Fall back to a
+        lightweight path only for plain text where structure is minimal.
+        """
+        file_ext = file_path.suffix.lower()
+
+        # Prefer NeMo for all supported rich formats by default
+        if file_ext in {".pdf", ".docx", ".doc", ".pptx", ".xlsx", ".html", ".rtf"}:
             return "nemo"
-        elif file_ext in [".docx", ".pptx"]:  # Office documents with potential images/tables
-            return "nemo"
-        else:
-            return "unstructured"  # Faster for simple documents
+
+        # Use lightweight path for plain text or unknowns
+        return "unstructured"
 
     async def _extract_with_nemo(self,
                                 file_path: Path,
                                 preserve_tables: bool,
                                 extract_images: bool) -> ExtractionResult:
         """Extract document using NeMo Retriever Extraction NIM."""
+        
+        def _strict_mode_enabled() -> bool:
+            env_flag = os.getenv("NEMO_EXTRACTION_STRICT", "")
+            strict = env_flag.strip().lower() in ("true", "1", "yes", "on")
+            prod_env = (os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "").strip().lower()
+            if prod_env in ("production", "prod"):
+                return True
+            return strict
         try:
             client = await self._ensure_nemo_client()
 
@@ -281,13 +293,25 @@ class NeMoExtractionService:
             if nemo_response.success:
                 return await self._process_nemo_extraction_response(nemo_response.data, file_path)
             else:
-                # Fallback to unstructured if NeMo fails
+                # Optional fallback to unstructured if NeMo fails (disabled in strict mode)
+                if _strict_mode_enabled():
+                    return ExtractionResult(
+                        success=False,
+                        error="NeMo extraction failed and strict mode is enabled (no non-NVIDIA fallback)",
+                        extraction_method="nemo_failed_strict"
+                    )
                 logger.warning(f"NeMo extraction failed for {file_path}, falling back to unstructured")
                 return await self._extract_with_unstructured(file_path, preserve_tables)
 
         except Exception as e:
             logger.error(f"NeMo extraction error for {file_path}: {e}")
-            # Fallback to unstructured
+            # Optional fallback to unstructured when not in strict mode
+            if _strict_mode_enabled():
+                return ExtractionResult(
+                    success=False,
+                    error=f"NeMo extraction error and strict mode enabled: {e}",
+                    extraction_method="nemo_error_strict"
+                )
             return await self._extract_with_unstructured(file_path, preserve_tables)
 
     async def _call_nemo_extraction_api(self, payload: Dict[str, Any]) -> NeMoAPIResponse:
