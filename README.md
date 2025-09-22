@@ -1067,6 +1067,73 @@ similar_docs = vector_db.similarity_search_with_scores(
 
 ---
 
+## 👨‍💻 **Development & Code Quality**
+
+### **🛠️ Development Setup**
+
+For contributors and developers, set up the complete development environment:
+
+```bash
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Set up pre-commit hooks (runs quality checks automatically)
+make setup-dev
+
+# Run quality checks manually
+make quality
+```
+
+### **🧹 Automated Code Hygiene**
+
+The repository maintains production-grade code quality with automated tools:
+
+**Quality Tools Included:**
+- **Black**: Uncompromising code formatting
+- **isort**: Import sorting and organization
+- **Flake8**: Linting and style guide enforcement
+- **MyPy**: Static type checking
+- **Bandit**: Security vulnerability scanning
+- **Safety**: Dependency vulnerability checking
+
+**Quick Commands:**
+```bash
+# Run all quality checks
+make quality
+
+# Auto-fix formatting issues
+make format
+
+# Run specific checks
+make lint        # Linting only
+make security    # Security scan only
+make test-unit   # Unit tests only
+```
+
+### **🔄 CI/CD Pipeline**
+
+Automated quality gates ensure code hygiene:
+- ✅ **Code formatting** (Black)
+- ✅ **Import sorting** (isort)
+- ✅ **Linting** (Flake8)
+- ✅ **Security scanning** (Bandit)
+- ✅ **Dependency checking** (Safety)
+- ✅ **Multi-version testing** (Python 3.8-3.11)
+- ✅ **Coverage reporting** (Codecov)
+
+### **📝 Pre-commit Hooks**
+
+Automatically maintain code quality on every commit:
+```bash
+# Install pre-commit hooks (done by make setup-dev)
+pre-commit install
+
+# Run manually on all files
+pre-commit run --all-files
+```
+
+---
+
 ## 🧪 **Quality Assurance**
 
 <div align="center">

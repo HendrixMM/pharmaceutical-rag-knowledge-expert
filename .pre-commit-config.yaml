@@ -1,0 +1,162 @@
+# Pre-commit hooks for automated code quality enforcement
+# Install with: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Built-in hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+      - id: end-of-file-fixer
+        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+      - id: check-yaml
+        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+      - id: check-json
+        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: debug-statements
+      - id: check-docstring-first
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+
+  # Python security
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml']
+        additional_dependencies: ['bandit[toml]']
+        exclude: ^tests/
+
+  # Code formatting
+  - repo: https://github.com/psf/black
+    rev: 23.11.0
+    hooks:
+      - id: black
+        language_version: python3
+        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+
+  # Import sorting
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+
+  # Linting
+  - repo: https://github.com/PyCQA/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - flake8-docstrings
+          - flake8-import-order
+          - flake8-bugbear
+          - flake8-comprehensions
+          - flake8-simplify
+        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+
+  # Type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-requests
+          - types-python-dateutil
+        exclude: ^(tests|tmptest|tmptest2|pubmed_cache)/
+
+  # Docstring checking
+  - repo: https://github.com/PyCQA/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args: ['--convention=google']
+        exclude: ^(tests|examples|scripts|tmptest|tmptest2|pubmed_cache)/
+
+  # Dependency vulnerability scanning
+  - repo: https://github.com/pyupio/safety
+    rev: 2.3.5
+    hooks:
+      - id: safety
+        args: ['--ignore=51668']  # Ignore specific CVEs if needed
+        files: requirements.*\.txt$
+
+  # Requirements.txt sorting
+  - repo: https://github.com/asottile/reorder_python_imports
+    rev: v3.12.0
+    hooks:
+      - id: reorder-python-imports
+        args: ['--py38-plus']
+        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+
+  # Upgrade syntax
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.15.0
+    hooks:
+      - id: pyupgrade
+        args: ['--py38-plus']
+        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+
+  # Remove unused imports
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.2.1
+    hooks:
+      - id: autoflake
+        args:
+          - --in-place
+          - --remove-all-unused-imports
+          - --remove-unused-variables
+          - --remove-duplicate-keys
+          - --ignore-init-module-imports
+        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+
+  # Jupyter notebook cleaning
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.7.1
+    hooks:
+      - id: nbqa-black
+      - id: nbqa-isort
+      - id: nbqa-flake8
+
+  # YAML formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        types_or: [yaml, markdown]
+        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+
+  # Spell checking (optional)
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
+    hooks:
+      - id: codespell
+        args: ['--skip=*.json,*.lock,pubmed_cache/*,tmptest*']
+        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+
+# Global configuration
+default_language_version:
+  python: python3.8
+
+# Exclude patterns
+exclude: |
+  (?x)^(
+      tmptest/.*|
+      tmptest2/.*|
+      pubmed_cache/.*|
+      \.git/.*|
+      __pycache__/.*|
+      \.pytest_cache/.*|
+      \.mypy_cache/.*|
+      venv/.*|
+      env/.*|
+      build/.*|
+      dist/.*
+  )$
