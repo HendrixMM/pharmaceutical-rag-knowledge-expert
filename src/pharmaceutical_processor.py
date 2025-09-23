@@ -10,7 +10,7 @@ from datetime import datetime
 from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -300,6 +300,34 @@ class PharmaceuticalProcessor:
                 logger.warning("Failed to load therapeutic area mapping: %s", exc)
         else:
             logger.info("Using built-in therapeutic area mapping (limited coverage)")
+
+        # -------------------------------
+        # Domain overlay feature toggles
+        # -------------------------------
+        def _env_true(name: str, default: bool = False) -> bool:
+            val = os.getenv(name)
+            if val is None:
+                return default
+            return val.strip().lower() in {"1", "true", "yes", "on"}
+
+        self._overlay_enabled: bool = _env_true("PHARMA_DOMAIN_OVERLAY", False)
+        self._enable_regulatory_tags: bool = _env_true("PHARMA_ENABLE_REGULATORY_TAGS", True)
+        self._enable_species_inference: bool = _env_true("PHARMA_ENABLE_SPECIES_INFERENCE", True)
+        self._enable_evidence_level: bool = _env_true("PHARMA_ENABLE_EVIDENCE_LEVEL", True)
+
+        # Optional synonym maps and regulatory status store
+        self._synonym_canonical: Dict[str, str] = {}
+        self._synonym_groups: Dict[str, Set[str]] = {}
+        self._regulatory_status: Dict[str, List[Dict[str, Any]]] = {}
+
+        try:
+            self._load_drug_synonyms_from_env()
+        except Exception as exc:
+            logger.warning("Drug synonym loading failed: %s", exc)
+        try:
+            self._load_regulatory_status_from_env()
+        except Exception as exc:
+            logger.warning("Regulatory status loading failed: %s", exc)
 
         # Log lexicon counts for visibility
         logger.info(
@@ -1087,6 +1115,90 @@ class PharmaceuticalProcessor:
         metadata["therapeutic_areas"] = self.identify_therapeutic_areas(mesh_terms)
         metadata["interaction_types"] = self.classify_drug_interaction_type(combined_text)
 
+        # -------------------------------
+        # Domain overlay (feature-gated)
+        # -------------------------------
+        if self._overlay_enabled:
+            # 1) Drug synonym canonicalization
+            try:
+                names = metadata.get("drug_names") or []
+                if names:
+                    name_map: Dict[str, str] = {}
+                    canon_names: Set[str] = set()
+                    for n in names:
+                        canon = self._canonicalize_drug_name(str(n))
+                        if canon:
+                            name_map[str(n)] = canon
+                            canon_names.add(canon)
+                    if name_map:
+                        metadata["drug_name_map"] = name_map
+                    if canon_names:
+                        metadata["drug_canonical_names"] = sorted(canon_names)
+                        # Equivalence groups per canonical
+                        eq_groups: Dict[str, List[str]] = {}
+                        for c in metadata["drug_canonical_names"]:
+                            group = sorted(list(self._synonym_groups.get(c.lower(), set())))
+                            if group:
+                                eq_groups[c] = group
+                        if eq_groups:
+                            metadata["drug_equivalence_groups"] = eq_groups
+            except Exception:
+                pass
+
+            # 2) Regulatory status tags
+            if self._enable_regulatory_tags and metadata.get("drug_canonical_names"):
+                try:
+                    reg = self.annotate_regulatory_status(metadata.get("drug_canonical_names", []))
+                    if reg.get("entries"):
+                        metadata["regulatory_status"] = reg["entries"]
+                    if reg.get("tags"):
+                        metadata["regulatory_tags"] = reg["tags"]
+                    agencies = reg.get("agencies") or set()
+                    if agencies:
+                        metadata["regulatory_agencies"] = sorted(list(agencies))
+                except Exception:
+                    pass
+
+            # 3) CYP risk scoring (lightweight)
+            try:
+                risk_score, risk_label = self._compute_cyp_risk(combined_text)
+                metadata["cyp_risk_score"] = risk_score
+                metadata["cyp_risk_label"] = risk_label
+            except Exception:
+                pass
+
+            # 4) Evidence level from study types
+            if self._enable_evidence_level:
+                try:
+                    evidence_level = self._derive_evidence_level(metadata.get("study_types") or [])
+                    if evidence_level:
+                        metadata["evidence_level"] = evidence_level
+                except Exception:
+                    pass
+
+            # 5) Species inference fallback
+            if self._enable_species_inference:
+                try:
+                    if not (metadata.get("species") or metadata.get("species_list")):
+                        inferred = self._infer_species_from_text(combined_text)
+                        if inferred:
+                            metadata["species"] = inferred[0]
+                            metadata["species_list"] = inferred
+                            metadata["species_inferred"] = True
+                except Exception:
+                    pass
+
+            # 6) PK signals summary (metadata-only)
+            try:
+                pk = metadata.get("pharmacokinetics") or {}
+                signals = [k for k in ("auc", "cmax", "tmax", "half_life", "clearance", "vd", "volume_distribution", "bioavailability", "protein_binding") if k in pk and pk.get(k) is not None]
+                if signals:
+                    metadata["pk_signals_present"] = sorted(list(set(signals)))
+                    score = len(set(signals)) + (1 if metadata.get("pharmacokinetic_values") else 0)
+                    metadata["pk_summary_score"] = score
+            except Exception:
+                pass
+
         enhanced["metadata"] = metadata
         return enhanced
 
@@ -1143,6 +1255,218 @@ class PharmaceuticalProcessor:
         if not entries:
             logger.warning("Lexicon file '%s' did not contain any usable entries", path)
         return entries
+
+    # -------------------------------
+    # Domain overlay helpers
+    # -------------------------------
+    def _load_drug_synonyms_from_env(self) -> None:
+        """Load drug synonyms from CSV/JSON specified via env.
+
+        DRUG_SYNONYMS_CSV: CSV with columns brand,generic,iupac,aliases
+        DRUG_SYNONYMS_JSON: JSON list with same schema
+        """
+        csv_path = os.getenv("DRUG_SYNONYMS_CSV")
+        json_path = os.getenv("DRUG_SYNONYMS_JSON")
+        loaded = 0
+        if csv_path and Path(csv_path).exists():
+            loaded += self._ingest_synonyms_csv(csv_path)
+        if json_path and Path(json_path).exists():
+            loaded += self._ingest_synonyms_json(json_path)
+        if loaded:
+            logger.info("Loaded %d synonym records", loaded)
+
+    def _ingest_synonyms_csv(self, path: str) -> int:
+        count = 0
+        with open(path, newline="", encoding="utf-8") as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                names = self._extract_synonym_names(row)
+                if names:
+                    self._merge_synonym_group(names)
+                    count += 1
+        return count
+
+    def _ingest_synonyms_json(self, path: str) -> int:
+        import json
+        count = 0
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        if isinstance(data, list):
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                names = self._extract_synonym_names(item)
+                if names:
+                    self._merge_synonym_group(names)
+                    count += 1
+        return count
+
+    def _extract_synonym_names(self, row: Dict[str, Any]) -> Set[str]:
+        names: Set[str] = set()
+        for key in ("brand", "generic", "iupac"):
+            val = row.get(key)
+            if val:
+                names.add(str(val).strip())
+        aliases = row.get("aliases")
+        if aliases:
+            parts = [p.strip() for p in re.split(r"[|,]", str(aliases)) if p and p.strip()]
+            names.update(parts)
+        names = {n for n in names if n}
+        return names
+
+    def _merge_synonym_group(self, names: Set[str]) -> None:
+        if not names:
+            return
+        # Prefer canonical as a known generic, else first lexeme
+        generic_candidates = [n for n in names if n.lower() in self.generic_drug_names]
+        canonical = (generic_candidates[0] if generic_candidates else sorted(names, key=lambda s: (s.isupper(), len(s)))[0]).strip()
+        canon_key = canonical.lower()
+
+        group = self._synonym_groups.get(canon_key, set())
+        group.update({n.strip() for n in names})
+        self._synonym_groups[canon_key] = group
+        for n in group:
+            self._synonym_canonical[n.lower()] = canonical
+
+    def _canonicalize_drug_name(self, name: str) -> Optional[str]:
+        if not name:
+            return None
+        key = name.strip().lower()
+        if key in self._synonym_canonical:
+            return self._synonym_canonical[key]
+        if key in self.generic_drug_names:
+            return key
+        if key in self.brand_drug_names:
+            mapped = self._synonym_canonical.get(key)
+            return mapped or key
+        return key if self._looks_like_drug_name(name) else None
+
+    def _load_regulatory_status_from_env(self) -> None:
+        path = os.getenv("REGULATORY_STATUS_CSV")
+        if not path:
+            return
+        p = Path(path)
+        if not p.exists():
+            logger.warning("REGULATORY_STATUS_CSV not found at %s", path)
+            return
+        count = 0
+        with p.open(newline="", encoding="utf-8") as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                drug = (row.get("drug") or row.get("generic") or "").strip()
+                if not drug:
+                    aliases = self._extract_synonym_names(row)
+                    if aliases:
+                        drug = self._canonicalize_drug_name(next(iter(aliases))) or ""
+                if not drug:
+                    continue
+                canonical = self._canonicalize_drug_name(drug) or drug.lower()
+                rec = {
+                    "agency": (row.get("agency") or "").strip(),
+                    "status": (row.get("status") or "").strip(),
+                    "date": (row.get("date") or row.get("effective_date") or "").strip(),
+                    "notes": (row.get("notes") or "").strip(),
+                }
+                self._regulatory_status.setdefault(canonical.lower(), []).append(rec)
+                count += 1
+        if count:
+            logger.info("Loaded %d regulatory status entries", count)
+
+    def annotate_regulatory_status(self, canonical_drug_names: Iterable[str]) -> Dict[str, Any]:
+        entries: List[Dict[str, Any]] = []
+        tags: Set[str] = set()
+        agencies: Set[str] = set()
+        for n in canonical_drug_names:
+            key = (n or "").strip().lower()
+            for rec in self._regulatory_status.get(key, []):
+                entries.append(rec)
+                ag = (rec.get("agency") or "").strip()
+                st = (rec.get("status") or "").strip().lower()
+                if ag:
+                    agencies.add(ag)
+                if st:
+                    if "black" in st and "box" in st:
+                        tags.add(f"black_box:{ag}" if ag else "black_box")
+                    elif "withdraw" in st:
+                        tags.add(f"withdrawn:{ag}" if ag else "withdrawn")
+                    elif "approve" in st:
+                        tags.add(f"approved:{ag}" if ag else "approved")
+        return {"entries": entries, "tags": sorted(tags), "agencies": agencies}
+
+    def _compute_cyp_risk(self, text: Optional[str]) -> Tuple[int, str]:
+        if not text:
+            return 0, "none"
+        annotations = self.annotate_cyp_roles(text)
+        score = 0
+
+        # Handle both legacy dict form and newer list-of-dicts form
+        if isinstance(annotations, dict):
+            iterable = annotations.values()
+        elif isinstance(annotations, list):
+            iterable = []
+            for ann in annotations:
+                if isinstance(ann, dict):
+                    iterable.append(ann.get("roles") or ann)
+                else:
+                    iterable.append(ann)
+        else:
+            iterable = []
+
+        for roles in iterable:
+            if isinstance(roles, dict):
+                rset = {str(r).lower() for r in roles.keys()}
+            elif isinstance(roles, list):
+                rset = {str(r).lower() for r in roles}
+            else:
+                rset = set()
+
+            if "inhibitors" in rset:
+                score += 2
+            if "inducers" in rset:
+                score += 2
+            if "substrates" in rset:
+                score += 1
+        if score == 0:
+            label = "none"
+        elif score <= 2:
+            label = "low"
+        elif score <= 4:
+            label = "moderate"
+        else:
+            label = "high"
+        return score, label
+
+    def _derive_evidence_level(self, study_types: Iterable[str]) -> Optional[str]:
+        tiers = {
+            "very_high": {"systematic review", "meta-analysis", "meta analysis"},
+            "high": {"randomized controlled trial", "rct", "phase iii", "phase 3"},
+            "moderate": {"phase ii", "phase 2", "observational study", "cohort study", "case-control study", "case-control studies"},
+            "low": {"case report", "preclinical study", "animal study", "in vitro", "in vitro study"},
+        }
+        normalized = {str(s or "").strip().lower() for s in study_types if s}
+        if not normalized:
+            return None
+        for level in ("very_high", "high", "moderate", "low"):
+            if tiers[level] & normalized:
+                return level
+        return None
+
+    def _infer_species_from_text(self, text: Optional[str]) -> List[str]:
+        if not text:
+            return []
+        mapping = {
+            "human": ["human", "humans", "patient", "patients"],
+            "mouse": ["mouse", "mice", "mus musculus"],
+            "rat": ["rat", "rats", "rattus norvegicus"],
+            "dog": ["dog", "dogs", "canine", "canines"],
+            "monkey": ["monkey", "monkeys", "macaque", "nonhuman primate", "non-human primate"],
+            "in vitro": ["in vitro", "cell culture", "cultured cells", "tissue culture"],
+        }
+        lowered = text.lower()
+        detected: Set[str] = set()
+        for canonical, terms in mapping.items():
+            if any(term in lowered for term in terms):
+                detected.add(canonical)
+        return sorted(detected)
 
     def _auto_fetch_lexicons(self, data_dir: Path) -> None:
         """Automatically populate bundled lexicon files when explicitly requested.
