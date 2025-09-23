@@ -64,11 +64,11 @@ class NeMoRetrieverClient:
     Automatically handles authentication, retries, and error conditions.
     """
 
-    # Default NeMo NIM endpoints (cloud-hosted)
+    # Default NeMo NIM endpoints (cloud-hosted) or Baseten (when configured)
     DEFAULT_ENDPOINTS = {
-        "embedding": "https://ai.api.nvidia.com/v1/retrieval/nvidia/embeddings",
-        "reranking": "https://ai.api.nvidia.com/v1/retrieval/nvidia/reranking",
-        "extraction": "https://ai.api.nvidia.com/v1/retrieval/nvidia/extraction"
+        "embedding": os.getenv("BASETEN_EMBEDDING_ENDPOINT") or "https://ai.api.nvidia.com/v1/retrieval/nvidia/embeddings",
+        "reranking": os.getenv("BASETEN_RERANKING_ENDPOINT") or "https://ai.api.nvidia.com/v1/retrieval/nvidia/reranking",
+        "extraction": os.getenv("BASETEN_EXTRACTION_ENDPOINT") or "https://ai.api.nvidia.com/v1/retrieval/nvidia/extraction",
     }
 
     # Available embedding models with their specifications
@@ -110,7 +110,9 @@ class NeMoRetrieverClient:
                  api_key: Optional[str] = None,
                  base_endpoints: Optional[Dict[str, str]] = None,
                  custom_headers: Optional[Dict[str, str]] = None,
-                 enable_langchain_integration: bool = True):
+                 enable_langchain_integration: bool = True,
+                 use_mcp_context: bool = False,
+                 baseten_api_key: Optional[str] = None):
         """
         Initialize NeMo Retriever client.
 
@@ -120,7 +122,14 @@ class NeMoRetrieverClient:
             custom_headers: Additional headers for API requests
             enable_langchain_integration: Use LangChain NVIDIA endpoints when available
         """
-        self.api_key = api_key or os.getenv("NVIDIA_API_KEY")
+        # Prefer Baseten API key when endpoints are set or when explicitly provided
+        baseten_enabled = bool(
+            os.getenv("MCP_BASETEN_CONTEXT_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
+            or os.getenv("BASETEN_EMBEDDING_ENDPOINT")
+            or os.getenv("BASETEN_RERANKING_ENDPOINT")
+            or os.getenv("BASETEN_EXTRACTION_ENDPOINT")
+        )
+        self.api_key = baseten_api_key or (os.getenv("BASETEN_API_KEY") if baseten_enabled else None) or api_key or os.getenv("NVIDIA_API_KEY")
         if not self.api_key:
             raise ValueError("NVIDIA API key is required. Set NVIDIA_API_KEY environment variable.")
 
@@ -128,8 +137,13 @@ class NeMoRetrieverClient:
         self.enable_langchain_integration = enable_langchain_integration
 
         # Standard headers for all requests
+        # Authentication header: Baseten uses Api-Key <key>; NVIDIA uses Bearer
+        auth_header = (
+            {"Authorization": f"Api-Key {self.api_key}"}
+            if baseten_enabled else {"Authorization": f"Bearer {self.api_key}"}
+        )
         self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            **auth_header,
             "Content-Type": "application/json",
             "User-Agent": "NeMo-Retriever-Client/1.0"
         }
