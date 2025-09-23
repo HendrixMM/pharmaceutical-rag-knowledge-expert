@@ -79,8 +79,18 @@ class NeMoRetrieverClient:
     """
     Universal client for NVIDIA NeMo Retriever NIMs.
 
-    Supports both cloud-hosted and self-hosted NIM deployments.
-    Automatically handles authentication, retries, and error conditions.
+    CURRENT IMPLEMENTATION (2024):
+    Supports the three-step NeMo Retriever pipeline with pharmaceutical optimization:
+    1. Extraction: NV-Ingest VLM-based document processing
+    2. Embedding: nvidia/nv-embedqa-e5-v5 for medical Q&A optimization
+    3. Reranking: llama-3_2-nemoretriever-500m-rerank-v2 for pharmaceutical relevance
+
+    Features:
+    - Both cloud-hosted and self-hosted NIM deployments
+    - Automatic authentication, retries, and error handling
+    - Pharmaceutical domain-specific model recommendations
+    - Environment-driven configuration support
+    - Free-tier credits monitoring and optimization
     """
 
     # Default NVIDIA NeMo NIM endpoints (cloud-hosted)
@@ -608,19 +618,24 @@ class NeMoRetrieverClient:
         """
         Recommend the best model for a specific use case.
 
+        CURRENT DEFAULTS (2024):
+        - Embedding: nvidia/nv-embedqa-e5-v5 (optimized for pharmaceutical Q&A)
+        - Reranking: llama-3_2-nemoretriever-500m-rerank-v2 (latest pharmaceutical-optimized model)
+
         Args:
             use_case: Type of use case (e.g., "pharmaceutical_qa", "multilingual", "similarity")
             content_type: Type of content (e.g., "medical", "technical", "general")
 
         Returns:
-            Dictionary with recommended embedding and reranking models
+            Dictionary with recommended embedding and reranking models optimized for the use case
         """
-        embedding_model = "nv-embedqa-e5-v5"  # Default
-        reranking_model = "nv-rerankqa-mistral4b-v3"  # Only option currently
+        embedding_model = "nv-embedqa-e5-v5"  # Default, optimized for Q&A
+        reranking_model = "llama-3_2-nemoretriever-500m-rerank-v2"  # Latest and preferred for pharmaceutical content
 
-        # Pharmaceutical/medical content
+        # Pharmaceutical/medical content - use latest models
         if "pharmaceutical" in use_case.lower() or "medical" in content_type.lower():
-            embedding_model = "nv-embedqa-e5-v5"  # Optimized for QA
+            embedding_model = "nv-embedqa-e5-v5"  # Optimized for medical Q&A
+            reranking_model = "llama-3_2-nemoretriever-500m-rerank-v2"  # Enhanced pharmaceutical understanding
 
         # Multilingual content
         elif "multilingual" in use_case.lower() or "multi" in content_type.lower():

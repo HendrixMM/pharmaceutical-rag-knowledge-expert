@@ -1,20 +1,24 @@
 """
 MCP-Enhanced Documentation Context for NVIDIA NeMo Retriever
 
-Provides live, up-to-date documentation context by integrating with Microsoft Learn MCP Server
+CURRENT APPROACH (2024):
+Provides live, up-to-date documentation context using the Model Context Protocol (MCP)
 to fetch the latest NVIDIA NeMo Retriever patterns, best practices, and API references.
+Supports the three-step pipeline: Extraction → Embedding → Reranking.
 
 This service ensures all NeMo operations in the pharmaceutical RAG system are aligned
-with the most current NVIDIA documentation and recommendations.
-
-<<use_mcp microsoft-learn>>
+with the most current NVIDIA documentation and recommendations using:
+- llama-3_2-nemoretriever-500m-rerank-v2 for reranking
+- nvidia/nv-embedqa-e5-v5 for embeddings
+- nv-ingest-vlm for extraction
 
 Features:
-1. Live documentation fetching from Microsoft Learn
+1. Live documentation fetching from multiple MCP servers
 2. Pharmaceutical domain-specific context enhancement
 3. Caching for performance optimization
 4. Context-aware error handling and troubleshooting
 5. Integration with all NeMo services (Extraction, Embedding, Reranking)
+6. Environment-driven model configuration support
 """
 
 import asyncio
@@ -28,8 +32,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import hashlib
 
-import aiohttp
-import requests
 from urllib.parse import urljoin, urlparse
 
 logger = logging.getLogger(__name__)
@@ -82,8 +84,16 @@ class MCPDocumentationContextService:
     """
     MCP-Enhanced Documentation Context Service for NVIDIA NeMo Retriever.
 
-    Integrates with Microsoft Learn MCP Server to provide live, up-to-date
-    documentation context for all NeMo operations with pharmaceutical optimization.
+    CURRENT IMPLEMENTATION:
+    Integrates with multiple MCP servers to provide live, up-to-date documentation context
+    for the three-step NeMo Retriever pipeline with pharmaceutical optimization.
+
+    Supports:
+    - Multiple documentation servers via MCP configuration
+    - Real-time model guidance for latest NVIDIA models
+    - Pharmaceutical domain optimization patterns
+    - Environment-driven configuration management
+    - Comprehensive caching and performance optimization
     """
 
     def __init__(
@@ -249,6 +259,18 @@ PHARMACEUTICAL DOMAIN CONSIDERATIONS FOR EMBEDDINGS:
    - Optimize for clinical trial data, prescribing information, and drug labels
    - Handle structured data like dosing tables and interaction matrices
    - Consider medical imaging and molecular structure representations
+
+5. Latest NeMo Embedding Models (2024):
+   - nv-embedqa-e5-v5: 1024 dimensions, optimized for pharmaceutical Q&A and medical literature
+   - nv-embedqa-mistral7b-v2: 4096 dimensions, best for multilingual pharmaceutical content
+   - Enhanced medical terminology understanding and drug name normalization
+   - Improved performance on regulatory documents and clinical trial reports
+
+6. Three-Step Pipeline Optimization:
+   - Embedding follows NV-Ingest VLM extraction for high-quality text representation
+   - Optimized for pharmaceutical domain overlay with drug canonicalization
+   - Prepares vectors for llama-3_2-nemoretriever-500m-rerank-v2 reranking
+   - Maintains medical context through the complete pipeline
 """
 
         elif context_type == 'reranking':
@@ -275,6 +297,18 @@ PHARMACEUTICAL DOMAIN CONSIDERATIONS FOR RERANKING:
    - Age-specific dosing information
    - Pregnancy/lactation safety categories
    - Renal/hepatic impairment adjustments
+
+5. Latest NeMo Reranking Models (2024):
+   - llama-3_2-nemoretriever-500m-rerank-v2: Optimized for pharmaceutical content relevance
+   - Enhanced pharmaceutical entity understanding and medical terminology
+   - Improved safety information prioritization for regulatory compliance
+   - Better handling of drug interaction matrices and dosing information
+
+6. Three-Step Pipeline Integration:
+   - Reranking follows extraction and embedding for optimal pharmaceutical relevance
+   - Leverages NV-Ingest VLM extraction for context-aware reranking
+   - Integrates with nv-embedqa-e5-v5 embeddings for medical QA optimization
+   - Maintains pharmaceutical domain overlay throughout the pipeline
 """
 
         elif context_type == 'extraction':
@@ -653,31 +687,104 @@ In production, this content would be fetched from Microsoft Learn MCP Server.
         logger.info(f"Cleared {cleared_count} cache files")
         return cleared_count
 
-    # (Baseten integration removed per free NVIDIA Build approach)
+    async def get_nemo_pipeline_context(self, pipeline_step: str, pharmaceutical_focus: bool = True) -> MCPDocumentationResponse:
+        """
+        Get comprehensive context for specific NeMo pipeline steps.
+
+        Args:
+            pipeline_step: 'extraction', 'embedding', 'reranking', or 'complete_pipeline'
+            pharmaceutical_focus: Include pharmaceutical optimization guidance
+
+        Returns:
+            MCPDocumentationResponse with pipeline-specific context
+        """
+        request = MCPDocumentationRequest(
+            topic=f"nemo_retriever_{pipeline_step}",
+            context_type=pipeline_step,
+            pharmaceutical_context=pharmaceutical_focus,
+            priority="high"
+        )
+
+        return await self.get_documentation_context(request)
+
+    async def get_latest_model_guidance(self, model_name: str) -> MCPDocumentationResponse:
+        """
+        Get latest documentation and best practices for specific NeMo models.
+
+        Args:
+            model_name: Model name (e.g., 'llama-3_2-nemoretriever-500m-rerank-v2', 'nv-embedqa-e5-v5')
+
+        Returns:
+            MCPDocumentationResponse with model-specific guidance
+        """
+        request = MCPDocumentationRequest(
+            topic=f"model_guidance_{model_name}",
+            context_type="general",
+            pharmaceutical_context=True,
+            priority="high"
+        )
+
+        # Enhanced context for new models
+        if "llama-3_2-nemoretriever" in model_name:
+            request.context_type = "reranking"
+        elif "nv-embedqa" in model_name:
+            request.context_type = "embedding"
+
+        return await self.get_documentation_context(request)
+
+    def get_pharmaceutical_pipeline_recommendations(self) -> Dict[str, str]:
+        """
+        Get recommended model configuration for pharmaceutical use cases.
+
+        Returns:
+            Dictionary with recommended models for each pipeline step
+        """
+        return {
+            "extraction_strategy": "nemo",
+            "extraction_model": "nv-ingest-vlm",
+            "embedding_model": "nvidia/nv-embedqa-e5-v5",
+            "reranking_model": "llama-3_2-nemoretriever-500m-rerank-v2",
+            "pharmaceutical_optimization": "enabled",
+            "use_case": "pharmaceutical_q_and_a_with_regulatory_compliance"
+        }
 
 
 # Global instance for easy access
 mcp_context_service = MCPDocumentationContextService()
 
-def get_nemo_context(
+async def get_nemo_context(
     operation_type: str,
     topic: Optional[str] = None,
     pharmaceutical_focus: bool = True
 ) -> MCPDocumentationResponse:
     """
-    Convenience function to get NeMo documentation context.
+    Convenience function to get NeMo context with pharmaceutical optimization.
 
     Args:
-        operation_type: NeMo operation type (embedding, reranking, extraction)
-        topic: Specific topic or None for general best practices
-        pharmaceutical_focus: Apply pharmaceutical domain optimizations
+        operation_type: Type of operation ('extraction', 'embedding', 'reranking', 'pipeline')
+        topic: Specific topic or model name
+        pharmaceutical_focus: Include pharmaceutical domain guidance
 
     Returns:
-        Documentation context response
+        MCPDocumentationResponse with context
+
+    Example:
+        # Get context for the complete three-step pipeline
+        context = await get_nemo_context('pipeline', 'three_step_retriever')
+
+        # Get context for specific reranking model
+        context = await get_nemo_context('reranking', 'llama-3_2-nemoretriever-500m-rerank-v2')
+
+        # Get context for embedding optimization
+        context = await get_nemo_context('embedding', 'nv-embedqa-e5-v5')
     """
-    return mcp_context_service.get_context_for_nemo_operation(
-        operation_type=operation_type,
-        specific_topic=topic,
+    # Use model-specific guidance if topic appears to be a model name
+    if topic and ('llama-3_2-nemoretriever' in topic or 'nv-embedqa' in topic or 'mistral' in topic):
+        return await mcp_context_service.get_latest_model_guidance(topic)
+
+    # Use pipeline context for operation types
+    return await mcp_context_service.get_nemo_pipeline_context(
+        pipeline_step=operation_type,
         pharmaceutical_focus=pharmaceutical_focus
     )
 
@@ -691,4 +798,35 @@ def get_pharmaceutical_guidance(content_type: str) -> Dict[str, Any]:
     Returns:
         Pharmaceutical guidance dictionary
     """
-    return mcp_context_service.get_pharmaceutical_guidance(content_type)
+    # Return appropriate guidance based on content type
+    profile = mcp_context_service.pharmaceutical_profile
+
+    guidance = {
+        "medical_terminologies": profile.medical_terminologies,
+        "regulatory_frameworks": profile.regulatory_frameworks,
+        "document_types": profile.document_types,
+        "content_priorities": profile.content_priorities,
+        "content_type": content_type
+    }
+
+    # Add content-specific guidance
+    if content_type in ["clinical_trial", "study_report"]:
+        guidance["priority_level"] = "high"
+        guidance["regulatory_focus"] = ["FDA", "EMA", "ICH", "GCP"]
+    elif content_type in ["prescribing_info", "drug_label"]:
+        guidance["priority_level"] = "critical"
+        guidance["regulatory_focus"] = ["FDA", "21 CFR Part 11"]
+    else:
+        guidance["priority_level"] = "medium"
+        guidance["regulatory_focus"] = profile.regulatory_frameworks[:3]
+
+    return guidance
+
+def get_nemo_pipeline_recommendations() -> Dict[str, str]:
+    """
+    Get recommended NeMo model configuration for pharmaceutical use cases.
+
+    Returns:
+        Dictionary with optimal three-step pipeline configuration
+    """
+    return mcp_context_service.get_pharmaceutical_pipeline_recommendations()

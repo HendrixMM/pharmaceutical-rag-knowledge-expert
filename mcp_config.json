@@ -4,11 +4,47 @@
       "type": "sse",
       "url": "https://learn.microsoft.com/mcp/api/v1",
       "description": "NVIDIA NeMo documentation from Microsoft Learn"
+    },
+    "nvidia_api_docs": {
+      "type": "http",
+      "url": "https://docs.api.nvidia.com/retrieval",
+      "description": "NVIDIA NIM API documentation for retrieval services"
+    },
+    "nvidia_nemo_models": {
+      "type": "http",
+      "url": "https://docs.nvidia.com/nemo/retriever/models",
+      "description": "NVIDIA NeMo Retriever model documentation and specifications"
+    },
+    "nvidia_llama_rerank": {
+      "type": "http",
+      "url": "https://docs.nvidia.com/nemo/retriever/reranking",
+      "description": "LLaMA-based reranking model documentation and best practices"
+    },
+    "nvidia_embedding_models": {
+      "type": "http",
+      "url": "https://docs.nvidia.com/nemo/retriever/embedding",
+      "description": "NV-EmbedQA and embedding model documentation"
     }
   },
   "contexts": {
     "nvidia_nemo_integration": [
-      "microsoft_learn"
+      "microsoft_learn",
+      "nvidia_api_docs",
+      "nvidia_nemo_models"
+    ],
+    "nemo_embedding_pipeline": [
+      "nvidia_embedding_models",
+      "nvidia_api_docs"
+    ],
+    "nemo_reranking_pipeline": [
+      "nvidia_llama_rerank",
+      "nvidia_nemo_models"
+    ],
+    "pharmaceutical_nemo_optimization": [
+      "microsoft_learn",
+      "nvidia_nemo_models",
+      "nvidia_embedding_models",
+      "nvidia_llama_rerank"
     ]
   }
 }

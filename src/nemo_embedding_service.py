@@ -12,8 +12,6 @@ Key Features:
 - Caching and performance monitoring
 - Fallback to existing nvidia_embeddings.py for compatibility
 
-<<use_mcp microsoft-learn>>
-
 Based on latest NVIDIA NeMo Retriever documentation patterns and best practices.
 """
 

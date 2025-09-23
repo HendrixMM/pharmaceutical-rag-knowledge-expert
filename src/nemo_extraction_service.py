@@ -15,8 +15,6 @@ Key Features:
 - Pharmaceutical regulatory document parsing
 - Metadata enrichment for medical literature
 
-<<use_mcp microsoft-learn>>
-
 Based on latest NVIDIA NeMo Retriever documentation patterns.
 """
 

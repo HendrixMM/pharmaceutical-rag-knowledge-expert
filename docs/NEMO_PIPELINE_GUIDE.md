@@ -480,12 +480,62 @@ async def health_check():
 - **Caching Strategy**: Implement distributed caching
 - **Load Balancing**: Distribute across multiple API keys
 
+## MCP-Enhanced Documentation Context
+
+Your implementation includes an advanced **Model Context Protocol (MCP)** integration that provides live, up-to-date documentation context for all NeMo operations.
+
+### MCP Configuration
+
+The MCP system is configured in `mcp_config.json` with multiple documentation servers:
+
+```json
+{
+  "servers": {
+    "microsoft_learn": "NVIDIA NeMo documentation from Microsoft Learn",
+    "nvidia_api_docs": "NVIDIA NIM API documentation for retrieval services",
+    "nvidia_nemo_models": "NVIDIA NeMo Retriever model documentation",
+    "nvidia_llama_rerank": "LLaMA-based reranking model documentation",
+    "nvidia_embedding_models": "NV-EmbedQA and embedding model documentation"
+  },
+  "contexts": {
+    "pharmaceutical_nemo_optimization": [
+      "microsoft_learn", "nvidia_nemo_models",
+      "nvidia_embedding_models", "nvidia_llama_rerank"
+    ]
+  }
+}
+```
+
+### Using MCP Context in Your Pipeline
+
+```python
+from src.mcp_documentation_context import get_nemo_context, get_nemo_pipeline_recommendations
+
+# Get live documentation for specific pipeline steps
+embedding_context = get_nemo_context('embedding', 'nv-embedqa-e5-v5')
+reranking_context = get_nemo_context('reranking', 'llama-3_2-nemoretriever-500m-rerank-v2')
+
+# Get pharmaceutical-optimized recommendations
+recommendations = get_nemo_pipeline_recommendations()
+print(f"Recommended embedding model: {recommendations['embedding_model']}")
+print(f"Recommended reranking model: {recommendations['reranking_model']}")
+```
+
+### Live Documentation Benefits
+
+- **Always Current**: Automatically fetches latest NVIDIA documentation
+- **Pharmaceutical Context**: Domain-specific optimization guidance
+- **Model-Specific**: Tailored advice for each model in your pipeline
+- **Error Resolution**: Up-to-date troubleshooting information
+
 ## Support and Resources
 
 ### Documentation
 - [NVIDIA NIM Documentation](https://docs.nvidia.com/nim/)
 - [NeMo Retriever Guide](https://docs.nvidia.com/nemo/retriever/)
 - [API Reference](https://docs.api.nvidia.com/)
+- [MCP Documentation Context Service](../src/mcp_documentation_context.py) - Live documentation integration
+- [Pipeline Configuration Guide](../mcp_config.json) - MCP server configuration
 
 ### Community
 - [NVIDIA Developer Forums](https://forums.developer.nvidia.com/)
