@@ -39,10 +39,10 @@ from .modules.source_metadata_utils import (
     _ensure_metadata_dict
 )
 
-
-    AnalyzerEngine = None
-    AnonymizerEngine = None
-    NlpEngineProvider = None
+# Provide safe defaults for optional Presidio interfaces
+AnalyzerEngine = globals().get('AnalyzerEngine', None)
+AnonymizerEngine = globals().get('AnonymizerEngine', None)
+NlpEngineProvider = globals().get('NlpEngineProvider', None)
 
 
 class MedicalSafetyActions:
