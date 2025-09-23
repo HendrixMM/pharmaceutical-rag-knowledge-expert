@@ -40,7 +40,7 @@ for p in (ROOT,):
     if str(p) not in sys.path:
         sys.path.append(str(p))
 
-from src.nemo_retriever_client import create_nemo_client
+from src.nemo_retriever_client import create_nemo_client, NVIDIABuildCreditsMonitor
 from src.nemo_extraction_service import NeMoExtractionService
 from src.pharmaceutical_processor import PharmaceuticalProcessor
 # Import embedding service lazily only when embedding step runs to avoid type
@@ -85,10 +85,10 @@ def _pick_pdf(path_arg: str | None) -> Path | None:
     return None
 
 
-async def _validate_services() -> bool:
+async def _validate_services(credits_monitor: NVIDIABuildCreditsMonitor | None = None) -> bool:
     print("=== NVIDIA NIM SERVICES VALIDATION ===")
     try:
-        client = await create_nemo_client()
+        client = await create_nemo_client(credits_monitor=credits_monitor)
         health = await client.health_check(force=True)
         ok = True
         for name, status in (health or {}).items():
@@ -129,17 +129,26 @@ async def _embed_with_nemo(texts: List[str]) -> None:
     if not texts:
         print("ℹ️  No texts to embed (empty extraction)")
         return
+
     # Avoid numpy dependency path in service by skipping normalization
     if EmbeddingConfig is None or NeMoEmbeddingService is None:
         print("ℹ️  Embedding service unavailable (import error); skipping embedding test")
         return
-    config = EmbeddingConfig(model="nv-embedqa-e5-v5")
+
+    # Get embedding model from environment variable with fallback
+    embedding_model = os.getenv("EMBEDDING_MODEL", "nvidia/nv-embedqa-e5-v5")
+    # Extract model name without provider prefix for the config
+    model_name = embedding_model.split("/")[-1] if "/" in embedding_model else embedding_model
+    print(f"🔧 Using embedding model: {embedding_model}")
+
+    config = EmbeddingConfig(model=model_name)
     config.normalize_embeddings = False
     emb_service = NeMoEmbeddingService(config=config, enable_multi_model_strategy=False)
     try:
         vecs = await emb_service.embed_documents(texts[:3])
         dims = len(vecs[0]) if vecs else 0
-        print(f"✅ Embeddings generated: {len(vecs)}  dims: {dims}")
+        print(f"✅ Embeddings generated: {len(vecs)} vectors, {dims} dimensions")
+        print(f"   Model: {model_name}")
     except Exception as exc:
         print(f"❌ Embedding failed: {exc}")
 
@@ -149,16 +158,23 @@ async def _rerank_with_nemo(query: str, docs: List[str]) -> None:
     if not docs:
         print("ℹ️  No documents to rerank (empty extraction)")
         return
+
+    # Get reranking model from environment variable with fallback
+    rerank_model = os.getenv("RERANK_MODEL", "llama-3_2-nemoretriever-500m-rerank-v2")
+    print(f"🔧 Using reranking model: {rerank_model}")
+
     try:
         client = await create_nemo_client()
         res = await client.rerank_passages(
             query=query or "pharmaceutical information",
             passages=[t[:500] for t in docs[:5]],
-            model="nvidia/nv-rerankqa-mistral4b-v3",
+            model=rerank_model,
             top_k=3,
         )
         if res.success:
-            print("✅ Reranking successful")
+            reranked_data = res.data.get("reranked_passages", [])
+            print(f"✅ Reranking successful: processed {len(reranked_data)} passages")
+            print(f"   Response time: {res.response_time_ms:.1f}ms")
         else:
             print(f"❌ Reranking failed: {res.error}")
     except Exception as exc:
@@ -216,6 +232,8 @@ async def main() -> int:
         return 2
 
     # 1) Validate services
+    free_tier = os.getenv("NVIDIA_BUILD_FREE_TIER", "").strip().lower() in {"1","true","yes","on"}
+    credits_monitor = NVIDIABuildCreditsMonitor(os.getenv("NVIDIA_API_KEY")) if free_tier else None
     if not await _validate_services():
         print("❌ NIM services not fully available - cannot proceed (strict mode)")
         return 3
@@ -229,12 +247,21 @@ async def main() -> int:
 
     # 3) Embeddings
     await _embed_with_nemo(docs)
+    if credits_monitor:
+        credits_monitor.log_api_call("embedding", tokens_used=max(1, min(len(docs), 3)))
 
     # 4) Reranking
     await _rerank_with_nemo("drug interactions", docs)
+    if credits_monitor:
+        credits_monitor.log_api_call("reranking", tokens_used=max(1, min(len(docs), 3)))
 
     # 5) Overlay summary
     _overlay_summary(docs)
+
+    if credits_monitor:
+        print("=== FREE TIER PHARMACEUTICAL OVERLAY ===")
+        print(f"💰 Credits used: {credits_monitor.credits_used}")
+        print(f"💰 Credits remaining: {credits_monitor.credits_remaining}")
 
     print("=== NIM-NATIVE TEST COMPLETE ===")
     return 0

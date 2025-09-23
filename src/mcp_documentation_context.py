@@ -148,14 +148,6 @@ class MCPDocumentationContextService:
         logger.info(f"Cache Directory: {self.cache_dir}")
         logger.info(f"Pharmaceutical Optimization: Enabled")
 
-        # Baseten documentation endpoints (lightweight map used by helpers)
-        self.baseten_doc_endpoints = {
-            "deployment": "deploy/models/nvidia-models",
-            "authentication": "api-reference/authentication",
-            "endpoints": "api-reference/model-endpoints",
-            "monitoring": "observability/monitoring",
-            "integration": "deploy/models/nvidia-models#integration-guide",
-        }
 
     def _generate_cache_key(self, request: MCPDocumentationRequest) -> str:
         """Generate cache key for documentation request."""
@@ -661,57 +653,7 @@ In production, this content would be fetched from Microsoft Learn MCP Server.
         logger.info(f"Cleared {cleared_count} cache files")
         return cleared_count
 
-    # ---------------------------------------------------------------------
-    # Baseten documentation helpers (MCP-enhanced)
-    # ---------------------------------------------------------------------
-    async def fetch_documentation(self, url: str, context_filter: Optional[str] = None) -> str:
-        """Fetch documentation from a URL with optional context filter.
-
-        This reuses the existing aiohttp client logic to retrieve content;
-        when an MCP server is available, callers typically pass MCP URLs. Here
-        we allow direct HTTP URLs for Baseten docs as well, to keep light.
-        """
-        try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20)) as session:
-                async with session.get(url) as resp:
-                    if resp.status != 200:
-                        raise RuntimeError(f"HTTP {resp.status}")
-                    text = await resp.text()
-                    if context_filter and context_filter.lower() not in text.lower():
-                        return text  # Return raw; consumers decide filtering
-                    return text
-        except Exception as exc:
-            logger.debug("Baseten doc fetch failed for %s: %s", url, exc)
-            return ""
-
-    async def fetch_baseten_integration_docs(self, topic: str = "deployment") -> str:
-        """Fetch Baseten-specific integration documentation with pharma context."""
-        endpoint = self.baseten_doc_endpoints.get(topic, "deploy/models")
-        base_url = "https://docs.baseten.co/"
-        full_url = base_url + endpoint
-        docs = await self.fetch_documentation(
-            full_url,
-            context_filter="nvidia nemo retriever pharmaceutical integration",
-        )
-        return docs
-
-    async def get_baseten_nvidia_context(self, pharmaceutical_focus: bool = True) -> str:
-        """Aggregate Baseten + NVIDIA integration context (lightweight)."""
-        sections = []
-        for topic in ("deployment", "authentication", "endpoints"):
-            try:
-                content = await self.fetch_baseten_integration_docs(topic)
-                if content:
-                    sections.append(content)
-            except Exception:
-                continue
-        if pharmaceutical_focus:
-            try:
-                pharma = self.get_pharmaceutical_guidance("regulatory_document")
-                sections.append(json.dumps(pharma))
-            except Exception:
-                pass
-        return "\n\n---\n\n".join(sections)
+    # (Baseten integration removed per free NVIDIA Build approach)
 
 
 # Global instance for easy access

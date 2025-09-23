@@ -56,6 +56,25 @@ class NeMoAPIResponse:
     service: Optional[str] = None
     model: Optional[str] = None
 
+class NVIDIABuildCreditsMonitor:
+    """Simple credit monitor for NVIDIA Build free tier."""
+    def __init__(self, api_key: Optional[str]):
+        self.api_key = api_key
+        self.credits_used = 0
+        self.credits_remaining = 10000
+
+    def log_api_call(self, service: str, tokens_used: int = 1) -> None:
+        try:
+            tokens = max(0, int(tokens_used))
+        except Exception:
+            tokens = 1
+        self.credits_used += tokens
+        self.credits_remaining = max(0, 10000 - self.credits_used)
+        if self.credits_remaining <= 100:
+            logger.warning("Low NVIDIA Build credits remaining: %s", self.credits_remaining)
+        logger.info("Credits: service=%s used=%s remaining=%s", service, tokens, self.credits_remaining)
+
+
 class NeMoRetrieverClient:
     """
     Universal client for NVIDIA NeMo Retriever NIMs.
@@ -64,11 +83,11 @@ class NeMoRetrieverClient:
     Automatically handles authentication, retries, and error conditions.
     """
 
-    # Default NeMo NIM endpoints (cloud-hosted) or Baseten (when configured)
+    # Default NVIDIA NeMo NIM endpoints (cloud-hosted)
     DEFAULT_ENDPOINTS = {
-        "embedding": os.getenv("BASETEN_EMBEDDING_ENDPOINT") or "https://ai.api.nvidia.com/v1/retrieval/nvidia/embeddings",
-        "reranking": os.getenv("BASETEN_RERANKING_ENDPOINT") or "https://ai.api.nvidia.com/v1/retrieval/nvidia/reranking",
-        "extraction": os.getenv("BASETEN_EXTRACTION_ENDPOINT") or "https://ai.api.nvidia.com/v1/retrieval/nvidia/extraction",
+        "embedding": "https://ai.api.nvidia.com/v1/retrieval/nvidia/embeddings",
+        "reranking": "https://ai.api.nvidia.com/v1/retrieval/nvidia/reranking",
+        "extraction": "https://ai.api.nvidia.com/v1/retrieval/nvidia/extraction",
     }
 
     # Available embedding models with their specifications
@@ -103,6 +122,12 @@ class NeMoRetrieverClient:
             "max_pairs": 1000,
             "description": "Fine-tuned for text reranking and accurate QA",
             "recommended_for": ["pharmaceutical_reranking", "medical_relevance", "cross_modal"]
+        },
+        "llama-3_2-nemoretriever-500m-rerank-v2": {
+            "full_name": "meta/llama-3_2-nemoretriever-500m-rerank-v2",
+            "max_pairs": 1000,
+            "description": "Latest NeMo Retriever reranking model optimized for pharmaceutical content",
+            "recommended_for": ["pharmaceutical_reranking", "medical_literature", "regulatory_documents", "clinical_trials"]
         }
     }
 
@@ -111,8 +136,7 @@ class NeMoRetrieverClient:
                  base_endpoints: Optional[Dict[str, str]] = None,
                  custom_headers: Optional[Dict[str, str]] = None,
                  enable_langchain_integration: bool = True,
-                 use_mcp_context: bool = False,
-                 baseten_api_key: Optional[str] = None):
+                 credits_monitor: Optional[NVIDIABuildCreditsMonitor] = None):
         """
         Initialize NeMo Retriever client.
 
@@ -122,28 +146,17 @@ class NeMoRetrieverClient:
             custom_headers: Additional headers for API requests
             enable_langchain_integration: Use LangChain NVIDIA endpoints when available
         """
-        # Prefer Baseten API key when endpoints are set or when explicitly provided
-        baseten_enabled = bool(
-            os.getenv("MCP_BASETEN_CONTEXT_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
-            or os.getenv("BASETEN_EMBEDDING_ENDPOINT")
-            or os.getenv("BASETEN_RERANKING_ENDPOINT")
-            or os.getenv("BASETEN_EXTRACTION_ENDPOINT")
-        )
-        self.api_key = baseten_api_key or (os.getenv("BASETEN_API_KEY") if baseten_enabled else None) or api_key or os.getenv("NVIDIA_API_KEY")
+        self.api_key = api_key or os.getenv("NVIDIA_API_KEY")
         if not self.api_key:
             raise ValueError("NVIDIA API key is required. Set NVIDIA_API_KEY environment variable.")
 
         self.base_endpoints = base_endpoints or self.DEFAULT_ENDPOINTS.copy()
         self.enable_langchain_integration = enable_langchain_integration
+        self.credits_monitor = credits_monitor
 
-        # Standard headers for all requests
-        # Authentication header: Baseten uses Api-Key <key>; NVIDIA uses Bearer
-        auth_header = (
-            {"Authorization": f"Api-Key {self.api_key}"}
-            if baseten_enabled else {"Authorization": f"Bearer {self.api_key}"}
-        )
+        # Standard NVIDIA headers (Bearer token)
         self.headers = {
-            **auth_header,
+            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
             "User-Agent": "NeMo-Retriever-Client/1.0"
         }
@@ -399,6 +412,9 @@ class NeMoRetrieverClient:
                     # Extract embeddings from response
                     embeddings = [item["embedding"] for item in result["data"]]
 
+                    if self.credits_monitor:
+                        self.credits_monitor.log_api_call("embedding", tokens_used=max(1, len(texts)))
+
                     return NeMoAPIResponse(
                         success=True,
                         data={"embeddings": embeddings},
@@ -534,6 +550,7 @@ class NeMoRetrieverClient:
                         service="reranking",
                         model=model
                     )
+                
                 else:
                     error_text = await response.text()
                     self._update_metrics(False, response_time)
@@ -621,7 +638,7 @@ class NeMoRetrieverClient:
 
 
 # Convenience functions for easy integration
-async def create_nemo_client(api_key: Optional[str] = None) -> NeMoRetrieverClient:
+async def create_nemo_client(api_key: Optional[str] = None, credits_monitor: Optional[NVIDIABuildCreditsMonitor] = None) -> NeMoRetrieverClient:
     """
     Factory function to create and validate NeMo Retriever client.
 
@@ -631,7 +648,7 @@ async def create_nemo_client(api_key: Optional[str] = None) -> NeMoRetrieverClie
     Returns:
         Initialized and validated NeMoRetrieverClient
     """
-    client = NeMoRetrieverClient(api_key=api_key)
+    client = NeMoRetrieverClient(api_key=api_key, credits_monitor=credits_monitor)
 
     # Perform initial health check
     health = await client.health_check(force=True)

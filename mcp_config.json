@@ -4,42 +4,11 @@
       "type": "sse",
       "url": "https://learn.microsoft.com/mcp/api/v1",
       "description": "NVIDIA NeMo documentation from Microsoft Learn"
-    },
-    "microsoft-learn": {
-      "type": "sse",
-      "url": "https://learn.microsoft.com/api/mcp",
-      "description": "Legacy alias for Microsoft Learn MCP"
-    },
-    "pubmed_eutils": {
-      "type": "sse",
-      "url": "https://docs.ncbi.nlm.nih.gov/books/NBK25499/"
-    },
-    "openalex": {
-      "type": "sse",
-      "url": "https://docs.openalex.org/how-to-use-the-api/api-overview"
-    },
-    "baseten_docs": {
-      "type": "http",
-      "url": "https://docs.baseten.co/api-reference",
-      "description": "Baseten API documentation and integration guides"
-    },
-    "baseten_models": {
-      "type": "http",
-      "url": "https://docs.baseten.co/deploy/models",
-      "description": "Baseten model deployment and endpoint documentation"
-    },
-    "baseten_nvidia": {
-      "type": "http",
-      "url": "https://docs.baseten.co/deploy/models/nvidia-models",
-      "description": "Baseten NVIDIA model integration specifics"
     }
   },
   "contexts": {
     "nvidia_nemo_integration": [
-      "microsoft_learn",
-      "baseten_docs",
-      "baseten_models",
-      "baseten_nvidia"
+      "microsoft_learn"
     ]
   }
 }
