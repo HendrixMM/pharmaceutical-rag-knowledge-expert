@@ -167,6 +167,44 @@ def initialize_rag_agent():
         st.exception(e)
         return None
 
+
+@st.cache_resource
+def get_shared_credit_tracker():
+    """Return a shared PharmaceuticalCreditTracker instance (cached)."""
+    try:
+        from src.monitoring.credit_tracker import PharmaceuticalCreditTracker
+        return PharmaceuticalCreditTracker()
+    except Exception:
+        return None
+
+
+def fetch_credit_burn_snapshot():
+    """Fetch a compact snapshot of credits and burn metrics for UI display.
+
+    Returns a dict with keys: used_today (int), burn_rate (float), service_counts (dict)
+    or an empty dict when unavailable.
+    """
+    try:
+        tracker = get_shared_credit_tracker()
+        if tracker is None:
+            return {}
+        analytics = tracker.get_pharmaceutical_analytics()
+        base = analytics.get("base_monitor_summary", {}) if isinstance(analytics, dict) else {}
+        burn = analytics.get("daily_burn") if isinstance(analytics, dict) else None
+        out = {}
+        if isinstance(burn, dict):
+            used_today = burn.get("used_today")
+            burn_rate = burn.get("burn_rate")
+            if used_today is not None and burn_rate is not None:
+                out["used_today"] = used_today
+                out["burn_rate"] = float(burn_rate)
+        svc = base.get("by_service") if isinstance(base, dict) else None
+        if isinstance(svc, dict):
+            out["service_counts"] = svc
+        return out
+    except Exception:
+        return {}
+
 def display_header():
     """Display the main header"""
     st.markdown("""
@@ -221,27 +259,21 @@ def display_sidebar(rag_agent):
         except Exception:
             st.sidebar.caption("Pharma policy info unavailable")
 
-        # Credits & burn (best-effort)
+        # Credits & burn (best-effort, uses shared cached tracker)
         st.sidebar.markdown("### 🧾 Credits & Burn")
         try:
-            from src.monitoring.credit_tracker import PharmaceuticalCreditTracker
-            tracker = PharmaceuticalCreditTracker()
-            analytics = tracker.get_pharmaceutical_analytics()
-            base = analytics.get("base_monitor_summary", {})
-            burn = analytics.get("daily_burn") or {}
-            if base or burn:
-                used_today = burn.get("used_today")
-                burn_rate = burn.get("burn_rate")
-                if used_today is not None and burn_rate is not None:
-                    st.sidebar.metric("Used Today", used_today)
-                    st.sidebar.metric("Burn Rate", f"{burn_rate:.2f}x/day budget")
-                svc = base.get("by_service", {})
-                if svc:
-                    st.sidebar.caption("Service usage (month):")
-                    for name, cnt in svc.items():
-                        st.sidebar.caption(f"• {name}: {cnt}")
-            else:
+            snap = fetch_credit_burn_snapshot()
+            if not snap:
                 st.sidebar.caption("No credit usage recorded yet this session")
+            else:
+                if "used_today" in snap and "burn_rate" in snap:
+                    st.sidebar.metric("Used Today", snap["used_today"])
+                    st.sidebar.metric("Burn Rate", f"{snap['burn_rate']:.2f}x/day budget")
+                for_svc = snap.get("service_counts") or {}
+                if for_svc:
+                    st.sidebar.caption("Service usage (month):")
+                    for name, cnt in for_svc.items():
+                        st.sidebar.caption(f"• {name}: {cnt}")
         except Exception:
             st.sidebar.caption("Credit monitor unavailable")
 
