@@ -72,10 +72,15 @@ class NVIDIABuildCreditsMonitor:
     aligned to monthly limits as defined in alerts config (fractions of monthly).
     """
 
-    def __init__(self, api_key: Optional[str]):
+    def __init__(self, api_key: Optional[str], monthly_free_requests: int = 10000):
         self.api_key = api_key
+        # Configurable monthly limit (defaults to 10k)
+        try:
+            self.monthly_free_requests = int(monthly_free_requests) if int(monthly_free_requests) > 0 else 10000
+        except Exception:
+            self.monthly_free_requests = 10000
         self.credits_used = 0
-        self.credits_remaining = 10000
+        self.credits_remaining = self.monthly_free_requests
         self._daily_usage: Dict[str, int] = {}
         self._by_service: Dict[str, int] = {}
         self._by_query_type: Dict[str, int] = {}
@@ -90,7 +95,7 @@ class NVIDIABuildCreditsMonitor:
         except Exception:
             tokens = 1
         self.credits_used += tokens
-        self.credits_remaining = max(0, 10000 - self.credits_used)
+        self.credits_remaining = max(0, self.monthly_free_requests - self.credits_used)
         self._by_service[service] = self._by_service.get(service, 0) + 1
         day_key = datetime.now().strftime('%Y-%m-%d')
         self._daily_usage[day_key] = self._daily_usage.get(day_key, 0) + 1
@@ -125,7 +130,7 @@ class NVIDIABuildCreditsMonitor:
 
     def daily_burn_rate(self) -> Dict[str, Any]:
         """Return daily usage with burn_rate as fraction of monthly free limit (10k)."""
-        monthly_limit = 10000
+        monthly_limit = self.monthly_free_requests
         today = datetime.now().strftime('%Y-%m-%d')
         used_today = int(self._daily_usage.get(today, 0))
         return {
@@ -145,10 +150,22 @@ class NVIDIABuildCreditsMonitor:
         return {
             "requests_this_month": self.credits_used,
             "remaining": self.credits_remaining,
+            "monthly_limit": self.monthly_free_requests,
             "by_service": dict(self._by_service),
             "by_query_type": dict(self._by_query_type),
             "daily": dict(self._daily_usage),
         }
+
+    def set_monthly_free_requests(self, value: int) -> None:
+        """Update the monthly limit and adjust remaining credits accordingly."""
+        try:
+            v = int(value)
+            if v <= 0:
+                return
+            self.monthly_free_requests = v
+            self.credits_remaining = max(0, self.monthly_free_requests - self.credits_used)
+        except Exception:
+            pass
 
 @dataclass
 class CreditUsageTracker:

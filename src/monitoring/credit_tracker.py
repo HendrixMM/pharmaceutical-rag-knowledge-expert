@@ -93,6 +93,8 @@ class PharmaceuticalCreditTracker:
             enable_project_tracking: Enable research project budgeting
         """
         # Composition: Use existing monitor as base
+        # Initialize base monitor with default monthly limit; it will be updated
+        # from centralized config below when available.
         self.base_monitor = base_monitor or NVIDIABuildCreditsMonitor(
             api_key=os.getenv("NVIDIA_API_KEY")
         )
@@ -123,6 +125,12 @@ class PharmaceuticalCreditTracker:
         self._monthly_free_requests: int = 10000
         # Optionally merge thresholds from centralized YAML
         self._load_alert_thresholds_from_yaml()
+        # Propagate configured monthly free requests into base monitor if supported
+        try:
+            if hasattr(self.base_monitor, "set_monthly_free_requests"):
+                self.base_monitor.set_monthly_free_requests(self._monthly_free_requests)
+        except Exception:
+            pass
 
         # Load cached data
         self._load_cached_data()
