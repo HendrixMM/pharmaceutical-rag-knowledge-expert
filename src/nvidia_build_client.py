@@ -62,34 +62,93 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
-# Re-export enhanced NVIDIA Build free-tier credit monitor for pharma tracking
+# Local enhanced NVIDIA Build free-tier credit monitor (pharma-aware)
 # -----------------------------------------------------------------------------
-try:
-    # Prefer the enhanced implementation defined in nemo_retriever_client
-    from src.nemo_retriever_client import NVIDIABuildCreditsMonitor  # type: ignore
-except Exception:  # pragma: no cover
-    # Minimal fallback to avoid import errors; pharma tracker has its own stub too
-    class NVIDIABuildCreditsMonitor:  # type: ignore
-        def __init__(self, api_key=None):
-            self.api_key = api_key
-            self.credits_used = 0
-            self.credits_remaining = 10000
-            self._daily: Dict[str, int] = {}
+class NVIDIABuildCreditsMonitor:
+    """Credit monitor for NVIDIA Build free tier with pharma-aware helpers.
 
-        def log_api_call(self, service: str, tokens_used: int = 1) -> None:
-            self.credits_used += max(1, int(tokens_used or 1))
-            self.credits_remaining = max(0, 10000 - self.credits_used)
-            day = datetime.now().strftime('%Y-%m-%d')
-            self._daily[day] = self._daily.get(day, 0) + 1
+    Standalone implementation to avoid importing modules with heavy optional
+    dependencies. Tracks request usage and provides simple daily burn reporting
+    aligned to monthly limits as defined in alerts config (fractions of monthly).
+    """
 
-        def get_usage_summary(self) -> Dict[str, Any]:
-            return {"requests_this_month": self.credits_used}
+    def __init__(self, api_key: Optional[str]):
+        self.api_key = api_key
+        self.credits_used = 0
+        self.credits_remaining = 10000
+        self._daily_usage: Dict[str, int] = {}
+        self._by_service: Dict[str, int] = {}
+        self._by_query_type: Dict[str, int] = {}
+        self._attached_tracker = None  # Optional external tracker
 
-        def daily_burn_rate(self) -> Dict[str, Any]:
-            day = datetime.now().strftime('%Y-%m-%d')
-            used_today = int(self._daily.get(day, 0))
-            monthly_limit = 10000
-            return {"date": day, "used_today": used_today, "monthly_limit": monthly_limit, "burn_rate": used_today / monthly_limit}
+    def log_api_call(self, service: str, tokens_used: int = 1) -> None:
+        """Record a call; 'tokens_used' acts as unit cost. Free-tier gating uses counts.
+        Consumers should pass tokens_used=1 for request-based tracking.
+        """
+        try:
+            tokens = max(1, int(tokens_used or 1))
+        except Exception:
+            tokens = 1
+        self.credits_used += tokens
+        self.credits_remaining = max(0, 10000 - self.credits_used)
+        self._by_service[service] = self._by_service.get(service, 0) + 1
+        day_key = datetime.now().strftime('%Y-%m-%d')
+        self._daily_usage[day_key] = self._daily_usage.get(day_key, 0) + 1
+        if self.credits_remaining <= 100:
+            logger.warning("Low NVIDIA Build credits remaining: %s", self.credits_remaining)
+        logger.info("Credits: service=%s used=%s remaining=%s", service, tokens, self.credits_remaining)
+
+    def log_api_call_pharma(self,
+                            service: str,
+                            tokens_used: int = 1,
+                            query_text: Optional[str] = None,
+                            query_type: Optional[str] = None) -> None:
+        """Record a call with pharmaceutical context; derives query_type if absent."""
+        self.log_api_call(service, tokens_used=tokens_used)
+        qtype = query_type or self.classify_pharma_query(query_text or "")
+        self._by_query_type[qtype] = self._by_query_type.get(qtype, 0) + 1
+
+    def attach_pharma_tracker(self, tracker: Any) -> None:
+        self._attached_tracker = tracker
+
+    def classify_pharma_query(self, text: str) -> str:
+        t = (text or "").lower()
+        if any(k in t for k in ("interaction", "contraindication", "together", "combined")):
+            return "drug_interaction"
+        if any(k in t for k in ("pharmacokinetic", "half-life", "clearance", "absorption", "metabolism")):
+            return "pharmacokinetics"
+        if any(k in t for k in ("trial", "study", "patient", "efficacy", "safety")):
+            return "clinical_trial"
+        if any(k in t for k in ("mechanism", "pathway", "target", "receptor")):
+            return "mechanism"
+        return "general"
+
+    def daily_burn_rate(self) -> Dict[str, Any]:
+        """Return daily usage with burn_rate as fraction of monthly free limit (10k)."""
+        monthly_limit = 10000
+        today = datetime.now().strftime('%Y-%m-%d')
+        used_today = int(self._daily_usage.get(today, 0))
+        return {
+            "date": today,
+            "used_today": used_today,
+            "monthly_limit": monthly_limit,
+            "burn_rate": round(used_today / max(1.0, float(monthly_limit)), 6),
+        }
+
+    def recommend_batch_size(self, service: str, queue_len: int) -> int:
+        base = 50 if service == "embedding" else 10
+        if queue_len > base:
+            base = min(base + (queue_len // 10), 100 if service == "embedding" else 20)
+        return max(1, base)
+
+    def get_usage_summary(self) -> Dict[str, Any]:
+        return {
+            "requests_this_month": self.credits_used,
+            "remaining": self.credits_remaining,
+            "by_service": dict(self._by_service),
+            "by_query_type": dict(self._by_query_type),
+            "daily": dict(self._daily_usage),
+        }
 
 @dataclass
 class CreditUsageTracker:
