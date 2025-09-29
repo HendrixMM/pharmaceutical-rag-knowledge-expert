@@ -7,5 +7,14 @@
     "cost_tier": "free_tier",
     "timestamp": "2025-09-29T12:55:15.581619",
     "research_context": "ACE inhibitor interaction"
+  },
+  {
+    "query_type": "drug_interaction",
+    "model_used": "embedding",
+    "tokens_consumed": 10,
+    "response_time_ms": 100,
+    "cost_tier": "free_tier",
+    "timestamp": "2025-09-29T13:13:37.413446",
+    "research_context": "ACE inhibitor interaction"
   }
 ]

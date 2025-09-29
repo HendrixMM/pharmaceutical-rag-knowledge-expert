@@ -406,17 +406,26 @@ class PharmaceuticalCreditTracker:
             daily = None
             if hasattr(self.base_monitor, "daily_burn_rate"):
                 daily = self.base_monitor.daily_burn_rate()
-            if daily and daily.get("burn_rate", 0) > self.alert_thresholds.get("daily_burn_rate", 0.05):
+            # Daily burn threshold is defined as a fraction of the monthly limit in alerts.yaml
+            threshold = float(self.alert_thresholds.get("daily_burn_rate", 0.05))
+            if isinstance(daily, dict):
+                burn = float(daily.get("burn_rate", 0.0) or 0.0)
+                if burn >= threshold:
+                    logger.info(
+                        "Daily burn rate alert: burn_rate=%.4f used_today=%s (threshold=%.4f of monthly)",
+                        burn,
+                        daily.get("used_today"),
+                        threshold,
+                    )
+                    return
+            # Fallback: compute against monthly denominator (10k requests)
+            today = [q for q in self.pharmaceutical_queries if q.timestamp.date() == datetime.now().date()]
+            if len(today) >= int(10000 * threshold):
                 logger.info(
-                    "Daily burn rate alert: burn_rate=%.3f used_today=%s",
-                    daily.get("burn_rate"),
-                    daily.get("used_today"),
+                    "Daily burn rate alert: %s queries today (threshold=%s)",
+                    len(today),
+                    int(10000 * threshold),
                 )
-            else:
-                # Fallback: estimate from local records (assuming 10k/month ≈ 333/day)
-                today = [q for q in self.pharmaceutical_queries if q.timestamp.date() == datetime.now().date()]
-                if len(today) > int(10000 * self.alert_thresholds["daily_burn_rate"]):
-                    logger.info("Daily burn rate alert: %s queries today", len(today))
         except Exception:
             pass
 

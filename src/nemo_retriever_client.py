@@ -144,16 +144,23 @@ class NVIDIABuildCreditsMonitor:
         return "general"
 
     def daily_burn_rate(self) -> Dict[str, Any]:
-        """Return daily usage and simple burn-rate estimate relative to 10k/month."""
-        # Approximate daily budget for a 30-day month
-        daily_budget = 10000 / 30.0
+        """
+        Return daily usage with burn_rate expressed as a fraction of the monthly limit.
+
+        Notes
+        -----
+        - The burn_rate here uses the monthly limit as the denominator to align
+          with config/alerts.yaml, where daily_burn_rate thresholds are defined
+          as a fraction of the monthly free tier (e.g., 0.05 => 5% of 10k = 500).
+        """
+        monthly_limit = 10000  # NVIDIA Build monthly free requests
         today = time.strftime("%Y-%m-%d")
         used_today = int(self._daily_usage.get(today, 0))
         return {
             "date": today,
             "used_today": used_today,
-            "daily_budget": int(daily_budget),
-            "burn_rate": round(used_today / max(1.0, daily_budget), 3)
+            "monthly_limit": monthly_limit,
+            "burn_rate": round(used_today / max(1.0, float(monthly_limit)), 6),
         }
 
     def recommend_batch_size(self, service: str, queue_len: int) -> int:
