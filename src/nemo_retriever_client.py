@@ -1,17 +1,17 @@
 """
 NVIDIA NeMo Retriever Universal Client
 
-Provides unified access to all NVIDIA NeMo Retriever NIMs:
-- Text Embedding NIMs (NV-EmbedQA-E5-v5, NV-EmbedQA-Mistral7B-v2, Snowflake-Arctic-Embed-L)
-- Text Reranking NIMs (NV-RerankQA-Mistral4B-v3)
-- Document Extraction NIMs (NeMo Retriever Extraction/NV-Ingest)
+Provides unified access to NVIDIA NeMo Retriever NIMs and a cloud-first
+enhanced client wrapper.
 
-Built with MCP-enhanced documentation context to ensure compatibility
-with the latest NVIDIA NeMo Retriever patterns and best practices.
+Factory guidance:
+- Use `create_client()` for sync code (returns immediately). When cloud-first is
+  enabled, it returns `NeMoClientWrapper` wrapping the enhanced client; otherwise
+  it returns `NeMoRetrieverClient`.
+- Use `create_client_async()` in async codebases to mirror the above with an
+  async alias returning immediately (no awaits required).
 
-<<use_mcp microsoft-learn>>
-
-This client provides:
+Features:
 1. Unified API for all NeMo NIMs
 2. Automatic retry and fallback logic
 3. Health monitoring and diagnostics
@@ -33,6 +33,20 @@ import requests
 from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings, NVIDIARerank
 
 logger = logging.getLogger(__name__)
+
+# Enhanced client imports for cloud-first integration
+try:
+    from .clients.nemo_client_enhanced import EnhancedNeMoClient
+    from .enhanced_config import EnhancedRAGConfig
+    ENHANCED_CLIENT_AVAILABLE = True
+except ImportError:
+    try:
+        from src.clients.nemo_client_enhanced import EnhancedNeMoClient
+        from src.enhanced_config import EnhancedRAGConfig
+        ENHANCED_CLIENT_AVAILABLE = True
+    except ImportError:
+        logger.warning("Enhanced client not available, using standard NeMo client only")
+        ENHANCED_CLIENT_AVAILABLE = False
 
 @dataclass
 class NeMoServiceConfig:
@@ -252,6 +266,40 @@ class NeMoRetrieverClient:
 
         except Exception as e:
             logger.warning(f"LangChain integration initialization failed: {e}")
+
+    @staticmethod
+    def validate_model_availability(service: str, model: str) -> bool:
+        """
+        Validate if a model is available for a specific service.
+
+        Args:
+            service: Service type ("embedding" or "reranking")
+            model: Model name to validate
+
+        Returns:
+            True if model is available, False otherwise
+        """
+        # Normalize model name by extracting the key part
+        model_key = model
+        if "/" in model:
+            # Extract the part after the last slash for matching
+            model_key = model.split("/")[-1]
+
+        if service == "embedding":
+            # Check both the key and the full_name in EMBEDDING_MODELS
+            return (
+                model_key in NeMoRetrieverClient.EMBEDDING_MODELS or
+                any(info.get("full_name") == model for info in NeMoRetrieverClient.EMBEDDING_MODELS.values())
+            )
+        elif service == "reranking":
+            # Check both the key and the full_name in RERANKING_MODELS
+            return (
+                model_key in NeMoRetrieverClient.RERANKING_MODELS or
+                any(info.get("full_name") == model for info in NeMoRetrieverClient.RERANKING_MODELS.values())
+            )
+        else:
+            # Unknown service type
+            return False
 
     async def health_check(self, force: bool = False) -> Dict[str, Any]:
         """
@@ -652,17 +700,292 @@ class NeMoRetrieverClient:
         }
 
 
+# CANONICAL client factory function for cloud-first integration
+def create_client() -> Union["NeMoClientWrapper", "NeMoRetrieverClient"]:
+    """
+    CANONICAL factory - use this for new code.
+
+    Create client based on configuration - enhanced client whenever available, legacy for fallback.
+    This is the primary entry point for all NeMo Retriever client creation.
+
+    Returns:
+        NeMoClientWrapper when enhanced client is available (regardless of credentials),
+        otherwise NeMoRetrieverClient. When credentials are missing, cloud functionality
+        is disabled but enhanced fallback paths remain available.
+    """
+    try:
+        if ENHANCED_CLIENT_AVAILABLE:
+            cfg = EnhancedRAGConfig.from_env()
+            if cfg.enable_nvidia_build_fallback and not cfg.has_nvidia_build_credentials():
+                logger.info("Enhanced client available with cloud functionality disabled: NVIDIA Build credentials missing")
+            # Return wrapper to preserve legacy async interface whenever enhanced client is available
+            return NeMoClientWrapper()
+    except Exception as e:
+        logger.debug(f"Failed to create enhanced client: {e}")
+
+    # Fallback to legacy client only when enhanced client unavailable
+    return NeMoRetrieverClient()
+
+
+async def create_client_async() -> Union["NeMoClientWrapper", "NeMoRetrieverClient"]:
+    """Async alias to create_client() for async codebases.
+
+    Returns immediately without awaiting any network operations.
+    """
+    return create_client()
+
+
+class NeMoClientWrapper:
+    """
+    Drop-in compatibility wrapper that delegates to EnhancedNeMoClient.
+
+    This class provides backward compatibility for existing consumers that expect
+    the original NeMoRetrieverClient interface while transparently using the
+    enhanced cloud-first client implementation.
+    """
+
+    def __init__(self, api_key: Optional[str] = None, **kwargs):
+        """
+        Initialize wrapper with enhanced client.
+
+        Args:
+            api_key: NVIDIA API key (optional, uses env var if not provided)
+            **kwargs: Additional arguments (ignored for compatibility)
+        """
+        if not ENHANCED_CLIENT_AVAILABLE:
+            raise ImportError(
+                "Enhanced client not available for wrapper. Use NeMoRetrieverClient directly."
+            )
+
+        # Construct enhanced client directly to avoid factory recursion
+        cfg = EnhancedRAGConfig.from_env()
+        self._enhanced = EnhancedNeMoClient(config=cfg, enable_fallback=True, pharmaceutical_optimized=True, api_key=api_key)
+
+    async def embed_texts(self, texts: List[str], model: str = "nvidia/nv-embedqa-e5-v5", use_langchain: bool = True) -> NeMoAPIResponse:
+        """
+        Generate embeddings using enhanced client. Always returns NeMoAPIResponse
+        to preserve legacy compatibility regardless of enhanced client internals.
+
+        Args:
+            texts: List of texts to embed
+            model: Embedding model to use
+            use_langchain: Ignored for compatibility
+
+        Returns:
+            NeMoAPIResponse with embeddings data
+        """
+        start_time = time.time()
+        # Normalize short model names to full for cloud path defense-in-depth
+        try:
+            from .clients.model_normalization import normalize_model as _normalize_model
+            model_full = _normalize_model(model, True)
+        except Exception:
+            model_full = model
+        try:
+            resp = await self._enhanced.embed_texts(texts, model_full)
+            elapsed_ms = (time.time() - start_time) * 1000
+
+            # If already the expected type, return directly
+            if isinstance(resp, NeMoAPIResponse):
+                # Ensure response_time shows measured latency
+                resp.response_time_ms = elapsed_ms
+                return resp
+
+            # Normalize dict or ClientResponse from enhanced client
+            embeddings = None
+            model_used = model_full
+            error = None
+
+            try:
+                # Attempt to import enhanced ClientResponse for isinstance checks
+                from .clients.nemo_client_enhanced import ClientResponse as EnhancedClientResponse  # type: ignore
+            except Exception:
+                EnhancedClientResponse = None  # type: ignore
+
+            if EnhancedClientResponse is not None and isinstance(resp, EnhancedClientResponse):  # type: ignore[arg-type]
+                if resp.success:
+                    data = resp.data or {}
+                    if isinstance(data, dict) and "embeddings" in data:
+                        embeddings = data.get("embeddings")
+                        model_used = data.get("model") or model_full
+                    else:
+                        error = "Enhanced client returned success without 'embeddings' payload"
+                else:
+                    error = resp.error or "Embedding creation failed"
+            elif isinstance(resp, dict):
+                # Best-effort normalization from dict
+                if "embeddings" in resp:
+                    embeddings = resp.get("embeddings")
+                    model_used = resp.get("model") or model_full
+                elif isinstance(resp.get("data"), list):
+                    # If data appears to be a list of vectors (list[list[float]])
+                    data_list = resp.get("data")
+                    if data_list == [] or (isinstance(data_list[0], list)):
+                        embeddings = data_list
+                        model_used = resp.get("model") or model_full
+                    else:
+                        error = "Unexpected 'data' format for embeddings payload"
+                else:
+                    error = resp.get("error") or "Unexpected embeddings payload from enhanced client"
+            else:
+                # Unknown shape; provide a descriptive error
+                error = f"Unexpected response type from enhanced client: {type(resp).__name__}"
+
+            if embeddings is not None:
+                return NeMoAPIResponse(
+                    success=True,
+                    data={"embeddings": embeddings},
+                    response_time_ms=elapsed_ms,
+                    service="embedding",
+                    model=model_used,
+                )
+            return NeMoAPIResponse(
+                success=False,
+                error=error or "Embedding creation failed",
+                response_time_ms=elapsed_ms,
+                service="embedding",
+                model=model_used,
+            )
+        except Exception as e:
+            elapsed_ms = (time.time() - start_time) * 1000
+            logger.error(f"Wrapper embedding failed: {e}")
+            return NeMoAPIResponse(
+                success=False,
+                error=str(e),
+                response_time_ms=elapsed_ms,
+                service="embedding",
+                model=model_full,
+            )
+
+    async def rerank_passages(self, query: str, passages: List[str], model: str = "nvidia/nv-rerankqa-mistral4b-v3",
+                              top_k: Optional[int] = None, use_langchain: bool = True) -> NeMoAPIResponse:
+        """
+        Rerank passages using enhanced client.
+
+        Args:
+            query: Search query
+            passages: List of passages to rerank
+            model: Reranking model to use
+            top_k: Return top K results (default: all)
+            use_langchain: Ignored for compatibility
+
+        Returns:
+            NeMoAPIResponse with reranked passages and scores
+        """
+        start_time = time.time()
+
+        # Normalize short model names to full
+        try:
+            from .clients.model_normalization import normalize_model as _normalize_model
+            model_full = _normalize_model(model, True)
+        except Exception:
+            model_full = model
+
+        try:
+            # Delegate to enhanced client's async-compatible rerank
+            response = await self._enhanced.rerank_passages_async(query, passages, model_full, top_k)
+            response_time = (time.time() - start_time) * 1000
+
+            if response.success and response.data:
+                # Convert ClientResponse to NeMoAPIResponse format
+                # Expect normalized [{text, score}] sorted desc
+                reranked_passages = response.data.get("reranked_passages", [])
+
+                return NeMoAPIResponse(
+                    success=True,
+                    data={"reranked_passages": reranked_passages},
+                    response_time_ms=response_time,
+                    service="reranking",
+                    model=model_full
+                )
+            else:
+                return NeMoAPIResponse(
+                    success=False,
+                    error=response.error or "Reranking failed",
+                    response_time_ms=response_time,
+                    service="reranking",
+                    model=model_full
+                )
+
+        except Exception as e:
+            response_time = (time.time() - start_time) * 1000
+            logger.error(f"Wrapper reranking failed: {e}")
+
+            return NeMoAPIResponse(
+                success=False,
+                error=str(e),
+                response_time_ms=response_time,
+                service="reranking",
+                model=model_full
+            )
+
+    async def health_check(self, force: bool = False) -> Dict[str, Any]:
+        """Get health status from enhanced client in legacy shape."""
+        status = self.get_service_status()
+        return status.get("services", status)
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get performance metrics from enhanced client."""
+        return self._enhanced.get_performance_metrics()
+
+    def get_service_status(self) -> Dict[str, Any]:
+        """Get current service status from enhanced client.
+
+        Adds legacy-compatible keys to align with original NeMoRetrieverClient.get_service_status().
+        """
+        status = self._enhanced.get_endpoint_status()
+
+        # Legacy structure expects these keys
+        services = status.get("services") or {
+            "cloud": status.get("cloud_status", {"success": status.get("cloud_available", False)}),
+            "nemo": {"available": status.get("nemo_available", False)},
+        }
+
+        # Pull metrics from enhanced client
+        metrics = self._enhanced.get_performance_metrics()
+
+        # Available models from legacy client constants
+        try:
+            embedding_models = list(NeMoRetrieverClient.EMBEDDING_MODELS.keys())
+            reranking_models = list(NeMoRetrieverClient.RERANKING_MODELS.keys())
+        except Exception:
+            embedding_models, reranking_models = [], []
+
+        legacy = {
+            "services": services,
+            "metrics": metrics,
+            "available_models": {
+                "embedding": embedding_models,
+                "reranking": reranking_models,
+            },
+            "langchain_integration": {
+                "enabled": False,
+                "embeddings_available": [],
+                "reranker_available": False,
+            },
+        }
+
+        return legacy
+
+
 # Convenience functions for easy integration
 async def create_nemo_client(api_key: Optional[str] = None, credits_monitor: Optional[NVIDIABuildCreditsMonitor] = None) -> NeMoRetrieverClient:
     """
-    Factory function to create and validate NeMo Retriever client.
+    DEPRECATED: Factory function to create and validate NeMo Retriever client.
+
+    Use create_client() instead for cloud-first enhanced functionality.
+    This legacy factory is maintained for backward compatibility.
 
     Args:
         api_key: NVIDIA API key (optional, uses env var if not provided)
+        credits_monitor: Optional credit usage tracker
 
     Returns:
         Initialized and validated NeMoRetrieverClient
     """
+    logger.warning(
+        "create_nemo_client() is deprecated. Use create_client() for enhanced cloud-first functionality."
+    )
     client = NeMoRetrieverClient(api_key=api_key, credits_monitor=credits_monitor)
 
     # Perform initial health check

@@ -1,0 +1,277 @@
+# Comprehensive Test Automation Configuration
+# Advanced configuration for pharmaceutical RAG system testing
+
+# Test execution configuration
+test_suites:
+  - pharmaceutical_credit_tracking
+  - alert_management
+  - batch_processing
+  - query_classification
+  - safety_alert_integration
+  - nvidia_build_compatibility
+
+# Performance thresholds and benchmarks
+performance_thresholds:
+  # Response time benchmarks (milliseconds)
+  response_time_ms: 2000
+  batch_processing_time_ms: 5000
+  query_classification_time_ms: 500
+
+  # Resource utilization limits
+  memory_usage_mb: 512
+  cpu_usage_percent: 80
+
+  # API performance benchmarks
+  api_success_rate: 0.95
+  api_response_time_ms: 1500
+
+  # Pharmaceutical-specific benchmarks
+  drug_safety_accuracy: 0.95
+  interaction_detection_accuracy: 0.90
+  contraindication_detection_accuracy: 0.92
+  clinical_research_relevance: 0.85
+
+  # Cost optimization benchmarks
+  cost_optimization_efficiency: 0.80
+  free_tier_utilization_target: 0.90
+  batch_processing_efficiency: 0.85
+
+# Pharmaceutical validation configuration
+pharmaceutical_validation: true
+pharmaceutical_requirements:
+  # Drug safety validation
+  drug_safety:
+    minimum_accuracy: 0.95
+    response_time_limit_ms: 1000
+    safety_check_coverage: 1.0
+    critical_interaction_detection: 0.98
+
+  # Clinical research validation
+  clinical_research:
+    relevance_threshold: 0.85
+    evidence_quality_score: 0.80
+    systematic_review_accuracy: 0.90
+
+  # Cost monitoring validation
+  cost_monitoring:
+    free_tier_optimization: 0.90
+    cost_prediction_accuracy: 0.85
+    alert_threshold_accuracy: 0.95
+
+  # Regulatory compliance
+  regulatory_compliance:
+    data_privacy_compliance: true
+    audit_trail_completeness: 1.0
+    safety_documentation: true
+
+# Cost monitoring and optimization
+cost_monitoring: true
+cost_thresholds:
+  daily_limit: 333      # Free tier daily allocation
+  monthly_limit: 10000  # Free tier monthly limit
+  warning_threshold: 0.8
+  critical_threshold: 0.9
+
+  # Pharmaceutical cost optimization
+  pharmaceutical_priority_weights:
+    drug_safety_queries: 3.0
+    drug_interactions: 3.0
+    clinical_research: 2.0
+    pharmacokinetics: 1.5
+    general_pharma: 1.0
+
+# Safety monitoring configuration
+safety_checks: true
+safety_requirements:
+  # Drug interaction monitoring
+  drug_interactions:
+    severity_thresholds:
+      critical: 0.9
+      major: 0.7
+      moderate: 0.5
+      minor: 0.3
+    real_time_monitoring: true
+
+  # Contraindication checking
+  contraindications:
+    absolute_contraindication_detection: 0.98
+    relative_contraindication_detection: 0.90
+    patient_safety_priority: true
+
+  # Safety alert system
+  safety_alerts:
+    response_time_limit_ms: 500
+    escalation_threshold: 3
+    notification_reliability: 0.99
+
+# Continuous validation settings
+continuous_mode: false
+continuous_validation:
+  interval_minutes: 60
+  full_validation_interval_hours: 24
+  performance_monitoring_interval_minutes: 15
+
+  # Monitoring thresholds for continuous validation
+  alert_conditions:
+    success_rate_below: 0.90
+    response_time_above_ms: 3000
+    error_rate_above: 0.05
+    pharmaceutical_accuracy_below: 0.90
+
+# Notification and reporting
+notification_channels:
+  - console
+  - file
+  - email  # When configured
+  - webhook # When configured
+
+notification_settings:
+  # Console notifications
+  console:
+    verbose: true
+    show_performance_metrics: true
+    show_pharmaceutical_metrics: true
+
+  # File-based notifications
+  file:
+    results_directory: "test_results"
+    summary_file: "latest_test_summary.json"
+    detailed_report: true
+
+  # Email notifications (optional)
+  email:
+    enabled: false
+    smtp_server: ""
+    recipients: []
+    send_on_failure: true
+    send_daily_summary: true
+
+  # Webhook notifications (optional)
+  webhook:
+    enabled: false
+    url: ""
+    send_on_failure: true
+    include_detailed_results: false
+
+# Test environment configuration
+test_environment:
+  # Environment variables for testing
+  environment_variables:
+    TESTING: "true"
+    ENVIRONMENT: "test"
+    ENABLE_PHARMACEUTICAL_VALIDATION: "true"
+    ENABLE_SAFETY_MONITORING: "true"
+    LOG_LEVEL: "INFO"
+
+  # Mock configurations for testing
+  mock_external_services: true
+  mock_api_responses: false  # Use real APIs when available
+
+  # Test data configuration
+  test_data:
+    pharmaceutical_queries_file: "tests/data/pharmaceutical_test_queries.json"
+    drug_interaction_test_cases: "tests/data/drug_interactions.json"
+    safety_test_scenarios: "tests/data/safety_scenarios.json"
+
+# Integration testing configuration
+integration_testing:
+  # API testing
+  api_testing:
+    nvidia_build_api: true
+    openai_sdk_compatibility: true
+    timeout_seconds: 30
+    retry_attempts: 3
+
+  # External service integration
+  external_services:
+    test_with_real_apis: false  # Enable only when API keys available
+    fallback_to_mocks: true
+    service_health_checks: true
+
+  # End-to-end workflow testing
+  e2e_workflows:
+    pharmaceutical_research_workflow: true
+    drug_safety_workflow: true
+    clinical_research_workflow: true
+    cost_optimization_workflow: true
+
+# Performance and load testing
+performance_testing:
+  # Load testing configuration
+  load_testing:
+    concurrent_users: 10
+    test_duration_seconds: 300
+    ramp_up_seconds: 60
+
+  # Stress testing configuration
+  stress_testing:
+    max_concurrent_users: 50
+    test_duration_seconds: 600
+    memory_limit_mb: 1024
+
+  # Performance benchmarking
+  benchmarking:
+    warmup_iterations: 5
+    test_iterations: 100
+    statistical_analysis: true
+
+# Security and compliance testing
+security_testing:
+  # Data privacy and protection
+  data_privacy:
+    pii_detection: true
+    phi_detection: true
+    data_anonymization_validation: true
+
+  # API security
+  api_security:
+    authentication_testing: true
+    authorization_testing: true
+    rate_limiting_validation: true
+
+  # Pharmaceutical compliance
+  pharmaceutical_compliance:
+    regulatory_standards_validation: true
+    audit_trail_verification: true
+    safety_documentation_completeness: true
+
+# Reporting and analytics
+reporting:
+  # Test result analytics
+  analytics:
+    trend_analysis: true
+    performance_regression_detection: true
+    pharmaceutical_accuracy_tracking: true
+    cost_optimization_analysis: true
+
+  # Report generation
+  report_formats:
+    - json
+    - html
+    - markdown
+
+  # Historical data retention
+  data_retention:
+    test_results_days: 90
+    performance_metrics_days: 30
+    pharmaceutical_metrics_days: 180  # Longer retention for pharmaceutical data
+
+# Advanced configuration
+advanced:
+  # Parallel execution
+  parallel_execution:
+    max_workers: 4
+    test_isolation: true
+    resource_sharing: false
+
+  # Custom validation rules
+  custom_validators:
+    pharmaceutical_accuracy_validator: "scripts/validators/pharmaceutical_accuracy.py"
+    cost_optimization_validator: "scripts/validators/cost_optimization.py"
+    safety_compliance_validator: "scripts/validators/safety_compliance.py"
+
+  # Plugin system
+  plugins:
+    - pharmaceutical_metrics_plugin
+    - cost_monitoring_plugin
+    - safety_validation_plugin

@@ -90,6 +90,30 @@ RAG-Template-for-NVIDIA-nemoretriever/
 - Vector database defaults to single-folder layout for compatibility; set `VECTOR_DB_PER_MODEL=true` for per-model indexing
 - CLI entrypoint added: `python -m src.pubmed_scraper "query" --write-sidecars`
 
+## 🧪 NIM-Native PubMed Pipeline (Cheapest Path)
+
+Run a minimal PubMed → Embed → Rerank pipeline via NVIDIA Build-hosted NIMs with credit-aware logging and strict health gating.
+
+Quick start:
+- Set in `.env`: `NVIDIA_API_KEY=...`, `ENABLE_NEMO_EXTRACTION=true`, `NEMO_EXTRACTION_STRATEGY=nemo`, `NEMO_EXTRACTION_STRICT=true`, `APP_ENV=production`, `PHARMA_DOMAIN_OVERLAY=true`.
+- Optional: `EMBEDDING_MODEL`, `RERANK_MODEL`, `NEMO_*_ENDPOINT` (self-hosted), `NVIDIA_BUILD_FREE_TIER=true`.
+
+Examples:
+- Validate config + run: `python -m scripts.pubmed_nim_pipeline --query "metformin pharmacokinetics" --batch-size 3 --top-k 5`
+- Bypass health for ad‑hoc runs: `python -m scripts.pubmed_nim_pipeline --query "cyp3a4 inhibitors" --skip-health`
+- Tighten health latency: `python -m scripts.pubmed_nim_pipeline --query "drug label safety" --health-latency-ms 2500`
+- PubMed-only testing (no NIM calls): `python -m scripts.pubmed_nim_pipeline --query "metformin pharmacokinetics" --pubmed-only --skip-health`
+
+Outputs:
+- Compact Markdown health table with masked key
+- Per‑phase latencies and approximate credits (if `NVIDIA_BUILD_FREE_TIER=true`)
+- Persisted summaries/benchmarks under `persist/`
+
+Troubleshooting:
+- See `docs/TROUBLESHOOTING_NVIDIA_BUILD.md` for common 401/404/422, model/endpoint mismatches, and latency gating.
+
+
+
 ## 📋 **Prerequisites**
 
 ### **System Requirements**
@@ -123,6 +147,104 @@ RAG-Template-for-NVIDIA-nemoretriever/
    - **Embedding Models**: `nvidia/nv-embed-v1`
    - **LLM Models**: `meta/llama-3.1-8b-instruct`
 2. Check the [NVIDIA API documentation](https://docs.api.nvidia.com) for current model availability
+
+## ✅ Testing Notes (Pharma Disclaimers & Async)
+
+To run the disclaimer-related tests locally with minimal friction:
+
+- Ensure pytest knows about the `asyncio` marker (our CI uses strict markers):
+  - Option A (per run): add `-o markers="asyncio: asyncio tests"`
+  - Option B (global): add a `markers` entry for `asyncio` in your local pytest.ini
+
+- Run only the disclaimer tests (no network required):
+  ```bash
+  pytest -q tests/test_disclaimer_flags.py -o markers="asyncio: asyncio tests"
+  ```
+
+These tests inject a dummy cloud client into `EnhancedNeMoClient` to avoid external calls. If you want to exercise the full OpenAI/NVIDIA Build stack in tests, install the SDK and export your key:
+
+```bash
+pip install 'openai>=1.0.0,<2.0.0'
+export NVIDIA_API_KEY=your_key
+pytest -q -o markers="asyncio: asyncio tests"
+```
+
+Important flags used by the chat+disclaimer flow:
+- `PHARMA_REQUIRE_DISCLAIMER=true` enforces a disclaimer in responses.
+- `APPEND_DISCLAIMER_IN_ANSWER=true|false` controls whether the disclaimer is appended to the text or just flagged in the payload via `disclaimer_added` and `disclaimer_text`.
+
+## 🧪 Rerank Cloud‑First Behavior
+
+Rerank ordering is driven by `ENABLE_CLOUD_FIRST_RERANK`:
+- `true` → NVIDIA Build rerank first, then NeMo reranking
+- `false` → NeMo reranking first, then NVIDIA Build rerank
+
+`ENABLE_NVB_RERANK` is treated as legacy; if explicitly set to `false`, it disables NVIDIA Build rerank regardless of ordering.
+
+### Rerank Retry/Backoff Tuning
+
+Use these environment variables to tune retry behavior for rerank calls. Sensible defaults avoid multi‑minute waits and keep jitter optional.
+
+- `RERANK_RETRY_BACKOFF_BASE` (float, seconds; default: `0.5`)
+  - Base for exponential backoff: delay = base × 2^attempt.
+- `RERANK_RETRY_MAX_ATTEMPTS` (int; default: `3`)
+  - Max retry attempts before surfacing an error (total tries = attempts + 1).
+- `RERANK_RETRY_JITTER` (bool; default: `true`)
+  - When true, adds uniform jitter in `[0, base]` to each computed delay.
+
+Advanced (code) overrides when constructing clients:
+- `NVIDIABuildConfig.request_backoff_base` (seconds)
+- `NVIDIABuildConfig.request_backoff_jitter` (seconds amplitude; `0` disables jitter)
+- `NVIDIABuildConfig.rerank_retry_max_attempts` (int)
+
+Per‑call overrides are also available on the wrapper method:
+- `OpenAIWrapper.rerank(..., max_retries=?, backoff_base=?, backoff_jitter=?)`
+
+## 💊 Pharma Environment Variables
+
+These environment variables control pharmaceutical behavior. `EnhancedRAGConfig.from_env` reads them and they flow into clients and feature flags:
+
+- `PHARMACEUTICAL_RESEARCH_MODE` (bool)
+  - Global pharma mode toggle exposed via `get_feature_flags()["pharmaceutical_research_mode"]`.
+- `PHARMACEUTICAL_FEATURE_DRUG_INTERACTION_ANALYSIS` (bool)
+- `PHARMACEUTICAL_FEATURE_CLINICAL_TRIAL_PROCESSING` (bool)
+- `PHARMACEUTICAL_FEATURE_PHARMACOKINETICS_OPTIMIZATION` (bool)
+  - Enable/disable specific pharma feature families.
+- `PHARMA_RESEARCH_PROJECT_BUDGETING` (bool)
+- `PHARMA_PROJECT_ID` (str)
+- `PHARMA_BUDGET_LIMIT_USD` (float)
+- `PHARMA_COST_PER_QUERY_TRACKING` (bool)
+  - Cost monitoring and budgeting used by the NVIDIA Build client. When budgeting is on, provide a positive `PHARMA_BUDGET_LIMIT_USD`.
+
+Related compliance and QA toggles:
+- `PHARMA_COMPLIANCE_MODE`, `PHARMA_REQUIRE_DISCLAIMER`, `PHARMA_REGION`,
+  `PHARMA_QUALITY_ASSURANCE_ENABLED`, `PHARMA_MEDICAL_TERMINOLOGY_VALIDATION`,
+  `PHARMA_WORKFLOW_TEMPLATES_ENABLED`, `PHARMA_SPECIALIZED_METRICS_ENABLED`.
+
+Tip: All of the above can be set in `.env`. See `src/enhanced_config.py` for defaults and mapping.
+
+### Pharma Benchmarks CLI
+
+Run the integrated capability checks against your current configuration:
+
+```bash
+python scripts/pharma_benchmarks_cli.py --pretty \
+  --fallback=true \
+  --api-key "$NVIDIA_API_KEY"
+```
+
+- Exit codes: 0 on success/partial, 1 on failure
+- Uses `.env` via `EnhancedRAGConfig.from_env()` and respects programmatic overrides
+
+## 🧩 Vector DB and Model Dimensions
+
+Switching embedding models (e.g., 4096 ↔ 1024 dims) requires either per‑model vector stores or a rebuild. This template defaults to:
+
+```env
+VECTOR_DB_PER_MODEL=true
+```
+
+If you disable per‑model storage, startup will validate FAISS index dimensions and raise a clear error when mismatched, suggesting either enabling per‑model directories or re‑indexing the corpus.
 
 ## 🚀 **Quick Start Guide**
 
@@ -1296,3 +1418,70 @@ This project is licensed under the **MIT License**
 ---
 
 ⭐ **Star this repository if it helps with your research!** ⭐
+## Local Rerank Setup
+
+Start the local reranker service and run tests:
+
+```
+# Spin up the reranker container and wait for health
+make start-rerank
+
+# Point your pipeline at the local endpoint
+export NEMO_RERANKING_ENDPOINT=http://localhost:8502/v1/rerank
+
+# Validate reranking works
+make test-rerank
+
+# Tear down the reranker when done
+make stop-rerank
+```
+
+Troubleshooting:
+
+- Ensure `NVIDIA_API_KEY` is set in `.env` before starting.
+- Healthcheck failures indicate the container isn’t ready; check logs with `docker-compose logs reranker`.
+- To skip rerank tests in CI, set `SKIP_RERANK=true`.
+
+### Start Local Stack (Embed + Rerank)
+
+```
+# Start both services and auto-write .env.local endpoints
+make start-local-stack
+
+# Stop both services
+make stop-local-stack
+
+# Start all (Embed + Rerank + Extraction)
+make start-local-all
+
+# Stop all
+make stop-local-all
+
+# Full cleanup
+make down-all
+```
+
+## Local Embed and Extraction (Optional)
+
+Start additional services for full self-hosted pipeline:
+
+```
+# Start embedder (http://localhost:8501)
+make start-embed
+export NEMO_EMBEDDING_ENDPOINT=http://localhost:8501/v1/embed
+
+# Start extraction (http://localhost:8503)
+make start-extraction
+export NEMO_EXTRACTION_ENDPOINT=http://localhost:8503/v1/extract
+
+# Stop services when finished
+make stop-embed
+make stop-extraction
+
+# Full cleanup
+make down-all
+```
+
+Notes:
+- Ensure your NVIDIA Build key is permitted to pull/run the NIM images.
+- You may override images via environment variables: `EMBED_IMAGE`, `RERANK_IMAGE`, `EXTRACT_IMAGE`.

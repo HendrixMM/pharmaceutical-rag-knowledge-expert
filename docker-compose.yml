@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  embedder:
+    image: ${EMBED_IMAGE:-nvidia/nv-embedqa-e5-v5:latest}
+    container_name: embed-nim
+    environment:
+      - NGC_API_KEY=${NVIDIA_API_KEY}
+      - EMBED_MODEL=nv-embedqa-e5-v5
+    ports:
+      - "8501:8501"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -H 'Authorization: Bearer $NGC_API_KEY' http://localhost:8501/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles: ["embed"]
+
+  reranker:
+    image: ${RERANK_IMAGE:-nvidia/llama-3_2-nemoretriever-500m-rerank-v2:latest}
+    container_name: rerank-nim
+    environment:
+      - NGC_API_KEY=${NVIDIA_API_KEY}
+      - RERANK_MODEL=llama-3_2-nemoretriever-500m-rerank-v2
+    ports:
+      - "8502:8502"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -H 'Authorization: Bearer $NGC_API_KEY' http://localhost:8502/health"]
+    
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles: ["rerank"]
+
+  extraction:
+    image: ${EXTRACT_IMAGE:-nvcr.io/nim/nvidia/nv-ingest:latest}
+    container_name: extract-nim
+    environment:
+      - NGC_API_KEY=${NVIDIA_API_KEY}
+    ports:
+      - "8503:8503"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -H 'Authorization: Bearer $NGC_API_KEY' http://localhost:8503/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles: ["extraction"]

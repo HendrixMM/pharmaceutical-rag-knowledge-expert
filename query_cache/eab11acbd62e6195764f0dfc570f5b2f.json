@@ -1,0 +1,467 @@
+{
+  "results": [
+    {
+      "pmid": "28076863",
+      "doi": "10.1159/000455014",
+      "title": "Adverse Renal Effects of Immune Checkpoint Inhibitors: A Narrative Review",
+      "abstract": "Ipilimumab is a fully human monoclonal antibody targeting cytotoxic T-lymphocyte antigen-4 and has become the first immune checkpoint inhibitor to enter clinical practice, being recently approved for the treatment of metastatic melanoma. Immune toxicity due to ipilimumab causing colitis, hepatitis, dermatitis and hypophysitis is well-described. We report on a case of acute renal failure resolving rapidly with high-dose corticosteroid treatment highlighting the importance of vigilance for rarer immune-related toxicities as clinical experience with ipilimumab grows.",
+      "authors": "Rimda Wanchoo, Sabine Karam, Nupur N. Uppal, Valerie S. Barta, Gilbert Deray, Craig Devoe, Vincent Launay‐Vacher, Kenar D. Jhaveri",
+      "publication_date": "2017-01-01",
+      "journal": "American Journal of Nephrology",
+      "full_text_url": "https://www.karger.com/Article/Pdf/455014",
+      "provider": "openalex",
+      "provider_family": "openalex",
+      "ingestion": "openalex",
+      "openalex_id": "https://openalex.org/W2572174216",
+      "drug_names": [
+        "Adverse",
+        "Checkpoint",
+        "Effects",
+        "Immune",
+        "Inhibitors",
+        "Ipilimumab",
+        "Narrative",
+        "Renal",
+        "Review",
+        "T-lymphocyte"
+      ],
+      "drug_annotations": [
+        {
+          "name": "Adverse",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Checkpoint",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Effects",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Immune",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Inhibitors",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Ipilimumab",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Narrative",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Renal",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Review",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "T-lymphocyte",
+          "type": "unknown",
+          "confidence": 0.6
+        }
+      ],
+      "cyp_enzymes": [],
+      "pharmacokinetics": {},
+      "dosage_information": [],
+      "ranking_score": 0.5125,
+      "ranking_breakdown": {
+        "quality": 0.5,
+        "recency": 0.5,
+        "sample_size": 0.55,
+        "species": 1.0,
+        "pharma_relevance": 0.2
+      }
+    },
+    {
+      "pmid": "9547031",
+      "doi": "10.1037//1076-8998.1.1.27",
+      "title": "Adverse health effects of high-effort/low-reward conditions.",
+      "abstract": "In addition to the person-environment fit model (J. R. French, R. D. Caplan, & R. V. Harrison, 1982) and the demand-control model (R. A. Karasek & T. Theorell, 1990), a third theoretical concept is proposed to assess adverse health effects of stressful experience at work: the effort-reward imbalance model. The focus of this model is on reciprocity of exchange in occupational life where high-cost/low-gain conditions are considered particularly stressful. Variables measuring low reward in terms of low status control (e.g., lack of promotion prospects, job insecurity) in association with high extrinsic (e.g., work pressure) or intrinsic (personal coping pattern, e.g., high need for control) effort independently predict new cardiovascular events in a prospective study on blue-collar men. Furthermore, these variables partly explain prevalence of cardiovascular risk factors (hypertension, atherogenic lipids) in 2 independent studies. Studying adverse health effects of high-effort/low-reward conditions seems well justified, especially in view of recent developments of the labor market.",
+      "authors": "Johannés Siegrist",
+      "publication_date": "1996-01-01",
+      "journal": "Journal of Occupational Health Psychology",
+      "full_text_url": "",
+      "provider": "openalex",
+      "provider_family": "openalex",
+      "ingestion": "openalex",
+      "openalex_id": "https://openalex.org/W2006906014",
+      "drug_names": [
+        "Adverse",
+        "Caplan",
+        "control",
+        "demand-control",
+        "French",
+        "Furthermore",
+        "Harrison",
+        "Karasek",
+        "Studying",
+        "Theorell",
+        "Variables"
+      ],
+      "drug_annotations": [
+        {
+          "name": "Adverse",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Caplan",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "control",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "demand-control",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "French",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Furthermore",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Harrison",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Karasek",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Studying",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Theorell",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Variables",
+          "type": "unknown",
+          "confidence": 0.6
+        }
+      ],
+      "cyp_enzymes": [],
+      "pharmacokinetics": {},
+      "dosage_information": [],
+      "ranking_score": 0.465,
+      "ranking_breakdown": {
+        "quality": 0.5,
+        "recency": 0.5,
+        "sample_size": 0.55,
+        "species": 0.45,
+        "pharma_relevance": 0.25
+      }
+    },
+    {
+      "pmid": "",
+      "doi": "10.18637/jss.v067.i01",
+      "title": "Fitting Linear Mixed-Effects Models Using<b>lme4</b>",
+      "abstract": "Maximum likelihood or restricted maximum likelihood (REML) estimates of the parameters in linear mixed-effects models can be determined using the lmer function in the lme4 package for R. As for most model-fitting functions in R, the model is described in an lmer call by a formula, in this case including both fixed- and random-effects terms. The formula and data together determine a numerical representation of the model from which the profiled deviance or the profiled REML criterion can be evaluated as a function of some of the model parameters. The appropriate criterion is optimized, using one of the constrained optimization functions in R, to provide the parameter estimates. We describe the structure of the model, the steps in evaluating the profiled deviance or REML criterion, and the structure of classes or types that represents such a model. Sufficient detail is included to allow specialization of these structures by users who wish to write functions to fit specialized linear mixed models, such as models incorporating pedigrees or smoothing splines, that are not easily expressible in the formula language used by lmer.",
+      "authors": "Douglas M. Bates, Martin Mächler, Benjamin M. Bolker, Steve Walker",
+      "publication_date": "2015-01-01",
+      "journal": "Journal of Statistical Software",
+      "full_text_url": "https://www.jstatsoft.org/index.php/jss/article/view/v067i01/v67i01.pdf",
+      "provider": "openalex",
+      "provider_family": "openalex",
+      "ingestion": "openalex",
+      "openalex_id": "https://openalex.org/W1951724000",
+      "drug_names": [
+        "appropriate",
+        "determine",
+        "Fitting",
+        "Linear",
+        "Maximum",
+        "Mixed-Effects",
+        "Models",
+        "provide",
+        "Sufficient",
+        "Using"
+      ],
+      "drug_annotations": [
+        {
+          "name": "appropriate",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "determine",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Fitting",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Linear",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Maximum",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Mixed-Effects",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Models",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "provide",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Sufficient",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Using",
+          "type": "unknown",
+          "confidence": 0.6
+        }
+      ],
+      "cyp_enzymes": [],
+      "pharmacokinetics": {},
+      "dosage_information": [],
+      "ranking_score": 0.4575,
+      "ranking_breakdown": {
+        "quality": 0.5,
+        "recency": 0.5,
+        "sample_size": 0.55,
+        "species": 0.45,
+        "pharma_relevance": 0.2
+      }
+    },
+    {
+      "pmid": "",
+      "doi": "10.1103/physrev.140.a1133",
+      "title": "Self-Consistent Equations Including Exchange and Correlation Effects",
+      "abstract": "From a theory of Hohenberg and Kohn, approximation methods for treating an inhomogeneous system of interacting electrons are developed. These methods are exact for systems of slowly varying or high density. For the ground state, they lead to self-consistent equations analogous to the Hartree and Hartree-Fock equations, respectively. In these equations the exchange and correlation portions of the chemical potential of a uniform electron gas appear as additional effective potentials. (The exchange portion of our effective potential differs from that due to Slater by a factor of $\\frac{2}{3}$.) Electronic systems at finite temperatures and in magnetic fields are also treated by similar methods. An appendix deals with a further correction for systems with short-wavelength density oscillations.",
+      "authors": "W. Kohn, L. J. Sham",
+      "publication_date": "1965-11-15",
+      "journal": "Physical Review",
+      "full_text_url": "http://link.aps.org/pdf/10.1103/PhysRev.140.A1133",
+      "provider": "openalex",
+      "provider_family": "openalex",
+      "ingestion": "openalex",
+      "openalex_id": "https://openalex.org/W2230728100",
+      "drug_names": [
+        "Correlation",
+        "Effects",
+        "Electronic",
+        "Equations",
+        "Exchange",
+        "From",
+        "Hartree",
+        "Hartree-Fock",
+        "Hohenberg",
+        "Including",
+        "Kohn",
+        "Self-Consistent",
+        "Slater",
+        "state",
+        "These"
+      ],
+      "drug_annotations": [
+        {
+          "name": "Correlation",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Effects",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Electronic",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Equations",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Exchange",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "From",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Hartree",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Hartree-Fock",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Hohenberg",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Including",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Kohn",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Self-Consistent",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Slater",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "state",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "These",
+          "type": "unknown",
+          "confidence": 0.6
+        }
+      ],
+      "cyp_enzymes": [],
+      "pharmacokinetics": {},
+      "dosage_information": [],
+      "ranking_score": 0.4575,
+      "ranking_breakdown": {
+        "quality": 0.5,
+        "recency": 0.5,
+        "sample_size": 0.55,
+        "species": 0.45,
+        "pharma_relevance": 0.2
+      }
+    },
+    {
+      "pmid": "",
+      "doi": "10.1093/biomet/70.1.41",
+      "title": "The central role of the propensity score in observational studies for causal effects",
+      "abstract": "The propensity score is the conditional probability of assignment to a particular treatment given a vector of observed covariates. Both large and small sample theory show that adjustment for the scalar propensity score is sufficient to remove bias due to all observed covariates. Applications include: (i) matched sampling on the univariate propensity score, which is a generalization of discriminant matching, (ii) multivariate adjustment by subclassification on the propensity score where the same subclasses are used to estimate treatment effects for all outcome variables and in all subpopulations, and (iii) visual representation of multivariate covariance adjustment by a two- dimensional plot.",
+      "authors": "Paul R. Rosenbaum, Donald B. Rubin",
+      "publication_date": "1983-01-01",
+      "journal": "Biometrika",
+      "full_text_url": "https://academic.oup.com/biomet/article-pdf/70/1/41/662954/70-1-41.pdf",
+      "provider": "openalex",
+      "provider_family": "openalex",
+      "ingestion": "openalex",
+      "openalex_id": "https://openalex.org/W2150291618",
+      "drug_names": [
+        "Applications",
+        "Both",
+        "estimate",
+        "multivariate",
+        "univariate"
+      ],
+      "drug_annotations": [
+        {
+          "name": "Applications",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Both",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "estimate",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "multivariate",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "univariate",
+          "type": "unknown",
+          "confidence": 0.6
+        }
+      ],
+      "cyp_enzymes": [],
+      "pharmacokinetics": {},
+      "dosage_information": [],
+      "ranking_score": 0.4575,
+      "ranking_breakdown": {
+        "quality": 0.5,
+        "recency": 0.5,
+        "sample_size": 0.55,
+        "species": 0.45,
+        "pharma_relevance": 0.2
+      }
+    }
+  ],
+  "metadata": {
+    "cached_at": "2025-09-23T07:18:53.733361+00:00",
+    "deduplication": {
+      "input_size": 5,
+      "output_size": 5,
+      "duplicates_removed": 0
+    },
+    "sort_by": "ranking_score",
+    "enhanced_query": "semaglutide cardiovascular outcomes AND (drug interaction OR pharmacokinetics OR cytochrome P450 OR drug metabolism)",
+    "pharma_enriched": true,
+    "ttl_hours": 24.0
+  }
+}

@@ -1,0 +1,511 @@
+{
+  "results": [
+    {
+      "pmid": "23333322",
+      "doi": "10.1016/j.pharmthera.2012.12.007",
+      "title": "Cytochrome P450 enzymes in drug metabolism: Regulation of gene expression, enzyme activities, and impact of genetic variation",
+      "abstract": "Cytochromes P450 (CYP) are a major source of variability in drug pharmacokinetics and response. Of 57 putatively functional human CYPs only about a dozen enzymes, belonging to the CYP1, 2, and 3 families, are responsible for the biotransformation of most foreign substances including 70–80% of all drugs in clinical use. The highest expressed forms in liver are CYPs 3A4, 2C9, 2C8, 2E1, and 1A2, while 2A6, 2D6, 2B6, 2C19 and 3A5 are less abundant and CYPs 2J2, 1A1, and 1B1 are mainly expressed extrahepatically. Expression of each CYP is influenced by a unique combination of mechanisms and factors including genetic polymorphisms, induction by xenobiotics, regulation by cytokines, hormones and during disease states, as well as sex, age, and others. Multiallelic genetic polymorphisms, which strongly depend on ethnicity, play a major role for the function of CYPs 2D6, 2C19, 2C9, 2B6, 3A5 and 2A6, and lead to distinct pharmacogenetic phenotypes termed as poor, intermediate, extensive, and ultrarapid metabolizers. For these CYPs, the evidence for clinical significance regarding adverse drug reactions (ADRs), drug efficacy and dose requirement is rapidly growing. Polymorphisms in CYPs 1A1, 1A2, 2C8, 2E1, 2J2, and 3A4 are generally less predictive, but new data on CYP3A4 show that predictive variants exist and that additional variants in regulatory genes or in NADPH:cytochrome P450 oxidoreductase (POR) can have an influence. Here we review the recent progress on drug metabolism activity profiles, interindividual variability and regulation of expression, and the functional and clinical impact of genetic variation in drug metabolizing P450s.",
+      "authors": "Ulrich M. Zanger, Matthias Schwab",
+      "publication_date": "2013-01-16",
+      "journal": "Pharmacology & Therapeutics",
+      "full_text_url": "https://doi.org/10.1016/j.pharmthera.2012.12.007",
+      "provider": "openalex",
+      "provider_family": "openalex",
+      "ingestion": "openalex",
+      "openalex_id": "https://openalex.org/W2010427019",
+      "drug_names": [
+        "ADRs",
+        "CYP3A4",
+        "CYPs",
+        "Cytochrome",
+        "Cytochromes",
+        "Expression",
+        "Here",
+        "intermediate",
+        "Multiallelic",
+        "NADPH",
+        "P450s",
+        "Polymorphisms",
+        "Regulation"
+      ],
+      "drug_annotations": [
+        {
+          "name": "ADRs",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "CYP3A4",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "CYPs",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Cytochrome",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Cytochromes",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Expression",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Here",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "intermediate",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Multiallelic",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "NADPH",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "P450s",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Polymorphisms",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Regulation",
+          "type": "unknown",
+          "confidence": 0.6
+        }
+      ],
+      "cyp_enzymes": [
+        "CYP1",
+        "CYP3A4"
+      ],
+      "pharmacokinetics": {},
+      "dosage_information": [],
+      "ranking_score": 0.6325,
+      "ranking_breakdown": {
+        "quality": 0.5,
+        "recency": 0.5,
+        "sample_size": 0.55,
+        "species": 1.0,
+        "pharma_relevance": 1.0
+      }
+    },
+    {
+      "pmid": "34884615",
+      "doi": "10.3390/ijms222312808",
+      "title": "Cytochrome P450 Enzymes and Drug Metabolism in Humans",
+      "abstract": "Human cytochrome P450 (CYP) enzymes, as membrane-bound hemoproteins, play important roles in the detoxification of drugs, cellular metabolism, and homeostasis. In humans, almost 80% of oxidative metabolism and approximately 50% of the overall elimination of common clinical drugs can be attributed to one or more of the various CYPs, from the CYP families 1-3. In addition to the basic metabolic effects for elimination, CYPs are also capable of affecting drug responses by influencing drug action, safety, bioavailability, and drug resistance through metabolism, in both metabolic organs and local sites of action. Structures of CYPs have recently provided new insights into both understanding the mechanisms of drug metabolism and exploiting CYPs as drug targets. Genetic polymorphisms and epigenetic changes in CYP genes and environmental factors may be responsible for interethnic and interindividual variations in the therapeutic efficacy of drugs. In this review, we summarize and highlight the structural knowledge about CYPs and the major CYPs in drug metabolism. Additionally, genetic and epigenetic factors, as well as several intrinsic and extrinsic factors that contribute to interindividual variation in drug response are also reviewed, to reveal the multifarious and important roles of CYP-mediated metabolism and elimination in drug therapy.",
+      "authors": "Mingzhe Zhao, Jingsong Ma, Mo Li, Yingtian Zhang, Bixuan Jiang, Xianglong Zhao, Cong Huai, Lu Shen, Na Zhang, Lin He, Shengying Qin",
+      "publication_date": "2021-11-26",
+      "journal": "International Journal of Molecular Sciences",
+      "full_text_url": "https://www.mdpi.com/1422-0067/22/23/12808/pdf?version=1638258983",
+      "provider": "openalex",
+      "provider_family": "openalex",
+      "ingestion": "openalex",
+      "openalex_id": "https://openalex.org/W3216238012",
+      "drug_names": [
+        "Additionally",
+        "CYP-mediated",
+        "CYPs",
+        "Cytochrome",
+        "Drug",
+        "Enzymes",
+        "Genetic",
+        "Human",
+        "Humans",
+        "Metabolism",
+        "Structures"
+      ],
+      "drug_annotations": [
+        {
+          "name": "Additionally",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "CYP-mediated",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "CYPs",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Cytochrome",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Drug",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Enzymes",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Genetic",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Human",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Humans",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Metabolism",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Structures",
+          "type": "unknown",
+          "confidence": 0.6
+        }
+      ],
+      "cyp_enzymes": [],
+      "pharmacokinetics": {},
+      "dosage_information": [],
+      "ranking_score": 0.595,
+      "ranking_breakdown": {
+        "quality": 0.5,
+        "recency": 0.5,
+        "sample_size": 0.55,
+        "species": 1.0,
+        "pharma_relevance": 0.75
+      }
+    },
+    {
+      "pmid": "17708140",
+      "doi": "",
+      "title": "The effect of cytochrome P450 metabolism on drug response, interactions, and adverse effects.",
+      "abstract": "Cytochrome P450 enzymes are essential for the metabolism of many medications. Although this class has more than 50 enzymes, six of them metabolize 90 percent of drugs, with the two most significant enzymes being CYP3A4 and CYP2D6. Genetic variability (polymorphism) in these enzymes may influence a patient's response to commonly prescribed drug classes, including beta blockers and antidepressants. Cytochrome P450 enzymes can be inhibited or induced by drugs, resulting in clinically significant drug-drug interactions that can cause unanticipated adverse reactions or therapeutic failures. Interactions with warfarin, antidepressants, antiepileptic drugs, and statins often involve the cytochrome P450 enzymes. Knowledge of the most important drugs metabolized by cytochrome P450 enzymes, as well as the most potent inhibiting and inducing drugs, can help minimize the possibility of adverse drug reactions and interactions. Although genotype tests can determine if a patient has a specific enzyme polymorphism, it has not been determined if routine use of these tests will improve outcomes.",
+      "authors": "Thomas R. Lynch, Amy Price",
+      "publication_date": "2007-08-01",
+      "journal": "PubMed",
+      "full_text_url": "",
+      "provider": "openalex",
+      "provider_family": "openalex",
+      "ingestion": "openalex",
+      "openalex_id": "https://openalex.org/W2107450474",
+      "drug_names": [
+        "warfarin",
+        "Although",
+        "CYP2D6",
+        "CYP3A4",
+        "Cytochrome",
+        "determine",
+        "Genetic",
+        "Interactions",
+        "Knowledge",
+        "routine"
+      ],
+      "drug_annotations": [
+        {
+          "name": "warfarin",
+          "type": "generic",
+          "confidence": 0.98
+        },
+        {
+          "name": "Although",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "CYP2D6",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "CYP3A4",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Cytochrome",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "determine",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Genetic",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Interactions",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Knowledge",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "routine",
+          "type": "unknown",
+          "confidence": 0.6
+        }
+      ],
+      "cyp_enzymes": [
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "pharmacokinetics": {},
+      "dosage_information": [],
+      "ranking_score": 0.5775,
+      "ranking_breakdown": {
+        "quality": 0.5,
+        "recency": 0.5,
+        "sample_size": 0.55,
+        "species": 0.45,
+        "pharma_relevance": 1.0
+      }
+    },
+    {
+      "pmid": "12571262",
+      "doi": "10.1056/nejmra020526",
+      "title": "Pharmacogenomics — Drug Disposition, Drug Targets, and Side Effects",
+      "abstract": "It is well recognized that different patients respond in different ways to the same medication. These differences are often greater among members of a population than they are within the same person at different times (or between monozygotic twins).1 The existence of large population differences with small intrapatient variability is consistent with inheritance as a determinant of drug response; it is estimated that genetics can account for 20 to 95 percent of variability in drug disposition and effects.2 Although many nongenetic factors influence the effects of medications, including age, organ function, concomitant therapy, drug interactions, and the nature of the . . .",
+      "authors": "William E. Evans, Howard L. McLeod",
+      "publication_date": "2003-02-05",
+      "journal": "New England Journal of Medicine",
+      "full_text_url": "",
+      "provider": "openalex",
+      "provider_family": "openalex",
+      "ingestion": "openalex",
+      "openalex_id": "https://openalex.org/W2155033804",
+      "drug_names": [
+        "Although",
+        "Disposition",
+        "Drug",
+        "Effects",
+        "Pharmacogenomics",
+        "Side",
+        "Targets",
+        "These"
+      ],
+      "drug_annotations": [
+        {
+          "name": "Although",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Disposition",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Drug",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Effects",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Pharmacogenomics",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Side",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Targets",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "These",
+          "type": "unknown",
+          "confidence": 0.6
+        }
+      ],
+      "cyp_enzymes": [],
+      "pharmacokinetics": {},
+      "dosage_information": [],
+      "ranking_score": 0.5325,
+      "ranking_breakdown": {
+        "quality": 0.5,
+        "recency": 0.5,
+        "sample_size": 0.55,
+        "species": 0.45,
+        "pharma_relevance": 0.7
+      }
+    },
+    {
+      "pmid": "22422992",
+      "doi": "10.1126/scitranslmed.3003377",
+      "title": "Data-Driven Prediction of Drug Effects and Interactions",
+      "abstract": "Adverse drug events remain a leading cause of morbidity and mortality around the world. Many adverse events are not detected during clinical trials before a drug receives approval for use in the clinic. Fortunately, as part of postmarketing surveillance, regulatory agencies and other institutions maintain large collections of adverse event reports, and these databases present an opportunity to study drug effects from patient population data. However, confounding factors such as concomitant medications, patient demographics, patient medical histories, and reasons for prescribing a drug often are uncharacterized in spontaneous reporting systems, and these omissions can limit the use of quantitative signal detection methods used in the analysis of such data. Here, we present an adaptive data-driven approach for correcting these factors in cases for which the covariates are unknown or unmeasured and combine this approach with existing methods to improve analyses of drug effects using three test data sets. We also present a comprehensive database of drug effects (Offsides) and a database of drug-drug interaction side effects (Twosides). To demonstrate the biological use of these new resources, we used them to identify drug targets, predict drug indications, and discover drug class interactions. We then corroborated 47 (P < 0.0001) of the drug class interactions using an independent analysis of electronic medical records. Our analysis suggests that combined treatment with selective serotonin reuptake inhibitors and thiazides is associated with significantly increased incidence of prolonged QT intervals. We conclude that confounding effects from covariates in observational clinical data can be controlled in data analyses and thus improve the detection and prediction of adverse drug effects and interactions.",
+      "authors": "Nicholas P. Tatonetti, Patrick P. Ye, Roxana Daneshjou, Russ B. Altman",
+      "publication_date": "2012-03-14",
+      "journal": "Science Translational Medicine",
+      "full_text_url": "https://europepmc.org/articles/pmc3382018?pdf=render",
+      "provider": "openalex",
+      "provider_family": "openalex",
+      "ingestion": "openalex",
+      "openalex_id": "https://openalex.org/W2119002393",
+      "drug_names": [
+        "Adverse",
+        "combine",
+        "Data-Driven",
+        "demonstrate",
+        "Drug",
+        "Effects",
+        "Fortunately",
+        "Here",
+        "However",
+        "Interactions",
+        "Many",
+        "Offsides",
+        "Prediction",
+        "side",
+        "Twosides"
+      ],
+      "drug_annotations": [
+        {
+          "name": "Adverse",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "combine",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Data-Driven",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "demonstrate",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Drug",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Effects",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Fortunately",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Here",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "However",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Interactions",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Many",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Offsides",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Prediction",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "side",
+          "type": "unknown",
+          "confidence": 0.6
+        },
+        {
+          "name": "Twosides",
+          "type": "unknown",
+          "confidence": 0.6
+        }
+      ],
+      "cyp_enzymes": [],
+      "pharmacokinetics": {},
+      "dosage_information": [],
+      "ranking_score": 0.5325,
+      "ranking_breakdown": {
+        "quality": 0.5,
+        "recency": 0.5,
+        "sample_size": 0.55,
+        "species": 0.45,
+        "pharma_relevance": 0.7
+      }
+    }
+  ],
+  "metadata": {
+    "cached_at": "2025-09-23T06:23:38.641105+00:00",
+    "filters": {},
+    "deduplication": {
+      "input_size": 5,
+      "output_size": 5,
+      "duplicates_removed": 0
+    },
+    "sort_by": "ranking_score",
+    "enhanced_query": "(metformin pharmacokinetics) OR (cytochrome P450 OR drug metabolism)",
+    "raw_cache_key": "ce6b11977acd4c0d19b5bf3d43240043",
+    "pharma_enriched": true,
+    "ttl_hours": 24.0
+  }
+}

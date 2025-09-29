@@ -207,6 +207,20 @@ def display_sidebar(rag_agent):
         st.sidebar.metric("Blocked", safety_metrics.get("blocked_queries", 0))
         st.sidebar.caption(f"Mode: {safety_metrics.get('safety_mode', 'balanced').title()}")
 
+        # Pharma mode and rerank retry/backoff policy
+        st.sidebar.markdown("### 💊 Pharma & Retry Policy")
+        try:
+            cfg = rag_agent.config
+            pharma_mode = bool(getattr(cfg, "pharmaceutical_research_mode", True))
+            backoff_base = getattr(cfg, "rerank_retry_backoff_base", 0.5)
+            retry_attempts = int(getattr(cfg, "rerank_retry_max_attempts", 3))
+            jitter_enabled = bool(getattr(cfg, "rerank_retry_jitter", True))
+            st.sidebar.caption(f"Pharma Mode: {'On' if pharma_mode else 'Off'}")
+            st.sidebar.caption(f"Backoff Base: {backoff_base}s | Retries: {retry_attempts}")
+            st.sidebar.caption(f"Jitter: {'On' if jitter_enabled else 'Off'}")
+        except Exception:
+            st.sidebar.caption("Pharma policy info unavailable")
+
         # PubMed integration status
         if rag_agent.config.should_enable_pubmed():
             st.sidebar.markdown("### 🔬 PubMed Integration")
@@ -935,6 +949,32 @@ def main():
         if st.button("🔄 Rebuild Knowledge Base"):
             st.cache_resource.clear()
             st.rerun()
+
+        # Pharma capability checks
+        if st.button("🧪 Run Pharma Benchmark"):
+            try:
+                from src.enhanced_config import EnhancedRAGConfig
+                from src.clients.nemo_client_enhanced import EnhancedNeMoClient
+                cfg = EnhancedRAGConfig.from_env()
+                api_key = os.getenv("NVIDIA_API_KEY")
+                with st.spinner("Running pharmaceutical capability checks..."):
+                    client = EnhancedNeMoClient(
+                        config=cfg,
+                        enable_fallback=True,
+                        pharmaceutical_optimized=True,
+                        api_key=api_key,
+                    )
+                    report = client.test_pharmaceutical_capabilities()
+                status = str(report.get("overall_status", "unknown")).title()
+                if status.lower() == "failed":
+                    st.error(f"Benchmark Status: {status}")
+                elif status.lower() == "partial":
+                    st.warning(f"Benchmark Status: {status}")
+                else:
+                    st.success(f"Benchmark Status: {status}")
+                st.json(report)
+            except Exception as e:
+                st.error(f"Benchmark run failed: {e}")
 
         # System information
         st.markdown("### ℹ️ About")

@@ -1,0 +1,42 @@
+# Installation guidance:
+# - Base environment: run `pip install -r requirements.txt`.
+# - Medical guardrails: when medical guardrails are needed, run:
+#   pip install -r requirements.txt && pip install -r requirements-medical.txt
+#   This adds guardrails packages, Presidio, spaCy, scispaCy, and transformers used by the medical rails.
+
+# Core runtime dependencies
+langchain>=0.3,<0.4  # 0.3.x series supports Pydantic v2 and stable parser APIs
+langchain-community>=0.3,<0.4  # Matches langchain release cadence; 0.3.x publishes community package
+langchain-core>=0.3,<0.4  # Keep core in sync with langchain for document Blob helpers
+faiss-cpu>=1.7.4,<1.8.0
+python-dotenv>=1.0.0,<2.0.0
+requests>=2.31.0,<3.0.0
+numpy>=1.21.0,<2.0.0
+tqdm>=4.65.0,<5.0.0
+PyPDF2>=3.0.0,<4.0.0
+regex>=2023.0.0
+python-dateutil>=2.8.0,<3.0.0
+pytz>=2023.3  # Rate limiting timezone calculations
+
+# NVIDIA integration
+langchain-nvidia-ai-endpoints>=0.3.0,<0.4.0
+
+# Security, schema validation, and observability
+cryptography>=41.0.0
+pydantic>=2.0.0
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+structlog>=23.1.0
+
+# See requirements-medical.txt for PII/PHI tooling when medical guardrails are enabled
+
+# Medical guardrails dependencies (install when ENABLE_MEDICAL_GUARDRAILS=true)
+# Run: pip install -r requirements.txt -r requirements-medical.txt
+# Or use extras: pip install -e .[medical]
+
+# Optional interfaces (install when needed)
+# streamlit>=1.28.0,<2.0.0
+# plotly>=5.15.0,<6.0.0
+
+# Optional advanced NLP / analytics packages are documented in requirements-advanced.md.
+# Medical safety validation and privacy tooling are available in requirements-medical.txt

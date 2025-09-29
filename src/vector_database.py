@@ -95,6 +95,12 @@ class VectorDatabase:
         self._docstore_ids: List[Any] = []
         self._pharma_filter_warning_emitted = False
 
+        # Optional: route to per-model directory
+        per_model = os.getenv("VECTOR_DB_PER_MODEL", "false").strip().lower() in {"1", "true", "yes", "on"}
+        if per_model:
+            model_slug = str(getattr(embeddings, "model_name", "default")).replace("/", "_")
+            self.db_path = self.db_path / model_slug
+
         # Create database directory
         self.db_path.mkdir(parents=True, exist_ok=True)
         
@@ -103,6 +109,24 @@ class VectorDatabase:
         self.docstore_path = self.db_path / f"{index_name}.pkl"
         
         logger.info(f"Initialized vector database at: {self.db_path}")
+
+        # Startup validation: check index dimension compatibility when not per-model
+        if not per_model:
+            try:
+                if self.index_path.exists() and faiss is not None:
+                    # Load FAISS index header to read dimension
+                    faiss_index = faiss.read_index(str(self.index_path))
+                    faiss_dim = int(getattr(faiss_index, 'd', 0))
+                    embed_dim = int(self.embeddings.get_embedding_dimension())
+                    if faiss_dim and embed_dim and faiss_dim != embed_dim:
+                        msg = (
+                            f"FAISS index dimension ({faiss_dim}) does not match current embedding dimension ({embed_dim}). "
+                            f"Either set VECTOR_DB_PER_MODEL=true to use per-model directories or rebuild the index at {self.db_path}."
+                        )
+                        logger.error(msg)
+                        raise RuntimeError(msg)
+            except Exception as e:
+                logger.debug("Startup dimension validation notice: %s", e)
 
     def update_base_path(self, new_path: Union[str, Path]) -> None:
         """Update storage paths when the base directory changes."""

@@ -105,7 +105,8 @@ class TestNeMoRetrieverClient:
         )
 
         assert recommendation["embedding"] == "nv-embedqa-e5-v5"
-        assert recommendation["reranking"] == "nv-rerankqa-mistral4b-v3"
+        # Newer default for pharmaceutical reranking prioritizes latest llama-based model
+        assert recommendation["reranking"] == "llama-3_2-nemoretriever-500m-rerank-v2"
         assert "pharmaceutical" in recommendation["reasoning"].lower()
 
     def test_model_recommendation_multilingual(self, mock_client):
