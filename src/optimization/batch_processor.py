@@ -499,29 +499,55 @@ class BatchProcessor:
                 await asyncio.sleep(sleep_time)
 
     async def _check_budget_availability(self) -> bool:
-        """Check if sufficient free tier budget is available."""
+        """Check if sufficient free tier budget is available.
+
+        Uses the credit tracker/base monitor summaries and thresholds
+        loaded from the centralized alerts config (`self._alerts_cfg`).
+        Returns False when monthly usage meets/exceeds the configured
+        critical threshold; True otherwise. On failure, defaults to True.
+        """
         try:
-            usage_stats = self.credit_tracker.get_usage_stats()
-            daily_usage = usage_stats.get("requests_today", 0)
-            monthly_usage = usage_stats.get("requests_this_month", 0)
+            monthly_usage = 0
+            # Prefer analytics from tracker, fall back to base monitor summary
+            try:
+                analytics = self.credit_tracker.get_pharmaceutical_analytics()
+                if isinstance(analytics, dict):
+                    base_summary = analytics.get("base_monitor_summary", {}) or {}
+                    monthly_usage = int(base_summary.get("requests_this_month", 0) or 0)
+            except Exception:
+                pass
 
-            # Check against alert thresholds
-            alerts_config = self.config.get_alerts_config()
-            nvidia_config = alerts_config.get("nvidia_build", {})
+            if not monthly_usage:
+                try:
+                    base = getattr(self.credit_tracker, "base_monitor", None)
+                    if base and hasattr(base, "get_usage_summary"):
+                        summary = base.get_usage_summary() or {}
+                        monthly_usage = int(summary.get("requests_this_month", 0) or 0)
+                except Exception:
+                    pass
 
-            monthly_limit = nvidia_config.get("monthly_free_requests", 10000)
-            critical_threshold = nvidia_config.get("usage_alerts", {}).get("monthly_usage_critical", 0.95)
+            # Thresholds from centralized alerts config (best-effort)
+            nvidia_cfg = (self._alerts_cfg.get("nvidia_build") if isinstance(self._alerts_cfg, dict) else {}) or {}
+            monthly_limit = int(nvidia_cfg.get("monthly_free_requests", 10000))
+            usage_alerts = (nvidia_cfg.get("usage_alerts") or {}) if isinstance(nvidia_cfg, dict) else {}
+            critical_threshold = float(usage_alerts.get("monthly_usage_critical", 0.95))
 
-            # Allow processing if under critical threshold
-            if monthly_usage < (monthly_limit * critical_threshold):
-                return True
+            limit_at_critical = monthly_limit * critical_threshold
+            if monthly_usage >= limit_at_critical:
+                logger.warning(
+                    "Monthly usage (%.0f) reached critical threshold (%.0f of %s)",
+                    monthly_usage,
+                    limit_at_critical,
+                    monthly_limit,
+                )
+                return False
 
-            logger.warning(f"Monthly usage ({monthly_usage}) approaching limit ({monthly_limit})")
-            return False
+            return True
 
         except Exception as e:
             logger.error(f"Budget check failed: {str(e)}")
-            return True  # Default to allow processing if check fails
+            # Default to allow processing if check fails
+            return True
 
     def _calculate_cost_optimization(self) -> Dict[str, Any]:
         """Calculate cost optimization metrics."""
