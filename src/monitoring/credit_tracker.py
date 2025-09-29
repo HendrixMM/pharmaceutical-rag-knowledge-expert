@@ -152,7 +152,8 @@ class PharmaceuticalCreditTracker:
             if hasattr(self.base_monitor, "log_api_call_pharma"):
                 self.base_monitor.log_api_call_pharma(
                     service=model_used,
-                    tokens_used=max(1, int(tokens_consumed or 1)),
+                    # Log exactly one request to align with free-tier tracking
+                    tokens_used=1,
                     query_text=research_context or "",
                     query_type=query_type,
                 )

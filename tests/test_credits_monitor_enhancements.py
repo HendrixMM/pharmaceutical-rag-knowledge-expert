@@ -34,10 +34,9 @@ def test_tracker_attaches_to_monitor_and_logs_without_recursion():
         research_context="ACE inhibitor interaction",
     )
 
-    # Credits reflect tokens logged once (no recursion)
-    assert mon.credits_used >= 10
+    # Credits reflect exactly one request logged (no recursion)
+    assert mon.credits_used == 1
 
     # Query type breakdown present via monitor summary
     summary = mon.get_usage_summary()
     assert summary.get("by_query_type", {}).get("drug_interaction", 0) >= 1
-
