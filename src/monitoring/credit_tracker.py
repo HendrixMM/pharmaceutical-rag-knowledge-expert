@@ -119,6 +119,8 @@ class PharmaceuticalCreditTracker:
             "monthly_usage": 0.80,      # 80% of monthly limit (8000 requests)
             "research_project_budget": 0.75  # 75% of project budget used
         }
+        # Centralized monthly free-tier limit (default 10k), may be overridden by alerts.yaml
+        self._monthly_free_requests: int = 10000
         # Optionally merge thresholds from centralized YAML
         self._load_alert_thresholds_from_yaml()
 
@@ -419,13 +421,22 @@ class PharmaceuticalCreditTracker:
                         threshold,
                     )
                     return
-            # Fallback: compute against monthly denominator (10k requests)
+            # Fallback: compute against configured monthly denominator
+            # Prefer configured monthly_free_requests; fall back to base monitor's summary
+            monthly_limit = self._monthly_free_requests
+            try:
+                base_summary = getattr(self.base_monitor, 'get_usage_summary', lambda: {})() or {}
+                monthly_limit = int(base_summary.get('monthly_limit', monthly_limit) or monthly_limit)
+            except Exception:
+                pass
             today = [q for q in self.pharmaceutical_queries if q.timestamp.date() == datetime.now().date()]
-            if len(today) >= int(10000 * threshold):
+            threshold_count = int(monthly_limit * threshold)
+            if len(today) >= threshold_count:
                 logger.info(
-                    "Daily burn rate alert: %s queries today (threshold=%s)",
+                    "Daily burn rate alert: %s queries today (threshold=%s of monthly=%s)",
                     len(today),
-                    int(10000 * threshold),
+                    threshold_count,
+                    monthly_limit,
                 )
         except Exception:
             pass
@@ -442,10 +453,18 @@ class PharmaceuticalCreditTracker:
                 return
             with open(cfg_path, "r") as f:
                 cfg = yaml.safe_load(f) or {}
-            nv = (cfg.get("nvidia_build", {}) or {}).get("usage_alerts", {})
+            nb = (cfg.get("nvidia_build", {}) or {})
+            nv = nb.get("usage_alerts", {}) if isinstance(nb, dict) else {}
             if nv:
                 self.alert_thresholds["daily_burn_rate"] = float(nv.get("daily_burn_rate", self.alert_thresholds["daily_burn_rate"]))
                 self.alert_thresholds["weekly_burn_rate"] = float(nv.get("weekly_burn_rate", self.alert_thresholds["weekly_burn_rate"]))
+            # Pick up the configured monthly free requests if present
+            try:
+                mfr = int(nb.get("monthly_free_requests", self._monthly_free_requests))
+                if mfr > 0:
+                    self._monthly_free_requests = mfr
+            except Exception:
+                pass
             pharma = cfg.get("pharmaceutical", {}) or {}
             proj = pharma.get("project_budget", {}) or {}
             if proj:
