@@ -71,22 +71,120 @@ class NeMoAPIResponse:
     model: Optional[str] = None
 
 class NVIDIABuildCreditsMonitor:
-    """Simple credit monitor for NVIDIA Build free tier."""
+    """
+    Credit monitor for NVIDIA Build free tier with pharmaceutical-aware extensions.
+
+    Backwards compatible with tests expecting basic counters, while exposing
+    optional helpers to support pharmaceutical research workflows.
+    """
+
     def __init__(self, api_key: Optional[str]):
         self.api_key = api_key
+        # Simple counters expected by tests
         self.credits_used = 0
         self.credits_remaining = 10000
+        # Optional pharma-aware state
+        self._daily_usage: Dict[str, int] = {}
+        self._by_service: Dict[str, int] = {}
+        self._by_query_type: Dict[str, int] = {}
+        self._attached_tracker = None  # Optional PharmaceuticalCreditTracker
 
+    # ------------------------ Basic interface (kept) ------------------------
     def log_api_call(self, service: str, tokens_used: int = 1) -> None:
+        """Record a call against the monthly free tier (backwards compatible)."""
         try:
             tokens = max(0, int(tokens_used))
         except Exception:
             tokens = 1
         self.credits_used += tokens
         self.credits_remaining = max(0, 10000 - self.credits_used)
+        # Track basic service counts
+        self._by_service[service] = self._by_service.get(service, 0) + 1
+        # Daily burn tracking
+        day_key = time.strftime("%Y-%m-%d")
+        self._daily_usage[day_key] = self._daily_usage.get(day_key, 0) + 1
+        # Low credit warning
         if self.credits_remaining <= 100:
             logger.warning("Low NVIDIA Build credits remaining: %s", self.credits_remaining)
         logger.info("Credits: service=%s used=%s remaining=%s", service, tokens, self.credits_remaining)
+
+    # ------------------------ Pharma-aware helpers ------------------------
+    def log_api_call_pharma(self,
+                            service: str,
+                            tokens_used: int = 1,
+                            query_text: Optional[str] = None,
+                            query_type: Optional[str] = None) -> None:
+        """Record a call with pharmaceutical context and optional classification.
+
+        This delegates to log_api_call() for counters and adds per-query-type
+        tallies. If a PharmaceuticalCreditTracker is attached, it provides a
+        hook without creating a hard dependency.
+        """
+        self.log_api_call(service, tokens_used=tokens_used)
+        qtype = query_type or self.classify_pharma_query(query_text or "")
+        self._by_query_type[qtype] = self._by_query_type.get(qtype, 0) + 1
+        # Optional callback into an attached tracker (non-fatal)
+        try:
+            if self._attached_tracker is not None and hasattr(self._attached_tracker, "track_pharmaceutical_query"):
+                self._attached_tracker.track_pharmaceutical_query(
+                    query_type=qtype,
+                    model_used=service,
+                    tokens_consumed=max(0, int(tokens_used or 0)),
+                    response_time_ms=0,
+                    cost_tier="free_tier",
+                )
+        except Exception:
+            logger.debug("Attached pharma tracker callback failed; continuing")
+
+    def attach_pharma_tracker(self, tracker: Any) -> None:
+        """Attach a PharmaceuticalCreditTracker instance for richer logging (optional)."""
+        self._attached_tracker = tracker
+
+    def classify_pharma_query(self, text: str) -> str:
+        """Lightweight keyword-based classification for pharmaceutical queries."""
+        t = (text or "").lower()
+        if any(k in t for k in ("interaction", "contraindication", "together", "combined")):
+            return "drug_interaction"
+        if any(k in t for k in ("pharmacokinetic", "half-life", "clearance", "absorption", "metabolism")):
+            return "pharmacokinetics"
+        if any(k in t for k in ("trial", "study", "patient", "efficacy", "safety")):
+            return "clinical_trial"
+        if any(k in t for k in ("mechanism", "pathway", "target", "receptor")):
+            return "mechanism"
+        return "general"
+
+    def daily_burn_rate(self) -> Dict[str, Any]:
+        """Return daily usage and simple burn-rate estimate relative to 10k/month."""
+        # Approximate daily budget for a 30-day month
+        daily_budget = 10000 / 30.0
+        today = time.strftime("%Y-%m-%d")
+        used_today = int(self._daily_usage.get(today, 0))
+        return {
+            "date": today,
+            "used_today": used_today,
+            "daily_budget": int(daily_budget),
+            "burn_rate": round(used_today / max(1.0, daily_budget), 3)
+        }
+
+    def recommend_batch_size(self, service: str, queue_len: int) -> int:
+        """Heuristic batch size recommendation for free tier efficiency."""
+        base = 50 if service == "embedding" else 10
+        # Increase modestly for large queues, cap at 100/20
+        if queue_len > base:
+            base = min(base + (queue_len // 10), 100 if service == "embedding" else 20)
+        return max(1, base)
+
+    def get_usage_summary(self) -> Dict[str, Any]:
+        """Return a summary for dashboards and alerts (backwards-compatible superset)."""
+        summary = {
+            "requests_this_month": self.credits_used,
+            "remaining": self.credits_remaining,
+            "by_service": dict(self._by_service),
+            "by_query_type": dict(self._by_query_type),
+            "daily": dict(self._daily_usage),
+        }
+        summary.update({"daily_burn": self.daily_burn_rate()})
+        return summary
 
 
 class NeMoRetrieverClient:

@@ -96,6 +96,12 @@ class PharmaceuticalCreditTracker:
         self.base_monitor = base_monitor or NVIDIABuildCreditsMonitor(
             api_key=os.getenv("NVIDIA_API_KEY")
         )
+        # Attach self to base monitor when supported for rich callbacks
+        try:
+            if hasattr(self.base_monitor, "attach_pharma_tracker"):
+                self.base_monitor.attach_pharma_tracker(self)
+        except Exception:
+            pass
 
         # Pharmaceutical-specific tracking
         self.pharmaceutical_queries: List[PharmaceuticalQuery] = []
@@ -113,6 +119,8 @@ class PharmaceuticalCreditTracker:
             "monthly_usage": 0.80,      # 80% of monthly limit (8000 requests)
             "research_project_budget": 0.75  # 75% of project budget used
         }
+        # Optionally merge thresholds from centralized YAML
+        self._load_alert_thresholds_from_yaml()
 
         # Load cached data
         self._load_cached_data()
@@ -139,8 +147,22 @@ class PharmaceuticalCreditTracker:
             research_context: Additional research context
             project_id: Associated research project ID
         """
-        # Track with base monitor
-        self.base_monitor.track_request()
+        # Track with base monitor (prefer pharma-aware API when available)
+        try:
+            if hasattr(self.base_monitor, "log_api_call_pharma"):
+                self.base_monitor.log_api_call_pharma(
+                    service=model_used,
+                    tokens_used=max(1, int(tokens_consumed or 1)),
+                    query_text=research_context or "",
+                    query_type=query_type,
+                )
+            elif hasattr(self.base_monitor, "track_request"):
+                self.base_monitor.track_request()
+        except Exception:
+            try:
+                self.base_monitor.track_request()
+            except Exception:
+                pass
 
         # Create pharmaceutical query record
         query = PharmaceuticalQuery(
@@ -240,7 +262,7 @@ class PharmaceuticalCreditTracker:
         )
         total_tokens = sum(q.tokens_consumed for q in month_queries)
 
-        return {
+        result = {
             "time_period_analysis": {
                 "today": len(today_queries),
                 "this_week": len(week_queries),
@@ -267,6 +289,13 @@ class PharmaceuticalCreditTracker:
             },
             "base_monitor_summary": self.base_monitor.get_usage_summary() if hasattr(self.base_monitor, 'get_usage_summary') else {}
         }
+        # Include daily burn snapshot if the base monitor provides it
+        try:
+            if hasattr(self.base_monitor, "daily_burn_rate"):
+                result["daily_burn"] = self.base_monitor.daily_burn_rate()
+        except Exception:
+            pass
+        return result
 
     def get_cost_optimization_recommendations(self) -> List[Dict[str, str]]:
         """
@@ -371,16 +400,49 @@ class PharmaceuticalCreditTracker:
             logger.warning(f"Project '{project.name}' has used {usage_percentage:.1%} of budget")
 
     def _check_pharmaceutical_alerts(self) -> None:
-        """Check alert thresholds for pharmaceutical research usage."""
-        base_summary = getattr(self.base_monitor, 'get_usage_summary', lambda: {})()
+        """Check and emit pharmaceutical research alerts based on thresholds."""
+        try:
+            # Prefer base monitor daily burn if available
+            daily = None
+            if hasattr(self.base_monitor, "daily_burn_rate"):
+                daily = self.base_monitor.daily_burn_rate()
+            if daily and daily.get("burn_rate", 0) > self.alert_thresholds.get("daily_burn_rate", 0.05):
+                logger.info(
+                    "Daily burn rate alert: burn_rate=%.3f used_today=%s",
+                    daily.get("burn_rate"),
+                    daily.get("used_today"),
+                )
+            else:
+                # Fallback: estimate from local records (assuming 10k/month ≈ 333/day)
+                today = [q for q in self.pharmaceutical_queries if q.timestamp.date() == datetime.now().date()]
+                if len(today) > int(10000 * self.alert_thresholds["daily_burn_rate"]):
+                    logger.info("Daily burn rate alert: %s queries today", len(today))
+        except Exception:
+            pass
 
-        # Daily burn rate check
-        daily_usage = base_summary.get('requests_today', 0)
-        daily_threshold = 10000 * self.alert_thresholds["daily_burn_rate"]
-
-        if daily_usage >= daily_threshold:
-            logger.warning(f"Daily burn rate alert: {daily_usage} requests today "
-                         f"(threshold: {daily_threshold:.0f})")
+    def _load_alert_thresholds_from_yaml(self) -> None:
+        """Merge thresholds from config/alerts.yaml when available (best-effort)."""
+        try:
+            import yaml  # type: ignore
+        except Exception:
+            return
+        try:
+            cfg_path = Path("config/alerts.yaml")
+            if not cfg_path.exists():
+                return
+            with open(cfg_path, "r") as f:
+                cfg = yaml.safe_load(f) or {}
+            nv = (cfg.get("nvidia_build", {}) or {}).get("usage_alerts", {})
+            if nv:
+                self.alert_thresholds["daily_burn_rate"] = float(nv.get("daily_burn_rate", self.alert_thresholds["daily_burn_rate"]))
+                self.alert_thresholds["weekly_burn_rate"] = float(nv.get("weekly_burn_rate", self.alert_thresholds["weekly_burn_rate"]))
+            pharma = cfg.get("pharmaceutical", {}) or {}
+            proj = pharma.get("project_budget", {}) or {}
+            if proj:
+                self.alert_thresholds["research_project_budget"] = float(proj.get("warning_threshold", self.alert_thresholds["research_project_budget"]))
+        except Exception:
+            # best-effort only
+            pass
 
     def _generate_pharmaceutical_insights(self) -> List[Dict[str, str]]:
         """Generate pharmaceutical-specific insights from usage data."""

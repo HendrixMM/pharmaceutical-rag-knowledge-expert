@@ -131,6 +131,8 @@ class BatchProcessor:
             "cost_savings_estimated": 0.0,
             "pharmaceutical_requests_prioritized": 0
         }
+        # Load optional centralized alert config
+        self._alerts_cfg = self._load_alerts_config()
 
         # Rate limiting state
         self.request_history: List[datetime] = []
@@ -376,6 +378,31 @@ class BatchProcessor:
             self.request_history.append(datetime.now())
             self.last_batch_time = datetime.now()
 
+            # Optionally feed approximate chat request metrics into credit tracker
+            try:
+                if self.credit_tracker is not None:
+                    for req in batch:
+                        if req.request_type == "chat":
+                            qtext = ""
+                            try:
+                                messages = req.payload.get("messages", [])
+                                for m in reversed(messages):
+                                    if m.get("role") == "user":
+                                        qtext = str(m.get("content", ""))
+                                        break
+                            except Exception:
+                                pass
+                            self.credit_tracker.track_pharmaceutical_query(
+                                query_type=self._classify_query_text(qtext),
+                                model_used="chat",
+                                tokens_consumed=req.estimated_tokens,
+                                response_time_ms=execution_time,
+                                cost_tier="free_tier",
+                                research_context=qtext,
+                            )
+            except Exception:
+                logger.debug("Skipped credit tracker logging for batch")
+
             logger.debug(f"Batch executed successfully: {len(batch)} requests ({execution_time}ms)")
 
             return {
@@ -562,6 +589,33 @@ class BatchProcessor:
 
         logger.info(f"Cleared queues: {cleared}")
         return cleared
+
+    # ------------------------ Internal helpers ------------------------
+    def _load_alerts_config(self) -> Dict[str, Any]:
+        """Load centralized alert configuration (best-effort)."""
+        try:
+            import yaml  # type: ignore
+            from pathlib import Path
+            cfg_path = Path("config/alerts.yaml")
+            if not cfg_path.exists():
+                return {}
+            with open(cfg_path, "r") as f:
+                return yaml.safe_load(f) or {}
+        except Exception:
+            return {}
+
+    def _classify_query_text(self, text: str) -> str:
+        """Basic pharma query classification used for tracking only."""
+        t = (text or "").lower()
+        if any(k in t for k in ("interaction", "contraindication", "together", "combined")):
+            return "drug_interaction"
+        if any(k in t for k in ("pharmacokinetic", "half-life", "clearance", "absorption", "metabolism")):
+            return "pharmacokinetics"
+        if any(k in t for k in ("trial", "study", "patient", "efficacy", "safety")):
+            return "clinical_trial"
+        if any(k in t for k in ("mechanism", "pathway", "target", "receptor")):
+            return "mechanism"
+        return "general"
 
 # Pharmaceutical research convenience functions
 def create_pharmaceutical_batch_processor(

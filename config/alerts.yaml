@@ -46,6 +46,10 @@ pharmaceutical:
     min_free_tier_usage_percentage: 80    # Minimum % of queries on free tier
     batch_optimization_trigger: 50        # Trigger batching after N queries/hour
     cost_per_query_warning: 0.1          # Warning if cost per query exceeds threshold
+    batch_window_seconds: 60              # Time window for batch triggers
+    preferred_batch_sizes:
+      embeddings: 75
+      chat: 10
 
 # ==============================================================================
 # Cost Optimization Alerts
@@ -62,6 +66,7 @@ cost_optimization:
     monthly_budget_soft_limit: 100       # $100 monthly budget soft limit
     monthly_budget_hard_limit: 150       # $150 monthly budget hard limit
     cost_trend_warning_percentage: 1.2   # 120% of expected cost trend
+    project_budget_alerts_enabled: true
 
   # Return on investment tracking
   roi_tracking:
