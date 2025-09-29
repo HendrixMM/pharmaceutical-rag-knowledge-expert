@@ -273,7 +273,8 @@ async def phase_embed_and_rerank(
         embed_ok = embed_res.success
         embed_latency = embed_res.response_time_ms or (time.time() - t0) * 1000
         if credits_monitor:
-            credits_monitor.log_api_call("embedding", tokens_used=len(batch))
+            # Deduct exactly one request per API call
+            credits_monitor.log_api_call("embedding", tokens_used=1)
     except Exception as exc:
         return PhaseResult(False, details={"error": f"Embedding error: {exc}"}), PhaseResult(False)
 
@@ -288,7 +289,8 @@ async def phase_embed_and_rerank(
         rerank_ok = rerank_res.success
         rerank_latency = rerank_res.response_time_ms or (time.time() - t1) * 1000
         if credits_monitor:
-            credits_monitor.log_api_call("reranking", tokens_used=min(len(texts), top_k))
+            # Deduct exactly one request per API call
+            credits_monitor.log_api_call("reranking", tokens_used=1)
     except Exception as exc:
         return PhaseResult(True, latency_ms=embed_latency, details={"embeddings": True}), PhaseResult(False, details={"error": f"Rerank error: {exc}"})
 

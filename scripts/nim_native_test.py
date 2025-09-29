@@ -248,12 +248,14 @@ async def main() -> int:
     # 3) Embeddings
     await _embed_with_nemo(docs)
     if credits_monitor:
-        credits_monitor.log_api_call("embedding", tokens_used=max(1, min(len(docs), 3)))
+        # Deduct exactly one request per API call
+        credits_monitor.log_api_call("embedding", tokens_used=1)
 
     # 4) Reranking
     await _rerank_with_nemo("drug interactions", docs)
     if credits_monitor:
-        credits_monitor.log_api_call("reranking", tokens_used=max(1, min(len(docs), 3)))
+        # Deduct exactly one request per API call
+        credits_monitor.log_api_call("reranking", tokens_used=1)
 
     # 5) Overlay summary
     _overlay_summary(docs)

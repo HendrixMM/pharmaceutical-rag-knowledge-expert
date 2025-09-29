@@ -566,7 +566,8 @@ class NeMoRetrieverClient:
                     embeddings = [item["embedding"] for item in result["data"]]
 
                     if self.credits_monitor:
-                        self.credits_monitor.log_api_call("embedding", tokens_used=max(1, len(texts)))
+                        # Deduct exactly one request per API call
+                        self.credits_monitor.log_api_call("embedding", tokens_used=1)
 
                     return NeMoAPIResponse(
                         success=True,

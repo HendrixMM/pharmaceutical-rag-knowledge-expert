@@ -378,12 +378,14 @@ class BatchProcessor:
             self.request_history.append(datetime.now())
             self.last_batch_time = datetime.now()
 
-            # Optionally feed approximate chat request metrics into credit tracker
+            # Optionally feed approximate request metrics into credit tracker
             try:
                 if self.credit_tracker is not None:
                     for req in batch:
+                        qtext = ""
+                        qtype = "general"
+                        model_used = req.request_type
                         if req.request_type == "chat":
-                            qtext = ""
                             try:
                                 messages = req.payload.get("messages", [])
                                 for m in reversed(messages):
@@ -392,14 +394,18 @@ class BatchProcessor:
                                         break
                             except Exception:
                                 pass
-                            self.credit_tracker.track_pharmaceutical_query(
-                                query_type=self._classify_query_text(qtext),
-                                model_used="chat",
-                                tokens_consumed=req.estimated_tokens,
-                                response_time_ms=execution_time,
-                                cost_tier="free_tier",
-                                research_context=qtext,
-                            )
+                            qtype = self._classify_query_text(qtext)
+                        elif req.request_type == "embedding":
+                            qtype = "embedding"
+
+                        self.credit_tracker.track_pharmaceutical_query(
+                            query_type=qtype,
+                            model_used=model_used,
+                            tokens_consumed=req.estimated_tokens,
+                            response_time_ms=execution_time,
+                            cost_tier="free_tier",
+                            research_context=qtext if qtext else None,
+                        )
             except Exception:
                 logger.debug("Skipped credit tracker logging for batch")
 
