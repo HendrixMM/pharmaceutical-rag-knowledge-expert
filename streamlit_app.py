@@ -201,6 +201,15 @@ def fetch_credit_burn_snapshot():
         svc = base.get("by_service") if isinstance(base, dict) else None
         if isinstance(svc, dict):
             out["service_counts"] = svc
+        # Include token analytics when available
+        perf = analytics.get("performance_metrics") if isinstance(analytics, dict) else None
+        if isinstance(perf, dict):
+            tokens_total = perf.get("total_tokens_consumed")
+            avg_tokens = perf.get("avg_tokens_per_query")
+            if isinstance(tokens_total, int):
+                out["tokens_month"] = tokens_total
+            if isinstance(avg_tokens, int):
+                out["avg_tokens_per_query"] = avg_tokens
         return out
     except Exception:
         return {}
@@ -274,6 +283,11 @@ def display_sidebar(rag_agent):
                     st.sidebar.caption("Service usage (month):")
                     for name, cnt in for_svc.items():
                         st.sidebar.caption(f"• {name}: {cnt}")
+                # Token analytics (month)
+                if "tokens_month" in snap:
+                    st.sidebar.metric("Tokens (month)", snap["tokens_month"])
+                if "avg_tokens_per_query" in snap:
+                    st.sidebar.caption(f"Avg Tokens/Query: {snap['avg_tokens_per_query']}")
         except Exception:
             st.sidebar.caption("Credit monitor unavailable")
 
