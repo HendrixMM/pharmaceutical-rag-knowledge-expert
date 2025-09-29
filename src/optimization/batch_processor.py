@@ -129,7 +129,11 @@ class BatchProcessor:
             "requests_batched": 0,
             "tokens_saved": 0,
             "cost_savings_estimated": 0.0,
-            "pharmaceutical_requests_prioritized": 0
+            "pharmaceutical_requests_prioritized": 0,
+            # Cost-per-query working aggregates
+            "tokens_processed": 0,
+            "requests_by_type": {"embedding": 0, "chat": 0},
+            "tokens_by_type": {"embedding": 0, "chat": 0},
         }
         # Load optional centralized alert config
         self._alerts_cfg = self._load_alerts_config()
@@ -373,6 +377,16 @@ class BatchProcessor:
             # Update metrics
             self.batch_metrics["total_batches_processed"] += 1
             self.batch_metrics["requests_batched"] += len(batch)
+            # Track token usage aggregates
+            try:
+                total_tokens_batch = sum(max(0, int(r.estimated_tokens or 0)) for r in batch)
+                self.batch_metrics["tokens_processed"] += total_tokens_batch
+                for r in batch:
+                    rt = r.request_type if r.request_type in ("embedding", "chat") else "chat"
+                    self.batch_metrics["requests_by_type"][rt] = self.batch_metrics["requests_by_type"].get(rt, 0) + 1
+                    self.batch_metrics["tokens_by_type"][rt] = self.batch_metrics["tokens_by_type"].get(rt, 0) + max(0, int(r.estimated_tokens or 0))
+            except Exception:
+                pass
 
             # Track request for rate limiting
             self.request_history.append(datetime.now())
@@ -580,11 +594,74 @@ class BatchProcessor:
 
     def _calculate_pharmaceutical_metrics(self) -> Dict[str, Any]:
         """Calculate pharmaceutical research-specific metrics."""
-        return {
+        metrics = {
             "pharmaceutical_requests_prioritized": self.batch_metrics["pharmaceutical_requests_prioritized"],
             "critical_priority_enabled": True,
             "domain_optimization_active": True,
-            "research_workflow_efficiency": "optimized"
+            "research_workflow_efficiency": "optimized",
+        }
+
+        # Merge cost-per-query metrics
+        try:
+            metrics["cost_per_query"] = self._calculate_cost_per_query_metrics()
+        except Exception:
+            metrics["cost_per_query"] = {
+                "average_cost_per_query_usd": 0.0,
+                "avg_tokens_per_query": 0,
+                "over_threshold": False,
+            }
+
+        return metrics
+
+    def _calculate_cost_per_query_metrics(self) -> Dict[str, Any]:
+        """Compute average cost-per-pharmaceutical-query metrics.
+
+        Uses estimated token counts and a conservative $/1k tokens rate
+        (aligned with cost savings assumptions) to provide an approximate
+        cost-per-query. Also returns per-type breakdowns when available
+        and evaluates against workflow_efficiency.cost_per_query_warning
+        threshold from alerts config.
+        """
+        total_requests = int(self.batch_metrics.get("requests_batched", 0) or 0)
+        tokens_total = int(self.batch_metrics.get("tokens_processed", 0) or 0)
+
+        # Conservative estimate rate ($ per 1k tokens)
+        usd_per_1k = 0.002
+
+        avg_tokens = int(tokens_total / total_requests) if total_requests > 0 else 0
+        avg_cost = (avg_tokens / 1000.0) * usd_per_1k if total_requests > 0 else 0.0
+
+        # By type
+        req_by_type = self.batch_metrics.get("requests_by_type", {}) or {}
+        tok_by_type = self.batch_metrics.get("tokens_by_type", {}) or {}
+        by_type_cost = {}
+        by_type_tokens = {}
+        by_type_over = {}
+
+        # Threshold from alerts config
+        wf_cfg = {}
+        try:
+            wf_cfg = ((self._alerts_cfg.get("pharmaceutical") or {}).get("workflow_efficiency") or {}) if isinstance(self._alerts_cfg, dict) else {}
+        except Exception:
+            wf_cfg = {}
+        warn_threshold = float(wf_cfg.get("cost_per_query_warning", 0.1))
+
+        for t in ("embedding", "chat"):
+            rcount = int(req_by_type.get(t, 0) or 0)
+            tkns = int(tok_by_type.get(t, 0) or 0)
+            by_type_tokens[t] = int(tkns / rcount) if rcount > 0 else 0
+            cost_t = (by_type_tokens[t] / 1000.0) * usd_per_1k if rcount > 0 else 0.0
+            by_type_cost[t] = round(cost_t, 6)
+            by_type_over[t] = bool(cost_t > warn_threshold)
+
+        return {
+            "average_cost_per_query_usd": round(avg_cost, 6),
+            "avg_tokens_per_query": avg_tokens,
+            "cost_per_query_by_type_usd": by_type_cost,
+            "avg_tokens_per_query_by_type": by_type_tokens,
+            "warning_threshold_usd": warn_threshold,
+            "over_threshold": bool(avg_cost > warn_threshold),
+            "over_threshold_by_type": by_type_over,
         }
 
     def get_queue_status(self) -> Dict[str, Any]:
