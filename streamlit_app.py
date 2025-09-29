@@ -221,6 +221,30 @@ def display_sidebar(rag_agent):
         except Exception:
             st.sidebar.caption("Pharma policy info unavailable")
 
+        # Credits & burn (best-effort)
+        st.sidebar.markdown("### 🧾 Credits & Burn")
+        try:
+            from src.monitoring.credit_tracker import PharmaceuticalCreditTracker
+            tracker = PharmaceuticalCreditTracker()
+            analytics = tracker.get_pharmaceutical_analytics()
+            base = analytics.get("base_monitor_summary", {})
+            burn = analytics.get("daily_burn") or {}
+            if base or burn:
+                used_today = burn.get("used_today")
+                burn_rate = burn.get("burn_rate")
+                if used_today is not None and burn_rate is not None:
+                    st.sidebar.metric("Used Today", used_today)
+                    st.sidebar.metric("Burn Rate", f"{burn_rate:.2f}x/day budget")
+                svc = base.get("by_service", {})
+                if svc:
+                    st.sidebar.caption("Service usage (month):")
+                    for name, cnt in svc.items():
+                        st.sidebar.caption(f"• {name}: {cnt}")
+            else:
+                st.sidebar.caption("No credit usage recorded yet this session")
+        except Exception:
+            st.sidebar.caption("Credit monitor unavailable")
+
         # PubMed integration status
         if rag_agent.config.should_enable_pubmed():
             st.sidebar.markdown("### 🔬 PubMed Integration")

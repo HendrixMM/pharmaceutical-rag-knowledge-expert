@@ -123,18 +123,8 @@ class NVIDIABuildCreditsMonitor:
         self.log_api_call(service, tokens_used=tokens_used)
         qtype = query_type or self.classify_pharma_query(query_text or "")
         self._by_query_type[qtype] = self._by_query_type.get(qtype, 0) + 1
-        # Optional callback into an attached tracker (non-fatal)
-        try:
-            if self._attached_tracker is not None and hasattr(self._attached_tracker, "track_pharmaceutical_query"):
-                self._attached_tracker.track_pharmaceutical_query(
-                    query_type=qtype,
-                    model_used=service,
-                    tokens_consumed=max(0, int(tokens_used or 0)),
-                    response_time_ms=0,
-                    cost_tier="free_tier",
-                )
-        except Exception:
-            logger.debug("Attached pharma tracker callback failed; continuing")
+        # Attached tracker callback intentionally omitted to avoid recursive logging loops.
+        # Integration should be initiated from the tracker side when needed.
 
     def attach_pharma_tracker(self, tracker: Any) -> None:
         """Attach a PharmaceuticalCreditTracker instance for richer logging (optional)."""
