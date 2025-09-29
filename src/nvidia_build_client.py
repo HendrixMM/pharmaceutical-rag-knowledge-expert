@@ -61,6 +61,36 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# -----------------------------------------------------------------------------
+# Re-export enhanced NVIDIA Build free-tier credit monitor for pharma tracking
+# -----------------------------------------------------------------------------
+try:
+    # Prefer the enhanced implementation defined in nemo_retriever_client
+    from src.nemo_retriever_client import NVIDIABuildCreditsMonitor  # type: ignore
+except Exception:  # pragma: no cover
+    # Minimal fallback to avoid import errors; pharma tracker has its own stub too
+    class NVIDIABuildCreditsMonitor:  # type: ignore
+        def __init__(self, api_key=None):
+            self.api_key = api_key
+            self.credits_used = 0
+            self.credits_remaining = 10000
+            self._daily: Dict[str, int] = {}
+
+        def log_api_call(self, service: str, tokens_used: int = 1) -> None:
+            self.credits_used += max(1, int(tokens_used or 1))
+            self.credits_remaining = max(0, 10000 - self.credits_used)
+            day = datetime.now().strftime('%Y-%m-%d')
+            self._daily[day] = self._daily.get(day, 0) + 1
+
+        def get_usage_summary(self) -> Dict[str, Any]:
+            return {"requests_this_month": self.credits_used}
+
+        def daily_burn_rate(self) -> Dict[str, Any]:
+            day = datetime.now().strftime('%Y-%m-%d')
+            used_today = int(self._daily.get(day, 0))
+            monthly_limit = 10000
+            return {"date": day, "used_today": used_today, "monthly_limit": monthly_limit, "burn_rate": used_today / monthly_limit}
+
 @dataclass
 class CreditUsageTracker:
     """Legacy credit tracker for backward compatibility."""
@@ -433,3 +463,11 @@ if __name__ == "__main__":
     import json
     results = test_nvidia_build_access()
     print(json.dumps(results, indent=2))
+
+# Public API
+__all__ = [
+    "NVIDIABuildCreditsMonitor",
+    "NVIDBuildClient",
+    "NVIDIABuildClient",
+    "test_nvidia_build_access",
+]
