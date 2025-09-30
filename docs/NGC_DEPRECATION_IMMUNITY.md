@@ -24,8 +24,8 @@ This document provides complete documentation of the RAG system's immunity to th
 ### Official NVIDIA Timeline
 
 **March 2026**: NGC API services will be deprecated and decommissioned
-- **Current Status**: NGC API remains operational (as of September 2025)
-- **Deprecation Window**: Approximately 6 months remaining
+- **Current Status**: NGC API remains operational (updated: ${CURRENT_DATE:-September 2025})
+- **Deprecation Window**: ~6 months remaining (from Sep 2025); adjust per current date
 - **Impact**: All NGC-dependent systems will lose functionality
 
 ### Timeline Milestones
@@ -509,3 +509,23 @@ system_status = {
 **Next Review**: December 2025
 **Maintained By**: Pharmaceutical RAG Team
 **Status**: ✅ **NGC DEPRECATION IMMUNE**
+### Docker Configuration (NGC‑Independent)
+
+We removed NGC‑specific references from docker‑compose.yml:
+- Replaced NGC_API_KEY with NVIDIA_API_KEY
+- Removed hard dependency on `nvcr.io` by allowing custom `EXTRACT_IMAGE`
+- Health checks use NVIDIA_API_KEY bearer tokens
+
+This enables fully NGC‑independent self‑hosted deployments.
+- Run the automated audit:
+```bash
+bash scripts/audit_ngc_dependencies.sh -v
+```
+Expected: No matches for `NGC_API_KEY`, `nvcr.io`, or `ngc.nvidia.com` outside of documentation.
+### Automated Auditing (CI/CD)
+
+- Integrate `scripts/audit_ngc_dependencies.sh` into your CI pipeline to block new NGC references.
+- Recommended: run audit on every PR and before deployments.
+- [x] docker-compose.yml updated for NGC independence
+- [x] scripts/audit_ngc_dependencies.sh added for continuous verification
+- [x] .env emphasizes NVIDIA Build (NGC‑independent)

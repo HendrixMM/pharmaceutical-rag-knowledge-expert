@@ -4,6 +4,10 @@
 
 This guide explains the different NVIDIA API endpoints, model access tiers, and how to configure your RAG system for optimal model access. Your system is currently optimized for pharmaceutical research with specialized NeMo Retriever models, and this guide helps you understand alternatives and fallback options.
 
+> ⚠️ NGC Deprecation Alert (March 2026)
+>
+> NVIDIA has announced deprecation of NGC API services by March 2026. This project is architected to be NGC‑independent and uses the NVIDIA Build platform as the primary path, ensuring immunity to that deprecation timeline. See docs/NGC_DEPRECATION_IMMUNITY.md for details.
+
 ## NVIDIA API Endpoint Types
 
 ### 1. NVIDIA AI Retrieval Services (`ai.api.nvidia.com`)
@@ -29,7 +33,8 @@ Endpoints:
 
 **Purpose**: Developer-friendly access to popular open-source models
 **Target**: General-purpose applications and cost-effective alternatives
-**Free Tier**: 10,000 requests for registered developers
+**Free Tier**: 10,000 requests for registered developers  
+**Status**: ✅ NGC Deprecation Immune
 
 ```bash
 Base URL: https://integrate.api.nvidia.com/v1
@@ -44,7 +49,7 @@ Endpoints:
 
 ## API Key and Access Analysis
 
-### Your Current API Key: `nvapi-FTRR...`
+### Your Current API Key: `nvapi-...` (NVIDIA Build)
 
 **Test Results**: The validation utility shows **403 Forbidden** errors across all endpoints, indicating:
 
@@ -68,6 +73,14 @@ python scripts/nim_native_test.py
 2. Create account or sign in
 3. Generate API key for Build platform
 4. Test with: `python scripts/nvidia_build_api_test.py`
+
+## NGC Deprecation Timeline & Immunity
+
+- March 2026: NGC API deprecation. Systems relying on NGC endpoints must migrate.  
+- This repository is already NGC‑independent via NVIDIA Build + self‑hosted NeMo fallbacks.  
+- No action needed for the March 2026 timeline when using this architecture.
+
+See also: docs/NGC_DEPRECATION_IMMUNITY.md
 
 #### Option 3: Contact NVIDIA Support
 - Check account status and permissions

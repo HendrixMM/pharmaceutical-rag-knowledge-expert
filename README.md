@@ -4,6 +4,7 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.28%2B-red)](https://streamlit.io)
 [![NVIDIA](https://img.shields.io/badge/NVIDIA-API-green)](https://build.nvidia.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![NGC Immune](https://img.shields.io/badge/NGC_Deprecation-IMMUNE-success?style=for-the-badge&logo=nvidia)](docs/NGC_DEPRECATION_IMMUNITY.md)
 
 A powerful **Retrieval-Augmented Generation (RAG)** template built with **NVIDIA's embedding models** and **LangChain**. This template provides a complete solution for building AI-powered document Q&A systems with a beautiful web interface.
 
@@ -1485,3 +1486,14 @@ make down-all
 Notes:
 - Ensure your NVIDIA Build key is permitted to pull/run the NIM images.
 - You may override images via environment variables: `EMBED_IMAGE`, `RERANK_IMAGE`, `EXTRACT_IMAGE`.
+- ### **🛡️ Future‑Proof Architecture**
+  - ✅ NGC Deprecation Immune: Zero impact from March 2026 NGC API deprecation
+  - 🌐 Cloud‑First: NVIDIA Build platform as primary endpoint
+  - 🔄 OpenAI SDK: Standardized, maintainable API access
+  - 📊 Cost Optimization: Free tier maximization (10K requests/month)
+  - 🔧 Self‑Hosted Fallback: Complete independence from cloud services
+
+> NGC Deprecation Immunity
+>
+> This template is architected to be NGC‑independent. It uses the NVIDIA Build platform as the primary endpoint and self‑hosted NeMo as fallback. This ensures zero migration overhead for the March 2026 deprecation timeline.  
+> See docs/NGC_DEPRECATION_IMMUNITY.md for the full documentation.
