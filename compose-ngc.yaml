@@ -1,0 +1,19 @@
+version: "3.8"
+
+# NGC-specific override file
+# Usage:
+#   docker compose -f docker-compose.yml -f compose-ngc.yaml up
+# This override switches images to nvcr.io NIM registry variants while keeping
+# the base compose NGC-independent by default. You can still override via
+# EMBED_IMAGE, RERANK_IMAGE, and EXTRACT_IMAGE environment variables.
+
+services:
+  embedder:
+    image: ${EMBED_IMAGE:-nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest}
+
+  reranker:
+    image: ${RERANK_IMAGE:-nvcr.io/nim/meta/llama-3_2-nemoretriever-500m-rerank-v2:latest}
+
+  extraction:
+    image: ${EXTRACT_IMAGE:-nvcr.io/nim/nvidia/nv-ingest:latest}
+

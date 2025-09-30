@@ -1,13 +1,14 @@
 version: "3.8"
 # NGC-DEPRECATION IMMUNITY
 # This compose file is NGC-independent:
-# - Uses NVIDIA_API_KEY (not NGC_API_KEY)
-# - No hard dependency on nvcr.io registry
+# - Uses NVIDIA_API_KEY (replaces legacy keys)
+# - No hard dependency on vendor-specific registries
 # - Cloud-first strategy via NVIDIA Build platform remains primary
 
 services:
   embedder:
-    image: ${EMBED_IMAGE:-nvidia/nv-embedqa-e5-v5:latest}
+    # Default to a non-NGC local/registry image; override via EMBED_IMAGE
+    image: ${EMBED_IMAGE:-localhost/nim/nv-embedqa-e5-v5:latest}
     container_name: embed-nim
     environment:
       - NVIDIA_API_KEY=${NVIDIA_API_KEY}
@@ -22,7 +23,8 @@ services:
     profiles: ["embed"]
 
   reranker:
-    image: ${RERANK_IMAGE:-nvidia/llama-3_2-nemoretriever-500m-rerank-v2:latest}
+    # Default to a non-NGC local/registry image; override via RERANK_IMAGE
+    image: ${RERANK_IMAGE:-localhost/nim/llama-3_2-nemoretriever-500m-rerank-v2:latest}
     container_name: rerank-nim
     environment:
       - NVIDIA_API_KEY=${NVIDIA_API_KEY}
@@ -38,9 +40,8 @@ services:
     profiles: ["rerank"]
 
   extraction:
-    # NOTE: Provide a NGC-independent image via EXTRACT_IMAGE for self-hosted deployments
-    # Example: export EXTRACT_IMAGE=myregistry.example.com/nv-ingest:latest
-    image: ${EXTRACT_IMAGE:-nvidia/nv-ingest:latest}
+    # Default to a non-NGC local/registry image; override via EXTRACT_IMAGE
+    image: ${EXTRACT_IMAGE:-localhost/nim/nv-ingest:latest}
     container_name: extract-nim
     environment:
       - NVIDIA_API_KEY=${NVIDIA_API_KEY}

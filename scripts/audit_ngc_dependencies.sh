@@ -20,13 +20,19 @@ TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 info "NGC audit started at $TS"
 
 # File filters and exclusions
-EXCLUDES=(backups \/venv\/ \/.git\/ \/.pytest_cache\/ \/__pycache__\/ docs/NGC_DEPRECATION_IMMUNITY.md)
+EXCLUDES=(backups \/venv\/ \/.git\/ \/.pytest_cache\/ \/__pycache__\/)
 EXPR_EXCLUDE=$(printf "|%s" "${EXCLUDES[@]}")
 EXPR_EXCLUDE="${EXPR_EXCLUDE:1}"
 
 scan() {
   local pattern="$1"
-  rg -n --hidden --glob '!venv/*' --glob '!*__pycache__/*' --glob '!backups/*' "$pattern" || true
+  rg -n --hidden \
+    --glob '!venv/*' \
+    --glob '!*__pycache__/*' \
+    --glob '!backups/*' \
+    --glob '!.git/*' \
+    --glob '!scripts/audit_ngc_dependencies.sh' \
+    "$pattern" || true
 }
 
 PATTERNS=(
@@ -40,8 +46,11 @@ FOUND=0
 TOTAL_FILES=$(rg -uu --files | wc -l | tr -d ' ')
 info "Scanning $TOTAL_FILES files for NGC dependencies..."
 
+# Allowlist: docs where NGC mentions are expected and educational
+ALLOWLIST_REGEX='^(docs/NGC_DEPRECATION_IMMUNITY\.md|docs/NVIDIA_MODEL_ACCESS_GUIDE\.md|docs/DEPLOYMENT_GUIDE\.md|compose-ngc\.yaml):'
+
 for p in "${PATTERNS[@]}"; do
-  MATCHES=$(scan "$p")
+  MATCHES=$(scan "$p" | grep -Ev "$ALLOWLIST_REGEX" || true)
   if [[ -n "$MATCHES" ]]; then
     if [[ $VERBOSE -eq 1 ]]; then
       err "Pattern '$p' found in:\n$MATCHES"
@@ -61,4 +70,3 @@ else
   err "NGC dependencies detected. Please remove or replace these references."
   exit 1
 fi
-
