@@ -5,6 +5,7 @@
 .PHONY: lint format check security coverage quality fix pre-commit setup-dev
 .PHONY: test-rerank
 .PHONY: start-rerank stop-rerank down-all
+.PHONY: bench:ci
 
 # Default target
 help:
@@ -36,6 +37,8 @@ help:
 	@echo "  stop-local-stack  Stop embedder + reranker"
 	@echo "  coverage         Run tests with coverage report"
 	@echo ""
+	@echo "🚀 Benchmarks:"
+	@echo "  bench:ci         Run orchestrated preflight→run locally (CI-like)"
 	@echo "⚙️  Development Setup:"
 	@echo "  setup-dev        Complete development setup"
 	@echo "  pre-commit       Install pre-commit hooks"
@@ -171,3 +174,20 @@ clean:
 # Quick development cycle
 dev: format lint test-unit
 	@echo "🎉 Development cycle complete!"
+
+# CI-like bench orchestration (requires NVIDIA_API_KEY)
+bench:ci:
+	@echo "Running orchestrated benchmarks (preflight→run)…" && \
+	python scripts/orchestrate_benchmarks.py \
+	  --mode $${MODE:-both} \
+	  --preset $${PRESET:-cloud_first_adaptive} \
+	  --output $${OUT:-results/benchmark_runs/orchestrated_local} \
+	  --summary-output $${OUT:-results/benchmark_runs/orchestrated_local}/summary.json \
+	  --auto-concurrency --skip-classifier-validation \
+	  --preflight-sample-count $${PF_SAMPLES:-1} \
+	  --preflight-min-concurrency $${PF_MIN_CONC:-2} \
+	  --fail-on-preflight \
+	  --fail-on-regressions \
+	  --min-cloud-score $${MIN_SCORE:-0.30} \
+	  --max-cloud-latency-ms $${MAX_P95_MS:-12000} \
+	  --max-queries $${MAX_Q:-1}

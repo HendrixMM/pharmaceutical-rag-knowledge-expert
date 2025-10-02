@@ -35,7 +35,7 @@ on:
         default: "2"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: benchmark-orchestration-${{ github.ref }}
@@ -45,6 +45,10 @@ jobs:
   smoke:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: ["cloud_first_adaptive", ""]
     env:
       NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
       BENCHMARK_LAUNCH_STAGGER_MS: "100"
@@ -76,11 +80,12 @@ jobs:
 
       - name: Orchestrate Benchmarks (smoke: preflight → run)
         run: |
+          PRESET_ARG=""; if [ -n "${{ matrix.preset }}" ]; then PRESET_ARG="--preset ${{ matrix.preset }}"; fi
           python scripts/orchestrate_benchmarks.py \
             --mode both \
-            --preset cloud_first_adaptive \
-            --output results/benchmark_runs/orchestrated_smoke_pr \
-            --summary-output results/benchmark_runs/orchestrated_smoke_pr/summary.json \
+            $$PRESET_ARG \
+            --output results/benchmark_runs/orchestrated_smoke_pr_${{ matrix.preset || 'default' }} \
+            --summary-output results/benchmark_runs/orchestrated_smoke_pr_${{ matrix.preset || 'default' }}/summary.json \
             --auto-concurrency --skip-classifier-validation \
             --preflight-sample-count 1 \
             --preflight-min-concurrency 2 \
@@ -94,9 +99,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: orchestrated-smoke-pr-results
+          name: orchestrated-smoke-pr-results-${{ matrix.preset || 'default' }}
           path: |
-            results/benchmark_runs/orchestrated_smoke_pr/**
+            results/benchmark_runs/orchestrated_smoke_pr_${{ matrix.preset || 'default' }}/**
           if-no-files-found: ignore
 
       - name: Smoke Job Summary
@@ -104,7 +109,12 @@ jobs:
         run: |
           python - << 'PY'
           import json, os
-          p='results/benchmark_runs/orchestrated_smoke_pr/summary.json'
+          p=f"results/benchmark_runs/orchestrated_smoke_pr_${os.environ.get('PRESET_NAME','default')}/summary.json"
+          # fallback for matrix
+          import glob
+          cands=glob.glob('results/benchmark_runs/orchestrated_smoke_pr_*/summary.json')
+          if not os.path.exists(p) and cands:
+              p=cands[0]
           try:
               d=json.load(open(p))
           except Exception as e:
