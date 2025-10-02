@@ -1,0 +1,310 @@
+# Pharmaceutical Benchmarks Manifest
+# Central metadata registry for all benchmark datasets
+
+version: "1.0"
+last_updated: "2025-09-30"
+total_datasets: 5
+total_queries: 250
+
+datasets:
+  drug_interactions:
+    versions:
+      - version: "1"
+        file: "drug_interactions_v1.json"
+        created: "2025-09-30"
+        total_queries: 50
+        description: "Baseline drug interaction queries covering mechanism-based, pharmacokinetic, and pharmacodynamic interactions"
+        query_types:
+          - comparison
+          - safety
+          - reasoning
+          - retrieval
+        therapeutic_classes:
+          - statins
+          - anticoagulants
+          - antiplatelets
+          - ACE_inhibitors
+          - beta_blockers
+          - ARBs
+          - calcium_channel_blockers
+          - antiarrhythmics
+          - antifungals
+          - antibiotics
+          - immunosuppressants
+        key_interaction_mechanisms:
+          - CYP450_inhibition
+          - CYP450_induction
+          - P-glycoprotein
+          - pharmacodynamic_additive
+          - absorption_interference
+          - protein_displacement
+        validation_status: "validated"
+        clinical_review: "pending"
+
+  pharmacokinetics:
+    versions:
+      - version: "1"
+        file: "pharmacokinetics_v1.json"
+        created: "2025-09-30"
+        total_queries: 50
+        description: "Baseline ADME queries covering absorption, distribution, metabolism, and excretion parameters"
+        query_types:
+          - scientific
+          - retrieval
+          - reasoning
+          - comparison
+        pk_parameters:
+          - bioavailability
+          - half-life
+          - volume_of_distribution
+          - clearance
+          - protein_binding
+          - metabolic_pathways
+          - renal_excretion
+          - hepatic_metabolism
+        special_populations:
+          - renal_impairment
+          - hepatic_impairment
+          - elderly
+          - obesity
+          - pregnancy
+          - dialysis
+        validation_status: "validated"
+        clinical_review: "pending"
+
+  clinical_terminology:
+    versions:
+      - version: "1"
+        file: "clinical_terminology_v1.json"
+        created: "2025-09-30"
+        total_queries: 50
+        description: "Baseline terminology queries covering drug classifications, medical terms, and pharmaceutical concepts"
+        query_types:
+          - definition
+          - classification
+          - comparison
+        terminology_categories:
+          - abbreviations
+          - therapeutic_classes
+          - administration_routes
+          - dosage_forms
+          - FDA_classifications
+          - ATC_codes
+          - regulatory_terms
+          - prescription_writing
+        key_concepts:
+          - bioequivalence
+          - therapeutic_index
+          - prodrug
+          - controlled_substances
+          - black_box_warnings
+          - off-label_use
+          - formulary
+        validation_status: "validated"
+        clinical_review: "pending"
+
+  mechanism_of_action:
+    versions:
+      - version: "1"
+        file: "mechanism_of_action_v1.json"
+        created: "2025-09-30"
+        total_queries: 50
+        description: "Baseline mechanism queries covering receptor interactions, enzyme targets, and signaling pathways"
+        query_types:
+          - scientific
+          - reasoning
+          - comparison
+        molecular_targets:
+          - enzymes
+          - receptors
+          - ion_channels
+          - transporters
+          - nuclear_receptors
+          - GPCRs
+        mechanism_categories:
+          - enzyme_inhibition
+          - receptor_agonism
+          - receptor_antagonism
+          - ion_channel_modulation
+          - transporter_inhibition
+          - gene_transcription
+          - signal_transduction
+        therapeutic_classes:
+          - statins
+          - anticoagulants
+          - antihypertensives
+          - antidiabetics
+          - antiarrhythmics
+          - analgesics
+          - psychotropics
+          - antimicrobials
+        validation_status: "validated"
+        clinical_review: "pending"
+
+  adverse_reactions:
+    versions:
+      - version: "1"
+        file: "adverse_reactions_v1.json"
+        created: "2025-09-30"
+        total_queries: 50
+        description: "Baseline adverse reaction queries covering common and serious side effects, warnings, and monitoring"
+        query_types:
+          - safety
+          - retrieval
+        severity_levels:
+          - common
+          - serious
+          - life-threatening
+          - black_box_warnings
+        adverse_effect_categories:
+          - cardiovascular
+          - gastrointestinal
+          - hepatotoxicity
+          - nephrotoxicity
+          - hematologic
+          - dermatologic
+          - neurologic
+          - metabolic
+          - endocrine
+          - hypersensitivity
+        monitoring_requirements:
+          - laboratory_tests
+          - vital_signs
+          - ECG
+          - imaging
+          - therapeutic_drug_monitoring
+          - clinical_assessment
+        special_warnings:
+          - pregnancy
+          - elderly
+          - pediatric
+          - renal_impairment
+          - hepatic_impairment
+          - drug_interactions
+        validation_status: "validated"
+        clinical_review: "pending"
+
+# Benchmark Quality Metrics
+quality_metrics:
+  coverage:
+    drug_classes_represented: 25
+    therapeutic_areas: 12
+    query_complexity_distribution:
+      basic: 30%
+      intermediate: 50%
+      advanced: 20%
+
+  diversity:
+    brand_name_queries: 40%
+    generic_name_queries: 60%
+    multi-drug_queries: 25%
+    single_drug_queries: 75%
+
+  clinical_relevance:
+    real_world_scenarios: 85%
+    educational_examples: 15%
+    evidence_based: 100%
+
+# Evaluation Criteria Weights
+default_evaluation_weights:
+  accuracy_weight: 0.4
+  completeness_weight: 0.3
+  relevance_weight: 0.3
+
+# Regression Detection Thresholds
+regression_thresholds:
+  accuracy_drop_percent: 5
+  cost_increase_percent: 20
+  latency_increase_percent: 50
+
+# Data Sources
+data_sources:
+  - name: "FDA Drug Labels"
+    type: "regulatory"
+    usage: "all_categories"
+
+  - name: "DrugBank"
+    type: "database"
+    usage: "pharmacokinetics, interactions"
+
+  - name: "Clinical Pharmacology Textbooks"
+    type: "literature"
+    usage: "mechanisms, adverse_effects"
+
+  - name: "PubMed Literature"
+    type: "research"
+    usage: "evidence_validation"
+
+  - name: "RxNorm/NLM"
+    type: "terminology"
+    usage: "clinical_terminology"
+
+  - name: "Project Drug Data"
+    type: "internal"
+    files:
+      - "Data/drugs_brand.txt"
+      - "Data/drugs_generic.txt"
+    usage: "query_generation"
+
+# Versioning Strategy
+versioning:
+  current_version: "1"
+  next_planned_version: "2"
+  version_increment_criteria:
+    - "50+ new queries per category"
+    - "edge_cases_identified"
+    - "production_insights"
+    - "clinical_expert_review"
+
+  immutability: true
+  backward_compatibility: true
+
+# Usage Guidelines
+usage:
+  run_frequency: "weekly"
+  regression_testing: "on_model_update"
+  performance_baseline: "version_1"
+
+  integration_points:
+    - "PharmaceuticalCostAnalyzer"
+    - "EnhancedNeMoClient"
+    - "QueryClassifier"
+    - "MonitoringDashboard"
+
+# Maintenance Schedule
+maintenance:
+  review_cycle: "quarterly"
+  update_cycle: "monthly"
+  clinical_validation: "annually"
+
+  responsible_team:
+    - "data_science"
+    - "clinical_pharmacology"
+    - "quality_assurance"
+
+# Export/Import Compatibility
+compatibility:
+  json_schema_version: "1.0"
+  encoding: "UTF-8"
+  supported_tools:
+    - "pytest"
+    - "pandas"
+    - "json"
+    - "yaml"
+
+# Contact Information
+contacts:
+  technical_lead: "data_science_team"
+  clinical_advisor: "clinical_pharmacology"
+  issues_tracker: "project_repository"
+
+# Change Log
+changelog:
+  - version: "1.0"
+    date: "2025-09-30"
+    changes:
+      - "Initial baseline datasets created"
+      - "5 categories with 50 queries each"
+      - "250 total pharmaceutical queries"
+      - "Comprehensive coverage of major therapeutic classes"
+    author: "benchmark_generation_system"

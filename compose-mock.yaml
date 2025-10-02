@@ -1,0 +1,42 @@
+version: "3.8"
+
+# Mock services override file for testing with WireMock stubs
+# Usage:
+#   docker compose -f docker-compose.yml -f compose-mock.yaml --profile mock-embed up
+#   docker compose -f docker-compose.yml -f compose-mock.yaml --profile mock-rerank up
+#   docker compose -f docker-compose.yml -f compose-mock.yaml --profile mock-extraction up
+#
+# This override provides lightweight mock services for testing without requiring
+# NGC registry access or GPU resources. The mocks return predefined responses
+# configured in docker/mocks/[service]/mappings/*.json
+
+services:
+  embedder:
+    image: ${EMBED_IMAGE:-wiremock/wiremock:2.35.0}
+    ports:
+      - "8501:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health"]
+    profiles: ["mock-embed"]
+    volumes:
+      - ./docker/mocks/embedder:/home/wiremock
+
+  reranker:
+    image: ${RERANK_IMAGE:-wiremock/wiremock:2.35.0}
+    ports:
+      - "8502:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health"]
+    profiles: ["mock-rerank"]
+    volumes:
+      - ./docker/mocks/reranker:/home/wiremock
+
+  extraction:
+    image: ${EXTRACT_IMAGE:-wiremock/wiremock:2.35.0}
+    ports:
+      - "8503:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health"]
+    profiles: ["mock-extraction"]
+    volumes:
+      - ./docker/mocks/extraction:/home/wiremock

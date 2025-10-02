@@ -1,0 +1,1532 @@
+{
+  "metadata": {
+    "version": "1",
+    "category": "mechanism_of_action",
+    "created_date": "2025-09-30",
+    "total_queries": 50,
+    "description": "Baseline mechanism of action queries covering receptor interactions, enzyme targets, signaling pathways, and molecular mechanisms across therapeutic classes",
+    "baselines": {
+      "cloud": {
+        "average_latency_ms": 480.0,
+        "success_rate": 0.97,
+        "average_cost_per_query": 14.0,
+        "average_accuracy": 0.82,
+        "notes": "Based on NVIDIA Build cloud endpoints (integrate.api.nvidia.com)"
+      },
+      "self_hosted": {
+        "average_latency_ms": 900.0,
+        "success_rate": 0.94,
+        "average_cost_per_query": 0.0,
+        "average_accuracy": 0.8,
+        "notes": "Based on local NIM containers with GPU acceleration"
+      },
+      "regression_thresholds": {
+        "accuracy_drop_percent": 5,
+        "cost_increase_percent": 20,
+        "latency_increase_percent": 50
+      }
+    }
+  },
+  "queries": [
+    {
+      "id": "moa_001",
+      "query": "How do statins like atorvastatin (Lipitor) lower cholesterol?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "HMG-CoA reductase inhibition",
+        "blocks cholesterol synthesis",
+        "mevalonate pathway",
+        "upregulates LDL receptors",
+        "hepatic cholesterol production"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "atorvastatin",
+          "Lipitor"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "statin",
+        "enzyme inhibition",
+        "cholesterol",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_002",
+      "query": "What is the mechanism of action of warfarin (Coumadin)?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "vitamin K antagonist",
+        "inhibits VKORC1",
+        "blocks clotting factor synthesis",
+        "factors II VII IX X",
+        "hepatic synthesis"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "Coumadin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "anticoagulant",
+        "vitamin K",
+        "clotting factors",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_003",
+      "query": "How do ACE inhibitors like lisinopril work to lower blood pressure?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "blocks angiotensin-converting enzyme",
+        "reduces angiotensin II",
+        "decreases aldosterone",
+        "vasodilation",
+        "RAAS system"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "lisinopril"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "ACE inhibitor",
+        "RAAS",
+        "antihypertensive",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_004",
+      "query": "What is the mechanism of action of beta blockers like metoprolol?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "beta-adrenergic receptor antagonist",
+        "blocks catecholamines",
+        "reduces heart rate",
+        "decreases contractility",
+        "cardiac output reduction"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "metoprolol"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "beta blocker",
+        "receptor antagonist",
+        "cardiovascular",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_005",
+      "query": "How does clopidogrel (Plavix) prevent blood clots?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "P2Y12 receptor antagonist",
+        "irreversible inhibition",
+        "blocks ADP-mediated platelet activation",
+        "prevents aggregation",
+        "prodrug conversion"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "Plavix"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antiplatelet",
+        "receptor antagonist",
+        "P2Y12",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_006",
+      "query": "What is the molecular target of aspirin's antiplatelet effect?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "irreversible COX-1 inhibition",
+        "acetylates serine 529",
+        "blocks thromboxane A2 synthesis",
+        "platelet aggregation prevention",
+        "permanent effect"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antiplatelet",
+        "COX inhibition",
+        "aspirin",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_007",
+      "query": "How do ARBs like losartan (Cozaar) differ from ACE inhibitors mechanistically?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "AT1 receptor blockade",
+        "direct angiotensin II antagonism",
+        "no bradykinin effect",
+        "less cough",
+        "RAAS downstream"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "normal",
+        "drug_names": [
+          "losartan",
+          "Cozaar"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "ARB",
+        "receptor antagonist",
+        "comparison",
+        "RAAS"
+      ]
+    },
+    {
+      "id": "moa_008",
+      "query": "What is the mechanism of action of metformin in type 2 diabetes?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "AMPK activation",
+        "reduces hepatic gluconeogenesis",
+        "improves insulin sensitivity",
+        "decreases glucose production",
+        "mitochondrial complex I"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "diabetes",
+        "AMPK",
+        "biguanide",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_009",
+      "query": "How do calcium channel blockers like amlodipine work?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "L-type calcium channel blockade",
+        "vascular smooth muscle relaxation",
+        "reduced calcium influx",
+        "vasodilation",
+        "peripheral resistance"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "amlodipine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "calcium channel blocker",
+        "vasodilation",
+        "mechanism",
+        "cardiovascular"
+      ]
+    },
+    {
+      "id": "moa_010",
+      "query": "What is the mechanism of action of direct oral anticoagulants (DOACs) like rivaroxaban?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "direct factor Xa inhibition",
+        "blocks prothrombinase complex",
+        "prevents thrombin generation",
+        "coagulation cascade",
+        "selective inhibitor"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "rivaroxaban"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "DOAC",
+        "factor Xa",
+        "anticoagulant",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_011",
+      "query": "How do proton pump inhibitors (PPIs) like omeprazole reduce stomach acid?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "H+/K+ ATPase inhibition",
+        "parietal cell",
+        "irreversible binding",
+        "prodrug activation",
+        "gastric acid pump"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "omeprazole"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "PPI",
+        "enzyme inhibition",
+        "gastric",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_012",
+      "query": "What is the mechanism of action of SSRIs like fluoxetine?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "selective serotonin reuptake inhibition",
+        "blocks SERT transporter",
+        "increases synaptic serotonin",
+        "presynaptic",
+        "antidepressant effect"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "fluoxetine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "SSRI",
+        "transporter inhibition",
+        "serotonin",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_013",
+      "query": "How does digoxin work to treat heart failure?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "Na+/K+ ATPase inhibition",
+        "increased intracellular calcium",
+        "positive inotropy",
+        "enhanced contractility",
+        "vagal tone"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "cardiac glycoside",
+        "enzyme inhibition",
+        "heart failure",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_014",
+      "query": "What is the mechanism of action of benzodiazepines like diazepam?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "GABA-A receptor allosteric modulator",
+        "enhances chloride influx",
+        "neuronal hyperpolarization",
+        "CNS depression",
+        "anxiolytic effect"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "diazepam"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "benzodiazepine",
+        "GABA",
+        "receptor modulator",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_015",
+      "query": "How do thiazide diuretics like hydrochlorothiazide lower blood pressure?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "Na-Cl cotransporter inhibition",
+        "distal convoluted tubule",
+        "sodium excretion",
+        "volume depletion",
+        "vasodilation"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "hydrochlorothiazide"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "thiazide",
+        "diuretic",
+        "transporter inhibition",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_016",
+      "query": "What is the mechanism of action of opioids like morphine?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "mu-opioid receptor agonist",
+        "G-protein coupled",
+        "inhibits adenylyl cyclase",
+        "reduces cAMP",
+        "analgesia pathway"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "morphine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "opioid",
+        "receptor agonist",
+        "GPCR",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_017",
+      "query": "How does insulin work at the cellular level?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "insulin receptor tyrosine kinase",
+        "GLUT4 translocation",
+        "glucose uptake",
+        "PI3K/Akt pathway",
+        "metabolic effects"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "insulin",
+        "receptor tyrosine kinase",
+        "glucose",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_018",
+      "query": "What is the mechanism of action of NSAIDs like ibuprofen?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "COX-1 and COX-2 inhibition",
+        "blocks prostaglandin synthesis",
+        "anti-inflammatory",
+        "analgesic",
+        "antipyretic"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "ibuprofen"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "NSAID",
+        "COX inhibition",
+        "prostaglandin",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_019",
+      "query": "How do sulfonylureas like glyburide lower blood glucose?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "K-ATP channel closure",
+        "beta cell depolarization",
+        "calcium influx",
+        "insulin secretion",
+        "pancreatic"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "glyburide"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "sulfonylurea",
+        "ion channel",
+        "insulin secretion",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_020",
+      "query": "What is the mechanism of action of albuterol for asthma?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "beta-2 adrenergic agonist",
+        "bronchial smooth muscle relaxation",
+        "cAMP increase",
+        "bronchodilation",
+        "G-protein coupled"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "beta-agonist",
+        "bronchodilator",
+        "receptor agonist",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_021",
+      "query": "How does amiodarone work as an antiarrhythmic?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "multiple ion channel blockade",
+        "potassium channel primary",
+        "prolongs action potential",
+        "Class III antiarrhythmic",
+        "multiple mechanisms"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antiarrhythmic",
+        "ion channel",
+        "multiple targets",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_022",
+      "query": "What is the mechanism of action of corticosteroids like prednisone?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "glucocorticoid receptor agonist",
+        "nuclear receptor",
+        "gene transcription",
+        "anti-inflammatory proteins",
+        "immunosuppression"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "prednisone"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "corticosteroid",
+        "nuclear receptor",
+        "anti-inflammatory",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_023",
+      "query": "How does levothyroxine work to treat hypothyroidism?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "thyroid hormone replacement",
+        "T4 to T3 conversion",
+        "nuclear thyroid receptors",
+        "gene transcription",
+        "metabolic regulation"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "thyroid",
+        "hormone replacement",
+        "nuclear receptor",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_024",
+      "query": "What is the mechanism of action of heparin?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "antithrombin III activation",
+        "1000-fold potentiation",
+        "inhibits thrombin and factor Xa",
+        "coagulation cascade",
+        "indirect inhibitor"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "anticoagulant",
+        "antithrombin",
+        "indirect inhibitor",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_025",
+      "query": "How do ACE inhibitors increase bradykinin levels and what effects does this have?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "ACE degrades bradykinin",
+        "inhibition increases bradykinin",
+        "vasodilation",
+        "cough side effect",
+        "angioedema risk"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "ACE inhibitors"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "ACE inhibitor",
+        "bradykinin",
+        "side effects",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_026",
+      "query": "What is the mechanism of action of nitroglycerin for angina?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "nitric oxide donor",
+        "activates guanylyl cyclase",
+        "increases cGMP",
+        "vascular smooth muscle relaxation",
+        "venous dilation"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "nitrate",
+        "NO donor",
+        "vasodilation",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_027",
+      "query": "How does allopurinol prevent gout attacks?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "xanthine oxidase inhibition",
+        "blocks uric acid formation",
+        "hypoxanthine to xanthine",
+        "reduces urate levels",
+        "purine metabolism"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "gout",
+        "enzyme inhibition",
+        "xanthine oxidase",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_028",
+      "query": "What is the mechanism of action of atropine?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "muscarinic acetylcholine receptor antagonist",
+        "competitive inhibition",
+        "parasympathetic blockade",
+        "anticholinergic",
+        "multiple effects"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "anticholinergic",
+        "receptor antagonist",
+        "muscarinic",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_029",
+      "query": "How do DPP-4 inhibitors like sitagliptin work for diabetes?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "dipeptidyl peptidase-4 inhibition",
+        "increases incretin levels",
+        "GLP-1 and GIP",
+        "enhances insulin secretion",
+        "glucose-dependent"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "sitagliptin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "DPP-4 inhibitor",
+        "incretin",
+        "diabetes",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_030",
+      "query": "What is the mechanism of action of epinephrine in anaphylaxis?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "alpha and beta adrenergic agonist",
+        "vasoconstriction alpha-1",
+        "bronchodilation beta-2",
+        "positive inotropy beta-1",
+        "multi-receptor"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "epinephrine",
+        "adrenergic agonist",
+        "emergency",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_031",
+      "query": "How does spironolactone work as a diuretic?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "mineralocorticoid receptor antagonist",
+        "aldosterone blockade",
+        "collecting duct",
+        "potassium-sparing",
+        "sodium excretion"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "diuretic",
+        "aldosterone antagonist",
+        "potassium-sparing",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_032",
+      "query": "What is the mechanism of action of azithromycin?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "50S ribosomal subunit binding",
+        "protein synthesis inhibition",
+        "bacteriostatic",
+        "macrolide antibiotic",
+        "translocation block"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "macrolide",
+        "antibiotic",
+        "ribosome",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_033",
+      "query": "How do GLP-1 agonists like liraglutide work?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "GLP-1 receptor agonist",
+        "enhances insulin secretion",
+        "suppresses glucagon",
+        "delays gastric emptying",
+        "incretin mimetic"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "liraglutide"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "GLP-1",
+        "receptor agonist",
+        "diabetes",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_034",
+      "query": "What is the mechanism of action of lithium in bipolar disorder?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "multiple mechanisms",
+        "inositol depletion",
+        "GSK-3 inhibition",
+        "neuroprotection",
+        "mood stabilization"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.3,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "lithium",
+        "mood stabilizer",
+        "multiple targets",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_035",
+      "query": "How does furosemide work as a loop diuretic?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "Na-K-2Cl cotransporter inhibition",
+        "loop of Henle",
+        "thick ascending limb",
+        "potent diuresis",
+        "calcium excretion"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "loop diuretic",
+        "transporter inhibition",
+        "mechanism",
+        "renal"
+      ]
+    },
+    {
+      "id": "moa_036",
+      "query": "What is the mechanism of action of phenytoin?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "voltage-gated sodium channel blockade",
+        "inactivated state stabilization",
+        "reduces neuronal firing",
+        "anticonvulsant",
+        "frequency-dependent"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "anticonvulsant",
+        "sodium channel",
+        "ion channel",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_037",
+      "query": "How do TNF-alpha inhibitors like infliximab work?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "binds TNF-alpha",
+        "monoclonal antibody",
+        "neutralizes cytokine",
+        "anti-inflammatory",
+        "immune modulation"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "infliximab"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "biologic",
+        "TNF inhibitor",
+        "antibody",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_038",
+      "query": "What is the mechanism of action of ranitidine (H2 blocker)?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "histamine H2 receptor antagonist",
+        "parietal cell",
+        "reduces acid secretion",
+        "competitive inhibition",
+        "gastric acid"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "H2 blocker",
+        "receptor antagonist",
+        "gastric",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_039",
+      "query": "How does tacrolimus work as an immunosuppressant?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "calcineurin inhibition",
+        "blocks NFAT activation",
+        "T-cell suppression",
+        "IL-2 reduction",
+        "transplant rejection"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "immunosuppressant",
+        "calcineurin",
+        "T-cell",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_040",
+      "query": "What is the mechanism of action of finasteride for BPH?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "5-alpha reductase inhibition",
+        "blocks DHT formation",
+        "reduces prostate size",
+        "androgen metabolism",
+        "type II enzyme"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "BPH",
+        "enzyme inhibition",
+        "androgen",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_041",
+      "query": "How does dabigatran differ mechanistically from rivaroxaban?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "dabigatran direct thrombin inhibitor",
+        "rivaroxaban factor Xa inhibitor",
+        "different coagulation targets",
+        "both DOACs",
+        "cascade position"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "normal",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "DOAC",
+        "comparison",
+        "anticoagulant",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_042",
+      "query": "What is the mechanism of action of levodopa in Parkinson's disease?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "dopamine precursor",
+        "crosses blood-brain barrier",
+        "converted to dopamine",
+        "replaces depleted neurotransmitter",
+        "aromatic amino acid decarboxylase"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "Parkinson",
+        "dopamine",
+        "prodrug",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_043",
+      "query": "How does methotrexate work as an immunosuppressant?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "dihydrofolate reductase inhibition",
+        "blocks folate metabolism",
+        "purine and pyrimidine synthesis",
+        "cell proliferation",
+        "anti-inflammatory"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "immunosuppressant",
+        "DHFR",
+        "antifolate",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_044",
+      "query": "What is the mechanism of action of bisphosphonates like alendronate?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "osteoclast inhibition",
+        "farnesyl pyrophosphate synthase",
+        "bone resorption reduction",
+        "hydroxyapatite binding",
+        "osteoporosis"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "alendronate"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "bisphosphonate",
+        "bone",
+        "osteoclast",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_045",
+      "query": "How does acetaminophen (Tylenol) reduce pain and fever?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "COX inhibition CNS",
+        "peroxide tone theory",
+        "weak peripheral COX",
+        "central analgesic",
+        "antipyretic"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "Tylenol"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.3,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.4
+      },
+      "tags": [
+        "acetaminophen",
+        "COX",
+        "analgesic",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_046",
+      "query": "What is the mechanism of action of tramadol?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "dual mechanism",
+        "weak mu-opioid agonist",
+        "serotonin-norepinephrine reuptake inhibition",
+        "central analgesic",
+        "synergistic effect"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "tramadol",
+        "dual mechanism",
+        "opioid",
+        "SNRI"
+      ]
+    },
+    {
+      "id": "moa_047",
+      "query": "How does sildenafil (Viagra) work?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "phosphodiesterase-5 inhibition",
+        "increases cGMP",
+        "smooth muscle relaxation",
+        "penile blood flow",
+        "NO-cGMP pathway"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "Viagra"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "PDE5 inhibitor",
+        "erectile dysfunction",
+        "cGMP",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_048",
+      "query": "What is the mechanism of action of naloxone in opioid overdose?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "competitive opioid receptor antagonist",
+        "mu receptor",
+        "reverses opioid effects",
+        "higher affinity",
+        "rapid onset"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "naloxone",
+        "opioid antagonist",
+        "overdose",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_049",
+      "query": "How do statins cause myopathy at the cellular level?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "mevalonate pathway depletion",
+        "reduced CoQ10",
+        "impaired prenylation",
+        "mitochondrial dysfunction",
+        "skeletal muscle"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": [
+          "statins"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "statin",
+        "adverse effect",
+        "myopathy",
+        "mechanism"
+      ]
+    },
+    {
+      "id": "moa_050",
+      "query": "What is the mechanism of action of montelukast for asthma?",
+      "expected_type": "scientific",
+      "expected_content": [
+        "leukotriene receptor antagonist",
+        "blocks CysLT1 receptor",
+        "reduces bronchoconstriction",
+        "inflammation",
+        "allergic response"
+      ],
+      "expected_classification": {
+        "domain": "mechanism_of_action",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "leukotriene",
+        "receptor antagonist",
+        "asthma",
+        "mechanism"
+      ]
+    }
+  ]
+}

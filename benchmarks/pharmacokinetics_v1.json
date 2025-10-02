@@ -1,0 +1,756 @@
+{
+  "metadata": {
+    "version": "1",
+    "category": "pharmacokinetics",
+    "created_date": "2025-09-30",
+    "total_queries": 50,
+    "description": "Baseline ADME (Absorption, Distribution, Metabolism, Excretion) queries covering pharmacokinetic parameters across major drug classes",
+    "baselines": {
+      "cloud": {
+        "average_latency_ms": 420.0,
+        "success_rate": 0.97,
+        "average_cost_per_query": 11.0,
+        "average_accuracy": 0.80,
+        "notes": "Based on NVIDIA Build cloud endpoints (integrate.api.nvidia.com)"
+      },
+      "self_hosted": {
+        "average_latency_ms": 800.0,
+        "success_rate": 0.94,
+        "average_cost_per_query": 0.0,
+        "average_accuracy": 0.78,
+        "notes": "Based on local NIM containers with GPU acceleration"
+      },
+      "regression_thresholds": {
+        "accuracy_drop_percent": 5,
+        "cost_increase_percent": 20,
+        "latency_increase_percent": 50
+      },
+      "classifier_validation": {
+        "overall_accuracy": 0.95,
+        "notes": "Expected PharmaceuticalQueryClassifier accuracy for domain, safety urgency, and research priority"
+      }
+    }
+  },
+  "queries": [
+    {
+      "id": "pk_001",
+      "query": "What is the bioavailability of atorvastatin (Lipitor) and what factors affect it?",
+      "expected_type": "scientific",
+      "expected_content": ["~14% bioavailability", "first-pass metabolism", "CYP3A4", "food effects minimal", "lipophilic"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["atorvastatin", "Lipitor"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["statin", "absorption", "bioavailability", "first-pass"]
+    },
+    {
+      "id": "pk_002",
+      "query": "What is the half-life of warfarin and its clinical significance?",
+      "expected_type": "retrieval",
+      "expected_content": ["20-60 hours", "racemic mixture", "S-warfarin 18-33h", "R-warfarin 37-89h", "long duration", "monitoring implications"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["warfarin"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["anticoagulant", "elimination", "half-life", "monitoring"]
+    },
+    {
+      "id": "pk_003",
+      "query": "How is lisinopril metabolized and excreted?",
+      "expected_type": "scientific",
+      "expected_content": ["not metabolized", "unchanged excretion", "100% renal elimination", "dose adjustment", "renal impairment"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "moderate",
+        "research_priority": "normal",
+        "drug_names": ["lisinopril"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["ACE inhibitor", "metabolism", "renal", "dose adjustment"]
+    },
+    {
+      "id": "pk_004",
+      "query": "What is the volume of distribution of digoxin and what does it indicate?",
+      "expected_type": "scientific",
+      "expected_content": ["5-7 L/kg", "large Vd", "extensive tissue distribution", "lipophilic", "myocardial binding"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["digoxin"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["cardiac glycoside", "distribution", "volume", "tissue binding"]
+    },
+    {
+      "id": "pk_005",
+      "query": "Which CYP450 enzymes metabolize clopidogrel (Plavix) and why is this important?",
+      "expected_type": "reasoning",
+      "expected_content": ["CYP2C19", "prodrug activation", "genetic polymorphism", "poor metabolizers", "efficacy variation"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["clopidogrel", "Plavix"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["antiplatelet", "CYP450", "prodrug", "pharmacogenomics"]
+    },
+    {
+      "id": "pk_006",
+      "query": "What is the protein binding of phenytoin and its clinical implications?",
+      "expected_type": "scientific",
+      "expected_content": ["90-95% bound", "albumin binding", "narrow therapeutic index", "free fraction monitoring", "displacement interactions"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["phenytoin"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["anticonvulsant", "protein binding", "TDM", "interactions"]
+    },
+    {
+      "id": "pk_007",
+      "query": "How does renal impairment affect metformin pharmacokinetics?",
+      "expected_type": "reasoning",
+      "expected_content": ["reduced clearance", "accumulation risk", "lactic acidosis", "contraindication GFR<30", "dose adjustment"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "moderate",
+        "research_priority": "normal",
+        "drug_names": ["metformin"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["diabetes", "renal impairment", "clearance", "safety"]
+    },
+    {
+      "id": "pk_008",
+      "query": "What is the Tmax of immediate-release vs extended-release metoprolol?",
+      "expected_type": "retrieval",
+      "expected_content": ["IR: 1-2 hours", "ER: 6-12 hours", "absorption profile", "steady state", "dosing frequency"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["metoprolol"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["beta blocker", "absorption", "formulation", "Tmax"]
+    },
+    {
+      "id": "pk_009",
+      "query": "Describe the hepatic extraction ratio of morphine and its significance.",
+      "expected_type": "scientific",
+      "expected_content": ["high extraction ~75%", "extensive first-pass", "low oral bioavailability", "hepatic clearance", "flow-dependent"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["morphine"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["opioid", "hepatic", "extraction ratio", "first-pass"]
+    },
+    {
+      "id": "pk_010",
+      "query": "What are the active metabolites of codeine and how are they formed?",
+      "expected_type": "reasoning",
+      "expected_content": ["morphine", "CYP2D6 metabolism", "prodrug", "10% conversion", "genetic polymorphism", "efficacy variation"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["codeine"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["opioid", "metabolism", "CYP2D6", "prodrug"]
+    },
+    {
+      "id": "pk_011",
+      "query": "How does food affect the absorption of amlodipine?",
+      "expected_type": "retrieval",
+      "expected_content": ["no significant effect", "can take with or without food", "bioavailability unchanged", "consistent absorption"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["amlodipine"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["calcium channel blocker", "absorption", "food effect", "administration"]
+    },
+    {
+      "id": "pk_012",
+      "query": "What is the renal clearance mechanism of penicillin?",
+      "expected_type": "scientific",
+      "expected_content": ["tubular secretion", "organic anion transporters", "probenecid interaction", "active secretion", "renal elimination"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["penicillin"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["antibiotic", "renal", "tubular secretion", "transporters"]
+    },
+    {
+      "id": "pk_013",
+      "query": "Explain the enterohepatic recirculation of mycophenolate.",
+      "expected_type": "reasoning",
+      "expected_content": ["glucuronide metabolite", "biliary excretion", "gut hydrolysis", "reabsorption", "secondary peak", "drug interactions"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["mycophenolate"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": ["immunosuppressant", "enterohepatic", "metabolism", "recirculation"]
+    },
+    {
+      "id": "pk_014",
+      "query": "What is the loading dose rationale for digoxin?",
+      "expected_type": "reasoning",
+      "expected_content": ["large Vd", "long half-life ~36-48h", "rapid therapeutic effect", "steady state delay", "calculated loading dose"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["digoxin"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["cardiac glycoside", "loading dose", "distribution", "pharmacokinetic principles"]
+    },
+    {
+      "id": "pk_015",
+      "query": "How does liver cirrhosis affect diazepam pharmacokinetics?",
+      "expected_type": "scientific",
+      "expected_content": ["reduced metabolism", "decreased clearance", "prolonged half-life", "accumulation", "dose reduction", "active metabolites"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "moderate",
+        "research_priority": "normal",
+        "drug_names": ["diazepam"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["benzodiazepine", "hepatic impairment", "metabolism", "dose adjustment"]
+    },
+    {
+      "id": "pk_016",
+      "query": "What is the significance of rivaroxaban's Cmax occurring at 2-4 hours?",
+      "expected_type": "retrieval",
+      "expected_content": ["rapid absorption", "peak effect timing", "once daily dosing", "predictable PK", "no monitoring needed"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["rivaroxaban"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.3,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.3
+      },
+      "tags": ["anticoagulant", "absorption", "Tmax", "dosing"]
+    },
+    {
+      "id": "pk_017",
+      "query": "Describe the zero-order kinetics of alcohol metabolism.",
+      "expected_type": "scientific",
+      "expected_content": ["saturable enzymes", "alcohol dehydrogenase", "constant elimination rate", "~10-15 mg/dL/hour", "non-linear kinetics"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["alcohol"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["alcohol", "metabolism", "zero-order", "kinetic model"]
+    },
+    {
+      "id": "pk_018",
+      "query": "What P-glycoprotein substrates are affected by renal transporters?",
+      "expected_type": "retrieval",
+      "expected_content": ["digoxin", "dabigatran", "edoxaban", "renal tubular secretion", "drug interactions", "transporter inhibition"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["digoxin", "dabigatran", "edoxaban"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["P-glycoprotein", "transporters", "renal", "interactions"]
+    },
+    {
+      "id": "pk_019",
+      "query": "How does age affect the pharmacokinetics of gentamicin?",
+      "expected_type": "reasoning",
+      "expected_content": ["renal function decline", "decreased clearance", "prolonged half-life", "elderly", "dose adjustment", "TDM essential"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "moderate",
+        "research_priority": "normal",
+        "drug_names": ["gentamicin"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["antibiotic", "age", "renal", "dose adjustment"]
+    },
+    {
+      "id": "pk_020",
+      "query": "What is the AUC/MIC ratio and why is it important for fluoroquinolones?",
+      "expected_type": "scientific",
+      "expected_content": ["pharmacokinetic-pharmacodynamic", "exposure-response", "AUC/MIC >125", "bacterial killing", "resistance prevention"],
+      "expected_classification": {
+        "domain": "pharmacokinetics",
+        "safety_urgency": "low",
+        "research_priority": "background",
+        "drug_names": ["fluoroquinolones"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["antibiotic", "PK/PD", "AUC", "efficacy"]
+    },
+    {
+      "id": "pk_021",
+      "query": "Explain the saturable absorption of gabapentin.",
+      "expected_type": "reasoning",
+      "expected_content": ["L-amino acid transporter", "saturable mechanism", "dose-dependent bioavailability", "decreased absorption at higher doses", "non-linear"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": ["anticonvulsant", "absorption", "saturable", "transporters"]
+    },
+    {
+      "id": "pk_022",
+      "query": "What is the role of UGT enzymes in morphine metabolism?",
+      "expected_type": "scientific",
+      "expected_content": ["glucuronidation", "morphine-6-glucuronide", "active metabolite", "morphine-3-glucuronide", "renal excretion"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["opioid", "metabolism", "UGT", "glucuronidation"]
+    },
+    {
+      "id": "pk_023",
+      "query": "How does plasma protein displacement affect warfarin dosing?",
+      "expected_type": "reasoning",
+      "expected_content": ["99% protein bound", "narrow therapeutic index", "free fraction increase", "enhanced effect", "INR monitoring", "transient changes"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["anticoagulant", "protein binding", "displacement", "monitoring"]
+    },
+    {
+      "id": "pk_024",
+      "query": "What is the clearance mechanism of low molecular weight heparins?",
+      "expected_type": "scientific",
+      "expected_content": ["renal elimination", "molecular weight dependent", "less hepatic metabolism", "longer half-life than UFH", "dose adjustment CrCl<30"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["anticoagulant", "renal", "clearance", "molecular weight"]
+    },
+    {
+      "id": "pk_025",
+      "query": "Describe the two-compartment model for vancomycin distribution.",
+      "expected_type": "scientific",
+      "expected_content": ["central compartment", "peripheral distribution", "biphasic elimination", "distribution phase", "Vd steady-state", "TDM implications"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["antibiotic", "distribution", "compartment model", "TDM"]
+    },
+    {
+      "id": "pk_026",
+      "query": "How does grapefruit juice affect simvastatin bioavailability?",
+      "expected_type": "reasoning",
+      "expected_content": ["intestinal CYP3A4 inhibition", "increased AUC", "up to 16-fold increase", "myopathy risk", "avoid concurrent use"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["statin", "food-drug", "CYP3A4", "bioavailability"]
+    },
+    {
+      "id": "pk_027",
+      "query": "What is the clinical significance of amiodarone's extremely long half-life?",
+      "expected_type": "reasoning",
+      "expected_content": ["20-100 days", "extensive tissue distribution", "loading dose required", "prolonged offset", "drug interactions persist", "monitoring duration"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["antiarrhythmic", "half-life", "distribution", "clinical implications"]
+    },
+    {
+      "id": "pk_028",
+      "query": "Explain the biliary excretion of atorvastatin and its metabolites.",
+      "expected_type": "scientific",
+      "expected_content": ["primary elimination route", "active metabolites", "fecal excretion", "minimal renal", "no dose adjustment renal impairment"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["statin", "biliary", "excretion", "metabolites"]
+    },
+    {
+      "id": "pk_029",
+      "query": "What factors affect phenytoin's non-linear pharmacokinetics?",
+      "expected_type": "reasoning",
+      "expected_content": ["saturable metabolism", "Michaelis-Menten kinetics", "dose-dependent half-life", "small dose changes", "large concentration changes", "TDM critical"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["anticonvulsant", "non-linear", "saturable", "TDM"]
+    },
+    {
+      "id": "pk_030",
+      "query": "How does obesity affect the pharmacokinetics of lipophilic drugs?",
+      "expected_type": "scientific",
+      "expected_content": ["increased Vd", "adipose tissue accumulation", "prolonged half-life", "altered dosing", "lean body weight considerations"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["obesity", "distribution", "lipophilic", "dosing"]
+    },
+    {
+      "id": "pk_031",
+      "query": "What is the bioavailability of sublingual nitroglycerin and why this route?",
+      "expected_type": "retrieval",
+      "expected_content": ["~40% sublingual", "avoids first-pass", "rapid onset", "oral <10%", "hepatic metabolism"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["nitrate", "bioavailability", "route", "first-pass avoidance"]
+    },
+    {
+      "id": "pk_032",
+      "query": "Describe the pharmacokinetics of enoxaparin (Lovenox) compared to unfractionated heparin.",
+      "expected_type": "comparison",
+      "expected_content": ["higher bioavailability ~90%", "longer half-life 4-6h", "more predictable", "renal elimination", "less monitoring"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["anticoagulant", "LMWH", "comparison", "predictability"]
+    },
+    {
+      "id": "pk_033",
+      "query": "What is the steady-state concentration concept for levothyroxine?",
+      "expected_type": "scientific",
+      "expected_content": ["7-day half-life", "steady state ~6 weeks", "5 half-lives rule", "TSH monitoring timing", "dose titration interval"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["thyroid", "steady-state", "half-life", "monitoring"]
+    },
+    {
+      "id": "pk_034",
+      "query": "How does dialysis affect lithium pharmacokinetics?",
+      "expected_type": "reasoning",
+      "expected_content": ["small molecule", "not protein bound", "readily dialyzable", "post-dialysis dosing", "level monitoring", "rebound effect"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["mood stabilizer", "dialysis", "renal replacement", "dosing"]
+    },
+    {
+      "id": "pk_035",
+      "query": "What is the mechanism of fexofenadine's lack of sedation compared to first-generation antihistamines?",
+      "expected_type": "reasoning",
+      "expected_content": ["P-glycoprotein substrate", "limited CNS penetration", "poor blood-brain barrier", "peripheral H1 blockade", "non-sedating"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["antihistamine", "P-glycoprotein", "CNS", "distribution"]
+    },
+    {
+      "id": "pk_036",
+      "query": "Explain the time-dependent pharmacokinetics of carbamazepine.",
+      "expected_type": "scientific",
+      "expected_content": ["autoinduction", "CYP3A4 induction", "decreasing half-life", "dose adjustment over time", "metabolite accumulation"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": ["anticonvulsant", "autoinduction", "CYP3A4", "time-dependent"]
+    },
+    {
+      "id": "pk_037",
+      "query": "What is the pharmacokinetic advantage of transdermal fentanyl?",
+      "expected_type": "retrieval",
+      "expected_content": ["avoids first-pass", "steady plasma levels", "72-hour duration", "reservoir effect", "lipophilic"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["opioid", "transdermal", "bioavailability", "controlled release"]
+    },
+    {
+      "id": "pk_038",
+      "query": "How does alpha-1 acid glycoprotein affect basic drug binding?",
+      "expected_type": "scientific",
+      "expected_content": ["acute phase protein", "binds basic drugs", "inflammation increases", "drug levels affected", "propranolol", "lidocaine"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["protein binding", "AAG", "basic drugs", "inflammation"]
+    },
+    {
+      "id": "pk_039",
+      "query": "What is the renal dose adjustment calculation for gentamicin in CKD?",
+      "expected_type": "reasoning",
+      "expected_content": ["Cockcroft-Gault", "creatinine clearance", "interval extension", "dose reduction", "TDM guided", "peak and trough"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["antibiotic", "renal dose", "CKD", "calculation"]
+    },
+    {
+      "id": "pk_040",
+      "query": "Describe the extended-release mechanism of metoprolol succinate (Toprol-XL).",
+      "expected_type": "scientific",
+      "expected_content": ["controlled release system", "24-hour duration", "metoprolol tartrate comparison", "once daily dosing", "consistent beta blockade"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.3,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.3
+      },
+      "tags": ["beta blocker", "formulation", "extended-release", "duration"]
+    },
+    {
+      "id": "pk_041",
+      "query": "What role does OATP1B1 play in statin disposition?",
+      "expected_type": "scientific",
+      "expected_content": ["hepatic uptake transporter", "atorvastatin", "rosuvastatin", "simvastatin", "genetic polymorphism", "myopathy risk"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["statin", "OATP", "transporters", "pharmacogenomics"]
+    },
+    {
+      "id": "pk_042",
+      "query": "How does pregnancy affect the pharmacokinetics of lamotrigine?",
+      "expected_type": "reasoning",
+      "expected_content": ["increased clearance", "UGT induction", "dose increase needed", "postpartum adjustment", "therapeutic monitoring"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["anticonvulsant", "pregnancy", "UGT", "dose adjustment"]
+    },
+    {
+      "id": "pk_043",
+      "query": "What is the clinical significance of dabigatran's low bioavailability?",
+      "expected_type": "retrieval",
+      "expected_content": ["~3-7% bioavailability", "acid-labile prodrug", "tartaric acid core", "capsule integrity", "food effect", "absorption variability"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["anticoagulant", "bioavailability", "prodrug", "formulation"]
+    },
+    {
+      "id": "pk_044",
+      "query": "Explain the concept of flip-flop kinetics with sustained-release theophylline.",
+      "expected_type": "scientific",
+      "expected_content": ["absorption rate-limited", "ka < ke", "prolonged absorption", "terminal phase", "apparent half-life", "formulation dependent"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["bronchodilator", "kinetics", "flip-flop", "sustained-release"]
+    },
+    {
+      "id": "pk_045",
+      "query": "How does CYP2D6 polymorphism affect codeine efficacy?",
+      "expected_type": "reasoning",
+      "expected_content": ["poor metabolizers", "ultrarapid metabolizers", "morphine formation", "efficacy variation", "toxicity risk", "genotype-guided dosing"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["opioid", "CYP2D6", "pharmacogenomics", "efficacy"]
+    },
+    {
+      "id": "pk_046",
+      "query": "What is the pharmacokinetic basis for once-daily dosing of amlodipine?",
+      "expected_type": "retrieval",
+      "expected_content": ["long half-life 30-50h", "slow absorption", "gradual onset", "sustained effect", "Tmax 6-12h"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["calcium channel blocker", "half-life", "dosing frequency", "absorption"]
+    },
+    {
+      "id": "pk_047",
+      "query": "Describe the dose-dependent kinetics of aspirin's antiplatelet effect.",
+      "expected_type": "scientific",
+      "expected_content": ["irreversible COX-1 inhibition", "platelet lifespan 7-10 days", "low dose sufficient", "81mg daily", "cumulative effect"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["antiplatelet", "dose-dependent", "mechanism", "duration"]
+    },
+    {
+      "id": "pk_048",
+      "query": "What is the impact of hemodialysis on water-soluble vs lipid-soluble drugs?",
+      "expected_type": "comparison",
+      "expected_content": ["water-soluble removed", "low Vd", "minimal protein binding", "lipid-soluble retained", "high Vd", "extensive binding"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["dialysis", "solubility", "distribution", "dosing"]
+    },
+    {
+      "id": "pk_049",
+      "query": "How does the MAO-B selectivity of selegiline change with dose?",
+      "expected_type": "reasoning",
+      "expected_content": ["low dose selective MAO-B", "higher doses lose selectivity", "MAO-A inhibition", "tyramine reaction risk", "dietary restrictions"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["MAO inhibitor", "dose-dependent", "selectivity", "safety"]
+    },
+    {
+      "id": "pk_050",
+      "query": "What is the pharmacokinetic rationale for clopidogrel's loading dose?",
+      "expected_type": "reasoning",
+      "expected_content": ["prodrug activation", "time to steady state", "rapid antiplatelet effect", "300-600mg loading", "maintenance 75mg", "PCI timing"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["antiplatelet", "loading dose", "prodrug", "acute therapy"]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/retrieval/nvidia/embeddings"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "data": [ { "embedding": [0.1, 0.2, 0.3] } ]
+    },
+    "headers": { "Content-Type": "application/json" }
+  }
+}

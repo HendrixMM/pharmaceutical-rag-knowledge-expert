@@ -1,0 +1,932 @@
+{
+  "metadata": {
+    "version": "1",
+    "category": "clinical_terminology",
+    "created_date": "2025-09-30",
+    "total_queries": 50,
+    "description": "Baseline medical and pharmaceutical terminology queries covering drug classifications, clinical terms, dosage forms, and regulatory concepts",
+    "baselines": {
+      "cloud": {
+        "average_latency_ms": 350.0,
+        "success_rate": 0.98,
+        "average_cost_per_query": 8.0,
+        "average_accuracy": 0.90,
+        "notes": "Based on NVIDIA Build cloud endpoints (integrate.api.nvidia.com)"
+      },
+      "self_hosted": {
+        "average_latency_ms": 650.0,
+        "success_rate": 0.96,
+        "average_cost_per_query": 0.0,
+        "average_accuracy": 0.88,
+        "notes": "Based on local NIM containers with GPU acceleration"
+      },
+      "regression_thresholds": {
+        "accuracy_drop_percent": 5,
+        "cost_increase_percent": 20,
+        "latency_increase_percent": 50
+      }
+    }
+  },
+  "queries": [
+    {
+      "id": "ct_001",
+      "query": "What does the abbreviation 'BID' mean in prescription writing?",
+      "expected_type": "definition",
+      "expected_content": ["twice daily", "bis in die", "Latin origin", "dosing frequency", "q12h"],
+      "expected_classification": {
+        "domain": "dosage_guidelines",
+        "safety_urgency": "low",
+        "research_priority": "normal",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["abbreviation", "prescription", "dosing", "Latin"]
+    },
+    {
+      "id": "ct_002",
+      "query": "What therapeutic class does atorvastatin (Lipitor) belong to?",
+      "expected_type": "classification",
+      "expected_content": ["HMG-CoA reductase inhibitor", "statin", "lipid-lowering agent", "antihyperlipidemic", "cardiovascular"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": ["atorvastatin", "Lipitor"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["classification", "statin", "therapeutic class"]
+    },
+    {
+      "id": "ct_003",
+      "query": "Define 'bioequivalence' in the context of generic drugs.",
+      "expected_type": "definition",
+      "expected_content": ["equivalent bioavailability", "same active ingredient", "80-125% AUC", "therapeutic equivalence", "FDA approval"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["definition", "generic", "bioequivalence", "FDA"]
+    },
+    {
+      "id": "ct_004",
+      "query": "What is the difference between 'PRN' and 'scheduled' medication administration?",
+      "expected_type": "comparison",
+      "expected_content": ["PRN as needed", "pro re nata", "scheduled fixed times", "symptom-driven vs routine", "clinical indication"],
+      "expected_classification": {
+        "domain": "dosage_guidelines",
+        "safety_urgency": "low",
+        "research_priority": "normal",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["abbreviation", "administration", "comparison", "nursing"]
+    },
+    {
+      "id": "ct_005",
+      "query": "What does 'narrow therapeutic index' mean?",
+      "expected_type": "definition",
+      "expected_content": ["small difference", "therapeutic vs toxic", "close monitoring", "examples warfarin digoxin", "dose adjustments"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "moderate",
+        "research_priority": "background",
+        "drug_names": ["warfarin", "digoxin"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["definition", "therapeutic index", "monitoring", "safety"]
+    },
+    {
+      "id": "ct_006",
+      "query": "What ATC code classification does metformin belong to?",
+      "expected_type": "classification",
+      "expected_content": ["A10BA02", "biguanides", "A alimentary tract", "A10 diabetes drugs", "WHO classification"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": ["metformin"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["ATC", "classification", "diabetes", "WHO"]
+    },
+    {
+      "id": "ct_007",
+      "query": "Define 'first-pass metabolism' or 'first-pass effect'.",
+      "expected_type": "definition",
+      "expected_content": ["hepatic metabolism", "oral administration", "reduced bioavailability", "before systemic circulation", "portal vein"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["definition", "pharmacokinetics", "metabolism", "bioavailability"]
+    },
+    {
+      "id": "ct_008",
+      "query": "What is the meaning of 'black box warning' on drug labels?",
+      "expected_type": "definition",
+      "expected_content": ["FDA most serious warning", "boxed warning", "significant risks", "adverse events", "prescriber alert"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["FDA", "safety", "definition", "labeling"]
+    },
+    {
+      "id": "ct_009",
+      "query": "What does 'enteral' administration route mean?",
+      "expected_type": "definition",
+      "expected_content": ["gastrointestinal tract", "oral", "nasogastric", "gastrostomy", "via GI system"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["route", "definition", "administration", "GI"]
+    },
+    {
+      "id": "ct_010",
+      "query": "What is the difference between 'generic name' and 'brand name' for drugs?",
+      "expected_type": "comparison",
+      "expected_content": ["generic nonproprietary", "brand trademarked", "same active ingredient", "lower case vs capital", "atorvastatin vs Lipitor"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": ["atorvastatin", "Lipitor"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["nomenclature", "comparison", "definition", "terminology"]
+    },
+    {
+      "id": "ct_011",
+      "query": "What does 'QD' stand for in medication orders?",
+      "expected_type": "definition",
+      "expected_content": ["once daily", "quaque die", "deprecated abbreviation", "use 'daily' instead", "ISMP do not use"],
+      "expected_classification": {
+        "domain": "dosage_guidelines",
+        "safety_urgency": "low",
+        "research_priority": "normal",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["abbreviation", "dosing", "safety", "ISMP"]
+    },
+    {
+      "id": "ct_012",
+      "query": "Define 'pharmacodynamics' in simple terms.",
+      "expected_type": "definition",
+      "expected_content": ["what drug does to body", "mechanism of action", "drug-receptor interaction", "therapeutic effect", "vs pharmacokinetics"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["definition", "pharmacology", "mechanism", "basic concept"]
+    },
+    {
+      "id": "ct_013",
+      "query": "What therapeutic class are ACE inhibitors? What do they treat?",
+      "expected_type": "classification",
+      "expected_content": ["angiotensin-converting enzyme inhibitors", "antihypertensive", "heart failure", "renal protection", "cardiovascular"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["classification", "ACE inhibitor", "therapeutic class", "cardiovascular"]
+    },
+    {
+      "id": "ct_014",
+      "query": "What does 'SL' route of administration mean?",
+      "expected_type": "definition",
+      "expected_content": ["sublingual", "under tongue", "buccal mucosa", "rapid absorption", "avoids first-pass"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["route", "abbreviation", "sublingual", "administration"]
+    },
+    {
+      "id": "ct_015",
+      "query": "What is a 'prodrug'? Give an example.",
+      "expected_type": "definition",
+      "expected_content": ["inactive precursor", "metabolized to active form", "improved properties", "clopidogrel", "enalapril", "codeine"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": ["clopidogrel", "enalapril", "codeine"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": ["definition", "prodrug", "metabolism", "examples"]
+    },
+    {
+      "id": "ct_016",
+      "query": "What does 'TID' mean for medication dosing?",
+      "expected_type": "definition",
+      "expected_content": ["three times daily", "ter in die", "q8h", "8-hour intervals", "Latin abbreviation"],
+      "expected_classification": {
+        "domain": "dosage_guidelines",
+        "safety_urgency": "low",
+        "research_priority": "normal",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["abbreviation", "dosing", "prescription", "frequency"]
+    },
+    {
+      "id": "ct_017",
+      "query": "Define 'contraindication' in clinical practice.",
+      "expected_type": "definition",
+      "expected_content": ["should not use", "harmful condition", "absolute vs relative", "patient safety", "avoid medication"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["definition", "clinical", "safety", "contraindication"]
+    },
+    {
+      "id": "ct_018",
+      "query": "What therapeutic class do beta blockers belong to?",
+      "expected_type": "classification",
+      "expected_content": ["beta-adrenergic antagonists", "antihypertensive", "antiarrhythmic", "cardiovascular", "heart rate control"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["classification", "beta blocker", "cardiovascular", "therapeutic class"]
+    },
+    {
+      "id": "ct_019",
+      "query": "What does 'PO' stand for in medication administration?",
+      "expected_type": "definition",
+      "expected_content": ["per os", "by mouth", "oral route", "Latin origin", "swallowed"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["abbreviation", "route", "oral", "administration"]
+    },
+    {
+      "id": "ct_020",
+      "query": "What is the difference between 'indication' and 'contraindication'?",
+      "expected_type": "comparison",
+      "expected_content": ["indication approved use", "contraindication avoid use", "opposite meanings", "safety consideration", "prescribing decision"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["definition", "comparison", "clinical", "terminology"]
+    },
+    {
+      "id": "ct_021",
+      "query": "Define 'therapeutic drug monitoring' (TDM).",
+      "expected_type": "definition",
+      "expected_content": ["measure drug levels", "optimize dosing", "narrow therapeutic index", "peak and trough", "examples digoxin vancomycin"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "moderate",
+        "research_priority": "background",
+        "drug_names": ["digoxin", "vancomycin"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["definition", "TDM", "monitoring", "dosing"]
+    },
+    {
+      "id": "ct_022",
+      "query": "What does 'IV' administration route mean?",
+      "expected_type": "definition",
+      "expected_content": ["intravenous", "directly into vein", "100% bioavailability", "rapid onset", "systemic circulation"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["route", "abbreviation", "intravenous", "administration"]
+    },
+    {
+      "id": "ct_023",
+      "query": "What is the Orange Book and its purpose?",
+      "expected_type": "definition",
+      "expected_content": ["FDA publication", "approved drug products", "therapeutic equivalence", "generic substitution", "AB rating"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["FDA", "reference", "generic", "definition"]
+    },
+    {
+      "id": "ct_024",
+      "query": "What does 'PRN' stand for?",
+      "expected_type": "definition",
+      "expected_content": ["pro re nata", "as needed", "when necessary", "symptom-based", "not scheduled"],
+      "expected_classification": {
+        "domain": "dosage_guidelines",
+        "safety_urgency": "low",
+        "research_priority": "normal",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["abbreviation", "administration", "PRN", "Latin"]
+    },
+    {
+      "id": "ct_025",
+      "query": "Define 'half-life' of a drug in pharmacokinetics.",
+      "expected_type": "definition",
+      "expected_content": ["time to reduce by 50%", "plasma concentration", "elimination rate", "dosing interval", "steady state"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["definition", "pharmacokinetics", "half-life", "elimination"]
+    },
+    {
+      "id": "ct_026",
+      "query": "What therapeutic class are ARBs? What is their mechanism?",
+      "expected_type": "classification",
+      "expected_content": ["angiotensin receptor blockers", "antihypertensive", "AT1 receptor antagonist", "cardiovascular", "alternative to ACE inhibitors"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["classification", "ARB", "mechanism", "cardiovascular"]
+    },
+    {
+      "id": "ct_027",
+      "query": "What does 'IM' route of administration mean?",
+      "expected_type": "definition",
+      "expected_content": ["intramuscular", "into muscle tissue", "deltoid gluteal", "depot formulations", "slower absorption than IV"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["route", "abbreviation", "intramuscular", "administration"]
+    },
+    {
+      "id": "ct_028",
+      "query": "What is an 'orphan drug'?",
+      "expected_type": "definition",
+      "expected_content": ["rare disease treatment", "<200,000 patients US", "FDA designation", "development incentives", "tax credits"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["definition", "orphan drug", "FDA", "rare disease"]
+    },
+    {
+      "id": "ct_029",
+      "query": "What does 'QHS' mean in prescription writing?",
+      "expected_type": "definition",
+      "expected_content": ["at bedtime", "quaque hora somni", "nightly", "before sleep", "Latin abbreviation"],
+      "expected_classification": {
+        "domain": "dosage_guidelines",
+        "safety_urgency": "low",
+        "research_priority": "normal",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["abbreviation", "dosing", "timing", "prescription"]
+    },
+    {
+      "id": "ct_030",
+      "query": "Define 'steady-state concentration' in pharmacokinetics.",
+      "expected_type": "definition",
+      "expected_content": ["equilibrium", "input equals elimination", "5 half-lives", "constant plasma level", "therapeutic range"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["definition", "pharmacokinetics", "steady-state", "dosing"]
+    },
+    {
+      "id": "ct_031",
+      "query": "What therapeutic class do anticoagulants belong to? Name subtypes.",
+      "expected_type": "classification",
+      "expected_content": ["antithrombotic agents", "hematologic", "warfarin vitamin K antagonist", "DOACs", "heparins", "cardiovascular"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "moderate",
+        "research_priority": "background",
+        "drug_names": ["warfarin"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": ["classification", "anticoagulant", "subtypes", "hematology"]
+    },
+    {
+      "id": "ct_032",
+      "query": "What does 'SC' or 'SQ' route mean?",
+      "expected_type": "definition",
+      "expected_content": ["subcutaneous", "under skin", "fatty tissue", "insulin", "slower absorption"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": ["insulin"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["route", "abbreviation", "subcutaneous", "administration"]
+    },
+    {
+      "id": "ct_033",
+      "query": "What is a 'biosimilar' drug?",
+      "expected_type": "definition",
+      "expected_content": ["biological product", "highly similar to reference", "no clinically meaningful differences", "FDA approval", "biologics"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["definition", "biosimilar", "biologics", "FDA"]
+    },
+    {
+      "id": "ct_034",
+      "query": "What does 'AC' mean in medication timing?",
+      "expected_type": "definition",
+      "expected_content": ["ante cibum", "before meals", "Latin origin", "30-60 minutes before eating", "absorption optimization"],
+      "expected_classification": {
+        "domain": "dosage_guidelines",
+        "safety_urgency": "low",
+        "research_priority": "normal",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["abbreviation", "timing", "administration", "Latin"]
+    },
+    {
+      "id": "ct_035",
+      "query": "Define 'polypharmacy' and its clinical concerns.",
+      "expected_type": "definition",
+      "expected_content": ["multiple medications", "typically 5 or more", "drug interactions", "adverse events", "elderly risk"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["definition", "polypharmacy", "safety", "geriatrics"]
+    },
+    {
+      "id": "ct_036",
+      "query": "What therapeutic class are statins? What is their primary use?",
+      "expected_type": "classification",
+      "expected_content": ["HMG-CoA reductase inhibitors", "lipid-lowering", "antihyperlipidemic", "cholesterol reduction", "cardiovascular prevention"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["classification", "statin", "cardiovascular", "therapeutic class"]
+    },
+    {
+      "id": "ct_037",
+      "query": "What does 'PC' mean for medication administration?",
+      "expected_type": "definition",
+      "expected_content": ["post cibum", "after meals", "Latin origin", "GI tolerability", "absorption considerations"],
+      "expected_classification": {
+        "domain": "dosage_guidelines",
+        "safety_urgency": "low",
+        "research_priority": "normal",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["abbreviation", "timing", "administration", "Latin"]
+    },
+    {
+      "id": "ct_038",
+      "query": "What is the 'Purple Book' from FDA?",
+      "expected_type": "definition",
+      "expected_content": ["biosimilar products", "biological equivalence", "FDA reference", "interchangeable biologics", "licensing database"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["FDA", "reference", "biosimilar", "definition"]
+    },
+    {
+      "id": "ct_039",
+      "query": "What does 'ER' or 'XR' mean on drug labels?",
+      "expected_type": "definition",
+      "expected_content": ["extended release", "controlled release", "slower absorption", "less frequent dosing", "modified formulation"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["formulation", "abbreviation", "extended release", "dosing"]
+    },
+    {
+      "id": "ct_040",
+      "query": "Define 'off-label use' of medications.",
+      "expected_type": "definition",
+      "expected_content": ["unapproved indication", "not FDA approved use", "physician discretion", "evidence-based", "common practice"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["definition", "off-label", "FDA", "prescribing"]
+    },
+    {
+      "id": "ct_041",
+      "query": "What therapeutic class are calcium channel blockers? Name two types.",
+      "expected_type": "classification",
+      "expected_content": ["calcium antagonists", "antihypertensive", "dihydropyridines", "non-dihydropyridines", "cardiovascular", "amlodipine verapamil"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": ["amlodipine", "verapamil"]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["classification", "calcium channel blocker", "subtypes", "cardiovascular"]
+    },
+    {
+      "id": "ct_042",
+      "query": "What does 'ODT' formulation mean?",
+      "expected_type": "definition",
+      "expected_content": ["orally disintegrating tablet", "dissolves on tongue", "no water needed", "rapid dissolution", "dysphagia patients"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["formulation", "abbreviation", "ODT", "administration"]
+    },
+    {
+      "id": "ct_043",
+      "query": "What is 'MedWatch' from the FDA?",
+      "expected_type": "definition",
+      "expected_content": ["adverse event reporting", "FDA safety program", "voluntary reporting", "drug safety surveillance", "healthcare professionals"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["FDA", "safety", "MedWatch", "reporting"]
+    },
+    {
+      "id": "ct_044",
+      "query": "What does 'Q4H' mean in dosing instructions?",
+      "expected_type": "definition",
+      "expected_content": ["every 4 hours", "quaque 4 hora", "6 times daily", "around the clock", "frequent dosing"],
+      "expected_classification": {
+        "domain": "dosage_guidelines",
+        "safety_urgency": "low",
+        "research_priority": "normal",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["abbreviation", "dosing", "frequency", "Latin"]
+    },
+    {
+      "id": "ct_045",
+      "query": "Define 'REMS' program for medications.",
+      "expected_type": "definition",
+      "expected_content": ["Risk Evaluation Mitigation Strategy", "FDA safety program", "high-risk medications", "prescriber training", "patient registry"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["FDA", "safety", "REMS", "risk management"]
+    },
+    {
+      "id": "ct_046",
+      "query": "What therapeutic class are NSAIDs? What do they treat?",
+      "expected_type": "classification",
+      "expected_content": ["nonsteroidal anti-inflammatory", "analgesic", "antipyretic", "COX inhibitors", "pain fever inflammation"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["classification", "NSAID", "therapeutic class", "mechanism"]
+    },
+    {
+      "id": "ct_047",
+      "query": "What does 'TD' or 'transdermal' route mean?",
+      "expected_type": "definition",
+      "expected_content": ["through skin", "patch formulation", "systemic absorption", "avoids first-pass", "sustained delivery"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["route", "transdermal", "patch", "administration"]
+    },
+    {
+      "id": "ct_048",
+      "query": "What is a 'Schedule II' controlled substance?",
+      "expected_type": "classification",
+      "expected_content": ["high abuse potential", "DEA classification", "accepted medical use", "severe dependence", "opioids stimulants"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["DEA", "controlled substance", "classification", "schedule"]
+    },
+    {
+      "id": "ct_049",
+      "query": "What does 'HS' mean in prescription timing?",
+      "expected_type": "definition",
+      "expected_content": ["hora somni", "at bedtime", "before sleep", "Latin abbreviation", "nighttime administration"],
+      "expected_classification": {
+        "domain": "dosage_guidelines",
+        "safety_urgency": "low",
+        "research_priority": "normal",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["abbreviation", "timing", "bedtime", "Latin"]
+    },
+    {
+      "id": "ct_050",
+      "query": "Define 'formulary' in healthcare context.",
+      "expected_type": "definition",
+      "expected_content": ["approved drug list", "insurance coverage", "preferred medications", "tiered structure", "pharmacy benefit"],
+      "expected_classification": {
+        "domain": "general_research",
+        "safety_urgency": "none",
+        "research_priority": "background",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["definition", "formulary", "insurance", "coverage"]
+    }
+  ]
+}

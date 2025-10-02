@@ -1,0 +1,346 @@
+# Pharmaceutical Benchmarking Configuration
+# Central configuration for benchmark execution, evaluation, and monitoring
+
+# Benchmark Datasets
+datasets:
+  base_path: "benchmarks"
+  categories:
+    drug_interactions:
+      enabled: true
+      file_pattern: "drug_interactions_v*.json"
+      current_version: 1
+      weight: 1.0  # Relative importance in overall scoring
+
+    pharmacokinetics:
+      enabled: true
+      file_pattern: "pharmacokinetics_v*.json"
+      current_version: 1
+      weight: 1.0
+
+    clinical_terminology:
+      enabled: true
+      file_pattern: "clinical_terminology_v*.json"
+      current_version: 1
+      weight: 0.8  # Slightly lower weight for terminology
+
+    mechanism_of_action:
+      enabled: true
+      file_pattern: "mechanism_of_action_v*.json"
+      current_version: 1
+      weight: 1.0
+
+    adverse_reactions:
+      enabled: true
+      file_pattern: "adverse_reactions_v*.json"
+      current_version: 1
+      weight: 1.2  # Higher weight for safety-critical queries
+
+# Evaluation Criteria
+evaluation:
+  default_weights:
+    accuracy_weight: 0.4
+    completeness_weight: 0.3
+    relevance_weight: 0.3
+
+  # Override weights by query type
+  type_specific_weights:
+    safety:
+      accuracy_weight: 0.5
+      completeness_weight: 0.3
+      relevance_weight: 0.2
+
+    scientific:
+      accuracy_weight: 0.4
+      completeness_weight: 0.4
+      relevance_weight: 0.2
+
+    comparison:
+      accuracy_weight: 0.35
+      completeness_weight: 0.35
+      relevance_weight: 0.3
+
+  scoring:
+    min_score: 0.0
+    max_score: 1.0
+    passing_threshold: 0.7
+    excellent_threshold: 0.9
+
+# Regression Detection
+regression:
+  enabled: true
+  baseline_version: 1
+
+  thresholds:
+    accuracy_drop_percent: 5  # Flag if accuracy drops >5%
+    cost_increase_percent: 20  # Flag if cost/query increases >20%
+    latency_increase_percent: 50  # Flag if latency increases >50%
+
+  comparison_mode: "version_to_version"  # or "rolling_average"
+  alert_on_regression: true
+  auto_rollback: false  # Manual review required
+
+# Performance Targets
+performance:
+  accuracy_targets:
+    drug_interactions: 0.85
+    pharmacokinetics: 0.80
+    clinical_terminology: 0.90
+    mechanism_of_action: 0.82
+    adverse_reactions: 0.88
+
+  latency_targets:  # milliseconds
+    p50: 500
+    p95: 1500
+    p99: 3000
+
+  cost_targets:  # credits per query
+    drug_interactions: 15
+    pharmacokinetics: 12
+    clinical_terminology: 8
+    mechanism_of_action: 14
+    adverse_reactions: 16
+
+# Query Execution
+execution:
+  batch_size: 10
+  parallel_queries: 3
+  timeout_seconds: 30
+  retry_on_failure: true
+  max_retries: 2
+  retry_delay_seconds: 5
+
+  # Query classification
+  use_query_classifier: true
+  classifier_config:
+    enable_pharmaceutical_detection: true
+    route_by_query_type: true
+
+# NeMo Client Configuration
+nemo_client:
+  use_enhanced_client: true
+  default_model: "embed"  # embed, rerank, or extract
+
+  models:
+    embed:
+      enabled: true
+      timeout: 10
+    rerank:
+      enabled: true
+      timeout: 15
+    extract:
+      enabled: false  # Not used for benchmarks
+
+  fallback_strategy: "retry_with_backoff"
+
+# Cost Tracking
+cost_tracking:
+  enabled: true
+  analyzer: "PharmaceuticalCostAnalyzer"
+
+  categories:
+    - embedding
+    - reranking
+    - extraction
+
+  monthly_budget:
+    warning_threshold: 0.8  # 80% of budget
+    hard_limit: 1.0
+
+  per_query_limits:
+    max_credits: 50
+    warn_above: 30
+
+# Monitoring Integration
+monitoring:
+  enabled: true
+  tracker: "PharmaceuticalBenchmarkTracker"
+
+  metrics_to_track:
+    - accuracy_by_category
+    - cost_per_query
+    - cost_by_query_type
+    - latency_percentiles
+    - error_rate
+    - regression_flags
+
+  export_format: "json"
+  export_path: "results/benchmark_metrics"
+
+  real_time_alerts:
+    enabled: true
+    channels:
+      - console
+      - file
+
+# Reporting
+reporting:
+  enabled: true
+  output_formats:
+    - json
+    - yaml
+    - markdown
+    - html
+
+  report_sections:
+    - executive_summary
+    - category_breakdown
+    - cost_analysis
+    - regression_detection
+    - query_level_details
+    - recommendations
+
+  output_directory: "results/benchmark_reports"
+  include_timestamp: true
+  include_visualizations: true
+
+# Result Storage
+storage:
+  save_results: true
+  results_directory: "results/benchmark_runs"
+  retention_days: 90
+
+  versioned_storage: true
+  compression: false
+
+  metadata_fields:
+    - timestamp
+    - git_commit
+    - model_version
+    - dataset_version
+    - environment
+
+# Continuous Integration
+ci:
+  run_on_commit: false
+  run_on_pull_request: true
+  run_on_schedule: true
+  schedule_cron: "0 2 * * 1"  # Weekly Monday 2 AM
+
+  failure_conditions:
+    - accuracy_below_threshold
+    - regression_detected
+    - cost_exceeds_limit
+
+  success_criteria:
+    min_passing_rate: 0.85
+    max_regression_count: 0
+    max_cost_per_query: 25
+
+# Development & Testing
+development:
+  debug_mode: false
+  verbose_logging: false
+  sample_size: null  # null = all queries, or specify integer
+
+  test_categories:
+    - drug_interactions  # Run only specific categories during dev
+
+  mock_mode: false  # Use mock responses instead of real API calls
+
+# Pharmaceutical Query Classification
+pharmaceutical_query:
+  detection:
+    enabled: true
+    drug_name_sources:
+      - "Data/drugs_brand.txt"
+      - "Data/drugs_generic.txt"
+
+  routing:
+    pharmaceutical_detected:
+      cost_tracking: "pharmaceutical"
+      use_specialized_prompts: true
+
+    general_query:
+      cost_tracking: "general"
+      use_standard_prompts: true
+
+# Quality Assurance
+quality_assurance:
+  validation:
+    check_expected_content: true
+    fuzzy_matching_threshold: 0.8
+    case_insensitive: true
+
+  content_scoring:
+    method: "keyword_overlap"  # or "semantic_similarity"
+    min_keyword_matches: 2
+
+  response_requirements:
+    min_length_chars: 50
+    max_length_chars: 2000
+    require_non_empty: true
+
+# Alerts Configuration
+alerts:
+  enabled: true
+
+  alert_rules:
+    - name: "accuracy_degradation"
+      condition: "accuracy < baseline - regression_threshold"
+      severity: "high"
+      action: "notify_and_log"
+
+    - name: "cost_spike"
+      condition: "cost_per_query > target * 1.5"
+      severity: "medium"
+      action: "notify"
+
+    - name: "latency_spike"
+      condition: "p95_latency > target_p95 * 2"
+      severity: "medium"
+      action: "log"
+
+    - name: "error_rate_high"
+      condition: "error_rate > 0.05"
+      severity: "high"
+      action: "notify_and_stop"
+
+  notification:
+    log_file: "logs/benchmark_alerts.log"
+    console: true
+    email: false  # Configure SMTP settings if enabled
+
+# Experimental Features
+experimental:
+  semantic_evaluation:
+    enabled: false
+    model: "sentence-transformers"
+    similarity_threshold: 0.75
+
+  adaptive_thresholds:
+    enabled: false
+    learning_rate: 0.1
+    min_samples: 100
+
+  query_augmentation:
+    enabled: false
+    methods:
+      - paraphrase
+      - synonym_replacement
+
+# Environment-Specific Overrides
+environments:
+  development:
+    execution:
+      batch_size: 5
+      parallel_queries: 2
+    development:
+      debug_mode: true
+      verbose_logging: true
+      sample_size: 10
+
+  staging:
+    execution:
+      batch_size: 10
+      parallel_queries: 3
+    reporting:
+      include_visualizations: false
+
+  production:
+    execution:
+      batch_size: 20
+      parallel_queries: 5
+    alerts:
+      email: true
+    ci:
+      run_on_commit: true

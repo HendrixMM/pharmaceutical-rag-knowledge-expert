@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/retrieval/nvidia/reranking"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "rankings": [
+        { "text": "passage 1", "score": 0.9, "index": 0 },
+        { "text": "passage 2", "score": 0.7, "index": 1 }
+      ]
+    },
+    "headers": { "Content-Type": "application/json" }
+  }
+}

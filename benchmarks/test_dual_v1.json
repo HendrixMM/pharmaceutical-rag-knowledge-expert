@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "category": "test_dual",
+    "version": 1,
+    "description": "Minimal dataset for dual-endpoint cost logging test"
+  },
+  "queries": [
+    {
+      "id": "q1",
+      "query": "What is the dosage for a sample medication?",
+      "expected_content": ["dosage", "mg"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "expected_classification": {
+        "domain": "dosage_guidelines",
+        "safety_urgency": "LOW",
+        "research_priority": "LOW",
+        "drug_names": []
+      }
+    }
+  ]
+}

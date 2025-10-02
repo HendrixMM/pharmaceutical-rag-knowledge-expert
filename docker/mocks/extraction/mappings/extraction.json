@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/retrieval/nvidia/extraction"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "data": { "chunks": [ { "text": "stubbed extraction content" } ] }
+    },
+    "headers": { "Content-Type": "application/json" }
+  }
+}
