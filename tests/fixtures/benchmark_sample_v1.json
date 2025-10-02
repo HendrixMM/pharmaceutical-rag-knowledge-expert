@@ -1,0 +1,92 @@
+{
+  "metadata": {
+    "version": "1",
+    "category": "drug_interactions",
+    "created_date": "2025-09-30",
+    "total_queries": 5,
+    "description": "Small test benchmark dataset for unit testing",
+    "baselines": {
+      "cloud": {
+        "average_latency_ms": 450.0,
+        "success_rate": 0.98,
+        "average_cost_per_query": 12.5,
+        "average_accuracy": 0.85,
+        "notes": "Test cloud baseline"
+      },
+      "self_hosted": {
+        "average_latency_ms": 850.0,
+        "success_rate": 0.95,
+        "average_cost_per_query": 0.0,
+        "average_accuracy": 0.82,
+        "notes": "Test self-hosted baseline"
+      },
+      "regression_thresholds": {
+        "accuracy_drop_percent": 5,
+        "cost_increase_percent": 20,
+        "latency_increase_percent": 50
+      }
+    }
+  },
+  "queries": [
+    {
+      "id": "test_001",
+      "query": "What are the potential interactions between aspirin and warfarin?",
+      "expected_type": "comparison",
+      "expected_content": ["bleeding risk", "anticoagulation", "monitoring"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": ["anticoagulant", "nsaid"]
+    },
+    {
+      "id": "test_002",
+      "query": "How does grapefruit juice affect statin medications?",
+      "expected_type": "safety",
+      "expected_content": ["CYP3A4 inhibition", "increased levels", "myopathy risk"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["statin", "food-drug"]
+    },
+    {
+      "id": "test_003",
+      "query": "What is the mechanism of action for ACE inhibitors?",
+      "expected_type": "scientific",
+      "expected_content": ["angiotensin converting enzyme", "blood pressure", "vasodilation"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": ["mechanism", "cardiovascular"]
+    },
+    {
+      "id": "test_004",
+      "query": "Compare the pharmacokinetics of immediate-release versus extended-release metformin",
+      "expected_type": "comparison",
+      "expected_content": ["absorption", "peak concentration", "half-life", "dosing frequency"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.35,
+        "completeness_weight": 0.35,
+        "relevance_weight": 0.3
+      },
+      "tags": ["pharmacokinetics", "comparison"]
+    },
+    {
+      "id": "test_005",
+      "query": "What are the common adverse reactions to penicillin antibiotics?",
+      "expected_type": "safety",
+      "expected_content": ["allergic reaction", "anaphylaxis", "rash", "gastrointestinal"],
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": ["adverse reactions", "antibiotic"]
+    }
+  ]
+}

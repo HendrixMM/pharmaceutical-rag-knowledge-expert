@@ -1,0 +1,9 @@
+{
+  "text": "This is a test response in custom format about drug interactions and clinical significance.",
+  "response": "Alternative response field with mechanism of action details.",
+  "metadata": {
+    "model": "test-model",
+    "tokens": 50,
+    "endpoint": "custom"
+  }
+}

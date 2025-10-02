@@ -93,6 +93,44 @@ client = OpenAIWrapper(config)
 ❌ NO CONNECTION TO NGC API ❌
 ```
 
+#### 4. Docker Configuration (Optional Self-Hosting)
+
+The system's Docker configuration is NGC-independent and provides optional self-hosted deployment:
+
+**docker-compose.yml Strategy**:
+- **Primary Strategy**: Cloud-first NVIDIA Build API (no Docker needed)
+- **Optional Services**: Self-hosted NIM containers for air-gapped or high-volume scenarios
+- **NGC Independence**: No hard-coded NGC registry (nvcr.io) dependencies
+- **Image Requirements**: Users must provide custom images via environment variables
+
+**Before/After Comparison**:
+```yaml
+# ❌ OLD (NGC-dependent):
+services:
+  embedder:
+    image: nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest  # Hard NGC dependency
+
+# ✅ NEW (NGC-independent):
+services:
+  embedder:
+    # Requires EMBED_IMAGE environment variable - no NGC default
+    # Users can choose: nvcr.io (optional), custom registry, or build own
+    image: ${EMBED_IMAGE:?EMBED_IMAGE required. See header for options.}
+```
+
+**Self-Hosted Deployment Options**:
+1. **NGC Registry (Optional)**: `export EMBED_IMAGE=nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest`
+2. **Custom Registry**: `export EMBED_IMAGE=your-registry.com/custom-embedder:v1`
+3. **Local Build**: Build and tag custom images locally
+
+**Key Benefits**:
+- ✅ No vendor lock-in to NGC registry
+- ✅ Cloud-first strategy remains primary (recommended)
+- ✅ Self-hosting truly optional, not required
+- ✅ Users control their image sources
+
+See: [docker-compose.yml](../docker-compose.yml) header documentation for complete details.
+
 ---
 
 ## NVIDIA Build Platform Integration
@@ -227,6 +265,45 @@ def test_ngc_independence_verification():
     assert "integrate.api.nvidia.com" in str(priority_order[0])
 ```
 
+#### 4. Automated NGC Dependency Audit (`scripts/audit_ngc_dependencies.sh`)
+```bash
+# Comprehensive automated NGC dependency detection
+# Scans entire codebase for NGC patterns
+
+# Usage
+bash scripts/audit_ngc_dependencies.sh
+
+# Expected output for NGC-independent system:
+# [OK]   Pattern 'NGC_API_KEY' not found
+# [OK]   Pattern 'nvcr\.io' not found
+# [OK]   Pattern 'ngc\.nvidia\.com' not found
+# [OK]   Pattern 'ngc\-cli' not found
+# [OK]   No NGC dependencies detected. Repository is NGC-independent.
+
+# Exit codes:
+#   0 = NGC-independent (PASS)
+#   1 = NGC dependencies found (FAIL)
+```
+
+**Audit Script Features**:
+- 🔍 Scans all file types (Python, YAML, shell scripts, docs)
+- 📋 Allowlist for educational/documentary NGC mentions
+- 🎯 Detects hard dependencies vs. optional references
+- ✅ CI/CD integration ready
+- 📊 Detailed reporting with file paths and line numbers
+
+**Integration in CI/CD**:
+```yaml
+# Example GitHub Actions integration
+- name: Verify NGC Independence
+  run: |
+    bash scripts/audit_ngc_dependencies.sh
+    if [ $? -ne 0 ]; then
+      echo "ERROR: NGC dependencies detected"
+      exit 1
+    fi
+```
+
 ### Validation Results
 
 #### System Status: ✅ **NGC DEPRECATION IMMUNE**
@@ -237,6 +314,7 @@ def test_ngc_independence_verification():
     "status": "IMMUNE",
     "nvidia_build_operational": true,
     "ngc_dependencies": 0,
+    "audit_script_status": "PASSING",
     "cloud_first_enabled": true,
     "pharmaceutical_optimization": true,
     "validation_date": "2025-09-24",
@@ -330,10 +408,34 @@ assert free_tier_utilization > 0.8  # Target 80%+ free tier usage
 | Frequency | Task | Purpose |
 |-----------|------|---------|
 | **Real-time** | Endpoint health monitoring | Immediate issue detection |
+| **Automated (CI/CD)** | NGC dependency audit script | Continuous NGC independence verification |
 | **Daily** | Model validation | Confirm continued compatibility |
 | **Weekly** | Cost analysis | Optimize pharmaceutical research budget |
+| **Pre-deployment** | Manual audit script execution | Verify NGC independence before releases |
 | **Monthly** | Comprehensive validation | Full system health assessment |
+| **Monthly** | Docker configuration review | Verify optional self-hosting remains NGC-independent |
 | **Pre-March 2026** | NGC deprecation readiness check | Final immunity verification |
+
+#### Automated Monitoring & Auditing
+
+**NGC Dependency Audit** (`scripts/audit_ngc_dependencies.sh`):
+```bash
+# Run automated audit
+bash scripts/audit_ngc_dependencies.sh
+
+# Verbose mode for detailed output
+bash scripts/audit_ngc_dependencies.sh -v
+
+# Expected result for NGC-independent system:
+# [OK] No NGC dependencies detected. Repository is NGC-independent.
+# Exit code: 0
+```
+
+**CI/CD Integration**:
+- Runs automatically on every commit/PR
+- Fails build if NGC dependencies detected
+- Provides detailed file/line reports on failure
+- Maintains continuous NGC independence verification
 
 ---
 
@@ -389,15 +491,34 @@ assert free_tier_utilization > 0.8  # Target 80%+ free tier usage
 
 ### Code Architecture Verification
 
-#### 1. NGC Independence Check
+#### 1. Automated NGC Independence Check
 ```bash
-# Verify no NGC API dependencies in codebase
-grep -r "nvcf.nvidia.com" src/     # Should return no results ✅
-grep -r "ngc.nvidia.com" src/      # Should return no results ✅
-grep -r "integrate.api.nvidia.com" src/  # Should find NVIDIA Build usage ✅
+# Primary verification method: Automated audit script
+bash scripts/audit_ngc_dependencies.sh
+
+# Expected output:
+# [OK]   Pattern 'NGC_API_KEY' not found
+# [OK]   Pattern 'nvcr\.io' not found
+# [OK]   Pattern 'ngc\.nvidia\.com' not found
+# [OK]   Pattern 'ngc\-cli' not found
+# [OK]   No NGC dependencies detected. Repository is NGC-independent.
+
+# Verbose mode for detailed analysis:
+bash scripts/audit_ngc_dependencies.sh -v
 ```
 
-#### 2. Configuration Verification
+#### 2. Docker Configuration Verification
+```bash
+# Verify docker-compose.yml has no hard NGC dependencies
+cat docker-compose.yml | grep "image:" | grep -v "EMBED_IMAGE\|RERANK_IMAGE\|EXTRACT_IMAGE"
+# Should return no results (all images use env vars) ✅
+
+# Verify .env file uses NVIDIA_API_KEY (not NGC_API_KEY)
+grep "NVIDIA_API_KEY" .env  # Should find NVIDIA_API_KEY ✅
+grep "NGC_API_KEY" .env     # Should return no results ✅
+```
+
+#### 3. Configuration Verification
 ```python
 # Verify cloud-first configuration
 config = EnhancedRAGConfig.from_env()
@@ -462,6 +583,9 @@ assert any("nvidia/" in model["id"] for model in models)
 | **OpenAI Wrapper** | `src/clients/openai_wrapper.py` | ✅ Full |
 | **Enhanced Client** | `src/clients/nemo_client_enhanced.py` | ✅ Composition |
 | **Configuration** | `src/enhanced_config.py` | ✅ Cloud-first |
+| **Environment Config** | `.env` | ✅ NGC-independent (NVIDIA_API_KEY) |
+| **Docker Compose** | `docker-compose.yml` | ✅ NGC-independent (no defaults) |
+| **NGC Audit Script** | `scripts/audit_ngc_dependencies.sh` | ✅ Automated verification |
 | **Model Validator** | `src/validation/model_validator.py` | ✅ Verified |
 | **Health Monitor** | `src/monitoring/endpoint_health_monitor.py` | ✅ Continuous |
 | **Cost Analyzer** | `src/monitoring/pharmaceutical_cost_analyzer.py` | ✅ Optimized |

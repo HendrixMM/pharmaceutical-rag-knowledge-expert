@@ -1,14 +1,47 @@
 version: "3.8"
-# NGC-DEPRECATION IMMUNITY
-# This compose file is NGC-independent:
-# - Uses NVIDIA_API_KEY (replaces legacy keys)
-# - No hard dependency on vendor-specific registries
-# - Cloud-first strategy via NVIDIA Build platform remains primary
+
+# ============================================================================
+# NGC-DEPRECATION IMMUNITY - CLOUD-FIRST ARCHITECTURE
+# ============================================================================
+# This configuration is NGC-independent and immune to March 2026 NGC API deprecation.
+#
+# PRIMARY STRATEGY (Recommended):
+#   - Use NVIDIA Build platform API (https://integrate.api.nvidia.com/v1)
+#   - Cloud-first, no Docker containers needed
+#   - NGC-independent, no registry access required
+#   - Free tier: 10,000 requests/month
+#   - See: docs/NVIDIA_MODEL_ACCESS_GUIDE.md
+#
+# OPTIONAL SELF-HOSTED DEPLOYMENT:
+#   - Services below are OPTIONAL for self-hosted NIM containers
+#   - Requires setting EMBED_IMAGE, RERANK_IMAGE, EXTRACT_IMAGE environment variables
+#   - Image options:
+#     1. nvcr.io registry (requires NGC credentials - optional path)
+#     2. Custom-built images
+#     3. Third-party registries
+#
+# IMPORTANT:
+#   - Uses NVIDIA_API_KEY (not NGC_API_KEY - NGC-independent)
+#   - No hard dependency on vendor-specific registries
+#   - Cloud-first strategy remains primary and recommended
+#
+# For more information:
+#   - NGC Deprecation: docs/NGC_DEPRECATION_IMMUNITY.md
+#   - Model Access: docs/NVIDIA_MODEL_ACCESS_GUIDE.md
+#   - Deployment Guide: docs/DEPLOYMENT_GUIDE.md
+#
+# Audit NGC independence: scripts/audit_ngc_dependencies.sh
+# ============================================================================
 
 services:
   embedder:
-    # Default to a non-NGC local/registry image; override via EMBED_IMAGE
-    image: ${EMBED_IMAGE:-localhost/nim/nv-embedqa-e5-v5:latest}
+    # OPTIONAL self-hosted embedder service
+    # Requires EMBED_IMAGE environment variable (no default to ensure NGC independence)
+    # Examples:
+    #   export EMBED_IMAGE=nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest  # NGC path (optional)
+    #   export EMBED_IMAGE=your-registry.com/custom-embedder:v1       # Custom image
+    # For testing with mocks: docker compose -f docker-compose.yml -f compose-mock.yaml --profile mock-embed up
+    image: ${EMBED_IMAGE:?EMBED_IMAGE environment variable required for self-hosted deployment. See header for options.}
     container_name: embed-nim
     environment:
       - NVIDIA_API_KEY=${NVIDIA_API_KEY}
@@ -16,15 +49,20 @@ services:
     ports:
       - "8501:8501"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf -H 'Authorization: Bearer $NVIDIA_API_KEY' http://localhost:8501/health"]
+      test: ["CMD-SHELL", "curl -sf -H \"Authorization: Bearer $NVIDIA_API_KEY\" http://localhost:8501/health"]
       interval: 10s
       timeout: 5s
       retries: 5
     profiles: ["embed"]
 
   reranker:
-    # Default to a non-NGC local/registry image; override via RERANK_IMAGE
-    image: ${RERANK_IMAGE:-localhost/nim/llama-3_2-nemoretriever-500m-rerank-v2:latest}
+    # OPTIONAL self-hosted reranker service
+    # Requires RERANK_IMAGE environment variable (no default to ensure NGC independence)
+    # Examples:
+    #   export RERANK_IMAGE=nvcr.io/nim/meta/llama-3_2-nemoretriever-500m-rerank-v2:latest  # NGC path (optional)
+    #   export RERANK_IMAGE=your-registry.com/custom-reranker:v1                           # Custom image
+    # For testing with mocks: docker compose -f docker-compose.yml -f compose-mock.yaml --profile mock-rerank up
+    image: ${RERANK_IMAGE:?RERANK_IMAGE environment variable required for self-hosted deployment. See header for options.}
     container_name: rerank-nim
     environment:
       - NVIDIA_API_KEY=${NVIDIA_API_KEY}
@@ -32,23 +70,27 @@ services:
     ports:
       - "8502:8502"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf -H 'Authorization: Bearer $NVIDIA_API_KEY' http://localhost:8502/health"]
-    
+      test: ["CMD-SHELL", "curl -sf -H \"Authorization: Bearer $NVIDIA_API_KEY\" http://localhost:8502/health"]
       interval: 10s
       timeout: 5s
       retries: 5
     profiles: ["rerank"]
 
   extraction:
-    # Default to a non-NGC local/registry image; override via EXTRACT_IMAGE
-    image: ${EXTRACT_IMAGE:-localhost/nim/nv-ingest:latest}
+    # OPTIONAL self-hosted extraction service
+    # Requires EXTRACT_IMAGE environment variable (no default to ensure NGC independence)
+    # Examples:
+    #   export EXTRACT_IMAGE=nvcr.io/nim/nvidia/nv-ingest:latest         # NGC path (optional)
+    #   export EXTRACT_IMAGE=your-registry.com/custom-extraction:v1      # Custom image
+    # For testing with mocks: docker compose -f docker-compose.yml -f compose-mock.yaml --profile mock-extraction up
+    image: ${EXTRACT_IMAGE:?EXTRACT_IMAGE environment variable required for self-hosted deployment. See header for options.}
     container_name: extract-nim
     environment:
       - NVIDIA_API_KEY=${NVIDIA_API_KEY}
     ports:
       - "8503:8503"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf -H 'Authorization: Bearer $NVIDIA_API_KEY' http://localhost:8503/health"]
+      test: ["CMD-SHELL", "curl -sf -H \"Authorization: Bearer $NVIDIA_API_KEY\" http://localhost:8503/health"]
       interval: 10s
       timeout: 5s
       retries: 5

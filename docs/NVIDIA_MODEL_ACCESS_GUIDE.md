@@ -4,9 +4,37 @@
 
 This guide explains the different NVIDIA API endpoints, model access tiers, and how to configure your RAG system for optimal model access. Your system is currently optimized for pharmaceutical research with specialized NeMo Retriever models, and this guide helps you understand alternatives and fallback options.
 
-> ⚠️ NGC Deprecation Alert (March 2026)
+---
+
+## 🚨 NGC API Deprecation Alert - March 2026
+
+> **CRITICAL TIMELINE**: NVIDIA will deprecate NGC API services in **March 2026** (6 months from September 2025).
 >
-> NVIDIA has announced deprecation of NGC API services by March 2026. This project is architected to be NGC‑independent and uses the NVIDIA Build platform as the primary path, ensuring immunity to that deprecation timeline. See docs/NGC_DEPRECATION_IMMUNITY.md for details.
+> ### ✅ **This System is NGC-Independent and Immune**
+>
+> **Why You're Protected:**
+> - ✅ **Cloud-First Architecture**: Primary strategy uses NVIDIA Build platform (`integrate.api.nvidia.com`)
+> - ✅ **OpenAI SDK Integration**: NGC-independent API access via standardized wrapper
+> - ✅ **Self-Hosted Fallback**: Optional Docker deployment doesn't require NGC registry
+> - ✅ **Zero Migration Needed**: System operates without NGC dependencies
+>
+> **Timeline Visualization:**
+> ```
+> ┌──────────────┬────────────────┬───────────────┬─────────────┐
+> │   Sept 2025  │   Dec 2025     │  March 2026   │  Post-2026  │
+> │   (Today)    │  (3 months)    │ (Deprecation) │  (Future)   │
+> ├──────────────┼────────────────┼───────────────┼─────────────┤
+> │ NGC-dependent│ Critical       │ NGC APIs      │ NGC-dependent│
+> │ systems OK   │ migration      │ SHUTDOWN      │ systems FAIL│
+> ├──────────────┼────────────────┼───────────────┼─────────────┤
+> │ THIS SYSTEM: │ THIS SYSTEM:   │ THIS SYSTEM:  │ THIS SYSTEM:│
+> │ ✅ Running   │ ✅ Running     │ ✅ Running    │ ✅ Running  │
+> └──────────────┴────────────────┴───────────────┴─────────────┘
+> ```
+>
+> **For Complete Details**: See [NGC_DEPRECATION_IMMUNITY.md](NGC_DEPRECATION_IMMUNITY.md)
+
+---
 
 ## NVIDIA API Endpoint Types
 
@@ -29,23 +57,36 @@ Endpoints:
 - **Reranking**: `meta/llama-3_2-nemoretriever-500m-rerank-v2` (pharmaceutical-specific)
 - **LLM**: `meta/llama-3.1-8b-instruct` (configured)
 
-### 2. NVIDIA Build Platform (`integrate.api.nvidia.com`)
+### 2. NVIDIA Build Platform (`integrate.api.nvidia.com`) ✅ NGC IMMUNE
 
 **Purpose**: Developer-friendly access to popular open-source models
 **Target**: General-purpose applications and cost-effective alternatives
-**Free Tier**: 10,000 requests for registered developers  
-**Status**: ✅ NGC Deprecation Immune
+**Free Tier**: 10,000 requests/month for registered developers
+**Status**: ✅ **NGC Deprecation Immune** - Primary Strategy
+
+**🛡️ March 2026 Timeline Advantages:**
+- ✅ **Zero Migration Risk**: Not affected by NGC deprecation
+- ✅ **OpenAI SDK Compatible**: Standardized, maintainable API access
+- ✅ **Cost Optimized**: Free tier maximizes pharmaceutical research budget
+- ✅ **Future-Proof**: NVIDIA's long-term developer platform strategy
+- ✅ **Self-Hosted Independent**: Optional Docker deployment, no NGC registry required
 
 ```bash
-Base URL: https://integrate.api.nvidia.com/v1
+Base URL: https://integrate.api.nvidia.com/v1  # NGC-Independent
 Endpoints:
-  - /embeddings
-  - /chat/completions
+  - /embeddings    # For vector representations
+  - /chat/completions  # For LLM inference
 ```
 
-**Available Models (Requested in your question):**
+**Available Models:**
 - **Embedding**: `nvidia/nv-embed-v1` (4096 dimensions, general purpose)
 - **LLM**: `meta/llama-3.1-8b-instruct` (same model, different endpoint)
+
+**API Key Acquisition:**
+1. Visit [build.nvidia.com](https://build.nvidia.com)
+2. Create account or sign in (no NGC account required)
+3. Generate NVIDIA_API_KEY (format: `nvapi-...`)
+4. Test with: `python scripts/nvidia_build_api_test.py`
 
 ## API Key and Access Analysis
 
@@ -76,11 +117,107 @@ python scripts/nim_native_test.py
 
 ## NGC Deprecation Timeline & Immunity
 
-- March 2026: NGC API deprecation. Systems relying on NGC endpoints must migrate.  
-- This repository is already NGC‑independent via NVIDIA Build + self‑hosted NeMo fallbacks.  
-- No action needed for the March 2026 timeline when using this architecture.
+### ⏰ Critical Timeline (September 2025 → March 2026)
 
-See also: docs/NGC_DEPRECATION_IMMUNITY.md
+**Current Status (September 2025)**:
+- ✅ System is NGC-independent
+- ✅ 6 months ahead of deprecation deadline
+- ✅ Zero migration overhead required
+
+**Timeline Breakdown**:
+
+| Date | NGC-Dependent Systems | This System (NGC-Independent) |
+|------|-----------------------|-------------------------------|
+| **September 2025** | Still operational, migration urgency increasing | ✅ Fully operational, no changes needed |
+| **December 2025** | 3 months to deadline, critical migration period | ✅ Fully operational, no changes needed |
+| **March 2026** | NGC API SHUTDOWN - systems fail | ✅ **Fully operational**, unaffected |
+| **Post-March 2026** | Broken until migration complete | ✅ Continues operating normally |
+
+### 🛡️ Why This System is Immune
+
+**1. Cloud-First Architecture**
+```python
+# NGC-Independent client initialization
+from src.clients.openai_wrapper import OpenAIWrapper, NVIDIABuildConfig
+
+config = NVIDIABuildConfig(
+    base_url="https://integrate.api.nvidia.com/v1",  # NGC-independent endpoint
+    pharmaceutical_optimized=True
+)
+client = OpenAIWrapper(config)  # No NGC dependencies
+```
+
+**2. OpenAI SDK Standardization**
+- Uses industry-standard OpenAI SDK format
+- Maintainable, widely-supported API pattern
+- Easy to swap backends if needed
+- Zero vendor lock-in
+
+**3. Self-Hosted Fallback (Optional)**
+- Docker services don't require NGC registry
+- Can use custom images or third-party registries
+- `docker-compose.yml` configured for NGC independence
+- See: [docker-compose.yml](../docker-compose.yml) header documentation
+
+### 📊 Benefits of Early NGC Independence
+
+**Pharmaceutical Research Continuity**:
+- ✅ **Zero Disruption**: No March 2026 service interruption
+- ✅ **Budget Predictability**: Free tier (10K requests/month) for planning
+- ✅ **Regulatory Compliance**: Stable infrastructure for validated systems
+- ✅ **Research Timeline Protection**: No migration downtime
+
+**Technical Advantages**:
+- ✅ **6+ Months Head Start**: Already migrated before deadline
+- ✅ **Composition Pattern**: Clean separation of concerns
+- ✅ **Automated Validation**: `scripts/audit_ngc_dependencies.sh` verifies independence
+- ✅ **Comprehensive Documentation**: [NGC_DEPRECATION_IMMUNITY.md](NGC_DEPRECATION_IMMUNITY.md)
+
+### 🔧 Migrating from NGC to NVIDIA Build (Not Needed for This System)
+
+**If you were NGC-dependent** (this system is not), migration would involve:
+
+1. **API Key Migration**:
+   ```bash
+   # Old (NGC - deprecated):
+   NGC_API_KEY=old_ngc_key_format
+
+   # New (NVIDIA Build - future-proof):
+   NVIDIA_API_KEY=nvapi-...  # Obtain from build.nvidia.com
+   ```
+
+2. **Endpoint Migration**:
+   ```bash
+   # Old (NGC - deprecated):
+   NGC_BASE_URL=https://api.ngc.nvidia.com
+
+   # New (NVIDIA Build - future-proof):
+   NVIDIA_BUILD_BASE_URL=https://integrate.api.nvidia.com/v1
+   ```
+
+3. **Code Migration**:
+   - Replace NGC client with OpenAI SDK wrapper
+   - Update environment variables
+   - Test with validation scripts
+
+**This System**: Already using NVIDIA Build platform, no migration needed.
+
+### ✅ Validation
+
+**Verify NGC Independence**:
+```bash
+# Run automated audit
+bash scripts/audit_ngc_dependencies.sh
+
+# Expected output: "No NGC dependencies detected. Repository is NGC-independent."
+```
+
+**Test NVIDIA Build Access**:
+```bash
+python scripts/nvidia_build_api_test.py
+```
+
+**For Complete Details**: See [NGC_DEPRECATION_IMMUNITY.md](NGC_DEPRECATION_IMMUNITY.md)
 
 #### Option 3: Contact NVIDIA Support
 - Check account status and permissions

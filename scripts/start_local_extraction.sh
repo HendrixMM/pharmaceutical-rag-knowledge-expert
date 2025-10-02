@@ -24,7 +24,7 @@ else
 fi
 
 echo "Starting Extraction NIM via docker compose..."
-"${COMPOSE_CMD[@]}" up -d extraction
+"${COMPOSE_CMD[@]}" --profile extraction up -d extraction
 
 echo "Waiting for extraction to become healthy on http://localhost:8503/health ..."
 ATTEMPTS=60
@@ -41,4 +41,3 @@ done
 echo "ERROR: Extraction did not become healthy in time. Recent container logs:" >&2
 "${COMPOSE_CMD[@]}" logs --tail=100 extraction || true
 exit 2
-

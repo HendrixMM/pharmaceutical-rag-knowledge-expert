@@ -153,7 +153,7 @@ class NeMoEnvironmentValidator:
                     component="NVIDIA API Access",
                     status="FAIL",
                     message="NVIDIA API key is invalid or expired",
-                    fix_suggestion="Check your API key or generate a new one from NVIDIA NGC"
+                    fix_suggestion="Check your API key or generate a new one from https://build.nvidia.com (NVIDIA Build platform)"
                 ))
             elif response.status_code == 429:
                 self.results.append(ValidationResult(

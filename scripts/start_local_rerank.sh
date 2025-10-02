@@ -24,7 +24,7 @@ else
 fi
 
 echo "Starting Reranker NIM via docker compose..."
-"${COMPOSE_CMD[@]}" up -d reranker
+"${COMPOSE_CMD[@]}" --profile rerank up -d reranker
 
 echo "Waiting for reranker to become healthy on http://localhost:8502/health ..."
 ATTEMPTS=60

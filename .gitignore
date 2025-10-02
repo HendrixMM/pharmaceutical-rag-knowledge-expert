@@ -1,6 +1,12 @@
 # Environment variables
-# NOTE: We intentionally track .env to allow CI/secrets workflow per user request.
-!.env
+# SECURITY: .env contains sensitive API keys and must NOT be tracked
+# - Use .env.example as template (tracked, has placeholders)
+# - Copy .env.example to .env and add your real keys locally
+# - CI uses GitHub Secrets, not .env file
+.env
+*.env
+!.env.example
+!.env.template
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -37,6 +43,9 @@ ENV/
 vector_db/
 *.faiss
 *.pkl
+
+# Benchmark results
+results/
 
 # PDF documents (exclude user documents but keep folder structure)
 Data/Docs/*.pdf
@@ -168,7 +177,6 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-!.env
 .envrc
 .venv
 env/

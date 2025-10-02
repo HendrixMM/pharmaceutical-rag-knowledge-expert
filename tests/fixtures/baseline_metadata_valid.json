@@ -1,0 +1,21 @@
+{
+  "cloud": {
+    "average_latency_ms": 450.0,
+    "success_rate": 0.98,
+    "average_cost_per_query": 12.5,
+    "average_accuracy": 0.85,
+    "notes": "Based on NVIDIA Build cloud endpoints (integrate.api.nvidia.com)"
+  },
+  "self_hosted": {
+    "average_latency_ms": 850.0,
+    "success_rate": 0.95,
+    "average_cost_per_query": 0.0,
+    "average_accuracy": 0.82,
+    "notes": "Based on local NIM containers with GPU acceleration"
+  },
+  "regression_thresholds": {
+    "accuracy_drop_percent": 5,
+    "cost_increase_percent": 20,
+    "latency_increase_percent": 50
+  }
+}

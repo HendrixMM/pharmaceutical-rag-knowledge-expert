@@ -24,7 +24,7 @@ else
 fi
 
 echo "Starting Embedder NIM via docker compose..."
-"${COMPOSE_CMD[@]}" up -d embedder
+"${COMPOSE_CMD[@]}" --profile embed up -d embedder
 
 echo "Waiting for embedder to become healthy on http://localhost:8501/health ..."
 ATTEMPTS=60
@@ -41,4 +41,3 @@ done
 echo "ERROR: Embedder did not become healthy in time. Recent container logs:" >&2
 "${COMPOSE_CMD[@]}" logs --tail=100 embedder || true
 exit 2
-

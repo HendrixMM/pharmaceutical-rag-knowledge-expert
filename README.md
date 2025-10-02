@@ -32,6 +32,16 @@ A powerful **Retrieval-Augmented Generation (RAG)** template built with **NVIDIA
 - 🔒 **Enterprise Security**: Environment-based configuration and authentication
 - 📱 **Production Ready**: Comprehensive error handling, logging, and testing
 
+### **🛡️ Future-Proof Architecture (NGC Deprecation Immune)**
+- ✅ **NGC Deprecation Immune**: Zero impact from March 2026 NGC API deprecation
+- 🌐 **Cloud-First Strategy**: NVIDIA Build platform (`integrate.api.nvidia.com`) as primary endpoint
+- 🔄 **OpenAI SDK Integration**: Standardized, maintainable API access via industry-standard wrapper
+- 📊 **Cost Optimization**: Free tier maximization (10,000 requests/month) for budget-conscious research
+- 🔧 **Self-Hosted Fallback**: Complete independence from cloud services with optional Docker deployment
+- 🛡️ **6+ Months Head Start**: Already migrated before March 2026 deadline
+- 📝 **Automated Validation**: `scripts/audit_ngc_dependencies.sh` continuously verifies NGC independence
+- 📚 **Comprehensive Documentation**: [NGC_DEPRECATION_IMMUNITY.md](docs/NGC_DEPRECATION_IMMUNITY.md) for complete details
+
 ## 🎯 **Perfect For**
 
 - Legal document analysis
@@ -148,6 +158,55 @@ Troubleshooting:
    - **Embedding Models**: `nvidia/nv-embed-v1`
    - **LLM Models**: `meta/llama-3.1-8b-instruct`
 2. Check the [NVIDIA API documentation](https://docs.api.nvidia.com) for current model availability
+
+## 🔒 **Security & API Key Management**
+
+### **⚠️ CRITICAL: Never Commit API Keys**
+
+This repository uses a **secure environment configuration pattern**:
+
+1. **`.env.example`** (✅ Tracked in Git)
+   - Contains placeholder values for all configuration
+   - Safe to commit and share
+   - Used as template for local setup
+
+2. **`.env`** (❌ NOT Tracked in Git)
+   - Contains your real API keys
+   - **NEVER commit this file**
+   - Listed in `.gitignore` for safety
+
+### **🛡️ Setup Your Local Environment**
+
+```bash
+# 1. Copy the example file
+cp .env.example .env
+
+# 2. Edit .env and add your real API keys
+# Replace placeholders with actual values:
+# NVIDIA_API_KEY=your_actual_nvidia_api_key_here
+# PUBMED_EUTILS_API_KEY=your_actual_pubmed_key_here
+# PUBMED_EMAIL=your_actual_email@example.com
+```
+
+### **🚨 If You've Committed Keys Accidentally**
+
+If you accidentally committed API keys:
+
+1. **Immediately rotate the exposed keys** at their respective portals
+2. **Remove from Git history** (requires force push):
+   ```bash
+   # Use BFG Repo-Cleaner or git-filter-repo
+   # WARNING: This rewrites history
+   ```
+3. **Update `.env` with new keys** (locally only)
+
+### **✅ CI/CD Best Practices**
+
+- GitHub Actions uses **GitHub Secrets**, not the `.env` file
+- Set secrets in: Repository Settings → Secrets and Variables → Actions
+- Required secrets:
+  - `NVIDIA_API_KEY`
+  - `PUBMED_EUTILS_API_KEY` (optional)
 
 ## ✅ Testing Notes (Pharma Disclaimers & Async)
 
