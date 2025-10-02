@@ -82,9 +82,18 @@ class BenchmarkGenerator:
         "adverse_reactions"
     ]
 
-    def __init__(self, output_dir: str = "benchmarks"):
+    def __init__(self, output_dir: str = "benchmarks", seed: Optional[int] = None):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
+        # Optional random seed for reproducibility
+        self.seed: Optional[int] = seed
+        if seed is not None:
+            try:
+                random.seed(seed)  # Seed global RNG used by DrugDataLoader
+            except Exception:
+                pass
+        # Local RNG
+        self.rnd: random.Random = random.Random(seed)
         self.drug_loader = DrugDataLoader()
         self.drug_loader.load_drugs()
 
@@ -131,7 +140,7 @@ class BenchmarkGenerator:
             "adverse_reactions": "Adverse reaction queries covering common and serious side effects, warnings, and monitoring"
         }
 
-        return {
+        meta = {
             "version": str(version),
             "category": category,
             "created_date": datetime.now().strftime("%Y-%m-%d"),
@@ -139,6 +148,9 @@ class BenchmarkGenerator:
             "description": descriptions.get(category, "Pharmaceutical benchmark queries"),
             "baselines": self.generate_baselines(category)
         }
+        if getattr(self, "seed", None) is not None:
+            meta["generation_seed"] = int(self.seed)  # type: ignore[arg-type]
+        return meta
 
     def _extract_drug_names_from_query(self, query_text: str) -> List[str]:
         """Extract drug names from query text by matching against drug list."""
@@ -543,10 +555,15 @@ def main():
         default='benchmarks',
         help='Output directory for benchmark files'
     )
+    parser.add_argument(
+        '--seed',
+        type=int,
+        help='Random seed for reproducible dataset generation'
+    )
 
     args = parser.parse_args()
 
-    generator = BenchmarkGenerator(output_dir=args.output)
+    generator = BenchmarkGenerator(output_dir=args.output, seed=getattr(args, 'seed', None))
 
     try:
         if args.category == 'all':
