@@ -1,0 +1,31 @@
+presets:
+  cloud_first_adaptive:
+    global:
+      mode: both
+      skip_classifier_validation: true
+      auto_concurrency: true
+      adaptive_concurrency: true
+      launch_stagger_ms: 100
+      adapt_latency_high_ms: 6000
+      adapt_latency_low_ms: 2200
+      adapt_step: 1
+      max_queries: 5
+      enforce_budget: false
+      budget_stop_utilization: 0.95
+      gating:
+        min_cloud_score: 0.40
+        max_cloud_latency_ms: 6000
+    categories:
+      pharmacokinetics:
+        adapt_latency_high_ms: 8000
+        adapt_latency_low_ms: 3000
+        max_queries: 5
+      mechanism_of_action:
+        adapt_latency_high_ms: 7000
+        adapt_latency_low_ms: 2800
+      adverse_reactions:
+        adapt_latency_high_ms: 6500
+      drug_interactions:
+        adapt_latency_high_ms: 6500
+      clinical_terminology:
+        adapt_latency_low_ms: 2000

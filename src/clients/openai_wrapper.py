@@ -571,7 +571,8 @@ class OpenAIWrapper:
         self._validate_model_selection(model, model_type="chat", query_type=query_type)
 
         # Execute with pharma-aware retry policy for critical medical queries
-        def _do_call() -> ChatCompletion:
+        # Avoid runtime NameError on missing ChatCompletion type at runtime
+        def _do_call() -> Any:
             with self._error_handler("Chat completion"):
                 # Ensure client is initialized
                 self._ensure_client_initialized()

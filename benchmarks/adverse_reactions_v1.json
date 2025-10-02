@@ -1,0 +1,1611 @@
+{
+  "metadata": {
+    "version": "1",
+    "category": "adverse_reactions",
+    "created_date": "2025-09-30",
+    "total_queries": 50,
+    "description": "Baseline adverse reaction queries covering common and serious side effects, black box warnings, monitoring requirements, and safety profiles across therapeutic classes",
+    "baselines": {
+      "cloud": {
+        "average_latency_ms": 500.0,
+        "success_rate": 0.98,
+        "average_cost_per_query": 16.0,
+        "average_accuracy": 0.88,
+        "notes": "Based on NVIDIA Build cloud endpoints (integrate.api.nvidia.com)"
+      },
+      "self_hosted": {
+        "average_latency_ms": 950.0,
+        "success_rate": 0.95,
+        "average_cost_per_query": 0.0,
+        "average_accuracy": 0.85,
+        "notes": "Based on local NIM containers with GPU acceleration"
+      },
+      "regression_thresholds": {
+        "accuracy_drop_percent": 5,
+        "cost_increase_percent": 20,
+        "latency_increase_percent": 50
+      }
+    }
+  },
+  "queries": [
+    {
+      "id": "ar_001",
+      "query": "What are the most common side effects of atorvastatin (Lipitor)?",
+      "expected_type": "safety",
+      "expected_content": [
+        "muscle pain",
+        "myalgia",
+        "headache",
+        "GI upset",
+        "elevated liver enzymes",
+        "rare myopathy"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "moderate",
+        "research_priority": "high",
+        "drug_names": [
+          "atorvastatin",
+          "Lipitor"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "statin",
+        "common side effects",
+        "myopathy",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_002",
+      "query": "What is the black box warning for warfarin (Coumadin)?",
+      "expected_type": "safety",
+      "expected_content": [
+        "major bleeding risk",
+        "fatal hemorrhage",
+        "INR monitoring required",
+        "drug interactions",
+        "careful dosing"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "warfarin",
+          "Coumadin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "anticoagulant",
+        "black box",
+        "bleeding",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "ar_003",
+      "query": "What are the serious adverse effects of ACE inhibitors like lisinopril?",
+      "expected_type": "safety",
+      "expected_content": [
+        "angioedema",
+        "hyperkalemia",
+        "renal impairment",
+        "hypotension",
+        "cough",
+        "pregnancy risk"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "lisinopril"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "ACE inhibitor",
+        "serious AE",
+        "angioedema",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_004",
+      "query": "What side effects should patients be warned about when starting metoprolol?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "bradycardia",
+        "fatigue",
+        "dizziness",
+        "cold extremities",
+        "bronchospasm",
+        "mask hypoglycemia"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "moderate",
+        "research_priority": "high",
+        "drug_names": [
+          "metoprolol"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "beta blocker",
+        "common AE",
+        "patient education",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_005",
+      "query": "What is the most concerning adverse effect of clopidogrel (Plavix)?",
+      "expected_type": "safety",
+      "expected_content": [
+        "bleeding risk",
+        "thrombotic thrombocytopenic purpura",
+        "TTP rare",
+        "bruising",
+        "GI bleeding"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "clopidogrel",
+          "Plavix"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antiplatelet",
+        "serious AE",
+        "TTP",
+        "bleeding"
+      ]
+    },
+    {
+      "id": "ar_006",
+      "query": "What are the gastrointestinal side effects of aspirin?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "gastric irritation",
+        "dyspepsia",
+        "ulceration",
+        "GI bleeding",
+        "take with food",
+        "PPI consideration"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "moderate",
+        "research_priority": "high",
+        "drug_names": [
+          "aspirin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "aspirin",
+        "GI effects",
+        "ulceration",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_007",
+      "query": "What black box warning exists for NSAIDs like ibuprofen?",
+      "expected_type": "safety",
+      "expected_content": [
+        "cardiovascular thrombotic events",
+        "GI bleeding",
+        "ulceration perforation",
+        "MI stroke risk",
+        "use lowest dose"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "ibuprofen"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "NSAID",
+        "black box",
+        "CV risk",
+        "GI bleeding"
+      ]
+    },
+    {
+      "id": "ar_008",
+      "query": "What are the common side effects of metformin?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "GI upset",
+        "diarrhea",
+        "nausea",
+        "metallic taste",
+        "vitamin B12 deficiency",
+        "lactic acidosis rare"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "low",
+        "research_priority": "high",
+        "drug_names": [
+          "metformin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "metformin",
+        "GI effects",
+        "common AE",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_009",
+      "query": "What monitoring is required for patients on amiodarone?",
+      "expected_type": "safety",
+      "expected_content": [
+        "thyroid function",
+        "liver function",
+        "pulmonary toxicity",
+        "QT interval",
+        "corneal deposits",
+        "chest X-ray"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "amiodarone"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "amiodarone",
+        "monitoring",
+        "toxicity",
+        "multiple organs"
+      ]
+    },
+    {
+      "id": "ar_010",
+      "query": "What are the serious adverse effects of SSRIs like fluoxetine?",
+      "expected_type": "safety",
+      "expected_content": [
+        "serotonin syndrome",
+        "suicidality young adults",
+        "bleeding risk",
+        "hyponatremia",
+        "sexual dysfunction"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "fluoxetine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "SSRI",
+        "serious AE",
+        "serotonin syndrome",
+        "black box"
+      ]
+    },
+    {
+      "id": "ar_011",
+      "query": "What is the risk of rhabdomyolysis with statins?",
+      "expected_type": "safety",
+      "expected_content": [
+        "rare but serious",
+        "muscle breakdown",
+        "myoglobinuria",
+        "renal failure",
+        "CK elevation",
+        "risk factors"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "statin",
+        "rhabdomyolysis",
+        "serious AE",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "ar_012",
+      "query": "What adverse effects are associated with long-term prednisone use?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "osteoporosis",
+        "hyperglycemia",
+        "weight gain",
+        "cushingoid features",
+        "immunosuppression",
+        "adrenal suppression"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "prednisone"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "corticosteroid",
+        "chronic use",
+        "multiple effects",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_013",
+      "query": "What is the black box warning for digoxin?",
+      "expected_type": "safety",
+      "expected_content": [
+        "narrow therapeutic index",
+        "toxicity risk",
+        "arrhythmias",
+        "AV block",
+        "visual disturbances",
+        "monitoring required"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "digoxin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "digoxin",
+        "toxicity",
+        "narrow TI",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "ar_014",
+      "query": "What are the common adverse effects of calcium channel blockers like amlodipine?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "peripheral edema",
+        "ankle swelling",
+        "flushing",
+        "headache",
+        "dizziness",
+        "gingival hyperplasia"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "low",
+        "research_priority": "high",
+        "drug_names": [
+          "amlodipine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "calcium channel blocker",
+        "edema",
+        "common AE",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_015",
+      "query": "What serious allergic reaction can occur with ACE inhibitors?",
+      "expected_type": "safety",
+      "expected_content": [
+        "angioedema",
+        "life-threatening",
+        "airway swelling",
+        "discontinue immediately",
+        "0.1-0.7% incidence",
+        "higher in black patients"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "ACE inhibitor",
+        "angioedema",
+        "emergency",
+        "allergy"
+      ]
+    },
+    {
+      "id": "ar_016",
+      "query": "What are the adverse effects of opioids like morphine?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "respiratory depression",
+        "constipation",
+        "nausea",
+        "sedation",
+        "addiction risk",
+        "tolerance"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "morphine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "opioid",
+        "respiratory depression",
+        "constipation",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_017",
+      "query": "What monitoring is required for patients on lithium?",
+      "expected_type": "safety",
+      "expected_content": [
+        "serum lithium levels",
+        "renal function",
+        "thyroid function",
+        "narrow therapeutic index",
+        "0.6-1.2 mEq/L",
+        "toxicity signs"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "lithium"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "lithium",
+        "monitoring",
+        "TDM",
+        "toxicity"
+      ]
+    },
+    {
+      "id": "ar_018",
+      "query": "What is the most serious adverse effect of phenytoin?",
+      "expected_type": "safety",
+      "expected_content": [
+        "Stevens-Johnson syndrome",
+        "toxic epidermal necrolysis",
+        "gingival hyperplasia",
+        "bone marrow suppression",
+        "hepatotoxicity"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "phenytoin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "phenytoin",
+        "SJS",
+        "serious AE",
+        "dermatologic"
+      ]
+    },
+    {
+      "id": "ar_019",
+      "query": "What adverse effects are common with benzodiazepines like diazepam?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "drowsiness",
+        "confusion",
+        "ataxia",
+        "dependency",
+        "paradoxical agitation",
+        "elderly fall risk"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "moderate",
+        "research_priority": "high",
+        "drug_names": [
+          "diazepam"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "benzodiazepine",
+        "CNS effects",
+        "dependency",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_020",
+      "query": "What is the bleeding risk with DOACs like rivaroxaban (Xarelto)?",
+      "expected_type": "safety",
+      "expected_content": [
+        "major bleeding",
+        "GI bleeding",
+        "intracranial hemorrhage",
+        "no routine monitoring",
+        "reversal agents available",
+        "renal dosing"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "rivaroxaban",
+          "Xarelto"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "DOAC",
+        "bleeding",
+        "anticoagulant",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_021",
+      "query": "What hepatotoxicity concerns exist with acetaminophen (Tylenol)?",
+      "expected_type": "safety",
+      "expected_content": [
+        "dose-dependent hepatotoxicity",
+        "4g/day maximum",
+        "overdose acute liver failure",
+        "NAPQI metabolite",
+        "N-acetylcysteine antidote"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "acetaminophen",
+          "Tylenol"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "acetaminophen",
+        "hepatotoxicity",
+        "overdose",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_022",
+      "query": "What are the anticholinergic side effects of antihistamines like diphenhydramine?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "dry mouth",
+        "urinary retention",
+        "constipation",
+        "blurred vision",
+        "confusion elderly",
+        "Beers criteria"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "moderate",
+        "research_priority": "high",
+        "drug_names": [
+          "diphenhydramine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antihistamine",
+        "anticholinergic",
+        "elderly",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_023",
+      "query": "What black box warning exists for antipsychotics in elderly dementia patients?",
+      "expected_type": "safety",
+      "expected_content": [
+        "increased mortality",
+        "cerebrovascular events",
+        "stroke risk",
+        "not FDA approved",
+        "dementia-related psychosis"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antipsychotic",
+        "black box",
+        "dementia",
+        "mortality"
+      ]
+    },
+    {
+      "id": "ar_024",
+      "query": "What are the extrapyramidal side effects of antipsychotics?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "dystonia",
+        "akathisia",
+        "parkinsonism",
+        "tardive dyskinesia",
+        "dopamine blockade",
+        "anticholinergics for treatment"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antipsychotic",
+        "EPS",
+        "movement disorders",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_025",
+      "query": "What is the risk of lactic acidosis with metformin?",
+      "expected_type": "safety",
+      "expected_content": [
+        "rare but fatal",
+        "renal impairment risk",
+        "contrast dye",
+        "hold during illness",
+        "tissue hypoxia",
+        "mortality high"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "metformin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "metformin",
+        "lactic acidosis",
+        "contraindication",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_026",
+      "query": "What are the common side effects of thiazide diuretics?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "hypokalemia",
+        "hyperuricemia",
+        "hyperglycemia",
+        "hypercalcemia",
+        "photosensitivity",
+        "sexual dysfunction"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "moderate",
+        "research_priority": "high",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "thiazide",
+        "electrolyte",
+        "metabolic",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_027",
+      "query": "What ototoxicity risk exists with aminoglycosides like gentamicin?",
+      "expected_type": "safety",
+      "expected_content": [
+        "irreversible hearing loss",
+        "vestibular toxicity",
+        "dose and duration dependent",
+        "monitor audiometry",
+        "trough levels important"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "gentamicin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "aminoglycoside",
+        "ototoxicity",
+        "monitoring",
+        "irreversible"
+      ]
+    },
+    {
+      "id": "ar_028",
+      "query": "What are the serious adverse effects of clozapine?",
+      "expected_type": "safety",
+      "expected_content": [
+        "agranulocytosis",
+        "mandatory monitoring",
+        "seizures",
+        "myocarditis",
+        "metabolic syndrome",
+        "REMS program"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "clozapine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "clozapine",
+        "agranulocytosis",
+        "REMS",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "ar_029",
+      "query": "What QT prolongation risks exist with azithromycin?",
+      "expected_type": "safety",
+      "expected_content": [
+        "cardiac arrhythmia",
+        "torsades de pointes",
+        "FDA warning",
+        "risk factors",
+        "ECG monitoring",
+        "drug interactions"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "azithromycin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "macrolide",
+        "QT prolongation",
+        "arrhythmia",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_030",
+      "query": "What are the adverse effects of loop diuretics like furosemide?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "hypokalemia",
+        "ototoxicity",
+        "hypomagnesemia",
+        "dehydration",
+        "hypotension",
+        "hyperuricemia"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "moderate",
+        "research_priority": "high",
+        "drug_names": [
+          "furosemide"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "loop diuretic",
+        "electrolyte",
+        "ototoxicity",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_031",
+      "query": "What is the tendon rupture risk with fluoroquinolones like ciprofloxacin?",
+      "expected_type": "safety",
+      "expected_content": [
+        "Achilles tendon",
+        "black box warning",
+        "elderly risk",
+        "corticosteroid use",
+        "discontinue if pain",
+        "rupture"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "ciprofloxacin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "fluoroquinolone",
+        "tendon rupture",
+        "black box",
+        "musculoskeletal"
+      ]
+    },
+    {
+      "id": "ar_032",
+      "query": "What nephrotoxicity concerns exist with NSAIDs?",
+      "expected_type": "safety",
+      "expected_content": [
+        "acute kidney injury",
+        "reduced GFR",
+        "interstitial nephritis",
+        "prostaglandin inhibition",
+        "monitor renal function",
+        "elderly risk"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "NSAID",
+        "nephrotoxicity",
+        "renal",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_033",
+      "query": "What are the adverse effects of bisphosphonates like alendronate?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "esophageal irritation",
+        "osteonecrosis jaw",
+        "atypical fractures",
+        "take upright",
+        "30 minutes fasting",
+        "dental precautions"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "alendronate"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "bisphosphonate",
+        "esophageal",
+        "ONJ",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_034",
+      "query": "What monitoring is required for patients on tacrolimus?",
+      "expected_type": "safety",
+      "expected_content": [
+        "trough levels",
+        "nephrotoxicity",
+        "neurotoxicity",
+        "hyperglycemia",
+        "hypertension",
+        "infection risk"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "tacrolimus"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "immunosuppressant",
+        "monitoring",
+        "TDM",
+        "toxicity"
+      ]
+    },
+    {
+      "id": "ar_035",
+      "query": "What is the risk of neuroleptic malignant syndrome with antipsychotics?",
+      "expected_type": "safety",
+      "expected_content": [
+        "rare but life-threatening",
+        "hyperthermia",
+        "muscle rigidity",
+        "altered mental status",
+        "autonomic instability",
+        "discontinue immediately"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antipsychotic",
+        "NMS",
+        "emergency",
+        "hyperthermia"
+      ]
+    },
+    {
+      "id": "ar_036",
+      "query": "What are the cardiovascular risks of COX-2 selective inhibitors like celecoxib?",
+      "expected_type": "safety",
+      "expected_content": [
+        "increased MI risk",
+        "stroke",
+        "thrombotic events",
+        "black box warning",
+        "rofecoxib withdrawn",
+        "CV assessment"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "celecoxib"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "COX-2 inhibitor",
+        "CV risk",
+        "black box",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_037",
+      "query": "What pulmonary toxicity can occur with amiodarone?",
+      "expected_type": "safety",
+      "expected_content": [
+        "pulmonary fibrosis",
+        "interstitial pneumonitis",
+        "baseline PFTs",
+        "chest X-ray monitoring",
+        "potentially fatal",
+        "dose-related"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "amiodarone"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "amiodarone",
+        "pulmonary toxicity",
+        "fibrosis",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "ar_038",
+      "query": "What are the withdrawal symptoms of benzodiazepines?",
+      "expected_type": "safety",
+      "expected_content": [
+        "seizures",
+        "anxiety",
+        "tremor",
+        "insomnia",
+        "taper required",
+        "rebound symptoms",
+        "life-threatening"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "benzodiazepine",
+        "withdrawal",
+        "seizures",
+        "tapering"
+      ]
+    },
+    {
+      "id": "ar_039",
+      "query": "What hematologic adverse effects occur with valproic acid?",
+      "expected_type": "safety",
+      "expected_content": [
+        "thrombocytopenia",
+        "platelet dysfunction",
+        "bleeding risk",
+        "monitor CBC",
+        "hepatotoxicity",
+        "teratogenicity"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "valproic acid"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "valproic acid",
+        "thrombocytopenia",
+        "hematologic",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "ar_040",
+      "query": "What is the gray baby syndrome associated with chloramphenicol?",
+      "expected_type": "safety",
+      "expected_content": [
+        "neonatal toxicity",
+        "impaired glucuronidation",
+        "cardiovascular collapse",
+        "gray skin",
+        "avoid in neonates",
+        "fatal"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "chloramphenicol"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "chloramphenicol",
+        "neonatal",
+        "gray baby",
+        "contraindication"
+      ]
+    },
+    {
+      "id": "ar_041",
+      "query": "What are the adverse effects of isotretinoin (Accutane)?",
+      "expected_type": "safety",
+      "expected_content": [
+        "teratogenicity",
+        "iPLEDGE program",
+        "depression",
+        "dry skin",
+        "hyperlipidemia",
+        "hepatotoxicity",
+        "pregnancy prevention"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "isotretinoin",
+          "Accutane"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "isotretinoin",
+        "teratogenicity",
+        "REMS",
+        "black box"
+      ]
+    },
+    {
+      "id": "ar_042",
+      "query": "What thyroid abnormalities can amiodarone cause?",
+      "expected_type": "safety",
+      "expected_content": [
+        "hypothyroidism",
+        "hyperthyroidism",
+        "iodine content",
+        "TSH monitoring",
+        "thyrotoxicosis",
+        "baseline TFTs"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "amiodarone"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "amiodarone",
+        "thyroid",
+        "endocrine",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "ar_043",
+      "query": "What is the risk of priapism with trazodone?",
+      "expected_type": "safety",
+      "expected_content": [
+        "prolonged erection",
+        "rare but serious",
+        "alpha-adrenergic blockade",
+        "surgical emergency",
+        "warn male patients",
+        "discontinue"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "trazodone"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "trazodone",
+        "priapism",
+        "emergency",
+        "urologic"
+      ]
+    },
+    {
+      "id": "ar_044",
+      "query": "What are the adverse effects of GLP-1 agonists like liraglutide?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "nausea",
+        "vomiting",
+        "pancreatitis risk",
+        "thyroid C-cell tumors",
+        "black box rodents",
+        "gallbladder disease"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "liraglutide"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "GLP-1",
+        "nausea",
+        "pancreatitis",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_045",
+      "query": "What corneal deposits occur with amiodarone?",
+      "expected_type": "safety",
+      "expected_content": [
+        "virtually universal",
+        "reversible",
+        "rarely affect vision",
+        "vortex keratopathy",
+        "ophthalmologic exam",
+        "baseline screening"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "low",
+        "research_priority": "high",
+        "drug_names": [
+          "amiodarone"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "amiodarone",
+        "corneal",
+        "ophthalmic",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "ar_046",
+      "query": "What is the risk of hypoglycemia with sulfonylureas?",
+      "expected_type": "safety",
+      "expected_content": [
+        "significant risk",
+        "elderly vulnerable",
+        "renal impairment",
+        "prolonged episodes",
+        "weight gain",
+        "meal timing important"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "sulfonylurea",
+        "hypoglycemia",
+        "elderly",
+        "safety"
+      ]
+    },
+    {
+      "id": "ar_047",
+      "query": "What immune-related adverse events occur with checkpoint inhibitors?",
+      "expected_type": "safety",
+      "expected_content": [
+        "colitis",
+        "pneumonitis",
+        "hepatitis",
+        "endocrinopathies",
+        "dermatitis",
+        "corticosteroid treatment",
+        "immune activation"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "immunotherapy",
+        "irAE",
+        "oncology",
+        "autoimmune"
+      ]
+    },
+    {
+      "id": "ar_048",
+      "query": "What is the DRESS syndrome associated with anticonvulsants?",
+      "expected_type": "safety",
+      "expected_content": [
+        "drug reaction eosinophilia",
+        "systemic symptoms",
+        "rash",
+        "fever",
+        "organ involvement",
+        "phenytoin carbamazepine",
+        "potentially fatal"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "anticonvulsant",
+        "DRESS",
+        "hypersensitivity",
+        "serious"
+      ]
+    },
+    {
+      "id": "ar_049",
+      "query": "What ocular adverse effects occur with ethambutol?",
+      "expected_type": "safety",
+      "expected_content": [
+        "optic neuritis",
+        "decreased visual acuity",
+        "red-green color blindness",
+        "dose-related",
+        "baseline eye exam",
+        "monthly monitoring"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "ethambutol"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "ethambutol",
+        "optic neuritis",
+        "visual",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "ar_050",
+      "query": "What is the serotonin syndrome triad of symptoms?",
+      "expected_type": "safety",
+      "expected_content": [
+        "altered mental status",
+        "autonomic hyperactivity",
+        "neuromuscular abnormalities",
+        "hyperthermia",
+        "agitation",
+        "clonus",
+        "emergency"
+      ],
+      "expected_classification": {
+        "domain": "adverse_reactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "serotonin syndrome",
+        "emergency",
+        "triad",
+        "diagnosis"
+      ]
+    }
+  ]
+}

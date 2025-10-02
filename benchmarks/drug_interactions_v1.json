@@ -1,0 +1,1613 @@
+{
+  "metadata": {
+    "version": "1",
+    "category": "drug_interactions",
+    "created_date": "2025-09-30",
+    "total_queries": 50,
+    "description": "Baseline drug interaction queries covering mechanism-based, pharmacokinetic, and pharmacodynamic interactions across major therapeutic classes",
+    "baselines": {
+      "cloud": {
+        "average_latency_ms": 450.0,
+        "success_rate": 0.98,
+        "average_cost_per_query": 12.5,
+        "average_accuracy": 0.85,
+        "notes": "Based on NVIDIA Build cloud endpoints (integrate.api.nvidia.com)"
+      },
+      "self_hosted": {
+        "average_latency_ms": 850.0,
+        "success_rate": 0.95,
+        "average_cost_per_query": 0.0,
+        "average_accuracy": 0.82,
+        "notes": "Based on local NIM containers with GPU acceleration"
+      },
+      "regression_thresholds": {
+        "accuracy_drop_percent": 5,
+        "cost_increase_percent": 20,
+        "latency_increase_percent": 50
+      },
+      "classifier_validation": {
+        "overall_accuracy": 0.95,
+        "notes": "Expected PharmaceuticalQueryClassifier accuracy for domain, safety urgency, and research priority"
+      }
+    }
+  },
+  "queries": [
+    {
+      "id": "di_001",
+      "query": "What are the potential interactions between atorvastatin (Lipitor) and warfarin (Coumadin)?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "increased bleeding risk",
+        "INR monitoring",
+        "CYP450 interaction",
+        "dose adjustment"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "atorvastatin",
+          "warfarin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "statin",
+        "anticoagulant",
+        "pharmacokinetic",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "di_002",
+      "query": "Can I take simvastatin (Zocor) with grapefruit juice? What are the risks?",
+      "expected_type": "safety",
+      "expected_content": [
+        "CYP3A4 inhibition",
+        "increased statin levels",
+        "myopathy risk",
+        "rhabdomyolysis",
+        "avoid grapefruit"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "simvastatin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "statin",
+        "food-drug interaction",
+        "CYP3A4",
+        "safety"
+      ]
+    },
+    {
+      "id": "di_003",
+      "query": "What happens if lisinopril and potassium supplements are taken together?",
+      "expected_type": "safety",
+      "expected_content": [
+        "hyperkalemia risk",
+        "ACE inhibitor",
+        "potassium retention",
+        "monitoring",
+        "renal function"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "lisinopril"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "ACE inhibitor",
+        "electrolyte",
+        "pharmacodynamic",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "di_004",
+      "query": "Is it safe to combine metoprolol (Lopressor) with verapamil?",
+      "expected_type": "safety",
+      "expected_content": [
+        "additive cardiac effects",
+        "bradycardia",
+        "heart block",
+        "caution required",
+        "monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "metoprolol",
+          "verapamil"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "beta blocker",
+        "calcium channel blocker",
+        "pharmacodynamic",
+        "cardiovascular"
+      ]
+    },
+    {
+      "id": "di_005",
+      "query": "What are the interactions between clopidogrel (Plavix) and omeprazole?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "CYP2C19 inhibition",
+        "reduced antiplatelet effect",
+        "cardiovascular risk",
+        "alternative PPI",
+        "pantoprazole"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "clopidogrel",
+          "omeprazole"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antiplatelet",
+        "PPI",
+        "CYP2C19",
+        "pharmacokinetic"
+      ]
+    },
+    {
+      "id": "di_006",
+      "query": "Can rivaroxaban (Xarelto) be taken with aspirin? What are the risks?",
+      "expected_type": "safety",
+      "expected_content": [
+        "increased bleeding risk",
+        "pharmacodynamic interaction",
+        "benefit-risk assessment",
+        "monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "rivaroxaban",
+          "aspirin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "anticoagulant",
+        "antiplatelet",
+        "bleeding risk",
+        "pharmacodynamic"
+      ]
+    },
+    {
+      "id": "di_007",
+      "query": "What drug interactions should I be aware of when taking amiodarone with warfarin?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "CYP450 inhibition",
+        "increased INR",
+        "warfarin dose reduction",
+        "close monitoring",
+        "bleeding risk"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "amiodarone",
+          "warfarin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antiarrhythmic",
+        "anticoagulant",
+        "CYP450",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "di_008",
+      "query": "How does fluconazole interact with atorvastatin?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "CYP3A4 inhibition",
+        "increased statin levels",
+        "myopathy risk",
+        "dose adjustment",
+        "alternative statin"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "fluconazole",
+          "atorvastatin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "antifungal",
+        "statin",
+        "CYP3A4",
+        "pharmacokinetic"
+      ]
+    },
+    {
+      "id": "di_009",
+      "query": "What are the interaction risks between losartan (Cozaar) and NSAIDs like ibuprofen?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "reduced antihypertensive effect",
+        "renal function",
+        "hyperkalemia",
+        "fluid retention",
+        "monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "losartan",
+          "ibuprofen"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "ARB",
+        "NSAID",
+        "renal",
+        "pharmacodynamic"
+      ]
+    },
+    {
+      "id": "di_010",
+      "query": "Can digoxin and amiodarone be used together safely?",
+      "expected_type": "safety",
+      "expected_content": [
+        "P-glycoprotein inhibition",
+        "increased digoxin levels",
+        "toxicity risk",
+        "dose reduction",
+        "monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "digoxin",
+          "amiodarone"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "cardiac glycoside",
+        "antiarrhythmic",
+        "P-glycoprotein",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "di_011",
+      "query": "What happens when you combine SSRIs like fluoxetine with tramadol?",
+      "expected_type": "safety",
+      "expected_content": [
+        "serotonin syndrome",
+        "seizure risk",
+        "additive serotonergic effects",
+        "warning",
+        "alternative analgesic"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "fluoxetine",
+          "tramadol"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "SSRI",
+        "opioid",
+        "serotonin syndrome",
+        "safety"
+      ]
+    },
+    {
+      "id": "di_012",
+      "query": "Are there any concerns with taking amlodipine and simvastatin together?",
+      "expected_type": "safety",
+      "expected_content": [
+        "simvastatin dose limit",
+        "10mg maximum",
+        "myopathy risk",
+        "FDA warning",
+        "alternative statin"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "amlodipine",
+          "simvastatin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "calcium channel blocker",
+        "statin",
+        "FDA warning",
+        "dose limit"
+      ]
+    },
+    {
+      "id": "di_013",
+      "query": "What are the interaction risks between levothyroxine and iron supplements?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "chelation",
+        "reduced absorption",
+        "separate administration",
+        "4 hour interval",
+        "thyroid monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "moderate",
+        "research_priority": "high",
+        "drug_names": [
+          "levothyroxine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "thyroid",
+        "supplement",
+        "absorption",
+        "timing"
+      ]
+    },
+    {
+      "id": "di_014",
+      "query": "Can metformin and contrast dye be used together?",
+      "expected_type": "safety",
+      "expected_content": [
+        "lactic acidosis risk",
+        "hold metformin",
+        "renal function",
+        "48 hours",
+        "resume criteria"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "metformin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "diabetes",
+        "contrast",
+        "renal",
+        "safety"
+      ]
+    },
+    {
+      "id": "di_015",
+      "query": "What interactions exist between prednisone and live vaccines?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "immunosuppression",
+        "vaccine failure",
+        "infection risk",
+        "contraindication",
+        "timing considerations"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "prednisone"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "corticosteroid",
+        "vaccine",
+        "immunosuppression",
+        "contraindication"
+      ]
+    },
+    {
+      "id": "di_016",
+      "query": "How does clarithromycin affect the levels of rosuvastatin (Crestor)?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "CYP3A4 inhibition",
+        "OATP inhibition",
+        "increased statin exposure",
+        "myopathy risk",
+        "dose adjustment"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "clarithromycin",
+          "rosuvastatin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "macrolide",
+        "statin",
+        "CYP3A4",
+        "OATP"
+      ]
+    },
+    {
+      "id": "di_017",
+      "query": "What are the risks of combining benazepril with spironolactone?",
+      "expected_type": "safety",
+      "expected_content": [
+        "hyperkalemia",
+        "potassium-sparing",
+        "ACE inhibitor",
+        "monitoring",
+        "renal function"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "benazepril",
+          "spironolactone"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "ACE inhibitor",
+        "diuretic",
+        "electrolyte",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "di_018",
+      "query": "Can allopurinol and azathioprine be used together?",
+      "expected_type": "safety",
+      "expected_content": [
+        "xanthine oxidase inhibition",
+        "increased azathioprine toxicity",
+        "dose reduction",
+        "75% reduction",
+        "contraindication"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "allopurinol",
+          "azathioprine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "gout",
+        "immunosuppressant",
+        "enzyme inhibition",
+        "dose adjustment"
+      ]
+    },
+    {
+      "id": "di_019",
+      "query": "What interactions should I know about when taking St. John's Wort with oral contraceptives?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "CYP3A4 induction",
+        "reduced contraceptive efficacy",
+        "breakthrough bleeding",
+        "pregnancy risk",
+        "alternative contraception"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "herbal",
+        "contraceptive",
+        "CYP3A4 induction",
+        "efficacy"
+      ]
+    },
+    {
+      "id": "di_020",
+      "query": "How does rifampin affect warfarin therapy?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "CYP450 induction",
+        "decreased warfarin effect",
+        "INR monitoring",
+        "dose increase",
+        "post-rifampin adjustment"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "rifampin",
+          "warfarin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antibiotic",
+        "anticoagulant",
+        "enzyme induction",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "di_021",
+      "query": "What are the interaction concerns between propranolol (Inderal) and insulin?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "masking hypoglycemia",
+        "beta blocker",
+        "glucose monitoring",
+        "tachycardia blunting",
+        "patient education"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "propranolol",
+          "insulin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "beta blocker",
+        "diabetes",
+        "hypoglycemia",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "di_022",
+      "query": "Can ketoconazole and terfenadine be used together?",
+      "expected_type": "safety",
+      "expected_content": [
+        "QT prolongation",
+        "torsades de pointes",
+        "contraindication",
+        "cardiac arrhythmia",
+        "black box warning"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "ketoconazole",
+          "terfenadine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antifungal",
+        "antihistamine",
+        "QT interval",
+        "contraindication"
+      ]
+    },
+    {
+      "id": "di_023",
+      "query": "What are the risks of combining lithium with thiazide diuretics?",
+      "expected_type": "safety",
+      "expected_content": [
+        "lithium toxicity",
+        "reduced renal clearance",
+        "sodium depletion",
+        "monitoring",
+        "dose adjustment"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "lithium"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "mood stabilizer",
+        "diuretic",
+        "renal",
+        "toxicity"
+      ]
+    },
+    {
+      "id": "di_024",
+      "query": "How does erythromycin interact with carbamazepine?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "CYP3A4 inhibition",
+        "increased carbamazepine levels",
+        "toxicity",
+        "neurological symptoms",
+        "monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "erythromycin",
+          "carbamazepine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "macrolide",
+        "anticonvulsant",
+        "CYP3A4",
+        "toxicity"
+      ]
+    },
+    {
+      "id": "di_025",
+      "query": "What interactions occur between dabigatran (Pradaxa) and rifampin?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "P-glycoprotein induction",
+        "reduced dabigatran levels",
+        "decreased efficacy",
+        "thrombosis risk",
+        "alternative antibiotic"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "dabigatran",
+          "rifampin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "anticoagulant",
+        "antibiotic",
+        "P-glycoprotein",
+        "efficacy"
+      ]
+    },
+    {
+      "id": "di_026",
+      "query": "Can phenytoin and folic acid be taken together?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "reduced phenytoin levels",
+        "seizure risk",
+        "folic acid depletion by phenytoin",
+        "monitoring",
+        "balance"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "moderate",
+        "research_priority": "high",
+        "drug_names": [
+          "phenytoin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "anticonvulsant",
+        "vitamin",
+        "efficacy",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "di_027",
+      "query": "What are the interaction risks between tacrolimus and voriconazole?",
+      "expected_type": "safety",
+      "expected_content": [
+        "CYP3A4 inhibition",
+        "increased tacrolimus levels",
+        "nephrotoxicity",
+        "dose reduction",
+        "TDM monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "tacrolimus",
+          "voriconazole"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "immunosuppressant",
+        "antifungal",
+        "CYP3A4",
+        "TDM"
+      ]
+    },
+    {
+      "id": "di_028",
+      "query": "How does grapefruit juice affect felodipine levels?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "CYP3A4 inhibition",
+        "increased felodipine exposure",
+        "hypotension",
+        "edema",
+        "avoid grapefruit"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "felodipine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "calcium channel blocker",
+        "food-drug",
+        "CYP3A4",
+        "safety"
+      ]
+    },
+    {
+      "id": "di_029",
+      "query": "What happens when MAO inhibitors are combined with tyramine-rich foods?",
+      "expected_type": "safety",
+      "expected_content": [
+        "hypertensive crisis",
+        "tyramine accumulation",
+        "dietary restrictions",
+        "emergency",
+        "cheese effect"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": []
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "MAO inhibitor",
+        "food-drug",
+        "hypertension",
+        "safety"
+      ]
+    },
+    {
+      "id": "di_030",
+      "query": "Can atenolol (Tenormin) and diltiazem be prescribed together?",
+      "expected_type": "safety",
+      "expected_content": [
+        "additive AV block",
+        "bradycardia",
+        "heart failure risk",
+        "monitoring",
+        "caution"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "atenolol",
+          "diltiazem"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "beta blocker",
+        "calcium channel blocker",
+        "cardiac",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "di_031",
+      "query": "What are the interaction concerns between tetracycline and antacids containing calcium?",
+      "expected_type": "retrieval",
+      "expected_content": [
+        "chelation",
+        "reduced absorption",
+        "decreased efficacy",
+        "separate doses",
+        "2-3 hour interval"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "moderate",
+        "research_priority": "high",
+        "drug_names": [
+          "tetracycline"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "antibiotic",
+        "antacid",
+        "absorption",
+        "timing"
+      ]
+    },
+    {
+      "id": "di_032",
+      "query": "How does ciprofloxacin interact with theophylline?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "CYP1A2 inhibition",
+        "increased theophylline levels",
+        "toxicity symptoms",
+        "seizure risk",
+        "monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "ciprofloxacin",
+          "theophylline"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.4,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "fluoroquinolone",
+        "bronchodilator",
+        "CYP1A2",
+        "toxicity"
+      ]
+    },
+    {
+      "id": "di_033",
+      "query": "What are the risks of combining apixaban (Eliquis) with ketoconazole?",
+      "expected_type": "safety",
+      "expected_content": [
+        "CYP3A4 inhibition",
+        "P-glycoprotein inhibition",
+        "increased bleeding risk",
+        "dose reduction",
+        "contraindication"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "apixaban",
+          "ketoconazole"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "anticoagulant",
+        "antifungal",
+        "dual inhibition",
+        "bleeding"
+      ]
+    },
+    {
+      "id": "di_034",
+      "query": "Can sildenafil be used with nitrates for angina?",
+      "expected_type": "safety",
+      "expected_content": [
+        "severe hypotension",
+        "synergistic vasodilation",
+        "contraindication",
+        "life-threatening",
+        "absolute contraindication"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "critical",
+        "research_priority": "emergency",
+        "drug_names": [
+          "sildenafil"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "PDE5 inhibitor",
+        "nitrate",
+        "cardiovascular",
+        "contraindication"
+      ]
+    },
+    {
+      "id": "di_035",
+      "query": "What interactions exist between pravastatin (Pravachol) and cyclosporine?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "OATP inhibition",
+        "increased statin exposure",
+        "myopathy risk",
+        "dose limit",
+        "monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "pravastatin",
+          "cyclosporine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "statin",
+        "immunosuppressant",
+        "OATP",
+        "dose limit"
+      ]
+    },
+    {
+      "id": "di_036",
+      "query": "How does alcohol interact with metronidazole?",
+      "expected_type": "safety",
+      "expected_content": [
+        "disulfiram-like reaction",
+        "acetaldehyde accumulation",
+        "nausea",
+        "flushing",
+        "avoid alcohol"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "metronidazole"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "antibiotic",
+        "alcohol",
+        "disulfiram reaction",
+        "safety"
+      ]
+    },
+    {
+      "id": "di_037",
+      "query": "What are the risks when combining quinidine with digoxin?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "P-glycoprotein inhibition",
+        "doubled digoxin levels",
+        "toxicity",
+        "dose reduction 50%",
+        "monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "quinidine",
+          "digoxin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "antiarrhythmic",
+        "cardiac glycoside",
+        "P-glycoprotein",
+        "dose adjustment"
+      ]
+    },
+    {
+      "id": "di_038",
+      "query": "Can ramipril (Altace) and aliskiren be used together in diabetic patients?",
+      "expected_type": "safety",
+      "expected_content": [
+        "hyperkalemia",
+        "hypotension",
+        "renal impairment",
+        "contraindication in diabetes",
+        "FDA warning"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "ramipril",
+          "aliskiren"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "ACE inhibitor",
+        "renin inhibitor",
+        "diabetes",
+        "contraindication"
+      ]
+    },
+    {
+      "id": "di_039",
+      "query": "What happens when azithromycin is combined with hydroxychloroquine?",
+      "expected_type": "safety",
+      "expected_content": [
+        "QT prolongation",
+        "arrhythmia risk",
+        "cardiac monitoring",
+        "ECG monitoring",
+        "additive effect"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "azithromycin",
+          "hydroxychloroquine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "macrolide",
+        "antimalarial",
+        "QT interval",
+        "cardiac"
+      ]
+    },
+    {
+      "id": "di_040",
+      "query": "How does omeprazole affect clopidogrel (Plavix) effectiveness?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "CYP2C19 inhibition",
+        "reduced active metabolite",
+        "decreased antiplatelet effect",
+        "cardiovascular events",
+        "alternative PPI"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "omeprazole",
+          "clopidogrel"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "PPI",
+        "antiplatelet",
+        "CYP2C19",
+        "efficacy"
+      ]
+    },
+    {
+      "id": "di_041",
+      "query": "What are the interaction risks between valsartan (Diovan) and lithium?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "increased lithium levels",
+        "reduced renal clearance",
+        "lithium toxicity",
+        "monitoring",
+        "dose adjustment"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "valsartan",
+          "lithium"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "ARB",
+        "mood stabilizer",
+        "renal",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "di_042",
+      "query": "Can fluoxetine and tamoxifen be used together?",
+      "expected_type": "safety",
+      "expected_content": [
+        "CYP2D6 inhibition",
+        "reduced endoxifen formation",
+        "decreased tamoxifen efficacy",
+        "cancer recurrence risk",
+        "alternative antidepressant"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "fluoxetine",
+          "tamoxifen"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "SSRI",
+        "oncology",
+        "CYP2D6",
+        "efficacy"
+      ]
+    },
+    {
+      "id": "di_043",
+      "query": "What interactions occur between prasugrel (Effient) and NSAIDs?",
+      "expected_type": "safety",
+      "expected_content": [
+        "increased bleeding risk",
+        "GI bleeding",
+        "pharmacodynamic interaction",
+        "monitoring",
+        "caution"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "prasugrel"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "antiplatelet",
+        "NSAID",
+        "bleeding",
+        "pharmacodynamic"
+      ]
+    },
+    {
+      "id": "di_044",
+      "query": "How does carbamazepine affect oral contraceptive reliability?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "CYP3A4 induction",
+        "increased contraceptive metabolism",
+        "reduced efficacy",
+        "breakthrough bleeding",
+        "alternative contraception"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "carbamazepine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "anticonvulsant",
+        "contraceptive",
+        "enzyme induction",
+        "efficacy"
+      ]
+    },
+    {
+      "id": "di_045",
+      "query": "What are the risks of combining telmisartan (Micardis) with trimethoprim?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "hyperkalemia",
+        "potassium retention",
+        "ARB effect",
+        "trimethoprim potassium-sparing",
+        "monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "telmisartan",
+          "trimethoprim"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "ARB",
+        "antibiotic",
+        "electrolyte",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "di_046",
+      "query": "Can edoxaban (Savaysa) be used with rifampin?",
+      "expected_type": "safety",
+      "expected_content": [
+        "P-glycoprotein induction",
+        "reduced edoxaban levels",
+        "decreased efficacy",
+        "thrombosis risk",
+        "contraindication"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "edoxaban",
+          "rifampin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "anticoagulant",
+        "antibiotic",
+        "P-glycoprotein",
+        "contraindication"
+      ]
+    },
+    {
+      "id": "di_047",
+      "query": "What happens when fosinopril (Monopril) is combined with potassium-sparing diuretics?",
+      "expected_type": "safety",
+      "expected_content": [
+        "severe hyperkalemia",
+        "ACE inhibitor",
+        "potassium retention",
+        "cardiac arrhythmia",
+        "monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "fosinopril"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "ACE inhibitor",
+        "diuretic",
+        "electrolyte",
+        "safety"
+      ]
+    },
+    {
+      "id": "di_048",
+      "query": "How does ticagrelor (Brilinta) interact with strong CYP3A4 inhibitors?",
+      "expected_type": "reasoning",
+      "expected_content": [
+        "increased ticagrelor levels",
+        "bleeding risk",
+        "CYP3A4 inhibition",
+        "dose considerations",
+        "monitoring"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "ticagrelor"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "antiplatelet",
+        "CYP3A4",
+        "bleeding",
+        "dose adjustment"
+      ]
+    },
+    {
+      "id": "di_049",
+      "query": "What are the interaction concerns between candesartan (Atacand) and heparin?",
+      "expected_type": "comparison",
+      "expected_content": [
+        "hyperkalemia risk",
+        "ARB potassium retention",
+        "heparin aldosterone suppression",
+        "monitoring",
+        "electrolyte management"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "candesartan",
+          "heparin"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.4,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.3
+      },
+      "tags": [
+        "ARB",
+        "anticoagulant",
+        "electrolyte",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "di_050",
+      "query": "Can pitavastatin (Livalo) be safely combined with cyclosporine?",
+      "expected_type": "safety",
+      "expected_content": [
+        "contraindication",
+        "severe myopathy risk",
+        "OATP inhibition",
+        "increased statin exposure",
+        "alternative statin"
+      ],
+      "expected_classification": {
+        "domain": "drug_interactions",
+        "safety_urgency": "high",
+        "research_priority": "high",
+        "drug_names": [
+          "pitavastatin",
+          "cyclosporine"
+        ]
+      },
+      "evaluation_criteria": {
+        "accuracy_weight": 0.5,
+        "completeness_weight": 0.3,
+        "relevance_weight": 0.2
+      },
+      "tags": [
+        "statin",
+        "immunosuppressant",
+        "OATP",
+        "contraindication"
+      ]
+    }
+  ]
+}

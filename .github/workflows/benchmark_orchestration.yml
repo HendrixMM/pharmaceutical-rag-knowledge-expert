@@ -1,0 +1,242 @@
+name: Benchmark Orchestration (Cloud-First)
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    inputs:
+      mode:
+        description: "Execution mode"
+        required: false
+        default: "both"
+        type: choice
+        options: [cloud, self_hosted, both]
+      max-queries:
+        description: "Max queries per category (sampling)"
+        required: false
+        default: "3"
+      min-cloud-score:
+        description: "CI gate: min cloud overall score"
+        required: false
+        default: "0.40"
+      max-cloud-latency-ms:
+        description: "CI gate: max cloud P95 latency (ms)"
+        required: false
+        default: "6000"
+      preflight-sample-count:
+        description: "Preflight sample count per category"
+        required: false
+        default: "2"
+      preflight-min-concurrency:
+        description: "Preflight gate: minimum recommended concurrency"
+        required: false
+        default: "2"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmark-orchestration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      BENCHMARK_LAUNCH_STAGGER_MS: "100"
+    steps:
+      - name: Check NVIDIA_API_KEY secret (smoke)
+        run: |
+          if [ -z "${NVIDIA_API_KEY}" ]; then echo "NVIDIA_API_KEY secret missing; skipping smoke run."; exit 0; fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Orchestrate Benchmarks (smoke: preflight → run)
+        run: |
+          python scripts/orchestrate_benchmarks.py \
+            --mode both \
+            --preset cloud_first_adaptive \
+            --output results/benchmark_runs/orchestrated_smoke_pr \
+            --summary-output results/benchmark_runs/orchestrated_smoke_pr/summary.json \
+            --auto-concurrency --skip-classifier-validation \
+            --preflight-sample-count 1 \
+            --preflight-min-concurrency 2 \
+            --fail-on-preflight \
+            --fail-on-regressions \
+            --min-cloud-score 0.30 \
+            --max-cloud-latency-ms 12000 \
+            --max-queries 1
+
+      - name: Upload smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orchestrated-smoke-pr-results
+          path: |
+            results/benchmark_runs/orchestrated_smoke_pr/**
+          if-no-files-found: ignore
+
+      - name: Smoke Job Summary
+        if: always()
+        run: |
+          python - << 'PY'
+          import json, os
+          p='results/benchmark_runs/orchestrated_smoke_pr/summary.json'
+          try:
+              d=json.load(open(p))
+          except Exception as e:
+              print("No summary found:", e)
+              raise SystemExit(0)
+          g=d.get('gating',{})
+          lines=["# Smoke Benchmark Summary",""]
+          if g:
+              status='✅ PASS' if g.get('pass') else '❌ FAIL'
+              rules=g.get('rules',{})
+              lines.append(f"Status: {status}")
+              lines.append(f"- Rules: min_cloud_score={rules.get('min_cloud_score')}, max_cloud_latency_ms={rules.get('max_cloud_latency_ms')}")
+              if g.get('score_violations'):
+                  lines.append(f"- Score violations: {', '.join(g.get('score_violations'))}")
+              if g.get('latency_violations'):
+                  lines.append(f"- Latency violations: {', '.join(g.get('latency_violations'))}")
+          with open(os.environ.get('GITHUB_STEP_SUMMARY','/dev/stdout'),'a') as f:
+              f.write("\n".join(lines)+"\n")
+          PY
+
+  run-benchmarks:
+    runs-on: ubuntu-latest
+    env:
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      BENCHMARK_LAUNCH_STAGGER_MS: "100"
+    steps:
+      - name: Check NVIDIA_API_KEY secret
+        run: |
+          if [ -z "${NVIDIA_API_KEY}" ]; then echo "NVIDIA_API_KEY secret is required to run benchmarks"; exit 1; fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Orchestrate Benchmarks (preflight → run)
+        id: orchestrate
+        run: |
+          python scripts/orchestrate_benchmarks.py \
+            --mode "${{ github.event.inputs.mode || 'both' }}" \
+            --preset cloud_first_adaptive \
+            --output results/benchmark_runs/orchestrated_ci \
+            --summary-output results/benchmark_runs/orchestrated_ci/summary.json \
+            --auto-concurrency --skip-classifier-validation \
+            --preflight-sample-count "${{ github.event.inputs['preflight-sample-count'] || '2' }}" \
+            --preflight-min-concurrency "${{ github.event.inputs['preflight-min-concurrency'] || '2' }}" \
+            --fail-on-preflight \
+            --fail-on-regressions \
+            --min-cloud-score "${{ github.event.inputs['min-cloud-score'] || '0.40' }}" \
+            --max-cloud-latency-ms "${{ github.event.inputs['max-cloud-latency-ms'] || '6000' }}" \
+            --max-queries "${{ github.event.inputs['max-queries'] || '3' }}"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orchestrated-results
+          path: |
+            results/benchmark_runs/orchestrated_ci/**
+          if-no-files-found: ignore
+
+      - name: Job Summary
+        if: always()
+        run: |
+          python - << 'PY'
+          import json, os, sys
+          p = 'results/benchmark_runs/orchestrated_ci/summary.json'
+          try:
+              d=json.load(open(p))
+          except Exception as e:
+              print("No summary found:", e)
+              sys.exit(0)
+          g = d.get('gating', {})
+          lines=[]
+          lines.append(f"# Benchmark Summary")
+          lines.append("")
+          if g:
+              status = "✅ PASS" if g.get('pass') else "❌ FAIL"
+              lines.append(f"Status: {status}")
+              rules=g.get('rules',{})
+              lines.append(f"- Rules: min_cloud_score={rules.get('min_cloud_score')}, max_cloud_latency_ms={rules.get('max_cloud_latency_ms')}")
+              if g.get('score_violations'):
+                  lines.append(f"- Score violations: {', '.join(g.get('score_violations'))}")
+              if g.get('latency_violations'):
+                  lines.append(f"- Latency violations: {', '.join(g.get('latency_violations'))}")
+          lines.append("")
+          cats=d.get('categories',[])
+          def get(cl, *keys):
+              cur=cl
+              for k in keys:
+                  if not isinstance(cur, dict):
+                      return None
+                  cur=cur.get(k)
+              return cur
+          cloud_scores=[]
+          cloud_p95=[]
+          for c in cats:
+              if c.get('mode')=='both':
+                  score=get(c,'metrics','cloud','average_overall_score') or 0.0
+                  p95=get(c,'metrics','cloud','p95_latency_ms') or 0.0
+              else:
+                  score=get(c,'metrics','average_overall_score') or 0.0
+                  p95=get(c,'metrics','p95_latency_ms') or 0.0
+              cloud_scores.append((c.get('category'), float(score)))
+              cloud_p95.append((c.get('category'), float(p95)))
+          cloud_scores.sort(key=lambda x:x[1])
+          cloud_p95.sort(key=lambda x:x[1], reverse=True)
+          lines.append("## Top Offenders")
+          lines.append("")
+          lines.append("- Lowest Cloud Scores:")
+          for name,val in cloud_scores[:3]:
+              lines.append(f"  - {name}: {val:.3f}")
+          lines.append("- Highest Cloud P95 Latency:")
+          for name,val in cloud_p95[:3]:
+              lines.append(f"  - {name}: {val:.2f} ms")
+          content="\n".join(lines)
+          with open(os.environ.get("GITHUB_STEP_SUMMARY", "/dev/stdout"), "a") as f:
+              f.write(content + "\n")
+          PY

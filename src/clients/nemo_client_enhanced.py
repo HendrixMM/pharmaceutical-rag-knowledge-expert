@@ -395,7 +395,8 @@ class EnhancedNeMoClient:
                    model: Optional[str],
                    temperature: Optional[float] = None,
                    max_tokens: Optional[int] = None,
-                   query_type: Optional[str] = None) -> str:
+                   query_type: Optional[str] = None,
+                   endpoint_label: Optional[str] = None) -> str:
         """
         Generate comprehensive cache key including all parameters that affect response.
 
@@ -439,6 +440,7 @@ class EnhancedNeMoClient:
             str(max_tokens or 'auto'),
             system_prompt_hash,
             query_type or 'general',
+            (endpoint_label or 'auto'),
             f"disc={int(disclaimer)}",
             f"comp={int(compliance)}",
             f"wf={int(workflows)}",
@@ -679,6 +681,7 @@ class EnhancedNeMoClient:
                                cloud_func: callable,
                                nemo_func: callable,
                                ollama_func: Optional[callable] = None,
+                               force_endpoint: Optional[EndpointType] = None,
                                **kwargs) -> ClientResponse:
         """
         Execute operation with intelligent fallback logic respecting configured order.
@@ -688,6 +691,7 @@ class EnhancedNeMoClient:
             cloud_func: Function to call on cloud client
             nemo_func: Function to call on NeMo client
             ollama_func: Function to call on Ollama client (optional)
+            force_endpoint: Force specific endpoint (CLOUD or SELF_HOSTED), bypasses fallback logic
             **kwargs: Arguments to pass to functions
 
         Returns:
@@ -696,8 +700,13 @@ class EnhancedNeMoClient:
         start_time = time.time()
         self.metrics["total_requests"] += 1
 
-        # Get fallback order from configuration
-        fallback_order = self.config.get_fallback_order()
+        # Get fallback order from configuration or force specific endpoint
+        if force_endpoint == EndpointType.CLOUD:
+            fallback_order = ["nvidia_build"]
+        elif force_endpoint == EndpointType.SELF_HOSTED:
+            fallback_order = ["nemo", "ollama"]
+        else:
+            fallback_order = self.config.get_fallback_order()
 
         # Map endpoint names to client functions and availability
         endpoint_mappings = {
@@ -980,10 +989,11 @@ class EnhancedNeMoClient:
             )
 
     def create_chat_completion(self,
-                              messages: List[Dict[str, str]],
-                              model: Optional[str] = None,
-                              max_tokens: Optional[int] = None,
-                              temperature: Optional[float] = None) -> ClientResponse:
+                          messages: List[Dict[str, str]],
+                          model: Optional[str] = None,
+                          max_tokens: Optional[int] = None,
+                          temperature: Optional[float] = None,
+                          force_endpoint: Optional[EndpointType] = None) -> ClientResponse:
         """
         Create chat completion with cloud-first fallback.
 
@@ -992,6 +1002,7 @@ class EnhancedNeMoClient:
             model: Model name (auto-selected if None)
             max_tokens: Maximum tokens in response
             temperature: Sampling temperature
+            force_endpoint: Force specific endpoint (CLOUD or SELF_HOSTED), bypasses fallback logic
 
         Returns:
             ClientResponse with chat completion results
@@ -1015,7 +1026,12 @@ class EnhancedNeMoClient:
                 messages = [{"role": "system", "content": sys_prompt}] + list(messages)
 
         # Cache check
-        cache_key = self._cache_key(messages, model, temperature, max_tokens, query_type)
+        endpoint_label = (
+            'cloud' if force_endpoint == EndpointType.CLOUD else (
+                'self_hosted' if force_endpoint == EndpointType.SELF_HOSTED else 'auto'
+            )
+        )
+        cache_key = self._cache_key(messages, model, temperature, max_tokens, query_type, endpoint_label=endpoint_label)
         cached = self._cache_get(cache_key)
         if cached is not None:
             payload = cached.get("payload", cached) if isinstance(cached, dict) else cached
@@ -1102,6 +1118,7 @@ class EnhancedNeMoClient:
             _cloud_chat,
             _nemo_chat,
             _ollama_chat if self.ollama_client else None,
+            force_endpoint=force_endpoint,
             messages=messages,
             model=model,
             max_tokens=max_tokens,
@@ -1124,6 +1141,7 @@ class EnhancedNeMoClient:
                         _cloud_chat,
                         _nemo_chat,
                         _ollama_chat if self.ollama_client else None,
+                        force_endpoint=force_endpoint,
                         messages=guided,
                         model=model,
                         max_tokens=(max_tokens or 1000),
@@ -1134,7 +1152,7 @@ class EnhancedNeMoClient:
 
         # Cache store on success (regenerate key with final parameter values)
         if response.success and isinstance(response.data, dict):
-            final_cache_key = self._cache_key(messages, model, temperature, max_tokens, query_type)
+            final_cache_key = self._cache_key(messages, model, temperature, max_tokens, query_type, endpoint_label=endpoint_label)
             self._cache_put(final_cache_key, {
                 "payload": response.data,
                 "endpoint_type": response.endpoint_type.value if response.endpoint_type else None,
