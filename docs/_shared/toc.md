@@ -8,6 +8,7 @@ Purpose: Canonical navigation structure for all project documentation
 # Documentation Navigation (Canonical TOC)
 
 <!-- TOC -->
+
 - [Getting Started](#getting-started)
 - [Core Documentation](#core-documentation)
 - [Specialized Guides](#specialized-guides)
@@ -45,6 +46,7 @@ This is the canonical navigation blueprint for the repository. It defines the lo
 
 - [docs/DEVELOPMENT.md](../DEVELOPMENT.md) — Developer setup, testing, quality, and workflows
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) — Contribution guidelines
+- [docs/MAINTAINERS.md](../MAINTAINERS.md) — Ownership, SLAs, and review expectations
 
 ## Deployment
 
