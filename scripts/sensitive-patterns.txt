@@ -1,13 +1,13 @@
 # Sensitive Patterns for BFG Repo-Cleaner
-# Generated: 2025-10-02 23:34:18
+# Generated: 2025-10-02 23:37:14
 # Mapping format ensures full leaked credentials are removed.
 # Only include concrete leaked fingerprints; no generic patterns.
 # Patterns below are automatically generated from .env history diffs.
 
 # NVIDIA assignments (regex-based from safe prefixes)
-NVIDIA_API_KEY=nvapi-FTRR\\S*==>NVIDIA_API_KEY=***REMOVED***
-NVIDIA_API_KEY=nvapi-FfK4\\S*==>NVIDIA_API_KEY=***REMOVED***
-NVIDIA_API_KEY=nvapi-VcxY\\S*==>NVIDIA_API_KEY=***REMOVED***
+NVIDIA_API_KEY=nvapi-FTRR\S*==>NVIDIA_API_KEY=***REMOVED***
+NVIDIA_API_KEY=nvapi-FfK4\S*==>NVIDIA_API_KEY=***REMOVED***
+NVIDIA_API_KEY=nvapi-VcxY\S*==>NVIDIA_API_KEY=***REMOVED***
 # Emails discovered in .env history (PII)
 hendrixmoreau123@gmail.com==>redacted@example.com
 # Email assignments discovered in .env history (PII)

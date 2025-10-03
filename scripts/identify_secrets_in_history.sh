@@ -134,7 +134,7 @@ email_assignments=$(echo "$email_assignments" | filter_assignments || true)
     echo "# NVIDIA assignments (regex-based from safe prefixes)"
     while read -r v; do
       [[ -n "$v" ]] || continue
-      emit_map "NVIDIA_API_KEY=${v}\\\\S*" "NVIDIA_API_KEY=***REMOVED***"
+      emit_map "NVIDIA_API_KEY=${v}\\S*" "NVIDIA_API_KEY=***REMOVED***"
     done <<< "$nv_keys"
   fi
 
@@ -143,7 +143,7 @@ email_assignments=$(echo "$email_assignments" | filter_assignments || true)
     echo "# PubMed E-utilities assignments"
     while read -r v; do
       [[ -n "$v" ]] || continue
-      emit_map "PUBMED_EUTILS_API_KEY=${v}\\\\S*" "PUBMED_EUTILS_API_KEY=***REMOVED***"
+      emit_map "PUBMED_EUTILS_API_KEY=${v}\\S*" "PUBMED_EUTILS_API_KEY=***REMOVED***"
     done <<< "$pb_keys"
   fi
 
@@ -152,7 +152,7 @@ email_assignments=$(echo "$email_assignments" | filter_assignments || true)
     echo "# Apify token assignments"
     while read -r v; do
       [[ -n "$v" ]] || continue
-      emit_map "APIFY_TOKEN=${v}\\\\S*" "APIFY_TOKEN=***REMOVED***"
+      emit_map "APIFY_TOKEN=${v}\\S*" "APIFY_TOKEN=***REMOVED***"
     done <<< "$ap_keys"
   fi
 
