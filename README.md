@@ -1,5 +1,8 @@
 # Universal Business Intelligence Platform
 
+[![Tests](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **Transform industry documents + live data into executive-ready insights**
 
 _Demo highlight: 4-hour research task completed in 30 seconds_
@@ -84,6 +87,7 @@ Every industry shares the same bottleneck: experts must digest mountains of repo
 ## Contact
 
 📧 your.email@example.com • 💼 https://www.linkedin.com/in/your-profile • 🔗 Demo available on request
+• 🐞 Issues: open a ticket at https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/issues
 
 ---
 
@@ -91,3 +95,12 @@ Every industry shares the same bottleneck: experts must digest mountains of repo
 
 - **Executive Brief:** One-page business story for recruiters (`docs/business/EXECUTIVE_BRIEF.md`).
 - **Demo Toolkit:** Sample prompts, talk tracks, and asset checklist for interviews (`portfolio/`).
+
+---
+
+### Project Links
+
+- Contributing guidelines: `CONTRIBUTING.md`
+- Code of Conduct: `CODE_OF_CONDUCT.md`
+- Security policy: `SECURITY.md`
+- License: `LICENSE`
