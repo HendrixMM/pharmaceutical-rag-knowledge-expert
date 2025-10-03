@@ -84,7 +84,11 @@ if $use_patterns; then
         fi
       done
       if [[ -n "$hit" ]]; then
-        fail "Check 2b: Sensitive fingerprints present (matched: '$hit')" | tee -a "$tmp"
+        commit_line=$(git log --all -- .env -S"$hit" --pretty=format:"%h %s" -n 1 2>/dev/null || true)
+        if [[ -z "$commit_line" ]]; then
+          commit_line="unknown"
+        fi
+        fail "Check 2b: Sensitive fingerprints present (matched: '$hit' in commit: $commit_line)" | tee -a "$tmp"
         overall=1
       else
         pass "Check 2b: Sensitive fingerprints (none found).........." | tee -a "$tmp"
