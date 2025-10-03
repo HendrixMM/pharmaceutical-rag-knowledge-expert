@@ -248,6 +248,45 @@ pre-commit run --all-files
    - Update documentation
    - Review access controls
 
+#### Git History Cleanup (If Keys Were Committed)
+
+If API keys were committed to git history (not just the working tree), follow the comprehensive cleanup process:
+
+1. Review the runbook:
+   - See `docs/security/history-redaction.md` for complete procedures
+   - Understand the impact (force-push required, team coordination)
+   - Review approval workflow and notification requirements
+
+2. Execute cleanup scripts:
+   ```bash
+   # Identify secrets in history
+   bash scripts/identify_secrets_in_history.sh --report backups/secret-scan-$(date +%Y%m%d).txt
+
+   # Review generated patterns
+   cat scripts/sensitive-patterns.txt
+
+   # Dry run, then run cleanup
+   bash scripts/git_history_cleanup.sh --dry-run
+   bash scripts/git_history_cleanup.sh
+
+   # Verify cleanup
+   bash scripts/verify_history_cleanup.sh
+   ```
+
+3. Coordinate force-push:
+   - Schedule the window and notify the team
+   - Execute force-push during the agreed window
+   - Ensure all team members re-clone after push
+
+4. Rotate keys immediately:
+   - Rotate NVIDIA, PubMed, Apify credentials
+   - Update CI/CD secrets
+   - Verify old keys revoked
+
+5. Document the incident:
+   - Update `docs/security/history-redaction.md` with timestamps
+   - Update `CHANGELOG.md` with security remediation entry
+
 6. **Root cause analysis**:
    - Why did this happen?
    - How to prevent recurrence?
@@ -260,8 +299,11 @@ pre-commit run --all-files
 We run automated security scans:
 
 - **Pre-commit hooks**: On every commit
+  - `detect-secrets`: Industry-standard secret detection
+  - Custom secret audit: Project-specific patterns
 - **CI/CD pipeline**: On every PR
 - **Dependency scanning**: Weekly
+- **Git history audit**: After any suspected exposure
 - **Full security audit**: Quarterly
 
 ### Manual Review
@@ -287,6 +329,24 @@ For PRs touching security-sensitive code:
 - [ ] Security tests added
 - [ ] Documentation updated
 
+### Git History Security
+
+For repositories with sensitive history:
+
+- [ ] No `.env` files in git history
+- [ ] No API keys in commit messages
+- [ ] No secrets in code comments
+- [ ] `detect-secrets` baseline established
+- [ ] Pre-commit hooks enforced
+- [ ] Team trained on secret management
+- [ ] Incident response plan documented
+- [ ] Regular history audits scheduled
+
+Verification Command:
+```bash
+bash scripts/verify_history_cleanup.sh
+```
+
 ## 📊 Supported Versions
 
 | Version | Supported  | Security Updates |
@@ -300,6 +360,7 @@ For PRs touching security-sensitive code:
 ### Internal
 
 - [Security Policy](SECURITY.md)
+- [Git History Cleanup Runbook](docs/security/history-redaction.md)
 - [API Reference (keys/config)](docs/API_REFERENCE.md)
 - [NGC Deprecation Immunity](docs/NGC_DEPRECATION_IMMUNITY.md)
 - [Deployment Security](docs/DEPLOYMENT.md)

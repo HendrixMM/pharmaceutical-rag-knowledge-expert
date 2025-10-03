@@ -25,6 +25,11 @@ help:
 	@echo "  security         Run security scan (bandit)"
 	@echo "  check            Check without fixing"
 	@echo ""
+	@echo "🔒 Security:"
+	@echo "  secret-scan      Scan git history for exposed secrets"
+	@echo "  history-cleanup  Clean git history (requires confirmation)"
+	@echo "  verify-cleanup   Verify git history cleanup was successful"
+	@echo "  rotate-keys      Display key rotation checklist"
 	@echo "🧪 Testing:"
 	@echo "  test             Run all tests"
 	@echo "  test-unit        Run unit tests only"
@@ -237,3 +242,65 @@ docs-check-toc:
 	@python scripts/docs_toc_generator.py README.md --check --quiet || exit 1
 	@find docs -name '*.md' -exec python scripts/docs_toc_generator.py {} --check --quiet \; || exit 1
 	@echo "✅ TOCs are up to date"
+
+# Security: Git history cleanup targets
+.PHONY: secret-scan history-cleanup verify-cleanup rotate-keys
+
+secret-scan:
+	@echo "🔍 Scanning git history for exposed secrets..." && \
+	bash scripts/identify_secrets_in_history.sh --report backups/secret-scan-$(shell date +%Y%m%d-%H%M%S).txt || true && \
+	echo "✅ Secret scan complete. Review backups/secret-scan-*.txt"
+
+history-cleanup:
+	@echo "⚠️  WARNING: This will rewrite git history (force-push required)" && \
+	echo "📖 Review docs/security/history-redaction.md before proceeding" && \
+	echo "" && \
+	read -p "Have you reviewed the documentation and coordinated with the team? (yes/no): " confirm; \
+	if [ "$$confirm" = "yes" ]; then \
+		bash scripts/git_history_cleanup.sh; \
+	else \
+		echo "❌ Cleanup aborted. Review documentation first."; \
+		exit 1; \
+	fi
+
+verify-cleanup:
+	@echo "✅ Verifying git history cleanup..." && \
+	bash scripts/verify_history_cleanup.sh && \
+	echo "📊 Verification complete. Check backups/verification-report-*.txt"
+
+rotate-keys:
+	@echo "🔑 API Key Rotation Checklist" && \
+	echo "═══════════════════════════════════════════════════════════" && \
+	echo "" && \
+	echo "1. NVIDIA API Key:" && \
+	echo "   - Visit: https://build.nvidia.com" && \
+	echo "   - Revoke old key" && \
+	echo "   - Generate new key" && \
+	echo "   - Test: python scripts/nvidia_build_api_test.py" && \
+	echo "" && \
+	echo "2. PubMed API Key:" && \
+	echo "   - Visit: https://www.ncbi.nlm.nih.gov/account/" && \
+	echo "   - Delete old key" && \
+	echo "   - Create new key" && \
+	echo "   - Update PUBMED_EUTILS_API_KEY in .env" && \
+	echo "" && \
+	echo "3. Apify Token:" && \
+	echo "   - Visit: https://console.apify.com" && \
+	echo "   - Revoke old token" && \
+	echo "   - Generate new token" && \
+	echo "   - Update APIFY_TOKEN in .env" && \
+	echo "" && \
+	echo "4. Update CI/CD Secrets:" && \
+	echo "   - GitHub: Settings → Secrets → Actions" && \
+	echo "   - Update all relevant secrets" && \
+	echo "" && \
+	echo "5. Verify:" && \
+	echo "   - Run: make test" && \
+	echo "   - Check usage logs for unauthorized access" && \
+	echo "" && \
+	echo "6. Document:" && \
+	echo "   - Update: docs/security/key-rotation-tracker.md" && \
+	echo "   - Add rotation date and new key IDs" && \
+	echo "" && \
+	echo "═══════════════════════════════════════════════════════════" && \
+	echo "📖 Full documentation: docs/security/key-rotation-tracker.md"

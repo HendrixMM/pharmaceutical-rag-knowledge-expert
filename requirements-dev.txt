@@ -25,6 +25,7 @@ coverage[toml]>=7.3.0            # Test coverage measurement
 bandit>=1.7.5                   # Security linter
 safety>=2.3.0                   # Dependency vulnerability scanner
 pip-audit>=2.6.0                # PyPI package vulnerability scanner
+detect-secrets>=1.4.0           # Automated secret detection and baseline management
 
 # Pre-commit and Git Hooks
 pre-commit>=3.4.0               # Git hook management

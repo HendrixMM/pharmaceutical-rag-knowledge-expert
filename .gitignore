@@ -8,6 +8,15 @@
 !.env.example
 !.env.template
 
+# Security and cleanup artifacts
+# Generated during git history cleanup and security audits
+repo-mirror.git/
+*.secrets
+secret-scan-*.txt
+cleanup-log-*.txt
+verification-report-*.txt
+cleanup-backup-manifest-*.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

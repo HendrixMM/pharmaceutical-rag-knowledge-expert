@@ -1,0 +1,29 @@
+# Sensitive Patterns for BFG Repo-Cleaner
+# Purpose: Replace known secret patterns in git history with ***REMOVED***
+# Usage: bfg --replace-text scripts/sensitive-patterns.txt repo-mirror.git
+# Notes:
+# - Do NOT include full secret values; use prefixes/fingerprints only
+# - One pattern per line; case-sensitive by default
+# - Review this file before running cleanup
+
+# NVIDIA API key prefixes
+nvapi-
+NVIDIA_API_KEY=nvapi-
+
+# PubMed E-utilities
+PUBMED_EUTILS_API_KEY=
+PUBMED_EMAIL=
+
+# Apify tokens
+APIFY_TOKEN=
+
+# Generic common tokens
+Bearer 
+Authorization: Bearer 
+
+# OpenAlex email
+OPENALEX_EMAIL=
+
+# Example emails (replace with known emails if discovered)
+@example.com
+

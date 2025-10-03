@@ -15,6 +15,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- CRITICAL: Completed git history cleanup to remove exposed API keys
+  - Scrubbed NVIDIA API keys (nvapi-*) from all commits
+  - Scrubbed PubMed E-utilities API keys from all commits
+  - Scrubbed Apify tokens from all commits
+  - Removed all `.env` files from git history using BFG Repo-Cleaner
+  - Force-pushed cleaned history on [DATE]
+  - All exposed keys rotated immediately after cleanup
+- Added `detect-secrets` baseline for automated secret prevention
+- Enhanced pre-commit hooks with `detect-secrets` integration
+- Created comprehensive security documentation:
+  - `docs/security/history-redaction.md` - Complete cleanup process documentation
+  - `scripts/git_history_cleanup.sh` - Automated cleanup script
+  - `scripts/identify_secrets_in_history.sh` - Secret scanning script
+  - `scripts/verify_history_cleanup.sh` - Verification script
+- Established backup procedures:
+  - Created `backup/week2-start` tag before cleanup
+  - Exported dependency snapshot to `backups/pip-freeze-[date].txt`
+  - Documented all audit artifacts in `docs/security/history-redaction.md`
+
 ### Changed
 
 - BREAKING: Refactored README.md from 1559 lines to <250 lines for improved discoverability
