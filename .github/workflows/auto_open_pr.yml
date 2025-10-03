@@ -1,0 +1,64 @@
+name: Auto Open PRs
+
+on:
+  push:
+    branches:
+      - feature/gh-tools
+      - docs/phase-2.2-enhancements
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create PR if missing
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const branchRef = context.ref.replace('refs/heads/', '');
+
+            const { data: repoData } = await github.rest.repos.get({ owner, repo });
+            const base = repoData.default_branch || 'main';
+
+            const { data: existing } = await github.rest.pulls.list({
+              owner, repo, state: 'open', head: `${owner}:${branchRef}`, base
+            });
+            if (existing.length) {
+              core.info(`PR already exists: #${existing[0].number}`);
+              return;
+            }
+
+            let title = '';
+            let body = '';
+            let labels = [];
+
+            if (branchRef === 'feature/gh-tools') {
+              title = 'Docs + Preflight Utilities: metadata, links, TOC, workflow fix';
+              body = `Summary\n- Adds required front matter to changed docs; fixes internal links and TOC.\n- Quotes YAML step with colon in .github/workflows/benchmark_orchestration.yml:81.\n- Adds scripts/ai_preflight.py and scripts/ai_smoke_test.py (invoked via python; logs ignored).\n\nChanges\n- Docs: metadata front matter added to technical-history docs.\n- Links: corrected relative paths in quick start; updated canonical TOC.\n- Workflow: .github/workflows/benchmark_orchestration.yml step name quoted.\n- Scripts: added scripts/ai_preflight.py and scripts/ai_smoke_test.py.\n\nValidation\n- Ran pre-commit locally for docs/linkcheck; passing after fixes.\n- No core runtime behavior changes.\n\nRisk\n- Low: doc/workflow only.\n`;
+              labels = ['area:docs','ci','chore'];
+            } else if (branchRef === 'docs/phase-2.2-enhancements') {
+              title = 'Pre-commit Hardening: bandit nosec + md5 usedforsecurity; secret scan excludes; shebang consistency; ADR date';
+              body = `Summary\n- Hardens pre-commit configuration and code annotations for reliable CI.\n- Resolves Bandit noise with targeted nosec where safe; sets usedforsecurity=false for MD5 non-crypto uses.\n- Scopes detect-secrets away from docs/scripts/tests/cache; adds allowlist pragma for a dummy key.\n- Normalizes shebang and executable bits across scripts, examples, and tests.\n- Fixes ADR template date per docs metadata policy.\n\nChanges\n- .pre-commit-config.yaml: bandit args; detect-secrets excludes; codespell ignores; JSON check scope.\n- Code: small nosec comments and MD5 usedforsecurity=false in specific files.\n- Tests: removed unintended shebangs.\n- Docs: ADR template Last Updated date set.\n\nValidation\n- Ran key hooks locally: check-yaml/json, codespell, docs link/metadata, shebang checks, detect-secrets (pass).\n\nRisk\n- Low: non-functional changes, targeted annotations only.\n`;
+              labels = ['ci','security','chore'];
+            } else {
+              title = `Automated PR from ${branchRef}`;
+              body = `Automated PR from branch ${branchRef} to ${base}.`;
+              labels = ['chore'];
+            }
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner, repo, head: branchRef, base, title, body,
+            });
+            core.info(`Created PR #${pr.number}`);
+
+            try {
+              await github.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels });
+            } catch (e) {
+              core.warning(`Failed to add labels: ${e.message}`);
+            }
