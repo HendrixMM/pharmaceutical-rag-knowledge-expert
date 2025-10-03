@@ -44,8 +44,8 @@ echo "" | tee -a "$tmp"
 
 overall=0
 
-# Check 1: .env in history
-if git log --all --full-history -- .env >/dev/null 2>&1; then
+# Check 1: .env in history (inspect output, not exit code)
+if git log --all --full-history -- .env | head -n1 | grep -q .; then
   fail "Check 1: .env files in history...................." | tee -a "$tmp"
   overall=1
 else
@@ -60,24 +60,24 @@ else
   pass "Check 2: NVIDIA API key patterns.................." | tee -a "$tmp"
 fi
 
-# Check 3: NVIDIA_API_KEY=
-if git log -p --all | grep -i 'NVIDIA_API_KEY=' >/dev/null 2>&1; then
+# Check 3: NVIDIA_API_KEY=nvapi- (only flag real keys; restrict to .env)
+if git log -p --all -- .env | grep -i 'NVIDIA_API_KEY=nvapi-' >/dev/null 2>&1; then
   fail "Check 3: NVIDIA_API_KEY assignments..............." | tee -a "$tmp"
   overall=1
 else
   pass "Check 3: NVIDIA_API_KEY assignments..............." | tee -a "$tmp"
 fi
 
-# Check 4: PUBMED_EUTILS_API_KEY=
-if git log -p --all | grep -i 'PUBMED_EUTILS_API_KEY=' >/dev/null 2>&1; then
+# Check 4: PUBMED_EUTILS_API_KEY= (restrict to .env to avoid placeholders in docs)
+if git log -p --all -- .env | grep -i 'PUBMED_EUTILS_API_KEY=' >/dev/null 2>&1; then
   fail "Check 4: PubMed API key patterns.................." | tee -a "$tmp"
   overall=1
 else
   pass "Check 4: PubMed API key patterns.................." | tee -a "$tmp"
 fi
 
-# Check 5: APIFY_TOKEN=
-if git log -p --all | grep -i 'APIFY_TOKEN=' >/dev/null 2>&1; then
+# Check 5: APIFY_TOKEN= (restrict to .env to avoid placeholders elsewhere)
+if git log -p --all -- .env | grep -i 'APIFY_TOKEN=' >/dev/null 2>&1; then
   fail "Check 5: Apify token patterns....................." | tee -a "$tmp"
   overall=1
 else

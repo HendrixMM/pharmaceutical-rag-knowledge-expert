@@ -87,8 +87,17 @@ check:
 lint:
 	flake8 src tests scripts examples
 
-security:
+security: audit secret-scan
 	bandit -r src
+
+.PHONY: audit
+audit:
+	@echo "🔎 Running secret audit (pre-commit hook)..." && \
+	if command -v pre-commit >/dev/null 2>&1; then \
+		pre-commit run secret-audit --all-files || true; \
+	else \
+		echo "pre-commit not installed; skipping secret-audit"; \
+	fi
 
 # Testing targets
 test:

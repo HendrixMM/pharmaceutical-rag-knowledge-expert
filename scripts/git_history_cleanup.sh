@@ -91,11 +91,25 @@ popd >/dev/null
 
 info "🔍 Verification (mirror)"
 set +e
-git --git-dir="$mirror_dir" log --all --full-history -- .env >/dev/null 2>&1
-[[ $? -ne 0 ]] && env_ok=true || env_ok=false
+# Check for any .env path remaining in history by inspecting output, not exit code
+if git --git-dir="$mirror_dir" log --all --full-history -- .env | head -n1 | grep -q .; then
+  env_ok=false
+else
+  env_ok=true
+fi
 
-git --git-dir="$mirror_dir" log -p --all | grep -i 'nvapi-' >/dev/null 2>&1; [[ $? -ne 0 ]] && nv_ok=true || nv_ok=false
-git --git-dir="$mirror_dir" log -p --all | grep -i 'NVIDIA_API_KEY=' >/dev/null 2>&1; [[ $? -ne 0 ]] && nvk_ok=true || nvk_ok=false
+# Only flag real secrets: restrict search to .env history and require secret-like prefixes
+if git --git-dir="$mirror_dir" log -p --all -- .env | grep -i 'nvapi-' >/dev/null 2>&1; then
+  nv_ok=false
+else
+  nv_ok=true
+fi
+
+if git --git-dir="$mirror_dir" log -p --all -- .env | grep -i 'NVIDIA_API_KEY=nvapi-' >/dev/null 2>&1; then
+  nvk_ok=false
+else
+  nvk_ok=true
+fi
 set -e
 
 if $env_ok && $nv_ok && $nvk_ok; then

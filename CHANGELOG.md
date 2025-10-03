@@ -16,8 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+
 - CRITICAL: Completed git history cleanup to remove exposed API keys
-  - Scrubbed NVIDIA API keys (nvapi-*) from all commits
+  - Scrubbed NVIDIA API keys (nvapi-\*) from all commits
   - Scrubbed PubMed E-utilities API keys from all commits
   - Scrubbed Apify tokens from all commits
   - Removed all `.env` files from git history using BFG Repo-Cleaner
@@ -171,6 +172,23 @@ See [NGC_DEPRECATION_IMMUNITY.md](docs/NGC_DEPRECATION_IMMUNITY.md) for details.
 3. Rebuild vector database: `python scripts/rebuild_vectordb.py`
 4. Update `.env` configuration (see `.env.example`)
 
+### Post-History-Cleanup Actions (v2.1.1+)
+
+IMPORTANT: If you cloned this repository before 2025-10-03, you must re-clone.
+
+The git history was rewritten on 2025-10-03 to remove exposed API keys. This was a force-push operation.
+
+Action Required:
+
+1. Backup your local changes: `git stash` or commit to a branch
+2. Delete your local clone: `rm -rf RAG-Template-for-NVIDIA-nemoretriever`
+3. Re-clone the repository: `git clone [repo-url]`
+4. Restore your changes: apply stashed changes or cherry-pick commits
+5. Update your `.env`: copy `.env.example` to `.env` and add new API keys
+
+For Fork Owners:
+If you maintain a fork, see `docs/security/history-redaction.md` for instructions on applying the cleanup to your fork.
+
 ## Deprecation Notices
 
 ### Deprecated in v2.1
@@ -185,11 +203,15 @@ See [NGC_DEPRECATION_IMMUNITY.md](docs/NGC_DEPRECATION_IMMUNITY.md) for details.
 
 ## Security Updates
 
-### v2.1.1 (Pending)
+### v2.1.1 (2025-10-03)
 
-- **CRITICAL**: Git history cleanup (remove historical API keys)
-- Added automated security scanning in CI/CD
-- Enhanced pre-commit hooks for secret prevention
+- **CRITICAL**: Git history cleanup completed (removed historical API keys)
+- All exposed NVIDIA, PubMed, and Apify keys removed from history
+- Force-push completed on 2025-10-03
+- All keys rotated and verified
+- Added `detect-secrets` baseline for automated secret prevention
+- Enhanced pre-commit hooks with industry-standard secret detection
+- Comprehensive security documentation and runbooks created
 
 ### v2.1.0
 

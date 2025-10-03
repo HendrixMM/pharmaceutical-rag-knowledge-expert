@@ -12,13 +12,11 @@ if ! command -v claude >/dev/null 2>&1; then
   exit 1
 fi
 
-# Load .env if present and not already loaded
-if [ -f .env ]; then
-  # shellcheck source=/dev/null
-  set -a; source ./.env; set +a
-fi
-
+# Resolve token without sourcing .env (which may contain unquoted values)
 TOKEN="${GITHUB_PAT:-}"
+if [ -z "$TOKEN" ] && [ -f .env ]; then
+  TOKEN=$(grep -E "^GITHUB_PAT=" .env | tail -n1 | sed -e 's/^GITHUB_PAT=//' -e 's/^"//' -e 's/"$//')
+fi
 if [ -z "$TOKEN" ]; then
   echo "Error: GITHUB_PAT not set in environment or .env."
   echo "- Create a GitHub Personal Access Token (PAT) with minimal scopes"
@@ -28,15 +26,13 @@ fi
 
 echo "Adding GitHub MCP server at project scope…"
 claude mcp remove -s project github >/dev/null 2>&1 || true
-claude mcp add -s project \
-  --transport http \
-  -H "Authorization: Bearer ${TOKEN}" \
+claude mcp add -s project -t http \
   github \
-  https://api.githubcopilot.com/mcp/
+  https://api.githubcopilot.com/mcp/ \
+  -H "Authorization: Bearer ${TOKEN}"
 
 echo "Verifying configuration…"
 claude mcp get github || { echo "Failed to configure GitHub MCP server."; exit 3; }
 
 echo "✅ GitHub MCP server configured for this project (.mcp.json created)."
 echo "   Note: .mcp.json is git-ignored to avoid committing secrets."
-
