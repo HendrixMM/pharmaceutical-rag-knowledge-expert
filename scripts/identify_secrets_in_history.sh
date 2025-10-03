@@ -25,7 +25,9 @@ report_file=""
 dry_run=false
 verbose=false
 allow_working_env=false
-bfg_map=false
+# Default to BFG mapping format so full leaked values are replaced without
+# committing raw secrets (we construct regex patterns from safe prefixes).
+bfg_map=true
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -106,32 +108,56 @@ emails=$(echo "$emails" | filter_placeholders || true)
 {
   echo "# Sensitive Patterns for BFG Repo-Cleaner"
   echo "# Generated: $(ts)"
+  echo "# Mapping format ensures full leaked credentials are removed."
   echo "# Only include concrete leaked fingerprints; no generic patterns."
-  echo "# Do not include full secret values; use safe prefixes/fingerprints."
+  echo "# Patterns below are automatically generated from .env history diffs."
   echo ""
-  emit_line() {
-    local val="$1"
+
+  # Helper to print mapping or plain lines
+  emit_map() {
+    # $1: left-hand side pattern, $2: replacement
     if $bfg_map; then
-      printf '%s==>***REMOVED***\n' "$val"
+      printf '%s==>%s\n' "$1" "$2"
     else
-      printf '%s\n' "$val"
+      printf '%s\n' "$1"
     fi
   }
+
+  # For NVIDIA keys: build regex that matches the entire assignment using the
+  # safe truncated prefix (e.g., NVIDIA_API_KEY=nvapi-ABC\S*)
   if [[ -n "$nv_keys" ]]; then
-    echo "# Discovered NVIDIA key fingerprints (truncated)"
-    while read -r v; do [[ -n "$v" ]] && emit_line "$v"; done <<< "$nv_keys"
+    echo "# NVIDIA assignments (regex-based from safe prefixes)"
+    while read -r v; do
+      [[ -n "$v" ]] || continue
+      emit_map "NVIDIA_API_KEY=${v}\\\\S*" "NVIDIA_API_KEY=***REMOVED***"
+    done <<< "$nv_keys"
   fi
+
+  # PubMed keys
   if [[ -n "$pb_keys" ]]; then
-    echo "# Discovered PubMed key fingerprints (truncated)"
-    while read -r v; do [[ -n "$v" ]] && emit_line "$v"; done <<< "$pb_keys"
+    echo "# PubMed E-utilities assignments"
+    while read -r v; do
+      [[ -n "$v" ]] || continue
+      emit_map "PUBMED_EUTILS_API_KEY=${v}\\\\S*" "PUBMED_EUTILS_API_KEY=***REMOVED***"
+    done <<< "$pb_keys"
   fi
+
+  # Apify tokens
   if [[ -n "$ap_keys" ]]; then
-    echo "# Discovered Apify token fingerprints (truncated)"
-    while read -r v; do [[ -n "$v" ]] && emit_line "$v"; done <<< "$ap_keys"
+    echo "# Apify token assignments"
+    while read -r v; do
+      [[ -n "$v" ]] || continue
+      emit_map "APIFY_TOKEN=${v}\\\\S*" "APIFY_TOKEN=***REMOVED***"
+    done <<< "$ap_keys"
   fi
+
+  # Emails discovered (replace exact strings)
   if [[ -n "$emails" ]]; then
-    echo "# Discovered emails from .env history"
-    while read -r v; do [[ -n "$v" ]] && emit_line "$v"; done <<< "$emails"
+    echo "# Emails discovered in .env history (PII)"
+    while read -r v; do
+      [[ -n "$v" ]] || continue
+      emit_map "$v" "redacted@example.com"
+    done <<< "$emails"
   fi
 } > "${out_file}.tmp"
 
