@@ -4,12 +4,8 @@ from __future__ import annotations
 import os
 import threading
 import time
-from dataclasses import asdict
-from dataclasses import dataclass
-from dataclasses import field
-from typing import Any
-from typing import Mapping
-from typing import MutableMapping
+from dataclasses import asdict, dataclass, field
+from typing import Any, Mapping, MutableMapping
 
 _BOOL_TRUE = {"1", "true", "yes", "on", "enabled"}
 _BOOL_FALSE = {"0", "false", "no", "off", "disabled"}

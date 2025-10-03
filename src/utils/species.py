@@ -1,10 +1,6 @@
 """Species utilities for consistent species matching across modules."""
 import re
-from typing import Dict
-from typing import Iterable
-from typing import List
-from typing import Optional
-from typing import Set
+from typing import Dict, Iterable, List, Optional, Set
 
 
 def tokenize_species_string(text: str) -> Set[str]:

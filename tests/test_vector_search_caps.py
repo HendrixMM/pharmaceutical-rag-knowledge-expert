@@ -3,8 +3,7 @@
 Verifies that the new oversampling configuration parameters properly
 guard against excessive memory usage and infinite loops.
 """
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from src.nvidia_embeddings import NVIDIAEmbeddings
 from src.vector_database import VectorDatabase

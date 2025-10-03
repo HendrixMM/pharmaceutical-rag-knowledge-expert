@@ -6,9 +6,7 @@ in-place mutations, preserving pharmaceutical safety compliance.
 """
 import logging
 from copy import deepcopy
-from typing import Any
-from typing import Dict
-from typing import Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

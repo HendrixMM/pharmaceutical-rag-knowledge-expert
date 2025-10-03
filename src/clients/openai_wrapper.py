@@ -16,13 +16,7 @@ Design Principles:
 import logging
 import os
 import time
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import TYPE_CHECKING
-from typing import Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import requests
 
@@ -1057,7 +1051,7 @@ class OpenAIWrapper:
             if callable(fn):
                 try:
                     return fn()
-                except Exception:
+                except Exception:  # nosec B110 - fallback to alternate dict conversion methods
                     pass
         if isinstance(obj, dict):
             return obj
@@ -1151,7 +1145,9 @@ class OpenAIWrapper:
                             if backoff_jitter:
                                 import random
 
-                                delay += random.uniform(0, backoff_jitter)
+                                delay += random.uniform(
+                                    0, backoff_jitter
+                                )  # nosec B311 - jitter for backoff, not crypto
                             logger.warning(
                                 f"Retrying rerank request to {url} after HTTP {resp.status_code}. attempt={attempt + 1} delay={delay:.2f}s"
                             )
@@ -1168,7 +1164,7 @@ class OpenAIWrapper:
                         if backoff_jitter:
                             import random
 
-                            delay += random.uniform(0, backoff_jitter)
+                            delay += random.uniform(0, backoff_jitter)  # nosec B311 - jitter for backoff, not crypto
                         logger.warning(
                             f"Retrying rerank request to {url} after {type(e).__name__}: {e}. attempt={attempt + 1} delay={delay:.2f}s"
                         )

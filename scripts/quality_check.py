@@ -9,8 +9,7 @@ import argparse
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
-from typing import Tuple
+from typing import List, Tuple
 
 
 def run_command(cmd: List[str], fix_mode: bool = False) -> Tuple[int, str]:

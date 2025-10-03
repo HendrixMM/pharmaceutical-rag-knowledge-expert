@@ -5,9 +5,7 @@ Provides CLI interface for interacting with the RAG agent
 import os
 import sys
 from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import Tuple
+from typing import Any, Dict, Tuple
 
 from dotenv import load_dotenv
 

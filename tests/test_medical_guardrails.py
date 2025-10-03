@@ -1,13 +1,10 @@
 """Unit tests for medical guardrails module."""
 import json
-from unittest.mock import mock_open
-from unittest.mock import patch
+from unittest.mock import mock_open, patch
 
 import pytest
 
-from src.medical_guardrails import MedicalGuardrails
-from src.medical_guardrails import PIIDetectionResult
-from src.medical_guardrails import ValidationResult
+from src.medical_guardrails import MedicalGuardrails, PIIDetectionResult, ValidationResult
 
 
 class TestMedicalGuardrails:

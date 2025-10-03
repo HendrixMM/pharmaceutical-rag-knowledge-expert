@@ -3,8 +3,7 @@
 Verifies that the search_with_info method and internal _similarity_search_with_pharmaceutical_filters_with_info
 method properly track and report which filters are ignored and why.
 """
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from src.nvidia_embeddings import NVIDIAEmbeddings
 from src.vector_database import VectorDatabase

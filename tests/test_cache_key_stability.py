@@ -1,7 +1,6 @@
 """Unit tests for cache key stability in QueryEngine."""
 import unittest
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from src.pubmed_scraper import PubMedScraper
 from src.query_engine import EnhancedQueryEngine

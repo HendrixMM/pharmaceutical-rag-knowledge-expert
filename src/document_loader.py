@@ -8,12 +8,7 @@ import os
 import re
 from io import BytesIO
 from pathlib import Path
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Pattern
+from typing import Any, Callable, Dict, List, Optional, Pattern
 
 logger = logging.getLogger(__name__)
 
@@ -648,7 +643,7 @@ class PDFDocumentLoader:
                             if parsed:
                                 extracted["publication_date"] = parsed.isoformat()
                                 break
-                        except Exception:
+                        except Exception:  # nosec B110 - permissive parsing of optional XMP dates
                             pass
                     extracted["publication_date"] = date_text
                     break
@@ -687,7 +682,7 @@ class PDFDocumentLoader:
                             if parsed:
                                 extracted["publication_date"] = parsed.isoformat()
                                 break
-                        except Exception:
+                        except Exception:  # nosec B110 - permissive parsing of optional PDF date metadata
                             pass
 
                     extracted["publication_date"] = cleaned
@@ -842,7 +837,7 @@ class PDFDocumentLoader:
                         parsed_date = parse_date(date_match.group())
                         metadata["publication_date"] = parsed_date.isoformat()
                         break
-                    except:
+                    except:  # nosec B112 - permissive regex parsing fallback
                         continue
 
         # Attempt to capture journal information if still missing
@@ -1216,8 +1211,8 @@ class PDFDocumentLoader:
                     parsed_date = parse_date(str(metadata["publication_date"]))
                     if parsed_date:
                         metadata["publication_date"] = parsed_date.isoformat()
-                except Exception:
-                    pass  # Keep original value if parsing fails
+                except Exception:  # nosec B110 - keep original value if parsing fails
+                    pass
 
             return metadata
 

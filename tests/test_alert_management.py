@@ -13,8 +13,7 @@ Tests validate alert system for pharmaceutical research cost optimization.
 import os
 import tempfile
 import time
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest

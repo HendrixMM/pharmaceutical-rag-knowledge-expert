@@ -5,8 +5,7 @@ import logging
 import math
 import re
 import statistics
-from collections import Counter
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Any
 

@@ -3,12 +3,9 @@ from __future__ import annotations
 
 import html
 import re
-from typing import Any
-from typing import Iterable
+from typing import Any, Iterable
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # Unified regex patterns for paper identifiers
 DOI_PATTERN = r"(?:doi[:\s]*)?10\.\d{4,9}/[^\s)>\]]+"

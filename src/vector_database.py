@@ -8,14 +8,7 @@ import os
 import re
 from collections import Counter
 from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import Iterable
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
-from typing import Union
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 logger = logging.getLogger(__name__)
 

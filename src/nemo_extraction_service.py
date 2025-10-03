@@ -25,19 +25,14 @@ import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Union
+from typing import Any, Dict, List, Optional, Union
 
 import aiofiles
 from langchain_core.documents import Document
 from unstructured.chunking.title import chunk_by_title
 from unstructured.partition.auto import partition
 
-from .nemo_retriever_client import NeMoAPIResponse
-from .nemo_retriever_client import NeMoRetrieverClient
+from .nemo_retriever_client import NeMoAPIResponse, NeMoRetrieverClient
 
 logger = logging.getLogger(__name__)
 

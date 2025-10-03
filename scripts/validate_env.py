@@ -13,8 +13,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import List
-from typing import Tuple
+from typing import List, Tuple
 
 # Placeholder patterns to detect
 PLACEHOLDER_PATTERNS = [

@@ -5,13 +5,10 @@ This module provides integration between your existing Claude-Code agent
 and the Microsoft Learn MCP server for up-to-date documentation.
 """
 import logging
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
-from mcp_client import create_mcp_client
-from mcp_client import NeMoMCPClient
+from mcp_client import NeMoMCPClient, create_mcp_client
+
 from prompt_generator import MCPPromptGenerator
 
 logger = logging.getLogger(__name__)

@@ -4,8 +4,7 @@ import shutil
 import sys
 import types
 from pathlib import Path
-from typing import Optional
-from typing import Union
+from typing import Optional, Union
 
 langchain_module = types.ModuleType("langchain")
 langchain_module.__path__ = []

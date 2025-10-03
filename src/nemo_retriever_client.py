@@ -22,17 +22,11 @@ import asyncio
 import logging
 import os
 import time
-from dataclasses import dataclass
-from dataclasses import field
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Union
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Union
 
 import aiohttp
-from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
-from langchain_nvidia_ai_endpoints import NVIDIARerank
+from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings, NVIDIARerank
 
 logger = logging.getLogger(__name__)
 

@@ -1,11 +1,9 @@
 """Unit tests for synthesis engine module."""
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-from src.synthesis_engine import KeyFinding
-from src.synthesis_engine import SynthesisEngine
+from src.synthesis_engine import KeyFinding, SynthesisEngine
 
 
 class TestSynthesisEngine:

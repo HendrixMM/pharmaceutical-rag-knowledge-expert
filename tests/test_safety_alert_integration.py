@@ -14,8 +14,7 @@ import json
 import os
 import tempfile
 import time
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
 

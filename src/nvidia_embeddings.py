@@ -18,9 +18,7 @@ import logging
 import os
 import re
 import time
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Dict, List, Optional
 
 import requests
 from langchain_core.embeddings import Embeddings

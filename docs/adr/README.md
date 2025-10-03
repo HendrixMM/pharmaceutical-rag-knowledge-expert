@@ -2,7 +2,7 @@
 
 ---
 
-Last Updated: 2025-01-15
+Last Updated: 2025-10-03
 Owner: Architecture Team
 Review Cadence: Quarterly
 

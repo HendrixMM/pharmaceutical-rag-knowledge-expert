@@ -3,8 +3,7 @@
 Verifies that all metadata fields are properly normalized during pharmaceutical
 metadata extraction and that filtering works correctly with normalized data.
 """
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from src.nvidia_embeddings import NVIDIAEmbeddings
 from src.pharmaceutical_processor import PharmaceuticalProcessor

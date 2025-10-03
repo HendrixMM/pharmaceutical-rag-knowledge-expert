@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Smoke test for guardrails flow/action wiring.
 Tests that all flows and actions are properly connected without runtime errors.

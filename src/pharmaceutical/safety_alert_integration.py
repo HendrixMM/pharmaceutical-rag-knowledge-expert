@@ -21,17 +21,10 @@ import hashlib
 import json
 import logging
 import time
-from dataclasses import dataclass
-from dataclasses import field
-from datetime import datetime
-from datetime import timedelta
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 try:
     from ..enhanced_config import EnhancedRAGConfig
@@ -503,7 +496,7 @@ class DrugSafetyAlertIntegration:
         """Generate unique alert ID."""
         timestamp = int(time.time())
         content = f"{alert_type}_{context}_{timestamp}"
-        return hashlib.md5(content.encode()).hexdigest()[:12]
+        return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()[:12]
 
     def get_active_safety_alerts(self) -> List[Dict[str, Any]]:
         """Get all active drug safety alerts."""

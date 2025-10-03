@@ -6,9 +6,7 @@ import logging
 import os
 import threading
 import time
-from typing import Any
-from typing import Awaitable
-from typing import TypedDict
+from typing import Any, Awaitable, TypedDict
 
 from langchain_core.documents import Document
 
@@ -16,8 +14,7 @@ from .ddi_pk_processor import DDIPKProcessor
 from .enhanced_config import EnhancedRAGConfig
 from .enhanced_pubmed_agent import PubMedIntegrationManager
 from .medical_guardrails import MedicalGuardrails
-from .rag_agent import RAGAgent
-from .rag_agent import RAGResponse
+from .rag_agent import RAGAgent, RAGResponse
 from .synthesis_engine import SynthesisEngine
 
 try:

@@ -6,8 +6,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any
-from typing import Dict
+from typing import Any, Dict
 
 import plotly.express as px
 import streamlit as st

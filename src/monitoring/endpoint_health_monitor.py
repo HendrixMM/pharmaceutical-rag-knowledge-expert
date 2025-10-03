@@ -19,16 +19,11 @@ import json
 import logging
 import statistics
 import time
-from collections import defaultdict
-from collections import deque
+from collections import defaultdict, deque
 from dataclasses import dataclass
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 try:
     from ..clients.openai_wrapper import NVIDIABuildConfig, OpenAIWrapper

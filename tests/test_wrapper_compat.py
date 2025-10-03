@@ -11,8 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.nemo_retriever_client import NeMoAPIResponse
-from src.nemo_retriever_client import NeMoClientWrapper
+from src.nemo_retriever_client import NeMoAPIResponse, NeMoClientWrapper
 
 
 @pytest.mark.asyncio

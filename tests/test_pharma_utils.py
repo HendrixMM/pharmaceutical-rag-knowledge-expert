@@ -5,11 +5,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.pharma_utils import _tokenize_species_string
-from src.pharma_utils import CacheSizeConfig
-from src.pharma_utils import cleanup_oldest_cache_files
-from src.pharma_utils import DrugNameChecker
-from src.pharma_utils import get_cache_dir_size_mb
+from src.pharma_utils import (
+    CacheSizeConfig,
+    DrugNameChecker,
+    _tokenize_species_string,
+    cleanup_oldest_cache_files,
+    get_cache_dir_size_mb,
+)
 
 
 class TestSpeciesTokenization(unittest.TestCase):

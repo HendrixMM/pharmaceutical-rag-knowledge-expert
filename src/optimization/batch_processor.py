@@ -20,17 +20,10 @@ import hashlib
 import json
 import logging
 import time
-from dataclasses import dataclass
-from dataclasses import field
-from datetime import datetime
-from datetime import timedelta
-from enum import Enum
-from enum import IntEnum
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum, IntEnum
+from typing import Any, Callable, Dict, List, Optional
 
 try:
     from ..enhanced_config import EnhancedRAGConfig
@@ -179,7 +172,9 @@ class BatchProcessor:
             Request ID for tracking
         """
         # Generate unique request ID
-        request_id = hashlib.md5(f"{request_type}_{time.time()}_{hash(str(payload))}".encode()).hexdigest()[:12]
+        request_id = hashlib.md5(
+            f"{request_type}_{time.time()}_{hash(str(payload))}".encode(), usedforsecurity=False
+        ).hexdigest()[:12]
 
         # Create batch request
         batch_request = BatchRequest(

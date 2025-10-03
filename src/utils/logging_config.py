@@ -8,9 +8,7 @@ import logging.config
 import os
 import sys
 from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import Optional
+from typing import Any, Dict, Optional
 
 
 def get_log_level() -> int:

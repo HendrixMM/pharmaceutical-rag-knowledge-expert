@@ -7,8 +7,7 @@ sorted by descending score.
 """
 import pytest
 
-from src.nemo_retriever_client import NeMoAPIResponse
-from src.nemo_retriever_client import NeMoClientWrapper
+from src.nemo_retriever_client import NeMoAPIResponse, NeMoClientWrapper
 
 
 class _DummyCloudRerank:

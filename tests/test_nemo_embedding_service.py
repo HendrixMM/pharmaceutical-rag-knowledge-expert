@@ -5,15 +5,11 @@ Tests the enhanced NVIDIA NeMo Embedding Service with pharmaceutical
 domain optimization and multi-model support.
 """
 import os
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.nemo_embedding_service import EmbeddingConfig
-from src.nemo_embedding_service import EmbeddingResult
-from src.nemo_embedding_service import NeMoEmbeddingService
+from src.nemo_embedding_service import EmbeddingConfig, EmbeddingResult, NeMoEmbeddingService
 
 
 class TestEmbeddingConfig:

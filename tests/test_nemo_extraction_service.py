@@ -5,16 +5,12 @@ Tests the NVIDIA NeMo Extraction Service with VLM-based OCR,
 structured data extraction, and pharmaceutical document processing.
 """
 import os
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from langchain_core.documents import Document
 
-from src.nemo_extraction_service import ExtractionMethod
-from src.nemo_extraction_service import ExtractionResult
-from src.nemo_extraction_service import NeMoExtractionService
+from src.nemo_extraction_service import ExtractionMethod, ExtractionResult, NeMoExtractionService
 
 
 class TestExtractionResult:

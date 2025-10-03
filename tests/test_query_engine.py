@@ -1,6 +1,5 @@
 import json
-from datetime import datetime
-from datetime import UTC
+from datetime import UTC, datetime
 from pathlib import Path
 
 from src.query_engine import EnhancedQueryEngine

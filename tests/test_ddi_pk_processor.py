@@ -1,13 +1,10 @@
 """Unit tests for DDI/PK processor module."""
 import re
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-from src.ddi_pk_processor import DDIPKProcessor
-from src.ddi_pk_processor import DrugInteraction
-from src.ddi_pk_processor import PKParameter
+from src.ddi_pk_processor import DDIPKProcessor, DrugInteraction, PKParameter
 
 
 class TestDDIPKProcessor:

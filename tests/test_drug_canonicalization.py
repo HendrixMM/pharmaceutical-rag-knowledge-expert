@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Test script for drug name canonicalization with proper assertions."""
 import os
 import sys

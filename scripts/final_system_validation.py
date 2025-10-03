@@ -18,14 +18,10 @@ import logging
 import statistics
 import sys
 import time
-from dataclasses import asdict
-from dataclasses import dataclass
-from datetime import datetime
-from datetime import timedelta
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import List
+from typing import Any, Dict, List
 
 # Add project root to path
 project_root = Path(__file__).parent.parent

@@ -17,8 +17,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any
-from typing import Dict
+from typing import Any, Dict
 
 # Ensure local src is importable
 ROOT = Path(__file__).resolve().parents[1]

@@ -9,14 +9,11 @@ Tests the three-step NeMo Retriever pipeline:
 These tests use mocks to avoid requiring live API access during testing.
 """
 import os
-from unittest.mock import AsyncMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.nemo_retriever_client import create_nemo_client
-from src.nemo_retriever_client import NeMoRetrieverClient
-from src.nemo_retriever_client import NVIDIABuildCreditsMonitor
+from src.nemo_retriever_client import NeMoRetrieverClient, NVIDIABuildCreditsMonitor, create_nemo_client
 
 
 class TestNVIDIABuildCreditsMonitor:

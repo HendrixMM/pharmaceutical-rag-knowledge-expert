@@ -9,9 +9,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from difflib import SequenceMatcher
-from typing import Any
-from typing import Iterable
-from typing import Literal
+from typing import Any, Iterable, Literal
 
 logger = logging.getLogger(__name__)
 

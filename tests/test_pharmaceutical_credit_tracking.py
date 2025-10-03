@@ -12,8 +12,7 @@ Tests validate cost-effective cloud-first strategy for pharmaceutical research.
 """
 import os
 import tempfile
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest

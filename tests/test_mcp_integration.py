@@ -8,10 +8,9 @@ import logging
 import sys
 import time
 
-from mcp_client import create_mcp_client
-from mcp_client import NeMoMCPClient
-from prompt_generator import generate_migration_prompt
-from prompt_generator import MCPPromptGenerator
+from mcp_client import NeMoMCPClient, create_mcp_client
+
+from prompt_generator import MCPPromptGenerator, generate_migration_prompt
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")

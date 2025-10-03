@@ -2,7 +2,7 @@
 
 ---
 
-Last Updated: YYYY-MM-DD
+Last Updated: 2025-10-03
 Owner: Architecture Team
 Review Cadence: Quarterly
 Status: [Proposed | Accepted | Deprecated | Superseded]

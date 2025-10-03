@@ -7,8 +7,7 @@ Microsoft Learn MCP server for up-to-date documentation.
 import logging
 from typing import Optional
 
-from mcp_client import create_mcp_client
-from mcp_client import NeMoMCPClient
+from mcp_client import NeMoMCPClient, create_mcp_client
 
 logger = logging.getLogger(__name__)
 

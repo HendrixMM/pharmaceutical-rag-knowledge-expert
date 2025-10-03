@@ -24,8 +24,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any
-from typing import Dict
+from typing import Any, Dict
 
 import requests
 

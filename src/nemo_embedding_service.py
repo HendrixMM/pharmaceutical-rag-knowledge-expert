@@ -16,18 +16,13 @@ Based on latest NVIDIA NeMo Retriever documentation patterns and best practices.
 """
 import logging
 import time
-from dataclasses import dataclass
-from dataclasses import field
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 
-from .nemo_retriever_client import create_nemo_client
-from .nemo_retriever_client import NeMoRetrieverClient
+from .nemo_retriever_client import NeMoRetrieverClient, create_nemo_client
 from .nvidia_embeddings import NVIDIAEmbeddings as LegacyNVIDIAEmbeddings
 
 logger = logging.getLogger(__name__)

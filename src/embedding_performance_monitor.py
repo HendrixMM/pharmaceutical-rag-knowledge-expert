@@ -19,18 +19,11 @@ import logging
 import statistics
 import threading
 import time
-from collections import defaultdict
-from collections import deque
-from dataclasses import dataclass
-from dataclasses import field
+from collections import defaultdict, deque
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

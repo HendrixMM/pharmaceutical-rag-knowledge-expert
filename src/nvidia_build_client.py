@@ -38,10 +38,7 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 try:
     from src.clients.openai_wrapper import OPENAI_AVAILABLE, NVIDIABuildConfig, NVIDIABuildError, OpenAIWrapper

@@ -5,10 +5,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Set
+from typing import Any, Dict, List, Set
 
 # Optional Presidio imports for advanced PII/PHI detection
 PRESIDIO_AVAILABLE = False
