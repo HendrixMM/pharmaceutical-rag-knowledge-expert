@@ -1,0 +1,43 @@
+name: Security Verification
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 4 * * 1" # Weekly, Mondays at 04:00 UTC
+
+jobs:
+  verify-history-and-secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Verify history cleanup
+        run: |
+          bash scripts/verify_history_cleanup.sh --no-color --verbose
+
+      - name: Detect-secrets scan (baseline)
+        run: |
+          detect-secrets scan --baseline .secrets.baseline
+
+      - name: Upload verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-verification-report
+          path: backups/verification-report-*.txt
