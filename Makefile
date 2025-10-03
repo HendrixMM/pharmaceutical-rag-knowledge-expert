@@ -8,6 +8,7 @@
 .PHONY: bench-ci
 .PHONY: docs docs-serve docs-linkcheck docs-linkcheck-all docs-validate docs-all docs-check-toc
 .PHONY: mcp-github-add mcp-github-verify mcp-github-remove
+.PHONY: gh-auth gh-issues-list gh-issue-create gh-pr-list gh-pr-comment gh-actions-runs gh-actions-logs gh-dependabot gh-code-search gh-file-get
 
 # Default target
 help:
@@ -30,6 +31,7 @@ help:
 	@echo "  secret-scan      Scan git history for exposed secrets"
 	@echo "  history-cleanup  Clean git history (requires confirmation)"
 	@echo "  verify-cleanup   Verify git history cleanup was successful"
+	@echo "  verify-cleanup-strict Verify using sensitive patterns file"
 	@echo "  rotate-keys      Display key rotation checklist"
 	@echo "  secrets-baseline Update detect-secrets baseline (manual review)"
 	@echo "🧪 Testing:"
@@ -64,6 +66,18 @@ help:
 	@echo "  mcp-github-add    Configure GitHub MCP server (project-scoped)"
 	@echo "  mcp-github-verify Verify GitHub MCP server configuration"
 	@echo "  mcp-github-remove Remove GitHub MCP server from project scope"
+	@echo ""
+	@echo "🐙 GitHub (gh) Utilities:"
+	@echo "  gh-auth            Verify GitHub auth with GH_TOKEN from .env"
+	@echo "  gh-issues-list     List issues (vars: REPO, STATE=open|closed|all)"
+	@echo "  gh-issue-create    Create issue (vars: REPO, TITLE, BODY, LABELS, ASSIGNEES)"
+	@echo "  gh-pr-list         List PRs (vars: REPO, STATE=open|closed|all)"
+	@echo "  gh-pr-comment      Comment on PR (vars: REPO, PR, BODY)"
+	@echo "  gh-actions-runs    List Actions runs (vars: REPO, WORKFLOW, STATUS)"
+	@echo "  gh-actions-logs    Show logs for run (vars: REPO, RUN)"
+	@echo "  gh-dependabot      List Dependabot alerts (vars: REPO, STATE, SEVERITY)"
+	@echo "  gh-code-search     Code search (vars: REPO, Q, LANG, FILENAME, PATH, IN)"
+	@echo "  gh-file-get        Print file contents (vars: REPO, PATH, REF)"
 
 # Installation targets
 install:
@@ -225,6 +239,57 @@ mcp-github-verify:
 mcp-github-remove:
 	-claude mcp remove -s project github || true
 	@echo "✅ Removed project-scoped 'github' MCP server (if present)."
+
+# GitHub (gh) Utilities
+gh-auth:
+	scripts/gh_auth_check.sh
+
+gh-issues-list:
+	STATE=$${STATE:-open} REPO=$${REPO:-} scripts/gh_issue_list.sh $$STATE
+
+
+gh-issue-create:
+	@if [ -z "$$REPO" ] || [ -z "$$TITLE" ] || [ -z "$$BODY" ]; then \
+	  echo "Usage: make gh-issue-create REPO=owner/repo TITLE='...' BODY='...' [LABELS=...] [ASSIGNEES=...]"; exit 2; \
+	fi; \
+	REPO="$$REPO" scripts/gh_issue_create.sh -t "$$TITLE" -b "$$BODY" $$( [ -n "$$LABELS" ] && echo -n "-l \"$$LABELS\"" ) $$( [ -n "$$ASSIGNEES" ] && echo -n "-a \"$$ASSIGNEES\"" )
+
+gh-pr-list:
+	STATE=$${STATE:-open} REPO=$${REPO:-} scripts/gh_pr_list.sh $$STATE
+
+
+gh-pr-comment:
+	@if [ -z "$$PR" ] || [ -z "$$BODY" ]; then \
+	  echo "Usage: make gh-pr-comment [REPO=owner/repo] PR=123 BODY='your comment'"; exit 2; \
+	fi; \
+	REPO="$$REPO" scripts/gh_pr_comment.sh "$$PR" "$$BODY"
+
+gh-actions-runs:
+	REPO=$${REPO:-} WORKFLOW=$${WORKFLOW:-} STATUS=$${STATUS:-} scripts/gh_actions_runs.sh
+
+
+gh-actions-logs:
+	@if [ -z "$$RUN" ]; then \
+	  echo "Usage: make gh-actions-logs [REPO=owner/repo] RUN=<run-id>"; exit 2; \
+	fi; \
+	REPO="$$REPO" scripts/gh_actions_logs.sh "$$RUN"
+
+gh-dependabot:
+	REPO=$${REPO:-} STATE=$${STATE:-open} SEVERITY=$${SEVERITY:-} scripts/gh_dependabot_alerts.sh
+
+
+gh-code-search:
+	@if [ -z "$$Q" ]; then \
+	  echo "Usage: make gh-code-search [REPO=owner/repo] Q='your query' [LANG=] [FILENAME=] [PATH=] [IN=file|path|symbol]"; exit 2; \
+	fi; \
+	REPO="$$REPO" scripts/gh_code_search.sh -q "$$Q" $$( [ -n "$$LANG" ] && echo -n "-l \"$$LANG\"" ) $$( [ -n "$$FILENAME" ] && echo -n "-f \"$$FILENAME\"" ) $$( [ -n "$$PATH" ] && echo -n "-p \"$$PATH\"" ) $$( [ -n "$$IN" ] && echo -n "--in \"$$IN\"" )
+
+
+gh-file-get:
+	@if [ -z "$$PATH" ]; then \
+	  echo "Usage: make gh-file-get [REPO=owner/repo] PATH=relative/file [REF=branch|sha]"; exit 2; \
+	fi; \
+	REPO="$$REPO" scripts/gh_file_get.sh -p "$$PATH" $$( [ -n "$$REF" ] && echo -n "-r \"$$REF\"" )
 	  --preflight-sample-count $${PF_SAMPLES:-1} \
 	  --preflight-min-concurrency $${PF_MIN_CONC:-2} \
 	  --fail-on-preflight \
@@ -293,6 +358,11 @@ history-cleanup:
 verify-cleanup:
 	@echo "✅ Verifying git history cleanup..." && \
 	bash scripts/verify_history_cleanup.sh && \
+	echo "📊 Verification complete. Check backups/verification-report-*.txt"
+
+verify-cleanup-strict:
+	@echo "✅ Verifying git history cleanup (strict patterns)..." && \
+	bash scripts/verify_history_cleanup.sh --use-sensitive-patterns --patterns-file scripts/sensitive-patterns.txt && \
 	echo "📊 Verification complete. Check backups/verification-report-*.txt"
 
 rotate-keys:

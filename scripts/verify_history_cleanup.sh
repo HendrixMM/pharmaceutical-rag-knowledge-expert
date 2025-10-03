@@ -2,7 +2,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: bash scripts/verify_history_cleanup.sh [--verbose] [--report FILE] [--no-color]
+Usage: bash scripts/verify_history_cleanup.sh [--verbose] [--report FILE] [--no-color] [--use-sensitive-patterns] [--patterns-file FILE]
 
 Runs a suite of checks to confirm that git history has been cleaned of secrets.
 USAGE
@@ -11,12 +11,16 @@ USAGE
 verbose=false
 report_file="backups/verification-report-$(date +%Y%m%d-%H%M%S).txt"
 use_color=true
+use_patterns=false
+patterns_file="scripts/sensitive-patterns.txt"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --verbose) verbose=true; shift;;
     --report) report_file="$2"; shift 2;;
     --no-color) use_color=false; shift;;
+    --use-sensitive-patterns) use_patterns=true; shift;;
+    --patterns-file) patterns_file="$2"; shift 2;;
     -h|--help) usage; exit 0;;
     *) echo "Unknown arg: $1" >&2; usage; exit 2;;
   esac
@@ -58,6 +62,33 @@ if git log -p --all -- .env | grep -i 'nvapi-' >/dev/null 2>&1; then
   overall=1
 else
   pass "Check 2: NVIDIA API key patterns.................." | tee -a "$tmp"
+fi
+
+# Optional Check 2b: scan for sensitive fingerprints from patterns file (scoped to .env history)
+if $use_patterns; then
+  if [[ -f "$patterns_file" ]]; then
+    # Load non-comment, non-blank lines
+    mapfile -t PATTERNS < <(grep -v '^#' "$patterns_file" | sed '/^\s*$/d')
+    if [[ ${#PATTERNS[@]} -eq 0 ]]; then
+      pass "Check 2b: Sensitive fingerprints (patterns file empty)...." | tee -a "$tmp"
+    else
+      hit=""
+      for p in "${PATTERNS[@]}"; do
+        # Use fixed-string grep to avoid regex surprises; case-insensitive
+        if git log -p --all -- .env | grep -F -i -- "$p" >/dev/null 2>&1; then
+          hit="$p"; break
+        fi
+      done
+      if [[ -n "$hit" ]]; then
+        fail "Check 2b: Sensitive fingerprints present (e.g., '$hit')" | tee -a "$tmp"
+        overall=1
+      else
+        pass "Check 2b: Sensitive fingerprints (none found).........." | tee -a "$tmp"
+      fi
+    fi
+  else
+    warn "Check 2b: Patterns file not found ($patterns_file)......." | tee -a "$tmp"
+  fi
 fi
 
 # Check 3: NVIDIA_API_KEY=nvapi- (only flag real keys; restrict to .env)
