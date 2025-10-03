@@ -5,7 +5,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: bash scripts/identify_secrets_in_history.sh [--output FILE] [--report FILE] [--dry-run] [--verbose]
+Usage: bash scripts/identify_secrets_in_history.sh [--output FILE] [--report FILE] [--dry-run] [--verbose] [--allow-working-env] [--bfg-map]
 
 Scans git history for .env and secret-like assignments, extracting safe fingerprints
 to scripts/sensitive-patterns.txt (or a custom output).
@@ -15,6 +15,8 @@ Options:
   --report FILE   Save detailed findings to this path (e.g., backups/secret-scan-YYYYMMDD.txt)
   --dry-run       Show actions without writing files
   --verbose       Print progress details
+  --allow-working-env  Proceed even if .env exists in working tree (warn)
+  --bfg-map       Emit mapping format lines (fingerprint==>***REMOVED***)
 USAGE
 }
 
@@ -22,6 +24,8 @@ out_file="scripts/sensitive-patterns.txt"
 report_file=""
 dry_run=false
 verbose=false
+allow_working_env=false
+bfg_map=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -33,6 +37,10 @@ while [[ $# -gt 0 ]]; do
       dry_run=true; shift;;
     --verbose)
       verbose=true; shift;;
+    --allow-working-env)
+      allow_working_env=true; shift;;
+    --bfg-map)
+      bfg_map=true; shift;;
     -h|--help)
       usage; exit 0;;
     *)
@@ -51,8 +59,12 @@ if ! grep -q "^\.env" .gitignore 2>/dev/null; then
 fi
 
 if [[ -f .env ]]; then
-  echo "❌ .env present in working tree (should not be committed). Aborting." >&2
-  exit 2
+  if $allow_working_env; then
+    echo "⚠️  .env present in working tree (ignored due to --allow-working-env)" >&2
+  else
+    echo "❌ .env present in working tree (should not be committed). Aborting." >&2
+    exit 2
+  fi
 fi
 
 ts() { date '+%Y-%m-%d %H:%M:%S'; }
@@ -71,12 +83,25 @@ echo "Commits with .env: $count_env_commits" >> "$tmp_report"
 
 # Extract candidate lines from history diffs
 candidate_lines=$(git log -p --all -- .env 2>/dev/null | \
-  grep -E "+(NVIDIA_API_KEY=|PUBMED_EUTILS_API_KEY=|APIFY_TOKEN=|PUBMED_EMAIL=|OPENALEX_EMAIL=)" | sed 's/^+//')
+  grep -E '^\+(NVIDIA_API_KEY=|PUBMED_EUTILS_API_KEY=|APIFY_TOKEN=|PUBMED_EMAIL=|OPENALEX_EMAIL=)' | sed 's/^+//')
 
 nv_keys=$(echo "$candidate_lines" | grep -E '^NVIDIA_API_KEY=' | sed 's/NVIDIA_API_KEY=//' | cut -c1-10 | sort -u || true)
 pb_keys=$(echo "$candidate_lines" | grep -E '^PUBMED_EUTILS_API_KEY=' | sed 's/PUBMED_EUTILS_API_KEY=//' | cut -c1-10 | sort -u || true)
 ap_keys=$(echo "$candidate_lines" | grep -E '^APIFY_TOKEN=' | sed 's/APIFY_TOKEN=//' | cut -c1-10 | sort -u || true)
 emails=$(echo "$candidate_lines" | grep -E '^(PUBMED_EMAIL=|OPENALEX_EMAIL=)' | sed 's/^[A-Z_]*=//' | sort -u || true)
+
+# Filter out known placeholders and examples to avoid no-op replacements
+filter_placeholders() {
+  awk 'length($0)>5' | \
+  grep -E -v '^(your_|test|dummy|placeholder)' | \
+  grep -E -v 'example\.com' | \
+  grep -E -v ':'
+}
+
+nv_keys=$(echo "$nv_keys" | filter_placeholders || true)
+pb_keys=$(echo "$pb_keys" | filter_placeholders || true)
+ap_keys=$(echo "$ap_keys" | filter_placeholders || true)
+emails=$(echo "$emails" | filter_placeholders || true)
 
 {
   echo "# Sensitive Patterns for BFG Repo-Cleaner"
@@ -84,21 +109,29 @@ emails=$(echo "$candidate_lines" | grep -E '^(PUBMED_EMAIL=|OPENALEX_EMAIL=)' | 
   echo "# Only include concrete leaked fingerprints; no generic patterns."
   echo "# Do not include full secret values; use safe prefixes/fingerprints."
   echo ""
+  emit_line() {
+    local val="$1"
+    if $bfg_map; then
+      printf '%s==>***REMOVED***\n' "$val"
+    else
+      printf '%s\n' "$val"
+    fi
+  }
   if [[ -n "$nv_keys" ]]; then
     echo "# Discovered NVIDIA key fingerprints (truncated)"
-    echo "$nv_keys"
+    while read -r v; do [[ -n "$v" ]] && emit_line "$v"; done <<< "$nv_keys"
   fi
   if [[ -n "$pb_keys" ]]; then
     echo "# Discovered PubMed key fingerprints (truncated)"
-    echo "$pb_keys"
+    while read -r v; do [[ -n "$v" ]] && emit_line "$v"; done <<< "$pb_keys"
   fi
   if [[ -n "$ap_keys" ]]; then
     echo "# Discovered Apify token fingerprints (truncated)"
-    echo "$ap_keys"
+    while read -r v; do [[ -n "$v" ]] && emit_line "$v"; done <<< "$ap_keys"
   fi
   if [[ -n "$emails" ]]; then
     echo "# Discovered emails from .env history"
-    echo "$emails"
+    while read -r v; do [[ -n "$v" ]] && emit_line "$v"; done <<< "$emails"
   fi
 } > "${out_file}.tmp"
 
