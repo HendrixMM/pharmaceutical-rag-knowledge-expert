@@ -71,6 +71,107 @@ This guide provides comprehensive troubleshooting procedures and maintenance pro
 
 ---
 
+## Diagnostic Decision Tree
+
+Use this flowchart to quickly identify and resolve issues:
+
+```mermaid
+graph TD
+    Start([System Issue?]) --> CheckAPI{API Keys<br/>Configured?}
+
+    CheckAPI -->|No| FixAPI[Set NVIDIA_API_KEY<br/>See: Authentication Issues]
+    CheckAPI -->|Yes| TestConn{Test API<br/>Connection}
+
+    TestConn -->|Fails| CheckNet{Network<br/>Reachable?}
+    TestConn -->|Success| CheckPerf{Performance<br/>Issue?}
+
+    CheckNet -->|No| FixNet[Check firewall/proxy<br/>See: API Connection Problems]
+    CheckNet -->|Yes| Check403{HTTP 403<br/>Error?}
+
+    Check403 -->|Yes| FixAuth[Verify API key validity<br/>Check quota/billing<br/>See: Authentication Issues]
+    Check403 -->|No| Check429{HTTP 429<br/>Rate Limit?}
+
+    Check429 -->|Yes| FixRate[Enable rate limiting<br/>Reduce concurrency<br/>See: Performance Issues]
+    Check429 -->|No| CheckOther[See: API Connection Problems]
+
+    CheckPerf -->|Yes| CheckLatency{High<br/>Latency?}
+    CheckPerf -->|No| CheckCost{Cost<br/>Issue?}
+
+    CheckLatency -->|Yes| OptimizePerf[Enable caching<br/>Optimize embedding model<br/>See: Performance Issues]
+    CheckLatency -->|No| CheckMemory{Memory<br/>Issue?}
+
+    CheckMemory -->|Yes| FixMemory[Reduce batch size<br/>Clear vector DB cache<br/>See: Performance Issues]
+    CheckMemory -->|No| CheckOtherPerf[See: Performance Issues]
+
+    CheckCost -->|Yes| CheckUsage{Usage<br/>Tracking<br/>Enabled?}
+    CheckCost -->|No| CheckSafety{Safety Alert<br/>Issue?}
+
+    CheckUsage -->|No| EnableCost[Enable PharmaceuticalCostAnalyzer<br/>See: Cost and Billing]
+    CheckUsage -->|Yes| OptimizeCost[Review logs/usage_summary.json<br/>Optimize model selection<br/>See: Cost and Billing]
+
+    CheckSafety -->|Yes| CheckAlert{Alerts<br/>Triggering?}
+    CheckSafety -->|No| CheckBatch{Batch Processing<br/>Issue?}
+
+    CheckAlert -->|No| FixAlert[Check safety_config.py<br/>Verify alert delivery<br/>See: Safety Alert System]
+    CheckAlert -->|Yes| CheckAlertDelivery{Receiving<br/>Alerts?}
+
+    CheckAlertDelivery -->|No| FixDelivery[Check notification config<br/>See: Safety Alert System]
+    CheckAlertDelivery -->|Yes| ReviewAlert[Review alert logic<br/>See: Safety Alert System]
+
+    CheckBatch -->|Yes| FixBatch[Check job status<br/>Review error logs<br/>See: Batch Processing]
+    CheckBatch -->|No| CheckConfig{Config<br/>Issue?}
+
+    CheckConfig -->|Yes| FixConfig[Verify .env file<br/>Check requirements.txt<br/>See: Configuration Issues]
+    CheckConfig -->|No| ContactSupport[See: Support and Resources<br/>Gather logs and contact support]
+
+    FixAPI --> Resolved([Issue Resolved])
+    FixNet --> Resolved
+    FixAuth --> Resolved
+    FixRate --> Resolved
+    OptimizePerf --> Resolved
+    FixMemory --> Resolved
+    EnableCost --> Resolved
+    OptimizeCost --> Resolved
+    FixAlert --> Resolved
+    FixDelivery --> Resolved
+    ReviewAlert --> Resolved
+    FixBatch --> Resolved
+    FixConfig --> Resolved
+
+    style Start fill:#e1f5ff
+    style Resolved fill:#c8e6c9
+    style FixAPI fill:#fff9c4
+    style FixNet fill:#fff9c4
+    style FixAuth fill:#fff9c4
+    style FixRate fill:#fff9c4
+    style OptimizePerf fill:#fff9c4
+    style FixMemory fill:#fff9c4
+    style EnableCost fill:#fff9c4
+    style OptimizeCost fill:#fff9c4
+    style FixAlert fill:#fff9c4
+    style FixDelivery fill:#fff9c4
+    style ReviewAlert fill:#fff9c4
+    style FixBatch fill:#fff9c4
+    style FixConfig fill:#fff9c4
+    style ContactSupport fill:#ffccbc
+```
+
+**Text Fallback:** If the diagram doesn't render, follow this decision path:
+1. **API Keys Configured?** → No: Set `NVIDIA_API_KEY` → [Authentication Issues](#authentication-and-authorization-issues)
+2. **API Keys Configured?** → Yes: Test connection
+3. **Connection Fails?** → Check network/firewall → [API Connection Problems](#api-connection-problems)
+4. **HTTP 403?** → Verify API key validity, check quota → [Authentication Issues](#authentication-and-authorization-issues)
+5. **HTTP 429?** → Enable rate limiting, reduce concurrency → [Performance Issues](#performance-issues)
+6. **High Latency?** → Enable caching, optimize model → [Performance Issues](#performance-issues)
+7. **Memory Issue?** → Reduce batch size, clear cache → [Performance Issues](#performance-issues)
+8. **Cost Issue?** → Enable `PharmaceuticalCostAnalyzer`, review logs → [Cost and Billing](#cost-and-billing-problems)
+9. **Safety Alert Issue?** → Check `safety_config.py`, verify delivery → [Safety Alert System](#safety-alert-system-issues)
+10. **Batch Processing Issue?** → Check job status, review logs → [Batch Processing](#batch-processing-problems)
+11. **Config Issue?** → Verify `.env`, check `requirements.txt` → [Configuration Issues](#configuration-issues)
+12. **Other?** → [Support and Resources](#support-and-resources)
+
+---
+
 ## Quick Diagnostic Tools
 
 ### System Health Check Script
