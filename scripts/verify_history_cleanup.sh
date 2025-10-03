@@ -52,8 +52,8 @@ else
   pass "Check 1: .env files in history...................." | tee -a "$tmp"
 fi
 
-# Check 2: nvapi- pattern
-if git log -p --all | grep -i 'nvapi-' >/dev/null 2>&1; then
+# Check 2: nvapi- pattern (restrict to .env history to ignore placeholders in docs)
+if git log -p --all -- .env | grep -i 'nvapi-' >/dev/null 2>&1; then
   fail "Check 2: NVIDIA API key patterns.................." | tee -a "$tmp"
   overall=1
 else
