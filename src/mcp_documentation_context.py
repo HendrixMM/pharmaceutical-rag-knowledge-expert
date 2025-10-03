@@ -20,34 +20,36 @@ Features:
 5. Integration with all NeMo services (Extraction, Embedding, Reranking)
 6. Environment-driven model configuration support
 """
-
 import asyncio
+import hashlib
 import json
 import logging
 import os
 import time
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union, Tuple
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from pathlib import Path
-import hashlib
-
-from urllib.parse import urljoin, urlparse
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import urljoin
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class MCPDocumentationRequest:
     """Request for MCP documentation context."""
+
     topic: str
     context_type: str  # 'embedding', 'reranking', 'extraction', 'general'
     pharmaceutical_context: bool = True
     max_age_hours: int = 24
     priority: str = "medium"  # 'low', 'medium', 'high', 'critical'
 
+
 @dataclass
 class MCPDocumentationResponse:
     """Response from MCP documentation context."""
+
     content: str
     source_url: str
     last_updated: datetime
@@ -56,29 +58,50 @@ class MCPDocumentationResponse:
     cache_key: str
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class PharmaceuticalContextProfile:
     """Pharmaceutical domain context for documentation enhancement."""
-    medical_terminologies: List[str] = field(default_factory=lambda: [
-        "adverse events", "clinical trials", "drug interactions", "pharmacokinetics",
-        "bioavailability", "therapeutic index", "contraindications", "dosage forms",
-        "active pharmaceutical ingredient", "excipients", "stability studies"
-    ])
-    regulatory_frameworks: List[str] = field(default_factory=lambda: [
-        "FDA", "EMA", "ICH", "GMP", "GLP", "GCP", "21 CFR Part 11", "EU MDR"
-    ])
-    document_types: List[str] = field(default_factory=lambda: [
-        "prescribing information", "clinical study reports", "drug labels",
-        "package inserts", "investigator brochures", "regulatory submissions"
-    ])
-    content_priorities: Dict[str, float] = field(default_factory=lambda: {
-        "safety_information": 1.0,
-        "efficacy_data": 0.9,
-        "dosing_guidelines": 0.95,
-        "contraindications": 1.0,
-        "drug_interactions": 0.9,
-        "adverse_events": 1.0
-    })
+
+    medical_terminologies: List[str] = field(
+        default_factory=lambda: [
+            "adverse events",
+            "clinical trials",
+            "drug interactions",
+            "pharmacokinetics",
+            "bioavailability",
+            "therapeutic index",
+            "contraindications",
+            "dosage forms",
+            "active pharmaceutical ingredient",
+            "excipients",
+            "stability studies",
+        ]
+    )
+    regulatory_frameworks: List[str] = field(
+        default_factory=lambda: ["FDA", "EMA", "ICH", "GMP", "GLP", "GCP", "21 CFR Part 11", "EU MDR"]
+    )
+    document_types: List[str] = field(
+        default_factory=lambda: [
+            "prescribing information",
+            "clinical study reports",
+            "drug labels",
+            "package inserts",
+            "investigator brochures",
+            "regulatory submissions",
+        ]
+    )
+    content_priorities: Dict[str, float] = field(
+        default_factory=lambda: {
+            "safety_information": 1.0,
+            "efficacy_data": 0.9,
+            "dosing_guidelines": 0.95,
+            "contraindications": 1.0,
+            "drug_interactions": 0.9,
+            "adverse_events": 1.0,
+        }
+    )
+
 
 class MCPDocumentationContextService:
     """
@@ -100,7 +123,7 @@ class MCPDocumentationContextService:
         self,
         mcp_server_url: Optional[str] = None,
         cache_dir: Optional[str] = None,
-        pharmaceutical_profile: Optional[PharmaceuticalContextProfile] = None
+        pharmaceutical_profile: Optional[PharmaceuticalContextProfile] = None,
     ):
         """
         Initialize MCP Documentation Context Service.
@@ -110,10 +133,7 @@ class MCPDocumentationContextService:
             cache_dir: Local cache directory for documentation
             pharmaceutical_profile: Pharmaceutical domain context profile
         """
-        self.mcp_server_url = mcp_server_url or os.getenv(
-            'MCP_SERVER_URL',
-            'https://learn.microsoft.com/mcp/api/v1'
-        )
+        self.mcp_server_url = mcp_server_url or os.getenv("MCP_SERVER_URL", "https://learn.microsoft.com/mcp/api/v1")
 
         self.cache_dir = Path(cache_dir or "mcp_cache")
         self.cache_dir.mkdir(exist_ok=True)
@@ -122,42 +142,41 @@ class MCPDocumentationContextService:
 
         # NVIDIA NeMo specific documentation endpoints
         self.nemo_doc_endpoints = {
-            'embedding': [
-                '/en-us/azure/ai-services/openai/concepts/models#embeddings-models',
-                '/en-us/azure/cognitive-services/language-service/concepts/data-limits',
-                '/nvidia/nemo-retriever/embedding-models'
+            "embedding": [
+                "/en-us/azure/ai-services/openai/concepts/models#embeddings-models",
+                "/en-us/azure/cognitive-services/language-service/concepts/data-limits",
+                "/nvidia/nemo-retriever/embedding-models",
             ],
-            'reranking': [
-                '/nvidia/nemo-retriever/reranking-models',
-                '/en-us/azure/search/semantic-search-overview',
-                '/nvidia/nemo-retriever/best-practices#reranking'
+            "reranking": [
+                "/nvidia/nemo-retriever/reranking-models",
+                "/en-us/azure/search/semantic-search-overview",
+                "/nvidia/nemo-retriever/best-practices#reranking",
             ],
-            'extraction': [
-                '/nvidia/nemo-retriever/document-extraction',
-                '/nvidia/nv-ingest/overview',
-                '/en-us/azure/ai-services/document-intelligence/overview'
+            "extraction": [
+                "/nvidia/nemo-retriever/document-extraction",
+                "/nvidia/nv-ingest/overview",
+                "/en-us/azure/ai-services/document-intelligence/overview",
             ],
-            'general': [
-                '/nvidia/nemo-retriever/overview',
-                '/nvidia/nemo-retriever/getting-started',
-                '/nvidia/nemo-retriever/architecture'
-            ]
+            "general": [
+                "/nvidia/nemo-retriever/overview",
+                "/nvidia/nemo-retriever/getting-started",
+                "/nvidia/nemo-retriever/architecture",
+            ],
         }
 
         # Performance tracking
         self.metrics = {
-            'requests_total': 0,
-            'requests_cached': 0,
-            'requests_failed': 0,
-            'avg_response_time': 0.0,
-            'pharmaceutical_contexts_applied': 0
+            "requests_total": 0,
+            "requests_cached": 0,
+            "requests_failed": 0,
+            "avg_response_time": 0.0,
+            "pharmaceutical_contexts_applied": 0,
         }
 
         logger.info(f"Initialized MCP Documentation Context Service")
         logger.info(f"MCP Server: {self.mcp_server_url}")
         logger.info(f"Cache Directory: {self.cache_dir}")
         logger.info(f"Pharmaceutical Optimization: Enabled")
-
 
     def _generate_cache_key(self, request: MCPDocumentationRequest) -> str:
         """Generate cache key for documentation request."""
@@ -172,23 +191,23 @@ class MCPDocumentationContextService:
             return None
 
         try:
-            with open(cache_file, 'r', encoding='utf-8') as f:
+            with open(cache_file, encoding="utf-8") as f:
                 cached_data = json.load(f)
 
-            last_updated = datetime.fromisoformat(cached_data['last_updated'])
+            last_updated = datetime.fromisoformat(cached_data["last_updated"])
             if datetime.now() - last_updated > timedelta(hours=max_age_hours):
                 return None
 
-            self.metrics['requests_cached'] += 1
+            self.metrics["requests_cached"] += 1
 
             return MCPDocumentationResponse(
-                content=cached_data['content'],
-                source_url=cached_data['source_url'],
+                content=cached_data["content"],
+                source_url=cached_data["source_url"],
                 last_updated=last_updated,
-                context_type=cached_data['context_type'],
-                pharmaceutical_optimized=cached_data['pharmaceutical_optimized'],
+                context_type=cached_data["context_type"],
+                pharmaceutical_optimized=cached_data["pharmaceutical_optimized"],
                 cache_key=cache_key,
-                metadata=cached_data.get('metadata', {})
+                metadata=cached_data.get("metadata", {}),
             )
 
         except Exception as e:
@@ -201,15 +220,15 @@ class MCPDocumentationContextService:
 
         try:
             cache_data = {
-                'content': response.content,
-                'source_url': response.source_url,
-                'last_updated': response.last_updated.isoformat(),
-                'context_type': response.context_type,
-                'pharmaceutical_optimized': response.pharmaceutical_optimized,
-                'metadata': response.metadata
+                "content": response.content,
+                "source_url": response.source_url,
+                "last_updated": response.last_updated.isoformat(),
+                "context_type": response.context_type,
+                "pharmaceutical_optimized": response.pharmaceutical_optimized,
+                "metadata": response.metadata,
             }
 
-            with open(cache_file, 'w', encoding='utf-8') as f:
+            with open(cache_file, "w", encoding="utf-8") as f:
                 json.dump(cache_data, f, indent=2, ensure_ascii=False)
 
         except Exception as e:
@@ -228,14 +247,14 @@ class MCPDocumentationContextService:
         """
         enhanced_content = content
         metadata = {
-            'pharmaceutical_enhancements': [],
-            'medical_terms_found': [],
-            'regulatory_references': [],
-            'safety_considerations': []
+            "pharmaceutical_enhancements": [],
+            "medical_terms_found": [],
+            "regulatory_references": [],
+            "safety_considerations": [],
         }
 
         # Add pharmaceutical-specific guidance based on context type
-        if context_type == 'embedding':
+        if context_type == "embedding":
             pharmaceutical_guidance = """
 
 PHARMACEUTICAL DOMAIN CONSIDERATIONS FOR EMBEDDINGS:
@@ -273,7 +292,7 @@ PHARMACEUTICAL DOMAIN CONSIDERATIONS FOR EMBEDDINGS:
    - Maintains medical context through the complete pipeline
 """
 
-        elif context_type == 'reranking':
+        elif context_type == "reranking":
             pharmaceutical_guidance = """
 
 PHARMACEUTICAL DOMAIN CONSIDERATIONS FOR RERANKING:
@@ -311,7 +330,7 @@ PHARMACEUTICAL DOMAIN CONSIDERATIONS FOR RERANKING:
    - Maintains pharmaceutical domain overlay throughout the pipeline
 """
 
-        elif context_type == 'extraction':
+        elif context_type == "extraction":
             pharmaceutical_guidance = """
 
 PHARMACEUTICAL DOMAIN CONSIDERATIONS FOR EXTRACTION:
@@ -372,36 +391,39 @@ PHARMACEUTICAL DOMAIN GENERAL CONSIDERATIONS:
 """
 
         enhanced_content += pharmaceutical_guidance
-        metadata['pharmaceutical_enhancements'].append(f"{context_type}_specific_guidance")
+        metadata["pharmaceutical_enhancements"].append(f"{context_type}_specific_guidance")
 
         # Identify medical terms and regulatory references
         content_lower = content.lower()
         for term in self.pharmaceutical_profile.medical_terminologies:
             if term.lower() in content_lower:
-                metadata['medical_terms_found'].append(term)
+                metadata["medical_terms_found"].append(term)
 
         for framework in self.pharmaceutical_profile.regulatory_frameworks:
             if framework.lower() in content_lower:
-                metadata['regulatory_references'].append(framework)
+                metadata["regulatory_references"].append(framework)
 
         # Add safety considerations
         safety_keywords = [
-            'adverse', 'contraindication', 'warning', 'precaution',
-            'interaction', 'toxicity', 'safety', 'risk'
+            "adverse",
+            "contraindication",
+            "warning",
+            "precaution",
+            "interaction",
+            "toxicity",
+            "safety",
+            "risk",
         ]
 
         for keyword in safety_keywords:
             if keyword in content_lower:
-                metadata['safety_considerations'].append(keyword)
+                metadata["safety_considerations"].append(keyword)
 
-        self.metrics['pharmaceutical_contexts_applied'] += 1
+        self.metrics["pharmaceutical_contexts_applied"] += 1
 
         return enhanced_content, metadata
 
-    async def get_documentation_context(
-        self,
-        request: MCPDocumentationRequest
-    ) -> MCPDocumentationResponse:
+    async def get_documentation_context(self, request: MCPDocumentationRequest) -> MCPDocumentationResponse:
         """
         Retrieve documentation context from MCP server with pharmaceutical optimization.
 
@@ -412,7 +434,7 @@ PHARMACEUTICAL DOMAIN GENERAL CONSIDERATIONS:
             Documentation response with pharmaceutical enhancement
         """
         start_time = time.time()
-        self.metrics['requests_total'] += 1
+        self.metrics["requests_total"] += 1
 
         cache_key = self._generate_cache_key(request)
 
@@ -432,8 +454,7 @@ PHARMACEUTICAL DOMAIN GENERAL CONSIDERATIONS:
 
             if request.pharmaceutical_context:
                 enhanced_content, metadata = self._enhance_pharmaceutical_context(
-                    documentation_content,
-                    request.context_type
+                    documentation_content, request.context_type
                 )
 
             # Create response
@@ -444,7 +465,7 @@ PHARMACEUTICAL DOMAIN GENERAL CONSIDERATIONS:
                 context_type=request.context_type,
                 pharmaceutical_optimized=request.pharmaceutical_context,
                 cache_key=cache_key,
-                metadata=metadata
+                metadata=metadata,
             )
 
             # Cache the response
@@ -452,16 +473,15 @@ PHARMACEUTICAL DOMAIN GENERAL CONSIDERATIONS:
 
             # Update metrics
             response_time = time.time() - start_time
-            self.metrics['avg_response_time'] = (
-                (self.metrics['avg_response_time'] * (self.metrics['requests_total'] - 1) + response_time)
-                / self.metrics['requests_total']
-            )
+            self.metrics["avg_response_time"] = (
+                self.metrics["avg_response_time"] * (self.metrics["requests_total"] - 1) + response_time
+            ) / self.metrics["requests_total"]
 
             logger.info(f"Retrieved fresh documentation for {request.topic} in {response_time:.2f}s")
             return response
 
         except Exception as e:
-            self.metrics['requests_failed'] += 1
+            self.metrics["requests_failed"] += 1
             logger.error(f"Failed to retrieve documentation context for {request.topic}: {e}")
 
             # Return fallback response
@@ -477,7 +497,7 @@ PHARMACEUTICAL DOMAIN GENERAL CONSIDERATIONS:
         Returns:
             Raw documentation content
         """
-        endpoints = self.nemo_doc_endpoints.get(request.context_type, self.nemo_doc_endpoints['general'])
+        endpoints = self.nemo_doc_endpoints.get(request.context_type, self.nemo_doc_endpoints["general"])
 
         for endpoint in endpoints:
             try:
@@ -529,21 +549,14 @@ In production, this content would be fetched from Microsoft Learn MCP Server.
 """
         return base_doc
 
-    def _get_fallback_response(
-        self,
-        request: MCPDocumentationRequest,
-        cache_key: str
-    ) -> MCPDocumentationResponse:
+    def _get_fallback_response(self, request: MCPDocumentationRequest, cache_key: str) -> MCPDocumentationResponse:
         """Generate fallback response when MCP server is unavailable."""
 
         fallback_content = self._get_mock_documentation(request.context_type)
 
         # Apply pharmaceutical context if requested
         if request.pharmaceutical_context:
-            fallback_content, metadata = self._enhance_pharmaceutical_context(
-                fallback_content,
-                request.context_type
-            )
+            fallback_content, metadata = self._enhance_pharmaceutical_context(fallback_content, request.context_type)
         else:
             metadata = {}
 
@@ -554,14 +567,11 @@ In production, this content would be fetched from Microsoft Learn MCP Server.
             context_type=request.context_type,
             pharmaceutical_optimized=request.pharmaceutical_context,
             cache_key=cache_key,
-            metadata={**metadata, 'fallback': True}
+            metadata={**metadata, "fallback": True},
         )
 
     def get_context_for_nemo_operation(
-        self,
-        operation_type: str,
-        specific_topic: Optional[str] = None,
-        pharmaceutical_focus: bool = True
+        self, operation_type: str, specific_topic: Optional[str] = None, pharmaceutical_focus: bool = True
     ) -> MCPDocumentationResponse:
         """
         Synchronous wrapper for getting documentation context for NeMo operations.
@@ -581,7 +591,7 @@ In production, this content would be fetched from Microsoft Learn MCP Server.
             context_type=operation_type,
             pharmaceutical_context=pharmaceutical_focus,
             max_age_hours=24,
-            priority="medium"
+            priority="medium",
         )
 
         # Run async operation in sync context
@@ -604,55 +614,52 @@ In production, this content would be fetched from Microsoft Learn MCP Server.
             Pharmaceutical guidance dictionary
         """
         guidance = {
-            'content_priorities': self.pharmaceutical_profile.content_priorities,
-            'medical_terminologies': self.pharmaceutical_profile.medical_terminologies,
-            'regulatory_frameworks': self.pharmaceutical_profile.regulatory_frameworks,
-            'document_types': self.pharmaceutical_profile.document_types
+            "content_priorities": self.pharmaceutical_profile.content_priorities,
+            "medical_terminologies": self.pharmaceutical_profile.medical_terminologies,
+            "regulatory_frameworks": self.pharmaceutical_profile.regulatory_frameworks,
+            "document_types": self.pharmaceutical_profile.document_types,
         }
 
         # Add content-type specific guidance
-        if content_type in ['clinical_trial', 'efficacy']:
-            guidance['statistical_considerations'] = [
-                'p-values and confidence intervals',
-                'primary vs secondary endpoints',
-                'intention-to-treat vs per-protocol analysis',
-                'subgroup analyses and multiplicity'
+        if content_type in ["clinical_trial", "efficacy"]:
+            guidance["statistical_considerations"] = [
+                "p-values and confidence intervals",
+                "primary vs secondary endpoints",
+                "intention-to-treat vs per-protocol analysis",
+                "subgroup analyses and multiplicity",
             ]
 
-        elif content_type in ['safety', 'adverse_events']:
-            guidance['safety_priorities'] = [
-                'serious adverse events (SAEs)',
-                'adverse drug reactions (ADRs)',
-                'contraindications and warnings',
-                'drug-drug interactions',
-                'special populations (pediatric, geriatric, pregnant)'
+        elif content_type in ["safety", "adverse_events"]:
+            guidance["safety_priorities"] = [
+                "serious adverse events (SAEs)",
+                "adverse drug reactions (ADRs)",
+                "contraindications and warnings",
+                "drug-drug interactions",
+                "special populations (pediatric, geriatric, pregnant)",
             ]
 
-        elif content_type in ['dosing', 'administration']:
-            guidance['dosing_considerations'] = [
-                'therapeutic dose range',
-                'maximum recommended dose',
-                'dose adjustments for special populations',
-                'bioavailability and bioequivalence',
-                'food effects and timing'
+        elif content_type in ["dosing", "administration"]:
+            guidance["dosing_considerations"] = [
+                "therapeutic dose range",
+                "maximum recommended dose",
+                "dose adjustments for special populations",
+                "bioavailability and bioequivalence",
+                "food effects and timing",
             ]
 
         return guidance
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get service performance metrics."""
-        total_requests = self.metrics['requests_total']
-        cache_hit_rate = (
-            self.metrics['requests_cached'] / total_requests
-            if total_requests > 0 else 0.0
-        )
+        total_requests = self.metrics["requests_total"]
+        cache_hit_rate = self.metrics["requests_cached"] / total_requests if total_requests > 0 else 0.0
 
         return {
             **self.metrics,
-            'cache_hit_rate': cache_hit_rate,
-            'cache_directory_size': sum(
-                f.stat().st_size for f in self.cache_dir.glob('*.json')
-            ) if self.cache_dir.exists() else 0
+            "cache_hit_rate": cache_hit_rate,
+            "cache_directory_size": sum(f.stat().st_size for f in self.cache_dir.glob("*.json"))
+            if self.cache_dir.exists()
+            else 0,
         }
 
     def clear_cache(self, older_than_hours: Optional[int] = None) -> int:
@@ -671,7 +678,7 @@ In production, this content would be fetched from Microsoft Learn MCP Server.
         if older_than_hours:
             cutoff_time = datetime.now() - timedelta(hours=older_than_hours)
 
-        for cache_file in self.cache_dir.glob('*.json'):
+        for cache_file in self.cache_dir.glob("*.json"):
             try:
                 if cutoff_time:
                     file_time = datetime.fromtimestamp(cache_file.stat().st_mtime)
@@ -687,7 +694,9 @@ In production, this content would be fetched from Microsoft Learn MCP Server.
         logger.info(f"Cleared {cleared_count} cache files")
         return cleared_count
 
-    async def get_nemo_pipeline_context(self, pipeline_step: str, pharmaceutical_focus: bool = True) -> MCPDocumentationResponse:
+    async def get_nemo_pipeline_context(
+        self, pipeline_step: str, pharmaceutical_focus: bool = True
+    ) -> MCPDocumentationResponse:
         """
         Get comprehensive context for specific NeMo pipeline steps.
 
@@ -702,7 +711,7 @@ In production, this content would be fetched from Microsoft Learn MCP Server.
             topic=f"nemo_retriever_{pipeline_step}",
             context_type=pipeline_step,
             pharmaceutical_context=pharmaceutical_focus,
-            priority="high"
+            priority="high",
         )
 
         return await self.get_documentation_context(request)
@@ -718,10 +727,7 @@ In production, this content would be fetched from Microsoft Learn MCP Server.
             MCPDocumentationResponse with model-specific guidance
         """
         request = MCPDocumentationRequest(
-            topic=f"model_guidance_{model_name}",
-            context_type="general",
-            pharmaceutical_context=True,
-            priority="high"
+            topic=f"model_guidance_{model_name}", context_type="general", pharmaceutical_context=True, priority="high"
         )
 
         # Enhanced context for new models
@@ -745,17 +751,16 @@ In production, this content would be fetched from Microsoft Learn MCP Server.
             "embedding_model": "nvidia/nv-embedqa-e5-v5",
             "reranking_model": "llama-3_2-nemoretriever-500m-rerank-v2",
             "pharmaceutical_optimization": "enabled",
-            "use_case": "pharmaceutical_q_and_a_with_regulatory_compliance"
+            "use_case": "pharmaceutical_q_and_a_with_regulatory_compliance",
         }
 
 
 # Global instance for easy access
 mcp_context_service = MCPDocumentationContextService()
 
+
 async def get_nemo_context(
-    operation_type: str,
-    topic: Optional[str] = None,
-    pharmaceutical_focus: bool = True
+    operation_type: str, topic: Optional[str] = None, pharmaceutical_focus: bool = True
 ) -> MCPDocumentationResponse:
     """
     Convenience function to get NeMo context with pharmaceutical optimization.
@@ -779,14 +784,14 @@ async def get_nemo_context(
         context = await get_nemo_context('embedding', 'nv-embedqa-e5-v5')
     """
     # Use model-specific guidance if topic appears to be a model name
-    if topic and ('llama-3_2-nemoretriever' in topic or 'nv-embedqa' in topic or 'mistral' in topic):
+    if topic and ("llama-3_2-nemoretriever" in topic or "nv-embedqa" in topic or "mistral" in topic):
         return await mcp_context_service.get_latest_model_guidance(topic)
 
     # Use pipeline context for operation types
     return await mcp_context_service.get_nemo_pipeline_context(
-        pipeline_step=operation_type,
-        pharmaceutical_focus=pharmaceutical_focus
+        pipeline_step=operation_type, pharmaceutical_focus=pharmaceutical_focus
     )
+
 
 def get_pharmaceutical_guidance(content_type: str) -> Dict[str, Any]:
     """
@@ -806,7 +811,7 @@ def get_pharmaceutical_guidance(content_type: str) -> Dict[str, Any]:
         "regulatory_frameworks": profile.regulatory_frameworks,
         "document_types": profile.document_types,
         "content_priorities": profile.content_priorities,
-        "content_type": content_type
+        "content_type": content_type,
     }
 
     # Add content-specific guidance
@@ -821,6 +826,7 @@ def get_pharmaceutical_guidance(content_type: str) -> Dict[str, Any]:
         guidance["regulatory_focus"] = profile.regulatory_frameworks[:3]
 
     return guidance
+
 
 def get_nemo_pipeline_recommendations() -> Dict[str, str]:
     """

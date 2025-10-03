@@ -8,22 +8,12 @@ Tests the three-step NeMo Retriever pipeline:
 
 These tests use mocks to avoid requiring live API access during testing.
 """
-
-import asyncio
-import json
 import os
-from unittest.mock import AsyncMock, Mock, patch
-from typing import List, Dict, Any
+from unittest.mock import AsyncMock, patch
 
 import pytest
-import aiohttp
 
-from src.nemo_retriever_client import (
-    NeMoRetrieverClient,
-    NeMoAPIResponse,
-    NVIDIABuildCreditsMonitor,
-    create_nemo_client
-)
+from src.nemo_retriever_client import NeMoRetrieverClient, NVIDIABuildCreditsMonitor, create_nemo_client
 
 
 class TestNVIDIABuildCreditsMonitor:
@@ -99,10 +89,7 @@ class TestNeMoRetrieverClient:
 
     def test_model_recommendation_pharmaceutical(self, mock_client):
         """Test model recommendations for pharmaceutical use case."""
-        recommendation = mock_client.recommend_model(
-            use_case="pharmaceutical_qa",
-            content_type="medical"
-        )
+        recommendation = mock_client.recommend_model(use_case="pharmaceutical_qa", content_type="medical")
 
         assert recommendation["embedding"] == "nv-embedqa-e5-v5"
         # Newer default for pharmaceutical reranking prioritizes latest llama-based model
@@ -111,10 +98,7 @@ class TestNeMoRetrieverClient:
 
     def test_model_recommendation_multilingual(self, mock_client):
         """Test model recommendations for multilingual content."""
-        recommendation = mock_client.recommend_model(
-            use_case="multilingual_search",
-            content_type="multi"
-        )
+        recommendation = mock_client.recommend_model(use_case="multilingual_search", content_type="multi")
 
         assert recommendation["embedding"] == "nv-embedqa-mistral7b-v2"
         assert "multilingual" in recommendation["reasoning"].lower()
@@ -131,12 +115,7 @@ class TestNeMoEmbeddingOperations:
     @pytest.mark.asyncio
     async def test_embed_texts_success(self, mock_client):
         """Test successful text embedding."""
-        mock_response_data = {
-            "data": [
-                {"embedding": [0.1, 0.2, 0.3]},
-                {"embedding": [0.4, 0.5, 0.6]}
-            ]
-        }
+        mock_response_data = {"data": [{"embedding": [0.1, 0.2, 0.3]}, {"embedding": [0.4, 0.5, 0.6]}]}
 
         with patch("aiohttp.ClientSession.post") as mock_post:
             mock_response = AsyncMock()
@@ -144,10 +123,7 @@ class TestNeMoEmbeddingOperations:
             mock_response.json.return_value = mock_response_data
             mock_post.return_value.__aenter__.return_value = mock_response
 
-            result = await mock_client.embed_texts(
-                texts=["test text 1", "test text 2"],
-                model="nv-embedqa-e5-v5"
-            )
+            result = await mock_client.embed_texts(texts=["test text 1", "test text 2"], model="nv-embedqa-e5-v5")
 
             assert result.success is True
             assert "embeddings" in result.data
@@ -164,10 +140,7 @@ class TestNeMoEmbeddingOperations:
             mock_response.text.return_value = "Bad Request"
             mock_post.return_value.__aenter__.return_value = mock_response
 
-            result = await mock_client.embed_texts(
-                texts=["test text"],
-                model="nv-embedqa-e5-v5"
-            )
+            result = await mock_client.embed_texts(texts=["test text"], model="nv-embedqa-e5-v5")
 
             assert result.success is False
             assert "400" in result.error
@@ -177,9 +150,7 @@ class TestNeMoEmbeddingOperations:
         """Test embedding with credits monitoring."""
         mock_client.credits_monitor = NVIDIABuildCreditsMonitor("test-key")
 
-        mock_response_data = {
-            "data": [{"embedding": [0.1, 0.2, 0.3]}]
-        }
+        mock_response_data = {"data": [{"embedding": [0.1, 0.2, 0.3]}]}
 
         with patch("aiohttp.ClientSession.post") as mock_post:
             mock_response = AsyncMock()
@@ -187,10 +158,7 @@ class TestNeMoEmbeddingOperations:
             mock_response.json.return_value = mock_response_data
             mock_post.return_value.__aenter__.return_value = mock_response
 
-            await mock_client.embed_texts(
-                texts=["test text"],
-                model="nv-embedqa-e5-v5"
-            )
+            await mock_client.embed_texts(texts=["test text"], model="nv-embedqa-e5-v5")
 
             assert mock_client.credits_monitor.credits_used == 1
 
@@ -209,7 +177,7 @@ class TestNeMoRerankingOperations:
         mock_response_data = {
             "rankings": [
                 {"text": "passage 1", "score": 0.9, "index": 0},
-                {"text": "passage 2", "score": 0.7, "index": 1}
+                {"text": "passage 2", "score": 0.7, "index": 1},
             ]
         }
 
@@ -222,7 +190,7 @@ class TestNeMoRerankingOperations:
             result = await mock_client.rerank_passages(
                 query="drug interactions",
                 passages=["passage 1", "passage 2"],
-                model="llama-3_2-nemoretriever-500m-rerank-v2"
+                model="llama-3_2-nemoretriever-500m-rerank-v2",
             )
 
             assert result.success is True
@@ -233,11 +201,7 @@ class TestNeMoRerankingOperations:
     @pytest.mark.asyncio
     async def test_rerank_passages_with_top_k(self, mock_client):
         """Test reranking with top_k parameter."""
-        mock_response_data = {
-            "rankings": [
-                {"text": "passage 1", "score": 0.9, "index": 0}
-            ]
-        }
+        mock_response_data = {"rankings": [{"text": "passage 1", "score": 0.9, "index": 0}]}
 
         with patch("aiohttp.ClientSession.post") as mock_post:
             mock_response = AsyncMock()
@@ -249,7 +213,7 @@ class TestNeMoRerankingOperations:
                 query="test query",
                 passages=["passage 1", "passage 2", "passage 3"],
                 model="llama-3_2-nemoretriever-500m-rerank-v2",
-                top_k=1
+                top_k=1,
             )
 
             assert result.success is True
@@ -259,11 +223,7 @@ class TestNeMoRerankingOperations:
     async def test_rerank_passages_invalid_model(self, mock_client):
         """Test reranking with invalid model name."""
         with pytest.raises(ValueError, match="Unknown reranking model"):
-            await mock_client.rerank_passages(
-                query="test",
-                passages=["passage"],
-                model="invalid-model"
-            )
+            await mock_client.rerank_passages(query="test", passages=["passage"], model="invalid-model")
 
 
 class TestNeMoHealthCheck:
@@ -294,6 +254,7 @@ class TestNeMoHealthCheck:
     @pytest.mark.asyncio
     async def test_health_check_some_unhealthy(self, mock_client):
         """Test health check when some services are unhealthy."""
+
         def mock_get_side_effect(*args, **kwargs):
             mock_response = AsyncMock()
             url = args[0] if args else ""
@@ -324,7 +285,7 @@ class TestCreateNemoClient:
                 mock_health.return_value = {
                     "embedding": {"status": "healthy"},
                     "reranking": {"status": "healthy"},
-                    "extraction": {"status": "healthy"}
+                    "extraction": {"status": "healthy"},
                 }
 
                 client = await create_nemo_client()
@@ -340,9 +301,7 @@ class TestCreateNemoClient:
 
         with patch.dict(os.environ, {"NVIDIA_API_KEY": "test-key"}):
             with patch("src.nemo_retriever_client.NeMoRetrieverClient.health_check") as mock_health:
-                mock_health.return_value = {
-                    "embedding": {"status": "healthy"}
-                }
+                mock_health.return_value = {"embedding": {"status": "healthy"}}
 
                 client = await create_nemo_client(credits_monitor=monitor)
 
@@ -358,7 +317,7 @@ class TestEnvironmentVariableIntegration:
         test_env = {
             "NVIDIA_API_KEY": "test-key",
             "EMBEDDING_MODEL": "nvidia/nv-embedqa-e5-v5",
-            "RERANK_MODEL": "llama-3_2-nemoretriever-500m-rerank-v2"
+            "RERANK_MODEL": "llama-3_2-nemoretriever-500m-rerank-v2",
         }
 
         with patch.dict(os.environ, test_env):

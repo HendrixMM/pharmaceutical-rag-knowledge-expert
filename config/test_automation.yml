@@ -67,8 +67,8 @@ pharmaceutical_requirements:
 # Cost monitoring and optimization
 cost_monitoring: true
 cost_thresholds:
-  daily_limit: 333      # Free tier daily allocation
-  monthly_limit: 10000  # Free tier monthly limit
+  daily_limit: 333 # Free tier daily allocation
+  monthly_limit: 10000 # Free tier monthly limit
   warning_threshold: 0.8
   critical_threshold: 0.9
 
@@ -122,7 +122,7 @@ continuous_validation:
 notification_channels:
   - console
   - file
-  - email  # When configured
+  - email # When configured
   - webhook # When configured
 
 notification_settings:
@@ -165,7 +165,7 @@ test_environment:
 
   # Mock configurations for testing
   mock_external_services: true
-  mock_api_responses: false  # Use real APIs when available
+  mock_api_responses: false # Use real APIs when available
 
   # Test data configuration
   test_data:
@@ -184,7 +184,7 @@ integration_testing:
 
   # External service integration
   external_services:
-    test_with_real_apis: false  # Enable only when API keys available
+    test_with_real_apis: false # Enable only when API keys available
     fallback_to_mocks: true
     service_health_checks: true
 
@@ -254,7 +254,7 @@ reporting:
   data_retention:
     test_results_days: 90
     performance_metrics_days: 30
-    pharmaceutical_metrics_days: 180  # Longer retention for pharmaceutical data
+    pharmaceutical_metrics_days: 180 # Longer retention for pharmaceutical data
 
 # Advanced configuration
 advanced:

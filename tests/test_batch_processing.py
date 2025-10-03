@@ -10,29 +10,33 @@ Comprehensive testing of the pharmaceutical batch processing system with:
 
 Tests validate batch processing for maximum free tier utilization.
 """
+import asyncio
+import time
+from datetime import timedelta
 
 import pytest
-import asyncio
-import os
-import json
-import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
-from unittest.mock import Mock, patch, MagicMock
-import tempfile
 
 # Import modules under test
 try:
-    from src.optimization.batch_processor import PharmaceuticalBatchProcessor, BatchRequest, BatchResponse, ProcessingPriority
-    from src.optimization.queue_manager import RequestQueue, QueueStrategy, OptimalTiming
-    from src.monitoring.credit_tracker import CreditUsage
+    from src.optimization.batch_processor import (
+        BatchRequest,
+        BatchResponse,
+        PharmaceuticalBatchProcessor,
+        ProcessingPriority,
+    )
+    from src.optimization.queue_manager import QueueStrategy, RequestQueue
 except ImportError:
     import sys
     from pathlib import Path
+
     sys.path.append(str(Path(__file__).parent.parent))
-    from src.optimization.batch_processor import PharmaceuticalBatchProcessor, BatchRequest, BatchResponse, ProcessingPriority
-    from src.optimization.queue_manager import RequestQueue, QueueStrategy, OptimalTiming
-    from src.monitoring.credit_tracker import CreditUsage
+    from src.optimization.batch_processor import (
+        BatchRequest,
+        BatchResponse,
+        PharmaceuticalBatchProcessor,
+        ProcessingPriority,
+    )
+    from src.optimization.queue_manager import QueueStrategy, RequestQueue
 
 
 class TestPharmaceuticalBatchProcessor:
@@ -46,32 +50,29 @@ class TestPharmaceuticalBatchProcessor:
             "min_batch_size": 5,
             "batch_timeout_seconds": 30,
             "pharmaceutical_priorities": {
-                "drug_safety_queries": 3,      # Highest priority
-                "drug_interactions": 3,        # Highest priority
-                "clinical_research": 2,        # Medium priority
-                "general_pharma": 1            # Normal priority
+                "drug_safety_queries": 3,  # Highest priority
+                "drug_interactions": 3,  # Highest priority
+                "clinical_research": 2,  # Medium priority
+                "general_pharma": 1,  # Normal priority
             },
             "cost_optimization": {
-                "target_daily_usage": 333,     # Free tier daily allocation
-                "burst_allowance": 0.5,        # 50% burst capacity
-                "efficiency_threshold": 0.8    # 80% efficiency target
-            }
+                "target_daily_usage": 333,  # Free tier daily allocation
+                "burst_allowance": 0.5,  # 50% burst capacity
+                "efficiency_threshold": 0.8,  # 80% efficiency target
+            },
         }
 
         yield
 
     def test_batch_processor_initialization(self):
         """Test pharmaceutical batch processor initialization."""
-        processor = PharmaceuticalBatchProcessor(
-            config=self.batch_config,
-            pharmaceutical_optimized=True
-        )
+        processor = PharmaceuticalBatchProcessor(config=self.batch_config, pharmaceutical_optimized=True)
 
         assert processor is not None
-        assert hasattr(processor, 'pharmaceutical_optimized')
+        assert hasattr(processor, "pharmaceutical_optimized")
         assert processor.pharmaceutical_optimized == True
-        assert hasattr(processor, 'batch_queue')
-        assert hasattr(processor, 'priority_weights')
+        assert hasattr(processor, "batch_queue")
+        assert hasattr(processor, "priority_weights")
 
         # Should load pharmaceutical priority weights
         priorities = processor.priority_weights
@@ -80,10 +81,7 @@ class TestPharmaceuticalBatchProcessor:
 
     def test_pharmaceutical_request_prioritization(self):
         """Test pharmaceutical request prioritization in batches."""
-        processor = PharmaceuticalBatchProcessor(
-            config=self.batch_config,
-            pharmaceutical_optimized=True
-        )
+        processor = PharmaceuticalBatchProcessor(config=self.batch_config, pharmaceutical_optimized=True)
 
         # Create diverse pharmaceutical requests
         requests = [
@@ -92,29 +90,29 @@ class TestPharmaceuticalBatchProcessor:
                 query_type="drug_safety_queries",
                 content="warfarin bleeding risk assessment",
                 priority=ProcessingPriority.HIGH,
-                metadata={"drug": "warfarin", "risk_category": "bleeding"}
+                metadata={"drug": "warfarin", "risk_category": "bleeding"},
             ),
             BatchRequest(
                 request_id="general_1",
                 query_type="general_pharma",
                 content="basic pharmacology question",
                 priority=ProcessingPriority.NORMAL,
-                metadata={"category": "education"}
+                metadata={"category": "education"},
             ),
             BatchRequest(
                 request_id="research_1",
                 query_type="clinical_research",
                 content="phase III diabetes trial data",
                 priority=ProcessingPriority.MEDIUM,
-                metadata={"phase": "iii", "indication": "diabetes"}
+                metadata={"phase": "iii", "indication": "diabetes"},
             ),
             BatchRequest(
                 request_id="interaction_1",
                 query_type="drug_interactions",
                 content="ACE inhibitor potassium interaction",
                 priority=ProcessingPriority.HIGH,
-                metadata={"drug_class": "ace_inhibitor", "interaction_type": "electrolyte"}
-            )
+                metadata={"drug_class": "ace_inhibitor", "interaction_type": "electrolyte"},
+            ),
         ]
 
         # Sort by pharmaceutical priorities
@@ -128,10 +126,7 @@ class TestPharmaceuticalBatchProcessor:
 
     def test_optimal_batch_sizing(self):
         """Test optimal batch size calculation for cost efficiency."""
-        processor = PharmaceuticalBatchProcessor(
-            config=self.batch_config,
-            pharmaceutical_optimized=True
-        )
+        processor = PharmaceuticalBatchProcessor(config=self.batch_config, pharmaceutical_optimized=True)
 
         # Test various scenarios for optimal batch sizing
 
@@ -144,7 +139,7 @@ class TestPharmaceuticalBatchProcessor:
         optimal_size = processor.calculate_optimal_batch_size(
             requests=safety_requests,
             current_load=0.3,  # 30% current system load
-            time_constraint=60  # 60 second constraint
+            time_constraint=60,  # 60 second constraint
         )
 
         # Should use smaller batches for urgent safety queries
@@ -160,7 +155,7 @@ class TestPharmaceuticalBatchProcessor:
         optimal_size = processor.calculate_optimal_batch_size(
             requests=research_requests,
             current_load=0.1,  # 10% current system load
-            time_constraint=300  # 5 minute constraint
+            time_constraint=300,  # 5 minute constraint
         )
 
         # Should use larger batches for research queries
@@ -169,19 +164,15 @@ class TestPharmaceuticalBatchProcessor:
 
     def test_cost_efficient_batching_strategy(self):
         """Test cost-efficient batching strategy for free tier optimization."""
-        processor = PharmaceuticalBatchProcessor(
-            config=self.batch_config,
-            pharmaceutical_optimized=True
-        )
+        processor = PharmaceuticalBatchProcessor(config=self.batch_config, pharmaceutical_optimized=True)
 
         # Simulate daily usage tracking
         current_daily_usage = 250  # 75% of 333 daily limit used
-        remaining_capacity = 83    # 25% remaining
+        remaining_capacity = 83  # 25% remaining
 
         # Create batch requests
         pending_requests = [
-            BatchRequest(f"req_{i}", "clinical_research", f"query {i}", ProcessingPriority.MEDIUM)
-            for i in range(20)
+            BatchRequest(f"req_{i}", "clinical_research", f"query {i}", ProcessingPriority.MEDIUM) for i in range(20)
         ]
 
         # Calculate cost-efficient strategy
@@ -189,7 +180,7 @@ class TestPharmaceuticalBatchProcessor:
             pending_requests=pending_requests,
             current_usage=current_daily_usage,
             daily_limit=333,
-            time_remaining_today=timedelta(hours=6)
+            time_remaining_today=timedelta(hours=6),
         )
 
         assert "recommended_batch_sizes" in strategy
@@ -208,10 +199,7 @@ class TestPharmaceuticalBatchProcessor:
     @pytest.mark.asyncio
     async def test_real_time_batch_processing(self):
         """Test real-time batch processing with pharmaceutical prioritization."""
-        processor = PharmaceuticalBatchProcessor(
-            config=self.batch_config,
-            pharmaceutical_optimized=True
-        )
+        processor = PharmaceuticalBatchProcessor(config=self.batch_config, pharmaceutical_optimized=True)
 
         # Mock the actual processing function
         async def mock_process_batch(batch_requests):
@@ -222,7 +210,7 @@ class TestPharmaceuticalBatchProcessor:
                 processed_count=len(batch_requests),
                 success_count=len(batch_requests),
                 processing_time_ms=100 * len(batch_requests),
-                cost_credits=len(batch_requests) * 2
+                cost_credits=len(batch_requests) * 2,
             )
 
         processor.process_batch_async = mock_process_batch
@@ -232,19 +220,16 @@ class TestPharmaceuticalBatchProcessor:
             # Urgent drug safety queries
             BatchRequest("urgent_1", "drug_safety_queries", "warfarin toxicity assessment", ProcessingPriority.HIGH),
             BatchRequest("urgent_2", "drug_interactions", "insulin drug interactions", ProcessingPriority.HIGH),
-
             # Regular research queries
             BatchRequest("research_1", "clinical_research", "diabetes treatment outcomes", ProcessingPriority.MEDIUM),
             BatchRequest("research_2", "clinical_research", "cardiovascular risk factors", ProcessingPriority.MEDIUM),
             BatchRequest("research_3", "clinical_research", "hypertension management", ProcessingPriority.MEDIUM),
-
             # General pharmaceutical queries
             BatchRequest("general_1", "general_pharma", "basic pharmacology", ProcessingPriority.NORMAL),
             BatchRequest("general_2", "general_pharma", "drug classification", ProcessingPriority.NORMAL),
         ]
 
         # Process requests through the batch system
-        results = []
         for request in test_requests:
             processor.add_to_queue(request)
 
@@ -260,7 +245,7 @@ class TestPharmaceuticalBatchProcessor:
         # High-priority pharmaceutical queries should be processed first
         processed_ids = []
         for result in batch_results:
-            if hasattr(result, 'request_ids'):
+            if hasattr(result, "request_ids"):
                 processed_ids.extend(result.request_ids)
 
         # Urgent requests should appear early in processing order
@@ -275,20 +260,17 @@ class TestPharmaceuticalBatchProcessor:
 
     def test_queue_management_optimization(self):
         """Test queue management and optimization strategies."""
-        processor = PharmaceuticalBatchProcessor(
-            config=self.batch_config,
-            pharmaceutical_optimized=True
-        )
+        processor = PharmaceuticalBatchProcessor(config=self.batch_config, pharmaceutical_optimized=True)
 
         # Test queue strategies
-        queue_manager = processor.queue_manager
+        processor.queue_manager
 
         # Test FIFO strategy
         fifo_queue = RequestQueue(strategy=QueueStrategy.FIFO)
         requests = [
             BatchRequest("req_1", "general_pharma", "query 1", ProcessingPriority.NORMAL),
             BatchRequest("req_2", "drug_safety_queries", "query 2", ProcessingPriority.HIGH),
-            BatchRequest("req_3", "clinical_research", "query 3", ProcessingPriority.MEDIUM)
+            BatchRequest("req_3", "clinical_research", "query 3", ProcessingPriority.MEDIUM),
         ]
 
         for req in requests:
@@ -310,10 +292,7 @@ class TestPharmaceuticalBatchProcessor:
 
     def test_batch_performance_optimization(self):
         """Test batch performance optimization metrics."""
-        processor = PharmaceuticalBatchProcessor(
-            config=self.batch_config,
-            pharmaceutical_optimized=True
-        )
+        processor = PharmaceuticalBatchProcessor(config=self.batch_config, pharmaceutical_optimized=True)
 
         # Simulate batch processing results
         batch_results = [
@@ -322,22 +301,22 @@ class TestPharmaceuticalBatchProcessor:
                 processed_count=10,
                 success_count=10,
                 processing_time_ms=2000,  # 2 seconds
-                cost_credits=20
+                cost_credits=20,
             ),
             BatchResponse(
                 batch_id="batch_2",
                 processed_count=15,
                 success_count=14,  # One failure
                 processing_time_ms=3500,  # 3.5 seconds
-                cost_credits=30
+                cost_credits=30,
             ),
             BatchResponse(
                 batch_id="batch_3",
                 processed_count=8,
                 success_count=8,
                 processing_time_ms=1200,  # 1.2 seconds
-                cost_credits=16
-            )
+                cost_credits=16,
+            ),
         ]
 
         # Calculate performance metrics
@@ -362,10 +341,7 @@ class TestPharmaceuticalBatchProcessor:
 
     def test_pharmaceutical_batch_analytics(self):
         """Test pharmaceutical-specific batch analytics."""
-        processor = PharmaceuticalBatchProcessor(
-            config=self.batch_config,
-            pharmaceutical_optimized=True
-        )
+        processor = PharmaceuticalBatchProcessor(config=self.batch_config, pharmaceutical_optimized=True)
 
         # Create batches with pharmaceutical metadata
         batch_history = []
@@ -380,8 +356,8 @@ class TestPharmaceuticalBatchProcessor:
             metadata={
                 "query_types": {"drug_safety_queries": 3, "drug_interactions": 2},
                 "pharmaceutical_categories": ["cardiovascular", "endocrine"],
-                "priority_distribution": {"high": 5, "medium": 0, "normal": 0}
-            }
+                "priority_distribution": {"high": 5, "medium": 0, "normal": 0},
+            },
         )
         batch_history.append(safety_batch)
 
@@ -395,8 +371,8 @@ class TestPharmaceuticalBatchProcessor:
             metadata={
                 "query_types": {"clinical_research": 15, "general_pharma": 5},
                 "pharmaceutical_categories": ["oncology", "neurology", "cardiology"],
-                "priority_distribution": {"high": 0, "medium": 15, "normal": 5}
-            }
+                "priority_distribution": {"high": 0, "medium": 15, "normal": 5},
+            },
         )
         batch_history.append(research_batch)
 
@@ -420,17 +396,14 @@ class TestPharmaceuticalBatchProcessor:
 
     def test_free_tier_optimization_strategies(self):
         """Test free tier optimization strategies for batch processing."""
-        processor = PharmaceuticalBatchProcessor(
-            config=self.batch_config,
-            pharmaceutical_optimized=True
-        )
+        processor = PharmaceuticalBatchProcessor(config=self.batch_config, pharmaceutical_optimized=True)
 
         # Test daily optimization planning
         daily_plan = processor.optimize_for_free_tier(
             pending_requests_count=500,  # More requests than daily limit
-            current_usage=100,           # Already used 100 credits
-            daily_limit=333,            # Free tier daily limit
-            hours_remaining=12          # 12 hours left in day
+            current_usage=100,  # Already used 100 credits
+            daily_limit=333,  # Free tier daily limit
+            hours_remaining=12,  # 12 hours left in day
         )
 
         assert "processing_strategy" in daily_plan
@@ -462,21 +435,11 @@ class TestIntegratedBatchOptimization:
         config = {
             "max_batch_size": 20,
             "batch_timeout_seconds": 30,
-            "pharmaceutical_priorities": {
-                "drug_safety_queries": 3,
-                "clinical_research": 2,
-                "general_pharma": 1
-            },
-            "cost_optimization": {
-                "target_daily_usage": 333,
-                "efficiency_threshold": 0.8
-            }
+            "pharmaceutical_priorities": {"drug_safety_queries": 3, "clinical_research": 2, "general_pharma": 1},
+            "cost_optimization": {"target_daily_usage": 333, "efficiency_threshold": 0.8},
         }
 
-        processor = PharmaceuticalBatchProcessor(
-            config=config,
-            pharmaceutical_optimized=True
-        )
+        processor = PharmaceuticalBatchProcessor(config=config, pharmaceutical_optimized=True)
 
         # Mock the actual API processing
         async def mock_api_call(requests):
@@ -484,7 +447,7 @@ class TestIntegratedBatchOptimization:
             return {
                 "results": [{"request_id": req.request_id, "success": True} for req in requests],
                 "processing_time": 100,
-                "cost": len(requests) * 2
+                "cost": len(requests) * 2,
             }
 
         processor.api_call = mock_api_call
@@ -492,42 +455,57 @@ class TestIntegratedBatchOptimization:
         # Create realistic pharmaceutical research workflow
         pharmaceutical_requests = [
             # Urgent drug safety queries
-            BatchRequest("safety_warfarin", "drug_safety_queries",
-                        "Warfarin interaction with NSAIDs safety assessment",
-                        ProcessingPriority.HIGH,
-                        metadata={"drug": "warfarin", "urgency": "high"}),
-
-            BatchRequest("safety_metformin", "drug_safety_queries",
-                        "Metformin contraindications in kidney disease",
-                        ProcessingPriority.HIGH,
-                        metadata={"drug": "metformin", "contraindication": "renal"}),
-
+            BatchRequest(
+                "safety_warfarin",
+                "drug_safety_queries",
+                "Warfarin interaction with NSAIDs safety assessment",
+                ProcessingPriority.HIGH,
+                metadata={"drug": "warfarin", "urgency": "high"},
+            ),
+            BatchRequest(
+                "safety_metformin",
+                "drug_safety_queries",
+                "Metformin contraindications in kidney disease",
+                ProcessingPriority.HIGH,
+                metadata={"drug": "metformin", "contraindication": "renal"},
+            ),
             # Clinical research queries
-            BatchRequest("research_diabetes_1", "clinical_research",
-                        "Phase III diabetes trial efficacy endpoints",
-                        ProcessingPriority.MEDIUM,
-                        metadata={"phase": "iii", "indication": "diabetes"}),
-
-            BatchRequest("research_diabetes_2", "clinical_research",
-                        "Diabetes medication adherence studies systematic review",
-                        ProcessingPriority.MEDIUM,
-                        metadata={"study_type": "systematic_review", "indication": "diabetes"}),
-
-            BatchRequest("research_cardio", "clinical_research",
-                        "Cardiovascular outcomes in hypertension treatment",
-                        ProcessingPriority.MEDIUM,
-                        metadata={"indication": "hypertension", "outcome": "cardiovascular"}),
-
+            BatchRequest(
+                "research_diabetes_1",
+                "clinical_research",
+                "Phase III diabetes trial efficacy endpoints",
+                ProcessingPriority.MEDIUM,
+                metadata={"phase": "iii", "indication": "diabetes"},
+            ),
+            BatchRequest(
+                "research_diabetes_2",
+                "clinical_research",
+                "Diabetes medication adherence studies systematic review",
+                ProcessingPriority.MEDIUM,
+                metadata={"study_type": "systematic_review", "indication": "diabetes"},
+            ),
+            BatchRequest(
+                "research_cardio",
+                "clinical_research",
+                "Cardiovascular outcomes in hypertension treatment",
+                ProcessingPriority.MEDIUM,
+                metadata={"indication": "hypertension", "outcome": "cardiovascular"},
+            ),
             # General pharmaceutical queries
-            BatchRequest("general_pk", "general_pharma",
-                        "Basic pharmacokinetics principles explanation",
-                        ProcessingPriority.NORMAL,
-                        metadata={"category": "education", "topic": "pharmacokinetics"}),
-
-            BatchRequest("general_classification", "general_pharma",
-                        "Drug classification system overview",
-                        ProcessingPriority.NORMAL,
-                        metadata={"category": "education", "topic": "classification"})
+            BatchRequest(
+                "general_pk",
+                "general_pharma",
+                "Basic pharmacokinetics principles explanation",
+                ProcessingPriority.NORMAL,
+                metadata={"category": "education", "topic": "pharmacokinetics"},
+            ),
+            BatchRequest(
+                "general_classification",
+                "general_pharma",
+                "Drug classification system overview",
+                ProcessingPriority.NORMAL,
+                metadata={"category": "education", "topic": "classification"},
+            ),
         ]
 
         # Add all requests to the processor
@@ -576,9 +554,7 @@ class TestIntegratedBatchOptimization:
 
     def test_batch_cost_optimization_validation(self):
         """Test batch processing cost optimization validation."""
-        processor = PharmaceuticalBatchProcessor(
-            pharmaceutical_optimized=True
-        )
+        processor = PharmaceuticalBatchProcessor(pharmaceutical_optimized=True)
 
         # Simulate month-long batch processing data
         monthly_batches = []
@@ -594,7 +570,7 @@ class TestIntegratedBatchOptimization:
                 processed_count=daily_usage // 2,  # Assume 2 credits per request
                 success_count=int((daily_usage // 2) * 0.95),  # 95% success rate
                 processing_time_ms=daily_usage * 50,  # 50ms per credit
-                cost_credits=daily_usage
+                cost_credits=daily_usage,
             )
             monthly_batches.append(daily_batch)
 

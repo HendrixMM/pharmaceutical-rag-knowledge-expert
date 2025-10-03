@@ -4,28 +4,24 @@ Test script for Microsoft Learn MCP integration
 This script verifies that the MCP client is working correctly
 and can fetch up-to-date NeMo Retriever documentation.
 """
-
 import logging
 import sys
 import time
-from typing import List, Dict, Any
 
-from mcp_client import create_mcp_client, NeMoMCPClient
+from mcp_client import NeMoMCPClient, create_mcp_client
+
 from prompt_generator import MCPPromptGenerator, generate_migration_prompt
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 def test_mcp_client_creation():
     """Test basic MCP client creation and initialization."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing MCP Client Creation")
-    print("="*60)
+    print("=" * 60)
 
     try:
         client = create_mcp_client()
@@ -38,15 +34,15 @@ def test_mcp_client_creation():
 
 def test_documentation_query(client: NeMoMCPClient):
     """Test querying Microsoft Learn for NeMo documentation."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing Documentation Query")
-    print("="*60)
+    print("=" * 60)
 
     test_queries = [
         "nvidia nemo retriever embedding",
         "nemo retriever langchain integration",
         "nvidia nim embedding models",
-        "faiss vector database nvidia"
+        "faiss vector database nvidia",
     ]
 
     all_results = []
@@ -59,7 +55,7 @@ def test_documentation_query(client: NeMoMCPClient):
             for i, doc in enumerate(docs, 1):
                 print(f"  {i}. {doc['title']}")
                 print(f"     URL: {doc['url']}")
-                if doc.get('relevance_score'):
+                if doc.get("relevance_score"):
                     print(f"     Score: {doc['relevance_score']:.2f}")
                 print()
 
@@ -78,9 +74,9 @@ def test_documentation_query(client: NeMoMCPClient):
 
 def test_nemo_context_generation(client: NeMoMCPClient):
     """Test NeMo Retriever context generation."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing NeMo Context Generation")
-    print("="*60)
+    print("=" * 60)
 
     try:
         context = client.get_nemo_retriever_context()
@@ -97,9 +93,9 @@ def test_nemo_context_generation(client: NeMoMCPClient):
 
 def test_prompt_generation():
     """Test enhanced prompt generation with MCP integration."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing Prompt Generation")
-    print("="*60)
+    print("=" * 60)
 
     try:
         generator = MCPPromptGenerator()
@@ -107,8 +103,7 @@ def test_prompt_generation():
         # Test migration prompt
         print("🔧 Generating migration prompt...")
         migration_prompt = generator.build_migration_prompt(
-            "nemo_retriever",
-            "Migrate 10M document corpus with custom preprocessing pipeline"
+            "nemo_retriever", "Migrate 10M document corpus with custom preprocessing pipeline"
         )
 
         print(f"📝 Generated migration prompt ({len(migration_prompt)} characters):")
@@ -137,16 +132,15 @@ def test_prompt_generation():
 
 def test_convenience_functions():
     """Test convenience functions for quick prompt generation."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing Convenience Functions")
-    print("="*60)
+    print("=" * 60)
 
     try:
         # Test quick migration prompt
         print("🚀 Testing quick migration prompt...")
         quick_prompt = generate_migration_prompt(
-            "langchain_faiss",
-            "Need to maintain existing API while improving performance"
+            "langchain_faiss", "Need to maintain existing API while improving performance"
         )
 
         print(f"📝 Quick prompt generated ({len(quick_prompt)} characters)")
@@ -162,16 +156,12 @@ def test_convenience_functions():
 
 def run_performance_test(client: NeMoMCPClient):
     """Run basic performance tests."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Running Performance Tests")
-    print("="*60)
+    print("=" * 60)
 
     try:
-        queries = [
-            "nvidia nemo retriever",
-            "embedding models nvidia",
-            "vector database integration"
-        ]
+        queries = ["nvidia nemo retriever", "embedding models nvidia", "vector database integration"]
 
         total_time = 0
         total_docs = 0
@@ -236,9 +226,9 @@ def main():
     results.append(run_performance_test(client))
 
     # Summary
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Test Summary")
-    print("="*60)
+    print("=" * 60)
 
     passed = sum(results)
     total = len(results)
@@ -249,7 +239,7 @@ def main():
         "Context Generation",
         "Prompt Generation",
         "Convenience Functions",
-        "Performance Test"
+        "Performance Test",
     ]
 
     for i, (name, result) in enumerate(zip(test_names, results)):

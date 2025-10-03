@@ -7,6 +7,7 @@ Review Cadence: Quarterly
 # Maintainers Guide
 
 <!-- TOC -->
+
 - [Ownership & Review Routing](#ownership--review-routing)
 - [Review SLAs (Targets)](#review-slas-targets)
 - [PR Acceptance Criteria](#pr-acceptance-criteria)
@@ -67,6 +68,6 @@ This guide outlines ownership, review expectations, and lightweight processes th
 
 ## Contacts
 
-- General: community@yourorg.com
-- Security: security@yourorg.com
-- Emergency: on-call channel (internal)
+- **General**: [GitHub Discussions](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/discussions)
+- **Security**: [GitHub Security Advisories](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/security/advisories/new)
+- **Critical Incidents**: Create a private Security Advisory immediately

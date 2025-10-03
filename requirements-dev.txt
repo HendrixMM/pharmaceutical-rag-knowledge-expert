@@ -57,3 +57,9 @@ faker>=19.6.0                   # Fake data generation for testing
 markdown>=3.5.0                 # Markdown parsing/formatting utilities
 pyyaml>=6.0.0                   # YAML parser for metadata validation
 requests>=2.31.0                # HTTP client for link checking
+
+# MkDocs Documentation Site Generator
+mkdocs>=1.5.0                   # Static site generator for documentation
+mkdocs-material>=9.5.0          # Material theme for MkDocs
+mkdocs-minify-plugin>=0.7.0     # Minify HTML/JS/CSS for production
+pymdown-extensions>=10.7.0      # Markdown extensions (Mermaid, syntax highlighting)

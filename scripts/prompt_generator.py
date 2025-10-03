@@ -4,9 +4,9 @@ Enhanced Prompt Generation with MCP Integration
 This module provides prompt generation utilities that integrate with
 Microsoft Learn MCP server for up-to-date documentation.
 """
-
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional
+
 from mcp_client import NeMoMCPClient, create_mcp_client
 
 logger = logging.getLogger(__name__)
@@ -24,9 +24,9 @@ class MCPPromptGenerator:
         """
         self.mcp_client = mcp_client or create_mcp_client()
 
-    def build_migration_prompt(self,
-                             migration_type: str = "nemo_retriever",
-                             specific_requirements: Optional[str] = None) -> str:
+    def build_migration_prompt(
+        self, migration_type: str = "nemo_retriever", specific_requirements: Optional[str] = None
+    ) -> str:
         """
         Build a comprehensive migration prompt with live documentation.
 
@@ -93,7 +93,7 @@ Performance optimization goals:
 - Optimize memory usage
 - Scale efficiently with data growth
 
-"""
+""",
         }
 
         base = prompts.get(migration_type, prompts["nemo_retriever"])
@@ -109,7 +109,7 @@ Performance optimization goals:
         queries = {
             "nemo_retriever": "nvidia nemo retriever embedding nim api migration",
             "langchain_faiss": "nemo retriever langchain faiss migration integration",
-            "embedding_optimization": "nvidia nim embedding performance optimization gpu"
+            "embedding_optimization": "nvidia nim embedding performance optimization gpu",
         }
 
         return queries.get(migration_type, "nvidia nemo retriever")
@@ -185,8 +185,7 @@ Ensure the implementation follows current NVIDIA guidelines and leverages the la
 
 
 # Convenience functions for common use cases
-def generate_migration_prompt(migration_type: str = "nemo_retriever",
-                            requirements: Optional[str] = None) -> str:
+def generate_migration_prompt(migration_type: str = "nemo_retriever", requirements: Optional[str] = None) -> str:
     """
     Quick function to generate migration prompt.
 
@@ -223,8 +222,7 @@ if __name__ == "__main__":
 
     # Generate a migration prompt
     migration_prompt = generator.build_migration_prompt(
-        "nemo_retriever",
-        "Need to migrate a 10M document corpus with custom preprocessing"
+        "nemo_retriever", "Need to migrate a 10M document corpus with custom preprocessing"
     )
 
     print("Generated Migration Prompt:")

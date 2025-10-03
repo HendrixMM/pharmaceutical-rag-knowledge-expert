@@ -180,8 +180,8 @@ security: implement placeholder detection in config validator
 
 ### If You Accidentally Commit Secrets
 
-1. **Immediately notify maintainers** via security@yourorg.com
-2. **Rotate the exposed keys** at their respective portals
+1. **Immediately create a private Security Advisory** at https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/security/advisories/new
+2. **Rotate the exposed keys** at their respective portals immediately
 3. **DO NOT** try to hide it - we need to address it properly
 
 ## 📝 Code Style Guidelines
@@ -403,14 +403,14 @@ Any other relevant information
 - **Second offense**: Temporary ban
 - **Repeated offenses**: Permanent ban
 
-Report violations to: conduct@yourorg.com
+Report violations: Create a private [GitHub Issue](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/issues/new) with `[CONDUCT]` label or contact maintainers directly
 
 ## 📞 Getting Help
 
-- **Questions**: Use GitHub Discussions
-- **Bugs**: Create GitHub Issue
-- **Security**: Email security@yourorg.com
-- **General**: community@yourorg.com
+- **Questions**: Use [GitHub Discussions](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/discussions)
+- **Bugs**: Create [GitHub Issue](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/issues/new)
+- **Security**: Create private [Security Advisory](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/security/advisories/new)
+- **General**: Use [GitHub Discussions](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/discussions)
 
 ## 📄 License
 

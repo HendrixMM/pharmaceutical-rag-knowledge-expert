@@ -1,10 +1,10 @@
 """Shared pharmaceutical query utilities."""
 from __future__ import annotations
 
-import re
 import logging
+import re
 import threading
-from typing import Dict, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -34,16 +34,16 @@ class PharmaceuticalQueryClassifier:
     across all clients, eliminating code duplication and maintenance drift.
     """
 
-    _instance: Optional['PharmaceuticalQueryClassifier'] = None
+    _instance: PharmaceuticalQueryClassifier | None = None
     _lock = threading.RLock()
 
     def __init__(self):
         self._import_warned = False
-        self._classification_cache: Dict[str, str] = {}
+        self._classification_cache: dict[str, str] = {}
         self._cache_lock = threading.RLock()
 
     @classmethod
-    def get_instance(cls) -> 'PharmaceuticalQueryClassifier':
+    def get_instance(cls) -> PharmaceuticalQueryClassifier:
         """Get singleton instance of pharmaceutical query classifier."""
         if cls._instance is None:
             with cls._lock:
@@ -80,14 +80,11 @@ class PharmaceuticalQueryClassifier:
 
         except Exception as e:
             if not self._import_warned:
-                logger.warning(
-                    "Pharmaceutical query classification failed: %s, defaulting to 'general'",
-                    str(e)
-                )
+                logger.warning("Pharmaceutical query classification failed: %s, defaulting to 'general'", str(e))
                 self._import_warned = True
             return "general"
 
-    def classify_with_context(self, text: str, medical_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def classify_with_context(self, text: str, medical_context: dict[str, Any] | None = None) -> dict[str, Any]:
         """
         Enhanced classification with pharmaceutical domain context.
 
@@ -101,16 +98,16 @@ class PharmaceuticalQueryClassifier:
         base_type = self.classify_query_safe(text)
 
         result = {
-            'query_type': base_type,
-            'confidence': self._calculate_confidence(text, base_type),
-            'safety_critical': base_type in {'drug_interaction', 'pharmacokinetics'},
-            'requires_disclaimer': True,  # Conservative default for pharmaceutical queries
-            'compliance_flags': self._get_compliance_flags(base_type)
+            "query_type": base_type,
+            "confidence": self._calculate_confidence(text, base_type),
+            "safety_critical": base_type in {"drug_interaction", "pharmacokinetics"},
+            "requires_disclaimer": True,  # Conservative default for pharmaceutical queries
+            "compliance_flags": self._get_compliance_flags(base_type),
         }
 
         # Add medical context if provided
         if medical_context:
-            result['medical_context'] = medical_context
+            result["medical_context"] = medical_context
 
         return result
 
@@ -123,12 +120,14 @@ class PharmaceuticalQueryClassifier:
 
         # Count relevant keywords for the classification
         keyword_counts = {
-            'drug_interaction': len(re.findall(r"\b(interaction|interacts?|contraindicat|co-?administer|ddi)\b", t)),
-            'pharmacokinetics': len(re.findall(r"\b(pk|pharmacokinetic|half-?life|clearance|cmax|tmax|auc)\b", t)),
-            'clinical_trial': len(re.findall(r"\b(trial|phase\s*[1i]{1,3}|randomi[sz]ed|placebo|cohort|arm|endpoint)\b", t)),
+            "drug_interaction": len(re.findall(r"\b(interaction|interacts?|contraindicat|co-?administer|ddi)\b", t)),
+            "pharmacokinetics": len(re.findall(r"\b(pk|pharmacokinetic|half-?life|clearance|cmax|tmax|auc)\b", t)),
+            "clinical_trial": len(
+                re.findall(r"\b(trial|phase\s*[1i]{1,3}|randomi[sz]ed|placebo|cohort|arm|endpoint)\b", t)
+            ),
         }
 
-        if classification == 'general':
+        if classification == "general":
             # Low confidence for general classification
             return 0.5
 
@@ -143,13 +142,13 @@ class PharmaceuticalQueryClassifier:
         confidence = min(1.0, (relevant_keywords / word_count) * 10)
         return max(0.6, confidence)  # Minimum confidence for specific classifications
 
-    def _get_compliance_flags(self, classification: str) -> Dict[str, bool]:
+    def _get_compliance_flags(self, classification: str) -> dict[str, bool]:
         """Get compliance flags for pharmaceutical classification."""
         return {
-            'requires_medical_disclaimer': True,
-            'requires_professional_consultation': classification in {'drug_interaction', 'pharmacokinetics'},
-            'requires_clinical_validation': classification == 'clinical_trial',
-            'high_risk_content': classification in {'drug_interaction', 'pharmacokinetics'},
+            "requires_medical_disclaimer": True,
+            "requires_professional_consultation": classification in {"drug_interaction", "pharmacokinetics"},
+            "requires_clinical_validation": classification == "clinical_trial",
+            "high_risk_content": classification in {"drug_interaction", "pharmacokinetics"},
         }
 
     def clear_cache(self) -> None:
@@ -157,15 +156,15 @@ class PharmaceuticalQueryClassifier:
         with self._cache_lock:
             self._classification_cache.clear()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get classifier statistics for monitoring."""
         with self._cache_lock:
             cache_size = len(self._classification_cache)
 
         return {
-            'cache_size': cache_size,
-            'import_warned': self._import_warned,
-            'supported_types': ['drug_interaction', 'pharmacokinetics', 'clinical_trial', 'general']
+            "cache_size": cache_size,
+            "import_warned": self._import_warned,
+            "supported_types": ["drug_interaction", "pharmacokinetics", "clinical_trial", "general"],
         }
 
 
@@ -178,4 +177,3 @@ def classify_pharma_query_safe(text: str) -> str:
     while using the centralized classifier.
     """
     return PharmaceuticalQueryClassifier.get_instance().classify_query_safe(text)
-

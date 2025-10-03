@@ -5,14 +5,14 @@ import os
 import threading
 import time
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, Mapping, MutableMapping, Optional
+from typing import Any, Mapping, MutableMapping
 
 _BOOL_TRUE = {"1", "true", "yes", "on", "enabled"}
 _BOOL_FALSE = {"0", "false", "no", "off", "disabled"}
 _ERROR_HANDLING_MODES = {"graceful", "strict", "silent"}
 
 
-def _get_env(env: Mapping[str, str], key: str) -> Optional[str]:
+def _get_env(env: Mapping[str, str], key: str) -> str | None:
     value = env.get(key)
     return value.strip() if isinstance(value, str) else value
 
@@ -97,28 +97,28 @@ class EnhancedRAGConfig:
     health_check_retry_attempts: int = 2
 
     # Model overrides
-    embedding_model_override: Optional[str] = None
-    reranking_model_override: Optional[str] = None
-    extraction_model_override: Optional[str] = None
+    embedding_model_override: str | None = None
+    reranking_model_override: str | None = None
+    extraction_model_override: str | None = None
 
     # Endpoint overrides
-    custom_embedding_endpoint: Optional[str] = None
-    custom_reranking_endpoint: Optional[str] = None
-    custom_extraction_endpoint: Optional[str] = None
+    custom_embedding_endpoint: str | None = None
+    custom_reranking_endpoint: str | None = None
+    custom_extraction_endpoint: str | None = None
 
     # NVIDIA Build platform integration
     enable_nvidia_build_fallback: bool = False
     nvidia_build_base_url: str = "https://integrate.api.nvidia.com/v1"
-    nvidia_build_embedding_model: Optional[str] = None
-    nvidia_build_llm_model: Optional[str] = None
-    nvidia_build_embedding_input_type: Optional[str] = None
+    nvidia_build_embedding_model: str | None = None
+    nvidia_build_llm_model: str | None = None
+    nvidia_build_embedding_input_type: str | None = None
     enable_nvidia_build_embedding_input_type: bool = True
 
     # Ollama local inference
     enable_ollama: bool = False
     ollama_base_url: str = "http://localhost:11434"
-    ollama_chat_model: Optional[str] = None
-    ollama_embed_model: Optional[str] = None
+    ollama_chat_model: str | None = None
+    ollama_embed_model: str | None = None
     ollama_timeout_seconds: int = 60
 
     # Fallback order configuration
@@ -139,12 +139,12 @@ class EnhancedRAGConfig:
     research_project_budgeting: bool = True
     research_project_budget_limit_usd: float = 0.0
     cost_per_query_tracking: bool = True
-    pharma_project_id: Optional[str] = None
+    pharma_project_id: str | None = None
 
     # Pharmaceutical model preferences (chat)
-    pharma_model_chat_drug_interaction: Optional[str] = None
-    pharma_model_chat_pharmacokinetics: Optional[str] = None
-    pharma_model_chat_clinical_trial: Optional[str] = None
+    pharma_model_chat_drug_interaction: str | None = None
+    pharma_model_chat_pharmacokinetics: str | None = None
+    pharma_model_chat_clinical_trial: str | None = None
 
     # Pharmaceutical performance + batch processing
     pharma_batch_max_size: int = 16
@@ -167,7 +167,7 @@ class EnhancedRAGConfig:
     pharmaceutical_research_mode: bool = True
 
     config_loaded_at: float = field(default_factory=time.time)
-    source_env: Dict[str, str] = field(default_factory=dict)
+    source_env: dict[str, str] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
@@ -177,7 +177,7 @@ class EnhancedRAGConfig:
     # Construction helpers
     # ------------------------------------------------------------------
     @classmethod
-    def from_env(cls, env: Optional[Mapping[str, str]] = None) -> "EnhancedRAGConfig":
+    def from_env(cls, env: Mapping[str, str] | None = None) -> EnhancedRAGConfig:
         """Build a configuration snapshot from environment variables."""
         env_map: Mapping[str, str] = env or os.environ
 
@@ -213,12 +213,14 @@ class EnhancedRAGConfig:
             prune_legacy_after_migration = _as_bool(env_map, "PRUNE_LEGACY_AFTER_MIGRATION", False)
 
             # Support both ENABLE_PUBMED_RATE_LIMITING and ENABLE_RATE_LIMITING for compatibility
-            enable_rate_limiting = _as_bool(env_map, "ENABLE_RATE_LIMITING",
-                                  _as_bool(env_map, "ENABLE_PUBMED_RATE_LIMITING", True))
+            enable_rate_limiting = _as_bool(
+                env_map, "ENABLE_RATE_LIMITING", _as_bool(env_map, "ENABLE_PUBMED_RATE_LIMITING", True)
+            )
             rate_limit_window_seconds = _as_int(env_map, "PUBMED_RATE_LIMIT_WINDOW_SECONDS", 1)
             # Support both PUBMED_RATE_LIMIT_MAX_REQUESTS and MAX_REQUESTS_PER_SECOND for compatibility
-            rate_limit_max_requests = _as_int(env_map, "MAX_REQUESTS_PER_SECOND",
-                                     _as_int(env_map, "PUBMED_RATE_LIMIT_MAX_REQUESTS", 3))
+            rate_limit_max_requests = _as_int(
+                env_map, "MAX_REQUESTS_PER_SECOND", _as_int(env_map, "PUBMED_RATE_LIMIT_MAX_REQUESTS", 3)
+            )
 
             cache_prefetch_on_startup = _as_bool(env_map, "RAG_PUBMED_CACHE_PREFETCH", False)
             cache_cleanup_on_startup = _as_bool(env_map, "RAG_PUBMED_CACHE_CLEANUP", False)
@@ -244,7 +246,9 @@ class EnhancedRAGConfig:
             nvidia_build_embedding_model = _get_env(env_map, "NVIDIA_BUILD_EMBEDDING_MODEL")
             nvidia_build_llm_model = _get_env(env_map, "NVIDIA_BUILD_LLM_MODEL")
             nvidia_build_embedding_input_type = _get_env(env_map, "NVIDIA_BUILD_EMBEDDING_INPUT_TYPE") or "query"
-            enable_nvidia_build_embedding_input_type = _as_bool(env_map, "ENABLE_NVIDIA_BUILD_EMBEDDING_INPUT_TYPE", True)
+            enable_nvidia_build_embedding_input_type = _as_bool(
+                env_map, "ENABLE_NVIDIA_BUILD_EMBEDDING_INPUT_TYPE", True
+            )
 
             # Ollama local inference
             enable_ollama = _as_bool(env_map, "OLLAMA_ENABLED", False)
@@ -266,9 +270,15 @@ class EnhancedRAGConfig:
             prefer_responses_api = _as_bool(env_map, "PREFER_RESPONSES_API", True)
 
             # Pharmaceutical research feature flags
-            enable_drug_interaction_analysis = _as_bool(env_map, "PHARMACEUTICAL_FEATURE_DRUG_INTERACTION_ANALYSIS", True)
-            enable_clinical_trial_processing = _as_bool(env_map, "PHARMACEUTICAL_FEATURE_CLINICAL_TRIAL_PROCESSING", True)
-            enable_pharmacokinetics_optimization = _as_bool(env_map, "PHARMACEUTICAL_FEATURE_PHARMACOKINETICS_OPTIMIZATION", True)
+            enable_drug_interaction_analysis = _as_bool(
+                env_map, "PHARMACEUTICAL_FEATURE_DRUG_INTERACTION_ANALYSIS", True
+            )
+            enable_clinical_trial_processing = _as_bool(
+                env_map, "PHARMACEUTICAL_FEATURE_CLINICAL_TRIAL_PROCESSING", True
+            )
+            enable_pharmacokinetics_optimization = _as_bool(
+                env_map, "PHARMACEUTICAL_FEATURE_PHARMACOKINETICS_OPTIMIZATION", True
+            )
 
             # Pharmaceutical cost optimization
             research_project_budgeting = _as_bool(env_map, "PHARMA_RESEARCH_PROJECT_BUDGETING", True)
@@ -395,9 +405,7 @@ class EnhancedRAGConfig:
         self.errors.clear()
 
         if not 0.0 <= self.relevance_threshold <= 1.0:
-            self.warnings.append(
-                "Relevance threshold must be between 0 and 1; clamping to valid range."
-            )
+            self.warnings.append("Relevance threshold must be between 0 and 1; clamping to valid range.")
             self.relevance_threshold = max(0.0, min(1.0, self.relevance_threshold))
 
         if self.max_external_results < 0:
@@ -442,9 +450,7 @@ class EnhancedRAGConfig:
 
         if not self.enable_pubmed_integration:
             if self.pubmed_hybrid_mode:
-                self.warnings.append(
-                    "Hybrid mode requested without PubMed integration; disabling hybrid mode."
-                )
+                self.warnings.append("Hybrid mode requested without PubMed integration; disabling hybrid mode.")
                 self.pubmed_hybrid_mode = False
             if self.pubmed_cache_integration:
                 self.warnings.append(
@@ -467,9 +473,7 @@ class EnhancedRAGConfig:
             )
 
         if not self.enhanced_features_enabled and (
-            self.enable_pubmed_integration
-            or self.pubmed_hybrid_mode
-            or self.beta_mode
+            self.enable_pubmed_integration or self.pubmed_hybrid_mode or self.beta_mode
         ):
             self.warnings.append(
                 "Specific PubMed features requested while master switch is off; features remain disabled."
@@ -478,13 +482,13 @@ class EnhancedRAGConfig:
     # ------------------------------------------------------------------
     # Runtime helpers
     # ------------------------------------------------------------------
-    def to_dict(self, include_env: bool = False) -> Dict[str, Any]:
+    def to_dict(self, include_env: bool = False) -> dict[str, Any]:
         data = asdict(self)
         if not include_env:
             data.pop("source_env", None)
         return data
 
-    def export_public_view(self) -> Dict[str, Any]:
+    def export_public_view(self) -> dict[str, Any]:
         data = self.to_dict(include_env=False)
         data.pop("warnings", None)
         data.pop("errors", None)
@@ -492,11 +496,7 @@ class EnhancedRAGConfig:
         return data
 
     def should_enable_pubmed(self) -> bool:
-        return bool(
-            self.enhanced_features_enabled
-            and self.enable_pubmed_integration
-            and not self.errors
-        )
+        return bool(self.enhanced_features_enabled and self.enable_pubmed_integration and not self.errors)
 
     def should_use_hybrid_mode(self) -> bool:
         return bool(self.should_enable_pubmed() and self.pubmed_hybrid_mode)
@@ -504,7 +504,7 @@ class EnhancedRAGConfig:
     def is_rollout_active(self) -> bool:
         return bool(self.gradual_rollout_enabled and self.rollout_percentage > 0)
 
-    def reload(self, env: Optional[Mapping[str, str]] = None) -> None:
+    def reload(self, env: Mapping[str, str] | None = None) -> None:
         new_config = self.from_env(env)
         with self._lock:
             for key, value in asdict(new_config).items():
@@ -518,7 +518,7 @@ class EnhancedRAGConfig:
             self._validate()
             self.config_loaded_at = time.time()
 
-    def apply_overrides(self, overrides: MutableMapping[str, Any], env: Optional[Mapping[str, str]] = None) -> None:
+    def apply_overrides(self, overrides: MutableMapping[str, Any], env: Mapping[str, str] | None = None) -> None:
         """
         Apply configuration overrides.
 
@@ -547,7 +547,7 @@ class EnhancedRAGConfig:
             self._validate()
             self.config_loaded_at = time.time()
 
-    def summarize_flags(self) -> Dict[str, Any]:
+    def summarize_flags(self) -> dict[str, Any]:
         return {
             "enabled": self.should_enable_pubmed(),
             "hybrid": self.should_use_hybrid_mode(),
@@ -569,22 +569,26 @@ class EnhancedRAGConfig:
             return errs
 
         # Guard check: ensure the validate_model_availability method exists
-        if hasattr(NeMoRetrieverClient, 'validate_model_availability'):
-            if self.embedding_model_override and not NeMoRetrieverClient.validate_model_availability("embedding", self.embedding_model_override):
+        if hasattr(NeMoRetrieverClient, "validate_model_availability"):
+            if self.embedding_model_override and not NeMoRetrieverClient.validate_model_availability(
+                "embedding", self.embedding_model_override
+            ):
                 errs.append(f"Invalid embedding model override: {self.embedding_model_override}")
-            if self.reranking_model_override and not NeMoRetrieverClient.validate_model_availability("reranking", self.reranking_model_override):
+            if self.reranking_model_override and not NeMoRetrieverClient.validate_model_availability(
+                "reranking", self.reranking_model_override
+            ):
                 errs.append(f"Invalid reranking model override: {self.reranking_model_override}")
         else:
             # Fallback: skip validation if method doesn't exist (backward compatibility)
             import logging
+
             logging.getLogger(__name__).warning(
-                "NeMoRetrieverClient.validate_model_availability method not found. "
-                "Skipping model validation checks."
+                "NeMoRetrieverClient.validate_model_availability method not found. " "Skipping model validation checks."
             )
 
         return errs
 
-    def get_effective_models(self) -> Dict[str, str]:
+    def get_effective_models(self) -> dict[str, str]:
         # Defaults aligned with client
         eff = {
             "embedding": self.embedding_model_override or "nvidia/nv-embedqa-e5-v5",
@@ -593,15 +597,22 @@ class EnhancedRAGConfig:
         }
         return eff
 
-    def get_effective_endpoints(self) -> Dict[str, str]:
+    def get_effective_endpoints(self) -> dict[str, str]:
         try:
             from src.nemo_retriever_client import NeMoRetrieverClient
+
             defaults = NeMoRetrieverClient.DEFAULT_ENDPOINTS
         except Exception:
             defaults = {
-                "embedding": os.getenv("NEMO_EMBEDDING_ENDPOINT", "https://ai.api.nvidia.com/v1/retrieval/nvidia/embeddings"),
-                "reranking": os.getenv("NEMO_RERANKING_ENDPOINT", "https://ai.api.nvidia.com/v1/retrieval/nvidia/reranking"),
-                "extraction": os.getenv("NEMO_EXTRACTION_ENDPOINT", "https://ai.api.nvidia.com/v1/retrieval/nvidia/extraction"),
+                "embedding": os.getenv(
+                    "NEMO_EMBEDDING_ENDPOINT", "https://ai.api.nvidia.com/v1/retrieval/nvidia/embeddings"
+                ),
+                "reranking": os.getenv(
+                    "NEMO_RERANKING_ENDPOINT", "https://ai.api.nvidia.com/v1/retrieval/nvidia/reranking"
+                ),
+                "extraction": os.getenv(
+                    "NEMO_EXTRACTION_ENDPOINT", "https://ai.api.nvidia.com/v1/retrieval/nvidia/extraction"
+                ),
             }
         return {
             "embedding": self.custom_embedding_endpoint or defaults.get("embedding", ""),
@@ -609,7 +620,7 @@ class EnhancedRAGConfig:
             "extraction": self.custom_extraction_endpoint or defaults.get("extraction", ""),
         }
 
-    def get_health_check_config(self) -> Dict[str, Any]:
+    def get_health_check_config(self) -> dict[str, Any]:
         return {
             "enabled": self.enable_nim_health_gate,
             "timeout_seconds": self.health_check_timeout_seconds,
@@ -617,7 +628,7 @@ class EnhancedRAGConfig:
             "retries": self.health_check_retry_attempts,
         }
 
-    def get_nim_overrides(self) -> Dict[str, Any]:
+    def get_nim_overrides(self) -> dict[str, Any]:
         return {
             "models": {
                 "embedding": self.embedding_model_override,
@@ -631,7 +642,7 @@ class EnhancedRAGConfig:
             },
         }
 
-    def get_nvidia_build_config(self) -> Dict[str, Any]:
+    def get_nvidia_build_config(self) -> dict[str, Any]:
         """Get NVIDIA Build platform configuration."""
         return {
             "enabled": self.enable_nvidia_build_fallback,
@@ -641,10 +652,10 @@ class EnhancedRAGConfig:
             "endpoints": {
                 "embeddings": f"{self.nvidia_build_base_url}/embeddings",
                 "chat_completions": f"{self.nvidia_build_base_url}/chat/completions",
-            }
+            },
         }
 
-    def get_embedding_input_type_config(self) -> tuple[bool, Optional[str]]:
+    def get_embedding_input_type_config(self) -> tuple[bool, str | None]:
         """Return embedding input_type toggle and value for asymmetric models.
 
         Returns a tuple (enabled, value). When enabled is False, callers should
@@ -658,7 +669,7 @@ class EnhancedRAGConfig:
         value = self.nvidia_build_embedding_input_type
         return enabled, value
 
-    def get_effective_input_type(self) -> Optional[str]:
+    def get_effective_input_type(self) -> str | None:
         """Helper method to return the effective embedding input_type based on config hierarchy.
 
         Returns the input_type value if config is enabled and value is set, otherwise None.
@@ -669,7 +680,7 @@ class EnhancedRAGConfig:
         return None
 
     # ------------------------- Embedding/Rerank Helpers -------------------------
-    def effective_embedding_dim(self) -> Optional[int]:
+    def effective_embedding_dim(self) -> int | None:
         """Return the effective embedding dimension for the configured model, if known."""
         model = self.get_effective_models().get("embedding")
         if not model:
@@ -677,6 +688,7 @@ class EnhancedRAGConfig:
         try:
             # Prefer using NeMoRetrieverClient's model info if available
             from src.nemo_retriever_client import NeMoRetrieverClient  # type: ignore
+
             key = model.split("/")[-1]
             info = NeMoRetrieverClient.EMBEDDING_MODELS.get(key)
             if info and isinstance(info.get("dimensions"), int):
@@ -692,7 +704,7 @@ class EnhancedRAGConfig:
         }
         return fallback_dims.get(model)
 
-    def _normalize_model_simple(self, name: Optional[str]) -> Optional[str]:
+    def _normalize_model_simple(self, name: str | None) -> str | None:
         """Normalize model naming quirks such as underscores and missing namespaces."""
         if not name:
             return name
@@ -709,7 +721,7 @@ class EnhancedRAGConfig:
             n = f"nvidia/{n}"
         return n
 
-    def get_effective_rerank_model(self) -> Optional[str]:
+    def get_effective_rerank_model(self) -> str | None:
         """Return normalized effective rerank model name."""
         model = self.get_effective_models().get("reranking")
         return self._normalize_model_simple(model)
@@ -725,13 +737,14 @@ class EnhancedRAGConfig:
         """Check if NVIDIA Build fallback should be used."""
         return self.enable_nvidia_build_fallback
 
-    def get_cloud_first_strategy(self) -> Dict[str, Any]:
+    def get_cloud_first_strategy(self) -> dict[str, Any]:
         """Get cloud-first configuration strategy with decision logging.
 
         Note: When `enable_nvidia_build_fallback` is true, NVIDIA Build is used as the
         PRIMARY (cloud-first) endpoint and self-hosted endpoints serve as fallback.
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         strategy = {
@@ -739,7 +752,7 @@ class EnhancedRAGConfig:
             "primary_endpoint": "cloud" if self.enable_nvidia_build_fallback else "self_hosted",
             "fallback_endpoint": "self_hosted" if self.enable_nvidia_build_fallback else "none",
             "decision_factors": [],
-            "pharmaceutical_optimized": True  # Always true for this domain
+            "pharmaceutical_optimized": True,  # Always true for this domain
         }
 
         # Log decision factors
@@ -762,7 +775,7 @@ class EnhancedRAGConfig:
         strategy["cost_optimization"] = {
             "free_tier_available": self.enable_nvidia_build_fallback,
             "estimated_monthly_limit": 10000 if self.enable_nvidia_build_fallback else 0,
-            "infrastructure_costs": not self.enable_nvidia_build_fallback
+            "infrastructure_costs": not self.enable_nvidia_build_fallback,
         }
 
         return strategy
@@ -772,7 +785,7 @@ class EnhancedRAGConfig:
         """Alias for `enable_nvidia_build_fallback` for clarity."""
         return self.enable_nvidia_build_fallback
 
-    def validate_openai_sdk_compatibility(self) -> Dict[str, Any]:
+    def validate_openai_sdk_compatibility(self) -> dict[str, Any]:
         """Validate OpenAI SDK configuration compatibility.
 
         Returns a dictionary with keys:
@@ -806,7 +819,7 @@ class EnhancedRAGConfig:
             },
         }
 
-    def get_feature_flags(self) -> Dict[str, bool]:
+    def get_feature_flags(self) -> dict[str, bool]:
         """Get environment-driven feature flags for modular control."""
         return {
             # Core features
@@ -814,7 +827,7 @@ class EnhancedRAGConfig:
             "cloud_first_rerank_enabled": self.enable_cloud_first_rerank,
             "pharmaceutical_optimized": True,  # Always enabled for this domain
             "pharmaceutical_research_mode": bool(getattr(self, "pharmaceutical_research_mode", True)),
-            "cost_monitoring_enabled": True,   # Always enabled for free tier
+            "cost_monitoring_enabled": True,  # Always enabled for free tier
             "ollama_enabled": self.enable_ollama,
             # Pharmaceutical research feature flags
             "drug_interaction_analysis": self.enable_drug_interaction_analysis,
@@ -822,25 +835,23 @@ class EnhancedRAGConfig:
             "pharmacokinetics_optimization": self.enable_pharmacokinetics_optimization,
             "research_project_budgeting": self.research_project_budgeting,
             "cost_per_query_tracking": self.cost_per_query_tracking,
-
             # Advanced features (environment-driven)
             "daily_alerts_enabled": _as_bool(self.source_env, "ENABLE_DAILY_CREDIT_ALERTS", True),
             "batch_optimization_enabled": _as_bool(self.source_env, "ENABLE_BATCH_OPTIMIZATION", True),
             "fallback_health_checks_enabled": _as_bool(self.source_env, "ENABLE_FALLBACK_HEALTH_CHECKS", True),
             "pharmaceutical_benchmarks_enabled": _as_bool(self.source_env, "ENABLE_PHARMA_BENCHMARKS", False),
-
             # Development features
             "debug_logging_enabled": _as_bool(self.source_env, "ENABLE_DEBUG_LOGGING", False),
             "performance_profiling_enabled": _as_bool(self.source_env, "ENABLE_PERFORMANCE_PROFILING", False),
-
             # Future-proofing features
             "ngc_deprecation_warnings_enabled": _as_bool(self.source_env, "ENABLE_NGC_DEPRECATION_WARNINGS", True),
-            "migration_assistance_enabled": _as_bool(self.source_env, "ENABLE_MIGRATION_ASSISTANCE", True)
+            "migration_assistance_enabled": _as_bool(self.source_env, "ENABLE_MIGRATION_ASSISTANCE", True),
         }
 
     def log_configuration_decisions(self) -> None:
         """Log configuration decisions for debugging and monitoring."""
         import logging
+
         logger = logging.getLogger(__name__)
 
         strategy = self.get_cloud_first_strategy()
@@ -866,7 +877,9 @@ class EnhancedRAGConfig:
         # Cost optimization logging
         cost_info = strategy["cost_optimization"]
         if cost_info["free_tier_available"]:
-            logger.info(f"Cost Optimization: Free tier available ({cost_info['estimated_monthly_limit']} requests/month)")
+            logger.info(
+                f"Cost Optimization: Free tier available ({cost_info['estimated_monthly_limit']} requests/month)"
+            )
         else:
             logger.info("Cost Optimization: Infrastructure costs apply (self-hosted)")
 
@@ -912,57 +925,65 @@ class EnhancedRAGConfig:
 
         logger.info("=== End Configuration Decisions ===")
 
-    def get_endpoint_priority_order(self) -> List[Dict[str, str]]:
+    def get_endpoint_priority_order(self) -> List[dict[str, str]]:
         """Get ordered list of endpoints by priority for fallback logic."""
         endpoints = []
 
         if self.enable_nvidia_build_fallback:
             # Cloud-first: NVIDIA Build primary, NeMo self-hosted fallback
-            endpoints.append({
-                "type": "cloud",
-                "name": "NVIDIA Build",
-                "base_url": self.nvidia_build_base_url,
-                "priority": "primary",
-                "cost_tier": "free_tier"
-            })
+            endpoints.append(
+                {
+                    "type": "cloud",
+                    "name": "NVIDIA Build",
+                    "base_url": self.nvidia_build_base_url,
+                    "priority": "primary",
+                    "cost_tier": "free_tier",
+                }
+            )
 
             # Add Ollama local (if enabled) as middle-tier fallback
             if self.enable_ollama:
-                endpoints.append({
-                    "type": "self_hosted",
-                    "name": "Ollama Local",
-                    "base_url": self.ollama_base_url,
-                    "priority": "fallback",
-                    "cost_tier": "infrastructure"
-                })
+                endpoints.append(
+                    {
+                        "type": "self_hosted",
+                        "name": "Ollama Local",
+                        "base_url": self.ollama_base_url,
+                        "priority": "fallback",
+                        "cost_tier": "infrastructure",
+                    }
+                )
 
             # Add NeMo self-hosted as fallback
             nemo_endpoints = self.get_effective_endpoints()
             if nemo_endpoints.get("embedding"):
-                endpoints.append({
-                    "type": "self_hosted",
-                    "name": "NeMo Retriever",
-                    "base_url": nemo_endpoints["embedding"],
-                    "priority": "fallback",
-                    "cost_tier": "infrastructure"
-                })
+                endpoints.append(
+                    {
+                        "type": "self_hosted",
+                        "name": "NeMo Retriever",
+                        "base_url": nemo_endpoints["embedding"],
+                        "priority": "fallback",
+                        "cost_tier": "infrastructure",
+                    }
+                )
 
         else:
             # Traditional: NeMo self-hosted primary
             nemo_endpoints = self.get_effective_endpoints()
             for service, url in nemo_endpoints.items():
-                endpoints.append({
-                    "type": "self_hosted",
-                    "name": f"NeMo {service.title()}",
-                    "base_url": url,
-                    "priority": "primary",
-                    "cost_tier": "infrastructure"
-                })
+                endpoints.append(
+                    {
+                        "type": "self_hosted",
+                        "name": f"NeMo {service.title()}",
+                        "base_url": url,
+                        "priority": "primary",
+                        "cost_tier": "infrastructure",
+                    }
+                )
 
         return endpoints
 
     # Ollama helpers
-    def get_ollama_config(self) -> Dict[str, Any]:
+    def get_ollama_config(self) -> dict[str, Any]:
         return {
             "enabled": self.enable_ollama,
             "base_url": self.ollama_base_url,
@@ -988,6 +1009,7 @@ class EnhancedRAGConfig:
         allowed = {"nvidia_build", "nemo", "ollama"}
         try:
             import logging
+
             log = logging.getLogger(__name__)
         except Exception:
             log = None  # pragma: no cover
@@ -1014,8 +1036,12 @@ class EnhancedRAGConfig:
                     validated.append(normalized_token)
             else:
                 if log and normalized_token:  # Don't log empty strings
-                    log.warning("Ignoring unknown fallback endpoint: '%s' (normalized: '%s'). Allowed: %s",
-                              original_token, normalized_token, sorted(allowed))
+                    log.warning(
+                        "Ignoring unknown fallback endpoint: '%s' (normalized: '%s'). Allowed: %s",
+                        original_token,
+                        normalized_token,
+                        sorted(allowed),
+                    )
 
         # Step 5: Return safe default if no valid tokens
         if not validated:
@@ -1030,11 +1056,14 @@ class EnhancedRAGConfig:
 
         Currently checks NVIDIA_API_KEY presence. Returns False for empty/whitespace values.
         """
-        key = (self.source_env.get("NVIDIA_API_KEY") if isinstance(getattr(self, "source_env", None), dict)
-               else os.getenv("NVIDIA_API_KEY"))
+        key = (
+            self.source_env.get("NVIDIA_API_KEY")
+            if isinstance(getattr(self, "source_env", None), dict)
+            else os.getenv("NVIDIA_API_KEY")
+        )
         return bool(key and str(key).strip())
 
-    def get_rerank_strategy(self) -> Dict[str, Any]:
+    def get_rerank_strategy(self) -> dict[str, Any]:
         """Get rerank service prioritization strategy.
 
         Returns:
@@ -1046,9 +1075,11 @@ class EnhancedRAGConfig:
         """
         strategy = {
             "cloud_first_enabled": self.enable_cloud_first_rerank and self.enable_nvidia_build_fallback,
-            "primary_service": "nvidia_build" if (self.enable_cloud_first_rerank and self.enable_nvidia_build_fallback) else "nemo",
+            "primary_service": "nvidia_build"
+            if (self.enable_cloud_first_rerank and self.enable_nvidia_build_fallback)
+            else "nemo",
             "fallback_services": [],
-            "decision_factors": []
+            "decision_factors": [],
         }
 
         if strategy["cloud_first_enabled"]:
@@ -1057,11 +1088,13 @@ class EnhancedRAGConfig:
             if self.enable_ollama:
                 strategy["decision_factors"].append("Ollama fallback enabled")
         else:
-            strategy["fallback_services"] = [
-                "nvidia_build", "ollama"
-            ] if (self.enable_nvidia_build_fallback and self.enable_ollama) else (
-                ["nvidia_build"] if self.enable_nvidia_build_fallback else (
-                    ["ollama"] if self.enable_ollama else []
+            strategy["fallback_services"] = (
+                ["nvidia_build", "ollama"]
+                if (self.enable_nvidia_build_fallback and self.enable_ollama)
+                else (
+                    ["nvidia_build"]
+                    if self.enable_nvidia_build_fallback
+                    else (["ollama"] if self.enable_ollama else [])
                 )
             )
             if not self.enable_cloud_first_rerank:
@@ -1072,7 +1105,7 @@ class EnhancedRAGConfig:
         return strategy
 
     # ------------------------- Pharma Helpers -------------------------
-    def get_pharma_settings(self) -> Dict[str, Any]:
+    def get_pharma_settings(self) -> dict[str, Any]:
         return {
             "flags": {
                 "drug_interaction_analysis": self.enable_drug_interaction_analysis,
@@ -1082,9 +1115,15 @@ class EnhancedRAGConfig:
                 "compliance_mode": self.pharma_compliance_mode,
             },
             "models": {
-                "drug_interaction": self.pharma_model_chat_drug_interaction or self.nvidia_build_llm_model or "meta/llama-3.1-8b-instruct",
-                "pharmacokinetics": self.pharma_model_chat_pharmacokinetics or self.nvidia_build_llm_model or "meta/llama-3.1-8b-instruct",
-                "clinical_trial": self.pharma_model_chat_clinical_trial or self.nvidia_build_llm_model or "meta/llama-3.1-8b-instruct",
+                "drug_interaction": self.pharma_model_chat_drug_interaction
+                or self.nvidia_build_llm_model
+                or "meta/llama-3.1-8b-instruct",
+                "pharmacokinetics": self.pharma_model_chat_pharmacokinetics
+                or self.nvidia_build_llm_model
+                or "meta/llama-3.1-8b-instruct",
+                "clinical_trial": self.pharma_model_chat_clinical_trial
+                or self.nvidia_build_llm_model
+                or "meta/llama-3.1-8b-instruct",
             },
             "batch": {
                 "max_size": self.pharma_batch_max_size,
@@ -1097,7 +1136,7 @@ class EnhancedRAGConfig:
         prefs = self.get_pharma_settings()["models"]
         return prefs.get(query_type, self.nvidia_build_llm_model or "meta/llama-3.1-8b-instruct")
 
-    def get_cost_monitoring_config(self) -> Dict[str, Any]:
+    def get_cost_monitoring_config(self) -> dict[str, Any]:
         return {
             "project_budgeting": self.research_project_budgeting,
             "budget_limit_usd": self.research_project_budget_limit_usd,
@@ -1105,7 +1144,7 @@ class EnhancedRAGConfig:
             "project_id": self.pharma_project_id,
         }
 
-    def get_batch_config(self) -> Dict[str, Any]:
+    def get_batch_config(self) -> dict[str, Any]:
         return {
             "batch_max_size": self.pharma_batch_max_size,
             "batch_max_latency_ms": self.pharma_batch_max_latency_ms,
@@ -1117,7 +1156,9 @@ class EnhancedRAGConfig:
             issues.append("Compliance mode enabled but disclaimer not required. Set PHARMA_REQUIRE_DISCLAIMER=true")
         if self.research_project_budgeting and self.research_project_budget_limit_usd <= 0:
             issues.append("Project budgeting enabled but PHARMA_BUDGET_LIMIT_USD not set (>0)")
-        if self.enable_drug_interaction_analysis and not (self.nvidia_build_llm_model or self.pharma_model_chat_drug_interaction):
+        if self.enable_drug_interaction_analysis and not (
+            self.nvidia_build_llm_model or self.pharma_model_chat_drug_interaction
+        ):
             issues.append("Drug interaction analysis enabled but no LLM model preference configured")
         return issues
 

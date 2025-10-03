@@ -13,13 +13,12 @@ import gzip
 import hashlib
 import json
 import logging
-import os
 import re
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Mapping, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +36,10 @@ class CacheKeyNormalizer:
     @staticmethod
     def normalize(
         query: str,
-        params: Optional[Mapping[str, Any]] = None,
+        params: Mapping[str, Any] | None = None,
         *,
         version: str | int = DEFAULT_VERSION,
-        salt: Optional[str] = None,
+        salt: str | None = None,
     ) -> str:
         """Return a stable cache key for the given query/parameter pair.
 
@@ -72,10 +71,10 @@ class CacheKeyNormalizer:
         return normalized.lower()
 
     @staticmethod
-    def _prepare_params(params: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
+    def _prepare_params(params: Mapping[str, Any] | None) -> Mapping[str, Any]:
         if not params:
             return {}
-        normalized: Dict[str, Any] = {}
+        normalized: dict[str, Any] = {}
         for key in sorted(params.keys()):
             value = params[key]
             normalized[key] = CacheKeyNormalizer._normalize_value(value)
@@ -140,9 +139,9 @@ class CacheMetadataExtractor:
         original_query: str,
         enhanced_query: str,
         parameters: Mapping[str, Any],
-        results: Optional[Sequence[Any]] = None,
+        results: Sequence[Any] | None = None,
         status: str = "success",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         result_count = len(results or [])
         metadata = {
             "original_query": original_query,
@@ -167,7 +166,7 @@ class CacheCompressionUtils:
     """Helpers for transparently compressing cached payloads."""
 
     @staticmethod
-    def compress_json(payload: Any, enabled: bool) -> Tuple[str, str]:
+    def compress_json(payload: Any, enabled: bool) -> tuple[str, str]:
         """Return a base64 encoded representation of the payload.
 
         Returns a tuple of ``(encoded_payload, encoding)`` where ``encoding`` is
@@ -251,7 +250,7 @@ class CacheTTLCalculator:
         self.pharma_bonus = timedelta(hours=bonus)
         self.strict_ncbi_ttl = bool(strict_ncbi_ttl)
 
-    def calculate(self, metadata: Mapping[str, Any]) -> Tuple[timedelta, timedelta]:
+    def calculate(self, metadata: Mapping[str, Any]) -> tuple[timedelta, timedelta]:
         status = metadata.get("status", "success")
         result_count = metadata.get("result_count", 0)
         pharma_focus = metadata.get("pharmaceutical_focus", False)
@@ -278,19 +277,19 @@ class CacheTTLCalculator:
 @dataclass
 class WarmingDecision:
     cache_key: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
     decision: str  # "due", "defer", "skip"
     reason: str
     priority: int = 0
-    suggested_defer_time: Optional[float] = None
+    suggested_defer_time: float | None = None
 
 
 class CacheWarmingScheduler:
     """Track stale keys that should be refreshed in the background."""
 
     def __init__(self, rate_limiter=None) -> None:
-        self._pending: Dict[str, Dict[str, Any]] = {}
-        self._decisions: Dict[str, WarmingDecision] = {}
+        self._pending: dict[str, dict[str, Any]] = {}
+        self._decisions: dict[str, WarmingDecision] = {}
         self._lock = threading.Lock()
         self._rate_limiter = rate_limiter
         self._optimal_timing_threshold = 0.7  # Priority multiplier for optimal timing
@@ -299,7 +298,7 @@ class CacheWarmingScheduler:
         with self._lock:
             self._pending[cache_key] = dict(metadata)
 
-    def get_warming_decisions(self, now: Optional[datetime] = None) -> List[WarmingDecision]:
+    def get_warming_decisions(self, now: datetime | None = None) -> list[WarmingDecision]:
         """Return list of warming decisions with due/defer logic."""
         if now is None:
             now = datetime.now(UTC)
@@ -366,7 +365,7 @@ class CacheWarmingScheduler:
                 decision="defer",
                 reason=f"Rate limited, wait {wait_time:.1f}s",
                 priority=priority,
-                suggested_defer_time=wait_time
+                suggested_defer_time=wait_time,
             )
         elif is_optimal_timing or priority >= 75:
             return WarmingDecision(
@@ -374,7 +373,7 @@ class CacheWarmingScheduler:
                 metadata=dict(metadata),
                 decision="due",
                 reason="High priority or optimal timing",
-                priority=priority
+                priority=priority,
             )
         else:
             return WarmingDecision(
@@ -383,10 +382,10 @@ class CacheWarmingScheduler:
                 decision="defer",
                 reason="Low priority, suboptimal timing",
                 priority=priority,
-                suggested_defer_time=300.0  # Defer 5 minutes
+                suggested_defer_time=300.0,  # Defer 5 minutes
             )
 
-    def pop_due_entries(self, now: Optional[datetime] = None) -> Dict[str, Dict[str, Any]]:
+    def pop_due_entries(self, now: datetime | None = None) -> dict[str, dict[str, Any]]:
         """Return entries marked as 'due' for warming."""
         decisions = self.get_warming_decisions(now)
         due_entries = {}
@@ -399,7 +398,7 @@ class CacheWarmingScheduler:
 
         return due_entries
 
-    def pop_all(self) -> Dict[str, Dict[str, Any]]:
+    def pop_all(self) -> dict[str, dict[str, Any]]:
         """Legacy method - returns all pending entries."""
         with self._lock:
             pending = dict(self._pending)
@@ -411,7 +410,7 @@ class CacheWarmingScheduler:
         with self._lock:
             return len(self._pending)
 
-    def get_decision_summary(self) -> Dict[str, int]:
+    def get_decision_summary(self) -> dict[str, int]:
         """Return summary of current decisions."""
         with self._lock:
             summary = {"due": 0, "defer": 0, "skip": 0}
@@ -419,8 +418,9 @@ class CacheWarmingScheduler:
                 summary[decision.decision] += 1
             return summary
 
-    def compute_optimal_warming_timing(self, cache_key: str, metadata: Mapping[str, Any], *,
-                                    now: Optional[datetime] = None) -> Dict[str, Any]:
+    def compute_optimal_warming_timing(
+        self, cache_key: str, metadata: Mapping[str, Any], *, now: datetime | None = None
+    ) -> dict[str, Any]:
         """Compute optimal warming timing for a cache entry.
 
         Returns:
@@ -506,14 +506,9 @@ class CacheWarmingScheduler:
             due_now = priority >= 75
             reason = "High priority" if due_now else "Below priority threshold"
 
-        return {
-            "due_now": due_now,
-            "defer_until": defer_until,
-            "reason": reason,
-            "priority": priority
-        }
+        return {"due_now": due_now, "defer_until": defer_until, "reason": reason, "priority": priority}
 
-    def get_warming_schedule(self, now: Optional[datetime] = None) -> Dict[str, Dict[str, Any]]:
+    def get_warming_schedule(self, now: datetime | None = None) -> dict[str, dict[str, Any]]:
         """Get complete warming schedule with timing decisions for all entries.
 
         Returns:
@@ -527,10 +522,7 @@ class CacheWarmingScheduler:
         with self._lock:
             for cache_key, metadata in self._pending.items():
                 timing = self.compute_optimal_warming_timing(cache_key, metadata, now=now)
-                schedule[cache_key] = {
-                    "metadata": metadata,
-                    **timing
-                }
+                schedule[cache_key] = {"metadata": metadata, **timing}
 
         return schedule
 
@@ -541,19 +533,19 @@ class CacheCleanupScheduler:
     def __init__(self, interval_hours: float, *, run_on_start: bool = False) -> None:
         self.interval = timedelta(hours=interval_hours)
         if run_on_start:
-            self.last_run: Optional[datetime] = None
+            self.last_run: datetime | None = None
         else:
             self.last_run = datetime.now(UTC)
         self._lock = threading.Lock()
 
-    def should_run(self, now: Optional[datetime] = None) -> bool:
+    def should_run(self, now: datetime | None = None) -> bool:
         now = now or datetime.now(UTC)
         with self._lock:
             if self.last_run is None:
                 return True
             return now - self.last_run >= self.interval
 
-    def mark_ran(self, now: Optional[datetime] = None) -> None:
+    def mark_ran(self, now: datetime | None = None) -> None:
         now = now or datetime.now(UTC)
         with self._lock:
             self.last_run = now
@@ -571,7 +563,7 @@ class CacheStatistics:
     exported: int = 0
     imported: int = 0
 
-    def to_dict(self) -> Dict[str, int]:
+    def to_dict(self) -> dict[str, int]:
         return {
             "hits": self.hits,
             "stale_hits": self.stale_hits,
@@ -629,7 +621,7 @@ class CacheAnalytics:
         with self._lock:
             self._stats.imported += count
 
-    def snapshot(self) -> Dict[str, int]:
+    def snapshot(self) -> dict[str, int]:
         with self._lock:
             return self._stats.to_dict()
 
@@ -639,11 +631,11 @@ class CacheOptimizer:
 
     def suggest_evictions(
         self,
-        entries: Sequence[Tuple[Path, Mapping[str, Any]]],
+        entries: Sequence[tuple[Path, Mapping[str, Any]]],
         *,
         max_entries: int,
         max_size_bytes: int,
-    ) -> List[Path]:
+    ) -> list[Path]:
         if len(entries) <= max_entries and self._total_size(entries) <= max_size_bytes:
             return []
 
@@ -652,7 +644,7 @@ class CacheOptimizer:
             entries,
             key=lambda item: self._timestamp_for_entry(item[1]),
         )
-        to_remove: List[Path] = []
+        to_remove: list[Path] = []
         total_size = self._total_size(entries)
         for path, _metadata in sorted_entries:
             if len(entries) - len(to_remove) <= max_entries and total_size <= max_size_bytes:
@@ -662,7 +654,7 @@ class CacheOptimizer:
         return to_remove
 
     @staticmethod
-    def _total_size(entries: Sequence[Tuple[Path, Mapping[str, Any]]]) -> int:
+    def _total_size(entries: Sequence[tuple[Path, Mapping[str, Any]]]) -> int:
         total = 0
         for path, _metadata in entries:
             if path.exists():
@@ -723,7 +715,9 @@ class CacheExportImportUtils:
                 if entry_version != target_schema_version:
                     logger.warning(
                         "Skipping cache entry %s: schema version %s != target %s",
-                        entry_path.name, entry_version, target_schema_version
+                        entry_path.name,
+                        entry_version,
+                        target_schema_version,
                     )
                     continue
 
@@ -733,10 +727,7 @@ class CacheExportImportUtils:
                 count += 1
 
             except Exception as exc:
-                logger.warning(
-                    "Skipping invalid cache entry %s: %s",
-                    entry_path.name, exc
-                )
+                logger.warning("Skipping invalid cache entry %s: %s", entry_path.name, exc)
                 continue
 
         return count
@@ -764,7 +755,7 @@ class PharmaceuticalCacheOptimizer:
         "cyp",
     }
 
-    def enrich_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    def enrich_metadata(self, metadata: dict[str, Any]) -> dict[str, Any]:
         enhanced_query = metadata.get("enhanced_query", "").lower()
         metadata["pharmaceutical_focus"] = metadata.get("pharmaceutical_focus") or any(
             term in enhanced_query for term in self.KEY_TERMS

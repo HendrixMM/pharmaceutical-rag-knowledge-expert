@@ -2,19 +2,15 @@
 RAG Agent - Main pipeline for Retrieval-Augmented Generation
 Combines document retrieval with question answering using NVIDIA models
 """
-
-import os
 import json
 import logging
+import os
 import shutil
-from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.documents import Document
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
-from langchain.llms.base import LLM
 
 from .document_loader import PDFDocumentLoader
 from .nvidia_embeddings import NVIDIAEmbeddings
@@ -40,6 +36,7 @@ except ImportError:
 @dataclass
 class RAGResponse:
     """Response from RAG agent"""
+
     answer: str
     source_documents: List[Document]
     confidence_scores: Optional[List[float]] = None
@@ -61,25 +58,17 @@ class SimpleNVIDIALLM:
         """Generate a response using NVIDIA API"""
         import requests
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
         payload = {
             "model": self.model_name,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 1024,
-            "temperature": 0.1
+            "temperature": 0.1,
         }
 
         try:
-            response = requests.post(
-                f"{self.base_url}/chat/completions",
-                headers=headers,
-                json=payload,
-                timeout=60
-            )
+            response = requests.post(f"{self.base_url}/chat/completions", headers=headers, json=payload, timeout=60)
 
             if response.status_code == 200:
                 result = response.json()
@@ -98,7 +87,7 @@ class RAGAgent:
 
     UIs should prefer get_disclaimer() or RAGResponse.disclaimer for display.
     """
-    
+
     def __init__(
         self,
         docs_folder: str,
@@ -170,9 +159,7 @@ class RAGAgent:
             logger.info("Document extraction mode: %s", mode_label)
             # Recommend enabling NeMo when not active
             if not getattr(self.document_loader, "_nemo_enabled", False):
-                logger.info(
-                    "NeMo extraction is disabled. For best results, set ENABLE_NEMO_EXTRACTION=true"
-                )
+                logger.info("NeMo extraction is disabled. For best results, set ENABLE_NEMO_EXTRACTION=true")
         except TypeError:
             # For maximum backward compatibility if older PDFDocumentLoader signature is present
             self.document_loader = PDFDocumentLoader(docs_folder, chunk_size, chunk_overlap)
@@ -212,7 +199,12 @@ class RAGAgent:
         # Set force preflight on first query behavior from environment
         env_force_preflight_first = os.getenv("FORCE_PREFLIGHT_ON_FIRST_QUERY")
         if env_force_preflight_first is not None:
-            self.force_preflight_on_first_query = env_force_preflight_first.strip().lower() in ("true", "1", "yes", "on")
+            self.force_preflight_on_first_query = env_force_preflight_first.strip().lower() in (
+                "true",
+                "1",
+                "yes",
+                "on",
+            )
         else:
             self.force_preflight_on_first_query = True  # Default to True to maintain existing behavior
 
@@ -262,7 +254,7 @@ Context:
 Question: {question}
 
 Answer: """
-        
+
         logger.info(f"RAG Agent initialized successfully with model: {self.embeddings.model_name}")
         if self.use_per_model_path:
             logger.info(
@@ -299,7 +291,7 @@ Answer: """
 
     def _sanitize_model_name(self, model_name: str) -> str:
         """Sanitize model name for use as directory name"""
-        return model_name.replace('/', '_').replace(' ', '_').replace(':', '_')
+        return model_name.replace("/", "_").replace(" ", "_").replace(":", "_")
 
     def _get_embeddings_metadata_path(self) -> Path:
         """Get path for embeddings metadata file"""
@@ -312,7 +304,7 @@ Answer: """
             return None
 
         try:
-            with open(metadata_path, "r", encoding="utf-8") as metadata_file:
+            with open(metadata_path, encoding="utf-8") as metadata_file:
                 return json.load(metadata_file)
         except Exception as error:
             logger.warning("Failed to read embeddings metadata from %s: %s", metadata_path, error)
@@ -341,6 +333,7 @@ Answer: """
             # Use standardized disclaimer detection
             try:
                 from guardrails.actions import contains_medical_disclaimer
+
                 if contains_medical_disclaimer(text):
                     return text
             except ImportError:
@@ -373,6 +366,7 @@ Answer: """
         # Check if disclaimer is already present using the same logic as _apply_disclaimer
         try:
             from guardrails.actions import contains_medical_disclaimer
+
             if contains_medical_disclaimer(answer_text):
                 # Remove disclaimer - this is simplified since the actual disclaimer format may vary
                 # In practice, UIs should use RAGResponse.disclaimer field instead
@@ -402,7 +396,7 @@ Answer: """
             metadata_path = self._get_embeddings_metadata_path()
             metadata_path.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(metadata_path, 'w') as f:
+            with open(metadata_path, "w") as f:
                 json.dump(metadata, f, indent=2)
 
             logger.info(f"Embeddings metadata written: {metadata}")
@@ -419,10 +413,10 @@ Answer: """
             return True
 
         try:
-            with open(metadata_path, 'r') as f:
+            with open(metadata_path) as f:
                 stored_metadata = json.load(f)
 
-            stored_model = stored_metadata.get('model_name')
+            stored_model = stored_metadata.get("model_name")
             current_model = self.embeddings.model_name
 
             if stored_model != current_model:
@@ -435,7 +429,7 @@ Answer: """
                 return False
 
             # Optionally check dimension too (only if both stored and current are valid)
-            stored_dimension = stored_metadata.get('dimension')
+            stored_dimension = stored_metadata.get("dimension")
             if stored_dimension and isinstance(stored_dimension, int):
                 try:
                     current_dimension = self.embeddings.get_embedding_dimension()
@@ -444,9 +438,13 @@ Answer: """
                             logger.warning(f"⚠️  EMBEDDING DIMENSION MISMATCH DETECTED!")
                             logger.warning(f"   Stored dimension: {stored_dimension}")
                             logger.warning(f"   Current dimension: {current_dimension}")
-                            logger.warning("   This will require a FULL INDEX REBUILD which may take considerable time.")
+                            logger.warning(
+                                "   This will require a FULL INDEX REBUILD which may take considerable time."
+                            )
                             logger.warning("   Consumer impact: All queries will be slower until rebuild completes.")
-                            logger.warning("   This typically occurs when switching between different embedding model families.")
+                            logger.warning(
+                                "   This typically occurs when switching between different embedding model families."
+                            )
                             return False
                 except Exception as e:
                     logger.warning(f"Could not verify current dimension: {str(e)}")
@@ -478,9 +476,7 @@ Answer: """
         mismatch_details = []
 
         if stored_model and stored_model != current_model:
-            mismatch_details.append(
-                f"embedding model '{stored_model}' (stored) vs '{current_model}' (active)"
-            )
+            mismatch_details.append(f"embedding model '{stored_model}' (stored) vs '{current_model}' (active)")
 
         current_dimension: Optional[int] = None
         if stored_dimension is not None:
@@ -495,9 +491,7 @@ Answer: """
                 )
 
         if stored_dimension is not None and current_dimension is not None and stored_dimension != current_dimension:
-            mismatch_details.append(
-                f"embedding dimension {stored_dimension} (stored) vs {current_dimension} (active)"
-            )
+            mismatch_details.append(f"embedding dimension {stored_dimension} (stored) vs {current_dimension} (active)")
 
         if mismatch_details:
             detail_text = "; ".join(mismatch_details)
@@ -525,14 +519,16 @@ Answer: """
         legacy_metadata = None
         if legacy_metadata_path.exists():
             try:
-                with open(legacy_metadata_path, 'r') as f:
+                with open(legacy_metadata_path) as f:
                     legacy_metadata = json.load(f)
 
-                legacy_model = legacy_metadata.get('model_name')
+                legacy_model = legacy_metadata.get("model_name")
                 current_model = self.embeddings.model_name
 
                 if legacy_model != current_model:
-                    logger.info(f"Legacy index found but model mismatch: legacy='{legacy_model}', current='{current_model}'")
+                    logger.info(
+                        f"Legacy index found but model mismatch: legacy='{legacy_model}', current='{current_model}'"
+                    )
                     logger.info("Proceeding with rebuild instead of migration")
                     return False
             except Exception as e:
@@ -542,11 +538,12 @@ Answer: """
         # Try to load legacy vector DB files, even without metadata
         try:
             from .vector_database import VectorDatabase
+
             legacy_vector_db = VectorDatabase(self.embeddings, self.base_vector_db_path)
 
             if legacy_vector_db.load_index():
                 if legacy_metadata:
-                    legacy_model = legacy_metadata.get('model_name')
+                    legacy_model = legacy_metadata.get("model_name")
                     logger.info(f"Legacy index found and compatible (model: {legacy_model})")
                 else:
                     logger.info("Legacy index found without metadata, treating as compatible")
@@ -561,7 +558,9 @@ Answer: """
                     # Write metadata for new location (with current model info)
                     self._write_embeddings_metadata()
                     if not legacy_metadata:
-                        logger.info("Legacy index migration completed successfully (metadata was missing but index was migrated)")
+                        logger.info(
+                            "Legacy index migration completed successfully (metadata was missing but index was migrated)"
+                        )
                     else:
                         logger.info("Legacy index migration completed successfully")
                     return True
@@ -624,9 +623,9 @@ Answer: """
                 stored_model = None
                 try:
                     if metadata_path.exists():
-                        with open(metadata_path, 'r') as f:
+                        with open(metadata_path) as f:
                             stored_metadata = json.load(f)
-                            stored_model = stored_metadata.get('model_name')
+                            stored_model = stored_metadata.get("model_name")
                 except Exception as metadata_error:
                     logger.debug(
                         "Could not inspect metadata at %s for migration: %s",
@@ -738,16 +737,22 @@ Answer: """
         try:
             vs = self.vector_db.vectorstore
             if vs is not None:
-                faiss_dim = getattr(getattr(vs, 'index', None), 'd', None)
+                faiss_dim = getattr(getattr(vs, "index", None), "d", None)
                 embed_dim = self.embeddings.get_embedding_dimension()
                 if isinstance(faiss_dim, int) and isinstance(embed_dim, int) and faiss_dim != embed_dim:
                     logger.warning(
                         "FAISS index dimension %s != active embedder dimension %s; forcing rebuild.",
-                        faiss_dim, embed_dim,
+                        faiss_dim,
+                        embed_dim,
                     )
-                    return reconciled, True, False, (
-                        "Stored vector index dimensionality is incompatible with the active embedder. "
-                        "Please rebuild the knowledge base."
+                    return (
+                        reconciled,
+                        True,
+                        False,
+                        (
+                            "Stored vector index dimensionality is incompatible with the active embedder. "
+                            "Please rebuild the knowledge base."
+                        ),
                     )
         except Exception as dim_err:
             logger.debug("Dimension compatibility check failed: %s", dim_err)
@@ -797,6 +802,7 @@ Answer: """
             if not force_rebuild and self.use_per_model_path and self.vector_db_path != self.base_vector_db_path:
                 try:
                     from .vector_database import VectorDatabase
+
                     base_vector_db = VectorDatabase(self.embeddings, self.base_vector_db_path)
 
                     if base_vector_db.load_index():
@@ -808,32 +814,34 @@ Answer: """
                         # Save to per-model location and write metadata
                         if self.vector_db.save_index():
                             self._write_embeddings_metadata()
-                            logger.info(f"✅ Loaded existing knowledge base (migrated from legacy base path to {self.vector_db_path})")
+                            logger.info(
+                                f"✅ Loaded existing knowledge base (migrated from legacy base path to {self.vector_db_path})"
+                            )
                             return True
                         else:
                             logger.warning("Failed to save migrated index from legacy base path")
                 except Exception as e:
                     logger.debug(f"Could not load from legacy base path: {str(e)}")
                     # Continue with rebuild
-            
+
             logger.info("Building knowledge base from PDF documents...")
-            
+
             # Load and process documents
             documents = self.document_loader.load_and_split()
-            
+
             if not documents:
                 logger.error("No documents found to build knowledge base")
                 return False
-            
+
             # Get document stats
             stats = self.document_loader.get_document_stats(documents)
             logger.info(f"Loaded {stats['num_source_files']} PDF files with {stats['total_chunks']} chunks")
-            
+
             # Create vector index
             if not self.vector_db.create_index(documents):
                 logger.error("Failed to create vector index")
                 return False
-            
+
             # Save index
             if not self.vector_db.save_index():
                 logger.error("Failed to save vector index")
@@ -844,13 +852,11 @@ Answer: """
 
             logger.info("✅ Knowledge base setup completed successfully (rebuilt index)!")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to setup knowledge base: {str(e)}")
             return False
-    
 
-    
     def ask_question(
         self,
         question: str,
@@ -873,11 +879,16 @@ Answer: """
             disclaimers to avoid duplicating MEDICAL_DISCLAIMER in the rendered text.
         """
         import time
+
         start_time = time.time()
 
         try:
             preflight_snippet = question[:64] if question else ""
-            force_preflight = self.use_per_model_path or (not self.vector_db.vectorstore and self.force_preflight_on_first_query) or (not self._did_one_time_preflight and self.force_preflight_on_first_query)
+            force_preflight = (
+                self.use_per_model_path
+                or (not self.vector_db.vectorstore and self.force_preflight_on_first_query)
+                or (not self._did_one_time_preflight and self.force_preflight_on_first_query)
+            )
             if preflight_snippet and (self.enable_preflight_embedding or force_preflight):
                 preflight_model_name = self.embeddings.model_name
                 try:
@@ -989,7 +1000,9 @@ Answer: """
                             needs_rebuild=True,
                         )
                     else:
-                        logger.error("Vector database not initialized and lazy load failed. Please setup knowledge base first.")
+                        logger.error(
+                            "Vector database not initialized and lazy load failed. Please setup knowledge base first."
+                        )
                         return RAGResponse(
                             answer=self._apply_disclaimer(
                                 "Knowledge base not initialized. Please setup the knowledge base first.",
@@ -1081,29 +1094,29 @@ Answer: """
                 processing_time=time.time() - start_time,
                 disclaimer=MEDICAL_DISCLAIMER,
             )
-    
+
     def get_relevant_documents(self, query: str, k: int = 4) -> List[Tuple[Document, float]]:
         """
         Get relevant documents for a query with similarity scores
-        
+
         Args:
             query: Search query
             k: Number of documents to retrieve
-            
+
         Returns:
             List of (document, score) tuples
         """
         return self.vector_db.similarity_search_with_scores(query, k=k)
-    
+
     def get_knowledge_base_stats(self) -> Dict[str, Any]:
         """
         Get statistics about the knowledge base
-        
+
         Returns:
             Dictionary with knowledge base statistics
         """
         vector_stats = self.vector_db.get_stats()
-        
+
         # Add document loader stats if available
         try:
             if os.path.exists(self.docs_folder):
@@ -1113,16 +1126,16 @@ Answer: """
                 vector_stats["docs_folder"] = self.docs_folder
         except Exception:
             pass
-        
+
         return vector_stats
-    
+
     def add_documents_to_knowledge_base(self, new_docs_folder: Optional[str] = None) -> bool:
         """
         Add new documents to the existing knowledge base
-        
+
         Args:
             new_docs_folder: Optional path to new documents folder
-            
+
         Returns:
             True if successful, False otherwise
         """
@@ -1142,11 +1155,11 @@ Answer: """
             except TypeError:
                 loader = PDFDocumentLoader(folder)
             new_documents = loader.load_and_split()
-            
+
             if not new_documents:
                 logger.warning("No new documents found to add")
                 return False
-            
+
             # Add to vector database
             if self.vector_db.add_documents(new_documents):
                 # Save updated index
@@ -1156,7 +1169,7 @@ Answer: """
             else:
                 logger.error("Failed to add new documents")
                 return False
-                
+
         except Exception as e:
             logger.error(f"Failed to add documents: {str(e)}")
             return False
@@ -1284,36 +1297,37 @@ Answer: """
 def main():
     """Test the RAG agent"""
     from dotenv import load_dotenv
+
     load_dotenv()
-    
+
     # Get configuration
     api_key = os.getenv("NVIDIA_API_KEY")
     docs_folder = os.getenv("DOCS_FOLDER", "Data/Docs")
-    
+
     if not api_key:
         print("❌ NVIDIA_API_KEY not found in environment variables")
         return
-    
+
     # Initialize RAG agent
     rag_agent = RAGAgent(docs_folder, api_key)
-    
+
     # Setup knowledge base
     if rag_agent.setup_knowledge_base():
         print("✅ Knowledge base setup successful!")
-        
+
         # Get stats
         stats = rag_agent.get_knowledge_base_stats()
         print(f"Knowledge base stats: {stats}")
-        
+
         # Test question
         test_question = "What is the main topic of the documents?"
         response = rag_agent.ask_question(test_question)
-        
+
         print(f"\nQuestion: {test_question}")
         print(f"Answer: {response.answer}")
         print(f"Sources: {len(response.source_documents)} documents")
         print(f"Processing time: {response.processing_time:.2f} seconds")
-        
+
     else:
         print("❌ Failed to setup knowledge base")
 

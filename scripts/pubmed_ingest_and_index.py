@@ -17,12 +17,13 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
-import json
+from typing import Any
+
 import requests
-from typing import Dict, Any
 
 
 def extract_pmid_from_url(url: str) -> str:
@@ -32,7 +33,7 @@ def extract_pmid_from_url(url: str) -> str:
     return m.group(1)
 
 
-def fetch_pubmed_record(pmid: str) -> Dict[str, Any]:
+def fetch_pubmed_record(pmid: str) -> dict[str, Any]:
     base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
     s = requests.get(f"{base}/esummary.fcgi", params={"db": "pubmed", "id": pmid, "retmode": "json"}, timeout=30)
     s.raise_for_status()
@@ -132,7 +133,7 @@ def main() -> int:
         from src.nvidia_embeddings import NVIDIAEmbeddings  # type: ignore
         from src.vector_database import VectorDatabase  # type: ignore
 
-    emb = NVIDIAEmbeddings(embedding_model_name=os.getenv('EMBEDDING_MODEL_NAME', 'nvidia/nv-embed-v1'))
+    emb = NVIDIAEmbeddings(embedding_model_name=os.getenv("EMBEDDING_MODEL_NAME", "nvidia/nv-embed-v1"))
     vdb = VectorDatabase(embeddings=emb, db_path=args.db)
     ok = vdb.add_documents([doc])
     print("Indexed:", ok)
@@ -140,12 +141,15 @@ def main() -> int:
     # Quick similarity test after indexing
     query = f"insomnia risk with centanafadine vs methylphenidate"
     results = vdb.similarity_search(query, k=3)
-    out = [{
-        "title": r.metadata.get("title"),
-        "pmid": r.metadata.get("pmid"),
-        "score": None,
-        "snippet": (r.page_content or "")[:240],
-    } for r in results]
+    out = [
+        {
+            "title": r.metadata.get("title"),
+            "pmid": r.metadata.get("pmid"),
+            "score": None,
+            "snippet": (r.page_content or "")[:240],
+        }
+        for r in results
+    ]
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0
 

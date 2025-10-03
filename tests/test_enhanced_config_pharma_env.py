@@ -1,5 +1,3 @@
-import os
-
 from src.enhanced_config import EnhancedRAGConfig
 
 
@@ -42,5 +40,3 @@ def test_from_env_parses_pharma_vars_isolated():
     assert flags.get("drug_interaction_analysis") is False
     assert flags.get("clinical_trial_processing") is True
     assert flags.get("pharmacokinetics_optimization") is False
-
-

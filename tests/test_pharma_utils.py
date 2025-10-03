@@ -1,5 +1,4 @@
 """Unit tests for pharmaceutical utilities."""
-
 import os
 import tempfile
 import unittest
@@ -7,12 +6,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from src.pharma_utils import (
-    _PK_FILTERING_ENABLED,
-    _tokenize_species_string,
-    DrugNameChecker,
     CacheSizeConfig,
-    get_cache_dir_size_mb,
+    DrugNameChecker,
+    _tokenize_species_string,
     cleanup_oldest_cache_files,
+    get_cache_dir_size_mb,
 )
 
 
@@ -138,11 +136,14 @@ class TestCacheSizeConfig(unittest.TestCase):
         self.assertEqual(config.cleanup_threshold_mb, 900)
         self.assertEqual(config.check_frequency, 50)
 
-    @patch.dict(os.environ, {
-        "QUERY_ENGINE_MAX_CACHE_MB": "500",
-        "QUERY_ENGINE_CACHE_CLEANUP_THRESHOLD_MB": "450",
-        "QUERY_ENGINE_CACHE_CHECK_FREQUENCY": "25"
-    })
+    @patch.dict(
+        os.environ,
+        {
+            "QUERY_ENGINE_MAX_CACHE_MB": "500",
+            "QUERY_ENGINE_CACHE_CLEANUP_THRESHOLD_MB": "450",
+            "QUERY_ENGINE_CACHE_CHECK_FREQUENCY": "25",
+        },
+    )
     def test_env_override(self):
         """Test environment variable overrides."""
         config = CacheSizeConfig()
@@ -162,6 +163,7 @@ class TestCacheSizeManagement(unittest.TestCase):
     def tearDown(self):
         """Clean up temporary directory."""
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
     def test_empty_cache_size(self):
@@ -232,7 +234,9 @@ class TestPKFilteringFlag(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             # Reload module to pick up env
             from importlib import reload
+
             import src.pharma_utils
+
             reload(src.pharma_utils)
             self.assertFalse(src.pharma_utils._PK_FILTERING_ENABLED)
 
@@ -240,7 +244,9 @@ class TestPKFilteringFlag(unittest.TestCase):
     def test_enabled_true(self):
         """Test enabling PK filtering."""
         from importlib import reload
+
         import src.pharma_utils
+
         reload(src.pharma_utils)
         self.assertTrue(src.pharma_utils._PK_FILTERING_ENABLED)
 
@@ -248,7 +254,9 @@ class TestPKFilteringFlag(unittest.TestCase):
     def test_enabled_case_insensitive(self):
         """Test case insensitive enable."""
         from importlib import reload
+
         import src.pharma_utils
+
         reload(src.pharma_utils)
         self.assertTrue(src.pharma_utils._PK_FILTERING_ENABLED)
 
@@ -256,7 +264,9 @@ class TestPKFilteringFlag(unittest.TestCase):
     def test_explicitly_disabled(self):
         """Test explicitly disabling PK filtering."""
         from importlib import reload
+
         import src.pharma_utils
+
         reload(src.pharma_utils)
         self.assertFalse(src.pharma_utils._PK_FILTERING_ENABLED)
 

@@ -3,14 +3,11 @@
 Verifies that all metadata fields are properly normalized during pharmaceutical
 metadata extraction and that filtering works correctly with normalized data.
 """
-
-import pytest
 from unittest.mock import Mock, patch
-from typing import Dict, Any, List
 
+from src.nvidia_embeddings import NVIDIAEmbeddings
 from src.pharmaceutical_processor import PharmaceuticalProcessor
 from src.vector_database import VectorDatabase
-from src.nvidia_embeddings import NVIDIAEmbeddings
 
 
 class TestMetadataNormalization:
@@ -54,10 +51,7 @@ class TestMetadataNormalization:
         assert "clinical trial" in result
 
         # Test combined data (both fields)
-        combined_data = {
-            "study_type": "case report",
-            "study_types": ["observational study"]
-        }
+        combined_data = {"study_type": "case report", "study_types": ["observational study"]}
         result = processor.normalize_study_types(combined_data)
         assert "case report" in result
         assert "observational study" in result
@@ -87,11 +81,7 @@ class TestMetadataNormalization:
         processor = PharmaceuticalProcessor()
 
         # Test parameter name normalization
-        pk_data = {
-            "half-life": "2.5 hours",
-            "CL/F": "15 L/h",
-            "AUC": "4500 ng*h/mL"
-        }
+        pk_data = {"half-life": "2.5 hours", "CL/F": "15 L/h", "AUC": "4500 ng*h/mL"}
         result = processor.normalize_pharmacokinetic_data(pk_data)
 
         assert "half_life" in result
@@ -100,10 +90,7 @@ class TestMetadataNormalization:
         assert result["half_life"] == 2.5
 
         # Test merging pharmacokinetics and pharmacokinetic_values
-        combined_data = {
-            "pharmacokinetics": {"half-life": "3 hours"},
-            "pharmacokinetic_values": {"auc": "5000"}
-        }
+        combined_data = {"pharmacokinetics": {"half-life": "3 hours"}, "pharmacokinetic_values": {"auc": "5000"}}
         result = processor.normalize_pharmacokinetic_data(combined_data)
         assert result["half_life"] == 3.0
         assert result["auc"] == 5000.0
@@ -122,12 +109,12 @@ class TestMetadataNormalization:
             "year": "2023",
             "species": "mice",
             "pharmacokinetics": {"half-life": "2 hours"},
-            "pharmacokinetic_values": {"auc": "4500 ng*h/mL"}
+            "pharmacokinetic_values": {"auc": "4500 ng*h/mL"},
         }
         doc.page_content = "Test content"
 
         # Mock the processor
-        with patch.object(db, '_get_pharmaceutical_processor') as mock_get_processor:
+        with patch.object(db, "_get_pharmaceutical_processor") as mock_get_processor:
             mock_processor = Mock(spec=PharmaceuticalProcessor)
             mock_get_processor.return_value = mock_processor
 
@@ -137,10 +124,7 @@ class TestMetadataNormalization:
             mock_processor.normalize_study_types.return_value = ["clinical trial"]
             mock_processor.normalize_publication_year.return_value = 2023
             mock_processor.normalize_species.return_value = ["mouse"]
-            mock_processor.normalize_pharmacokinetic_data.return_value = {
-                "half_life": 2.0,
-                "auc": 4500.0
-            }
+            mock_processor.normalize_pharmacokinetic_data.return_value = {"half_life": 2.0, "auc": 4500.0}
 
             # Execute
             result = db._normalize_metadata_fields(doc.metadata, mock_processor)
@@ -170,7 +154,7 @@ class TestMetadataNormalization:
             "species_list": ["human"],
             "pharmacokinetics": {"half_life": 2.5},
             "drug_names": ["aspirin"],
-            "therapeutic_areas": ["cardiology"]
+            "therapeutic_areas": ["cardiology"],
         }
 
         # Test study type filtering
@@ -196,12 +180,12 @@ class TestMetadataNormalization:
 
         # Test PK filtering
         filters = {"pharmacokinetics": {"half_life": True}}
-        with patch('src.pharma_utils._PK_FILTERING_ENABLED', True):
+        with patch("src.pharma_utils._PK_FILTERING_ENABLED", True):
             assert db._document_matches_pharma_filters(metadata, filters) is True
 
         # Test with a parameter that doesn't exist
         filters = {"pharmacokinetics": {"nonexistent_param": True}}
-        with patch('src.pharma_utils._PK_FILTERING_ENABLED', True):
+        with patch("src.pharma_utils._PK_FILTERING_ENABLED", True):
             assert db._document_matches_pharma_filters(metadata, filters) is False
 
     def test_backward_compatibility_fields_maintained(self):
@@ -216,7 +200,7 @@ class TestMetadataNormalization:
         doc.page_content = "Test content"
 
         # Mock the processor
-        with patch.object(db, '_get_pharmaceutical_processor') as mock_get_processor:
+        with patch.object(db, "_get_pharmaceutical_processor") as mock_get_processor:
             mock_processor = Mock(spec=PharmaceuticalProcessor)
             mock_get_processor.return_value = mock_processor
             mock_processor.normalize_mesh_terms.return_value = []
@@ -246,24 +230,19 @@ class TestMetadataNormalization:
         doc.page_content = "Test content"
 
         # Mock processor and enhance_document_metadata
-        with patch.object(db, '_get_pharmaceutical_processor') as mock_get_processor:
+        with patch.object(db, "_get_pharmaceutical_processor") as mock_get_processor:
             mock_processor = Mock(spec=PharmaceuticalProcessor)
             mock_get_processor.return_value = mock_processor
-            mock_processor.enhance_document_metadata.return_value = {
-                "metadata": {"raw_field": "raw_value"}
-            }
+            mock_processor.enhance_document_metadata.return_value = {"metadata": {"raw_field": "raw_value"}}
 
             # Mock _normalize_metadata_fields
-            with patch.object(db, '_normalize_metadata_fields') as mock_normalize:
+            with patch.object(db, "_normalize_metadata_fields") as mock_normalize:
                 mock_normalize.return_value = {"normalized_field": "normalized_value"}
 
                 # Execute
                 result = db._extract_pharmaceutical_metadata(doc)
 
                 # Verify normalization was called
-                mock_normalize.assert_called_once_with(
-                    {"raw_field": "raw_value"},
-                    mock_processor
-                )
+                mock_normalize.assert_called_once_with({"raw_field": "raw_value"}, mock_processor)
                 assert result["normalized_field"] == "normalized_value"
                 assert result["pharmaceutical_enriched"] is True

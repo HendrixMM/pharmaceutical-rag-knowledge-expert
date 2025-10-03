@@ -15,39 +15,42 @@ Features:
 
 <<use_mcp microsoft-learn>>
 """
-
-import asyncio
 import logging
-import time
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Callable, Tuple
-from enum import Enum
-from collections import deque, defaultdict
 import statistics
-import json
-from datetime import datetime, timedelta
 import threading
+import time
+from collections import defaultdict, deque
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+
 class ServiceHealth(Enum):
     """Health status of embedding services."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
     DOWN = "down"
     UNKNOWN = "unknown"
 
+
 class AlertLevel(Enum):
     """Alert severity levels."""
+
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"
     EMERGENCY = "emergency"
 
+
 @dataclass
 class PerformanceMetrics:
     """Performance metrics for embedding services."""
+
     service_name: str
     total_requests: int = 0
     successful_requests: int = 0
@@ -60,9 +63,11 @@ class PerformanceMetrics:
     last_health_check: float = 0.0
     health_status: ServiceHealth = ServiceHealth.UNKNOWN
 
+
 @dataclass
 class PerformanceAlert:
     """Performance alert information."""
+
     timestamp: float
     service_name: str
     alert_level: AlertLevel
@@ -72,9 +77,11 @@ class PerformanceAlert:
     threshold: float
     resolved: bool = False
 
+
 @dataclass
 class FallbackRoute:
     """Fallback routing configuration."""
+
     primary_service: str
     fallback_services: List[str]
     fallback_criteria: Dict[str, float]
@@ -82,14 +89,17 @@ class FallbackRoute:
     recovery_threshold: float = 0.8
     cooldown_period_seconds: int = 300
 
+
 @dataclass
 class SLAConfiguration:
     """Service Level Agreement configuration."""
+
     max_response_time_ms: float = 5000.0
     min_success_rate: float = 0.95
     max_error_rate: float = 0.05
     min_availability: float = 0.99
     pharmaceutical_response_time_ms: float = 3000.0  # Stricter for pharma
+
 
 class EmbeddingPerformanceMonitor:
     """
@@ -104,7 +114,7 @@ class EmbeddingPerformanceMonitor:
         sla_config: Optional[SLAConfiguration] = None,
         enable_alerting: bool = True,
         enable_circuit_breaker: bool = True,
-        health_check_interval_seconds: int = 60
+        health_check_interval_seconds: int = 60,
     ):
         """
         Initialize performance monitor.
@@ -141,7 +151,7 @@ class EmbeddingPerformanceMonitor:
             "error_rate_critical": 0.05,
             "success_rate_warning": 0.98,
             "success_rate_critical": 0.95,
-            "pharmaceutical_response_time_critical_ms": 3000.0
+            "pharmaceutical_response_time_critical_ms": 3000.0,
         }
 
         # Health check functions
@@ -160,7 +170,7 @@ class EmbeddingPerformanceMonitor:
         self,
         service_name: str,
         health_check_function: Optional[Callable] = None,
-        fallback_config: Optional[FallbackRoute] = None
+        fallback_config: Optional[FallbackRoute] = None,
     ):
         """
         Register a service for monitoring.
@@ -184,7 +194,7 @@ class EmbeddingPerformanceMonitor:
                 "state": "closed",  # closed, open, half-open
                 "failure_count": 0,
                 "last_failure_time": 0,
-                "next_attempt_time": 0
+                "next_attempt_time": 0,
             }
 
         logger.info(f"Registered service for monitoring: {service_name}")
@@ -195,7 +205,7 @@ class EmbeddingPerformanceMonitor:
         response_time_ms: float,
         success: bool,
         is_pharmaceutical: bool = False,
-        cache_hit: bool = False
+        cache_hit: bool = False,
     ):
         """
         Record a request for performance tracking.
@@ -281,22 +291,22 @@ class EmbeddingPerformanceMonitor:
         recent_error_rate = metrics.error_rates[-1] if metrics.error_rates else 0
 
         # Health assessment
-        if (avg_response_time <= self.performance_thresholds["response_time_warning_ms"] and
-            recent_error_rate <= self.performance_thresholds["error_rate_warning"]):
+        if (
+            avg_response_time <= self.performance_thresholds["response_time_warning_ms"]
+            and recent_error_rate <= self.performance_thresholds["error_rate_warning"]
+        ):
             return ServiceHealth.HEALTHY
-        elif (avg_response_time <= self.performance_thresholds["response_time_critical_ms"] and
-              recent_error_rate <= self.performance_thresholds["error_rate_critical"]):
+        elif (
+            avg_response_time <= self.performance_thresholds["response_time_critical_ms"]
+            and recent_error_rate <= self.performance_thresholds["error_rate_critical"]
+        ):
             return ServiceHealth.DEGRADED
         elif recent_error_rate > self.performance_thresholds["error_rate_critical"]:
             return ServiceHealth.UNHEALTHY
         else:
             return ServiceHealth.DOWN
 
-    def get_optimal_service(
-        self,
-        primary_service: str,
-        is_pharmaceutical: bool = False
-    ) -> Tuple[str, str]:
+    def get_optimal_service(self, primary_service: str, is_pharmaceutical: bool = False) -> Tuple[str, str]:
         """
         Get the optimal service to use considering health and fallbacks.
 
@@ -349,8 +359,7 @@ class EmbeddingPerformanceMonitor:
 
                 # Check if we should open the circuit
                 fallback_config = self.fallback_routes.get(service_name)
-                threshold = (fallback_config.circuit_breaker_threshold
-                           if fallback_config else 0.5)
+                threshold = fallback_config.circuit_breaker_threshold if fallback_config else 0.5
 
                 if cb["failure_count"] >= 5:  # Minimum failures before considering
                     metrics = self.service_metrics[service_name]
@@ -365,7 +374,7 @@ class EmbeddingPerformanceMonitor:
                             f"Circuit breaker opened for {service_name}",
                             "circuit_breaker",
                             recent_error_rate,
-                            threshold
+                            threshold,
                         )
             else:
                 # Reset failure count on success
@@ -386,7 +395,7 @@ class EmbeddingPerformanceMonitor:
                     f"Circuit breaker closed for {service_name} - service recovered",
                     "circuit_breaker",
                     0,
-                    0
+                    0,
                 )
             else:
                 cb["state"] = "open"
@@ -394,11 +403,7 @@ class EmbeddingPerformanceMonitor:
                 cb["next_attempt_time"] = current_time + 300
 
     def _check_performance_alerts(
-        self,
-        service_name: str,
-        response_time_ms: float,
-        success: bool,
-        is_pharmaceutical: bool
+        self, service_name: str, response_time_ms: float, success: bool, is_pharmaceutical: bool
     ):
         """Check for performance threshold violations and generate alerts."""
 
@@ -411,7 +416,7 @@ class EmbeddingPerformanceMonitor:
                     f"Pharmaceutical content response time exceeded critical threshold",
                     "pharmaceutical_response_time",
                     response_time_ms,
-                    self.performance_thresholds["pharmaceutical_response_time_critical_ms"]
+                    self.performance_thresholds["pharmaceutical_response_time_critical_ms"],
                 )
         else:
             if response_time_ms > self.performance_thresholds["response_time_critical_ms"]:
@@ -421,7 +426,7 @@ class EmbeddingPerformanceMonitor:
                     f"Response time exceeded critical threshold",
                     "response_time",
                     response_time_ms,
-                    self.performance_thresholds["response_time_critical_ms"]
+                    self.performance_thresholds["response_time_critical_ms"],
                 )
             elif response_time_ms > self.performance_thresholds["response_time_warning_ms"]:
                 self._create_alert(
@@ -430,7 +435,7 @@ class EmbeddingPerformanceMonitor:
                     f"Response time exceeded warning threshold",
                     "response_time",
                     response_time_ms,
-                    self.performance_thresholds["response_time_warning_ms"]
+                    self.performance_thresholds["response_time_warning_ms"],
                 )
 
         # Error rate alerts
@@ -445,7 +450,7 @@ class EmbeddingPerformanceMonitor:
                     f"Error rate exceeded critical threshold",
                     "error_rate",
                     current_error_rate,
-                    self.performance_thresholds["error_rate_critical"]
+                    self.performance_thresholds["error_rate_critical"],
                 )
             elif current_error_rate > self.performance_thresholds["error_rate_warning"]:
                 self._create_alert(
@@ -454,7 +459,7 @@ class EmbeddingPerformanceMonitor:
                     f"Error rate exceeded warning threshold",
                     "error_rate",
                     current_error_rate,
-                    self.performance_thresholds["error_rate_warning"]
+                    self.performance_thresholds["error_rate_warning"],
                 )
 
     def _create_alert(
@@ -464,7 +469,7 @@ class EmbeddingPerformanceMonitor:
         message: str,
         metric_name: str,
         metric_value: float,
-        threshold: float
+        threshold: float,
     ):
         """Create a new performance alert."""
         alert = PerformanceAlert(
@@ -474,7 +479,7 @@ class EmbeddingPerformanceMonitor:
             message=message,
             metric_name=metric_name,
             metric_value=metric_value,
-            threshold=threshold
+            threshold=threshold,
         )
 
         self.active_alerts.append(alert)
@@ -497,7 +502,7 @@ class EmbeddingPerformanceMonitor:
                 "avg_response_time": statistics.mean(list(metrics.response_times)[-10:]),
                 "error_rate": metrics.error_rates[-1],
                 "total_requests": metrics.total_requests,
-                "cache_hit_rate": metrics.cache_hits / max(metrics.total_requests, 1)
+                "cache_hit_rate": metrics.cache_hits / max(metrics.total_requests, 1),
             }
             self.performance_trends[service_name].append(trend_data)
 
@@ -535,8 +540,7 @@ class EmbeddingPerformanceMonitor:
                 # Clean up old alerts
                 current_time = time.time()
                 self.active_alerts = [
-                    alert for alert in self.active_alerts
-                    if current_time - alert.timestamp < 3600  # Keep for 1 hour
+                    alert for alert in self.active_alerts if current_time - alert.timestamp < 3600  # Keep for 1 hour
                 ]
 
                 time.sleep(self.health_check_interval)
@@ -557,7 +561,7 @@ class EmbeddingPerformanceMonitor:
             "services": {},
             "overall_health": "unknown",
             "active_alerts": len(self.active_alerts),
-            "sla_compliance": {}
+            "sla_compliance": {},
         }
 
         healthy_services = 0
@@ -574,7 +578,7 @@ class EmbeddingPerformanceMonitor:
                 "error_rate": metrics.error_rates[-1] if metrics.error_rates else 0,
                 "pharmaceutical_requests": metrics.pharmaceutical_requests,
                 "cache_hit_rate": metrics.cache_hits / max(metrics.total_requests, 1),
-                "circuit_breaker_state": self.circuit_breakers.get(service_name, {}).get("state", "unknown")
+                "circuit_breaker_state": self.circuit_breakers.get(service_name, {}).get("state", "unknown"),
             }
 
             # SLA compliance check
@@ -603,7 +607,7 @@ class EmbeddingPerformanceMonitor:
                 "service": alert.service_name,
                 "level": alert.alert_level.value,
                 "message": alert.message,
-                "metric": alert.metric_name
+                "metric": alert.metric_name,
             }
             for alert in self.active_alerts[-10:]
         ]
@@ -619,9 +623,11 @@ class EmbeddingPerformanceMonitor:
             return False
 
         # Check response time
-        max_response_time = (self.sla_config.pharmaceutical_response_time_ms
-                           if service_report["pharmaceutical_requests"] > 0
-                           else self.sla_config.max_response_time_ms)
+        max_response_time = (
+            self.sla_config.pharmaceutical_response_time_ms
+            if service_report["pharmaceutical_requests"] > 0
+            else self.sla_config.max_response_time_ms
+        )
 
         if service_report["avg_response_time_ms"] > max_response_time:
             return False
@@ -651,36 +657,42 @@ class EmbeddingPerformanceMonitor:
 
             # Response time recommendations
             if avg_response_time > 3000:
-                recommendations.append({
-                    "service": service_name,
-                    "type": "performance",
-                    "priority": "high",
-                    "recommendation": "Consider optimizing model selection or increasing batch size",
-                    "metric": "response_time",
-                    "current_value": avg_response_time
-                })
+                recommendations.append(
+                    {
+                        "service": service_name,
+                        "type": "performance",
+                        "priority": "high",
+                        "recommendation": "Consider optimizing model selection or increasing batch size",
+                        "metric": "response_time",
+                        "current_value": avg_response_time,
+                    }
+                )
 
             # Cache recommendations
             if cache_hit_rate < 0.3:
-                recommendations.append({
-                    "service": service_name,
-                    "type": "caching",
-                    "priority": "medium",
-                    "recommendation": "Increase cache TTL or cache size to improve hit rate",
-                    "metric": "cache_hit_rate",
-                    "current_value": cache_hit_rate
-                })
+                recommendations.append(
+                    {
+                        "service": service_name,
+                        "type": "caching",
+                        "priority": "medium",
+                        "recommendation": "Increase cache TTL or cache size to improve hit rate",
+                        "metric": "cache_hit_rate",
+                        "current_value": cache_hit_rate,
+                    }
+                )
 
             # Error rate recommendations
             if error_rate > 0.02:
-                recommendations.append({
-                    "service": service_name,
-                    "type": "reliability",
-                    "priority": "high",
-                    "recommendation": "Investigate error patterns and improve fallback mechanisms",
-                    "metric": "error_rate",
-                    "current_value": error_rate
-                })
+                recommendations.append(
+                    {
+                        "service": service_name,
+                        "type": "reliability",
+                        "priority": "high",
+                        "recommendation": "Investigate error patterns and improve fallback mechanisms",
+                        "metric": "error_rate",
+                        "current_value": error_rate,
+                    }
+                )
 
         return recommendations
 
@@ -688,12 +700,9 @@ class EmbeddingPerformanceMonitor:
 # Global instance for easy access
 performance_monitor = EmbeddingPerformanceMonitor()
 
+
 def monitor_embedding_request(
-    service_name: str,
-    response_time_ms: float,
-    success: bool,
-    is_pharmaceutical: bool = False,
-    cache_hit: bool = False
+    service_name: str, response_time_ms: float, success: bool, is_pharmaceutical: bool = False, cache_hit: bool = False
 ):
     """
     Convenience function to record embedding request performance.
@@ -710,13 +719,11 @@ def monitor_embedding_request(
         response_time_ms=response_time_ms,
         success=success,
         is_pharmaceutical=is_pharmaceutical,
-        cache_hit=cache_hit
+        cache_hit=cache_hit,
     )
 
-def get_optimal_embedding_service(
-    primary_service: str,
-    is_pharmaceutical: bool = False
-) -> Tuple[str, str]:
+
+def get_optimal_embedding_service(primary_service: str, is_pharmaceutical: bool = False) -> Tuple[str, str]:
     """
     Get the optimal embedding service considering health and fallbacks.
 
@@ -727,7 +734,4 @@ def get_optimal_embedding_service(
     Returns:
         Tuple of (selected_service, selection_reason)
     """
-    return performance_monitor.get_optimal_service(
-        primary_service=primary_service,
-        is_pharmaceutical=is_pharmaceutical
-    )
+    return performance_monitor.get_optimal_service(primary_service=primary_service, is_pharmaceutical=is_pharmaceutical)

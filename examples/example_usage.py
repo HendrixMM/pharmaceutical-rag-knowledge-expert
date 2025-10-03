@@ -4,7 +4,6 @@ Example usage of the pharmaceutical filter methods in RAG Template
 
 This script demonstrates how to use the newly implemented pharmaceutical-aware search methods.
 """
-
 import os
 import sys
 from pathlib import Path
@@ -13,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from rag_agent import RAGAgent
+
 
 def main():
     """Example usage of pharmaceutical filter methods"""
@@ -23,11 +23,7 @@ def main():
         print("Please set NVIDIA_API_KEY environment variable")
         return
 
-    rag_agent = RAGAgent(
-        docs_folder="Data/Docs",
-        api_key=api_key,
-        vector_db_path="./example_vector_db"
-    )
+    rag_agent = RAGAgent(docs_folder="Data/Docs", api_key=api_key, vector_db_path="./example_vector_db")
 
     # Setup knowledge base
     if not rag_agent.setup_knowledge_base():
@@ -41,10 +37,7 @@ def main():
     results = rag_agent.similarity_search_with_pharmaceutical_filters(
         query="drug interactions side effects",
         k=5,
-        filters={
-            "species_preference": "human",
-            "study_types": ["clinical trial", "randomized controlled trial"]
-        }
+        filters={"species_preference": "human", "study_types": ["clinical trial", "randomized controlled trial"]},
     )
     print(f"   Found {len(results)} human clinical studies\n")
 
@@ -61,11 +54,7 @@ def main():
     cardio_results = rag_agent.similarity_search_with_pharmaceutical_filters(
         query="treatment outcomes",
         k=5,
-        filters={
-            "therapeutic_areas": ["cardiology"],
-            "year_range": [2020, 2024],
-            "min_ranking_score": 0.7
-        }
+        filters={"therapeutic_areas": ["cardiology"], "year_range": [2020, 2024], "min_ranking_score": 0.7},
     )
     print(f"   Found {len(cardio_results)} recent cardiovascular studies\n")
 
@@ -88,8 +77,8 @@ def main():
             "therapeutic_areas": ["endocrinology"],
             "study_types": ["clinical trial"],
             "year_range": [2018, 2024],
-            "include_unknown_species": False
-        }
+            "include_unknown_species": False,
+        },
     )
     print(f"   Found {len(complex_results)} matching documents")
 
@@ -105,6 +94,7 @@ def main():
         print(f"   - Ranking score: {meta.get('ranking_score', 'N/A')}")
 
     print("\n=== Examples completed! ===")
+
 
 if __name__ == "__main__":
     main()

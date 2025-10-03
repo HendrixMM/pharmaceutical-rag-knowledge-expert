@@ -15,16 +15,15 @@ Integration:
 - Integrates with alert system for threshold monitoring
 - Supports pharmaceutical workflow optimization
 """
-
 import asyncio
+import hashlib
+import json
 import logging
 import time
 from dataclasses import dataclass, field
-from enum import Enum, IntEnum
-from typing import List, Dict, Any, Optional, Callable, Tuple
 from datetime import datetime, timedelta
-import json
-import hashlib
+from enum import Enum, IntEnum
+from typing import Any, Callable, Dict, List, Optional
 
 try:
     from ..enhanced_config import EnhancedRAGConfig
@@ -35,22 +34,28 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 class RequestPriority(IntEnum):
     """Request priority levels for pharmaceutical research optimization."""
-    CRITICAL = 1      # Drug safety, adverse reactions
-    HIGH = 2         # Clinical trials, efficacy studies
-    NORMAL = 3       # General research, mechanism queries
-    BATCH = 4        # Background processing, bulk operations
+
+    CRITICAL = 1  # Drug safety, adverse reactions
+    HIGH = 2  # Clinical trials, efficacy studies
+    NORMAL = 3  # General research, mechanism queries
+    BATCH = 4  # Background processing, bulk operations
+
 
 class BatchType(Enum):
     """Types of batch operations for optimization."""
+
     EMBEDDINGS = "embeddings"
     CHAT_COMPLETION = "chat_completion"
     MIXED = "mixed"
 
+
 @dataclass
 class BatchRequest:
     """Individual request within a batch operation."""
+
     request_id: str
     request_type: str  # "embedding" or "chat"
     payload: Dict[str, Any]
@@ -81,9 +86,11 @@ class BatchRequest:
 
         return 100  # Default conservative estimate
 
+
 @dataclass
 class BatchOptimizationStrategy:
     """Configuration for batch optimization strategies."""
+
     max_batch_size: int = 50
     max_wait_time_seconds: int = 30
     priority_boost_factor: float = 2.0
@@ -91,6 +98,7 @@ class BatchOptimizationStrategy:
     rate_limit_buffer: float = 0.1  # 10% buffer under rate limits
     enable_intelligent_scheduling: bool = True
     enable_cost_optimization: bool = True
+
 
 class BatchProcessor:
     """
@@ -100,10 +108,12 @@ class BatchProcessor:
     to maximize pharmaceutical research value within cost constraints.
     """
 
-    def __init__(self,
-                 config: Optional[EnhancedRAGConfig] = None,
-                 credit_tracker: Optional[PharmaceuticalCreditTracker] = None,
-                 strategy: Optional[BatchOptimizationStrategy] = None):
+    def __init__(
+        self,
+        config: Optional[EnhancedRAGConfig] = None,
+        credit_tracker: Optional[PharmaceuticalCreditTracker] = None,
+        strategy: Optional[BatchOptimizationStrategy] = None,
+    ):
         """
         Initialize batch processor with pharmaceutical optimization.
 
@@ -117,9 +127,7 @@ class BatchProcessor:
         self.strategy = strategy or BatchOptimizationStrategy()
 
         # Request queues by priority
-        self.request_queues: Dict[RequestPriority, List[BatchRequest]] = {
-            priority: [] for priority in RequestPriority
-        }
+        self.request_queues: Dict[RequestPriority, List[BatchRequest]] = {priority: [] for priority in RequestPriority}
 
         # Processing state
         self.is_processing = False
@@ -144,11 +152,13 @@ class BatchProcessor:
 
         logger.info("BatchProcessor initialized with pharmaceutical optimization")
 
-    def queue_request(self,
-                     request_type: str,
-                     payload: Dict[str, Any],
-                     priority: RequestPriority = RequestPriority.NORMAL,
-                     pharmaceutical_context: Optional[Dict[str, Any]] = None) -> str:
+    def queue_request(
+        self,
+        request_type: str,
+        payload: Dict[str, Any],
+        priority: RequestPriority = RequestPriority.NORMAL,
+        pharmaceutical_context: Optional[Dict[str, Any]] = None,
+    ) -> str:
         """
         Queue a request for batch processing.
 
@@ -163,7 +173,7 @@ class BatchProcessor:
         """
         # Generate unique request ID
         request_id = hashlib.md5(
-            f"{request_type}_{time.time()}_{hash(str(payload))}".encode()
+            f"{request_type}_{time.time()}_{hash(str(payload))}".encode(), usedforsecurity=False
         ).hexdigest()[:12]
 
         # Create batch request
@@ -172,7 +182,7 @@ class BatchProcessor:
             request_type=request_type,
             payload=payload,
             priority=priority,
-            pharmaceutical_context=pharmaceutical_context
+            pharmaceutical_context=pharmaceutical_context,
         )
 
         # Apply pharmaceutical prioritization
@@ -188,21 +198,32 @@ class BatchProcessor:
         logger.debug(f"Queued request {request_id} with priority {priority.name}")
         return request_id
 
-    def _apply_pharmaceutical_prioritization(self,
-                                           base_priority: RequestPriority,
-                                           pharma_context: Dict[str, Any]) -> RequestPriority:
+    def _apply_pharmaceutical_prioritization(
+        self, base_priority: RequestPriority, pharma_context: Dict[str, Any]
+    ) -> RequestPriority:
         """Apply pharmaceutical domain-specific prioritization."""
 
         # Critical pharmaceutical keywords that boost priority
         critical_keywords = [
-            "adverse", "toxicity", "contraindication", "drug interaction",
-            "safety", "warning", "side effect", "overdose"
+            "adverse",
+            "toxicity",
+            "contraindication",
+            "drug interaction",
+            "safety",
+            "warning",
+            "side effect",
+            "overdose",
         ]
 
         # High priority pharmaceutical keywords
         high_priority_keywords = [
-            "clinical trial", "efficacy", "dosage", "pharmacokinetics",
-            "bioavailability", "therapeutic", "treatment"
+            "clinical trial",
+            "efficacy",
+            "dosage",
+            "pharmacokinetics",
+            "bioavailability",
+            "therapeutic",
+            "treatment",
         ]
 
         query_text = str(pharma_context.get("query", "")).lower()
@@ -221,9 +242,7 @@ class BatchProcessor:
 
         return base_priority
 
-    async def process_batches(self,
-                            executor_func: Callable,
-                            max_concurrent_batches: int = 3) -> Dict[str, Any]:
+    async def process_batches(self, executor_func: Callable, max_concurrent_batches: int = 3) -> Dict[str, Any]:
         """
         Process queued requests in optimized batches.
 
@@ -247,7 +266,7 @@ class BatchProcessor:
                 "requests_processed": 0,
                 "processing_time_ms": 0,
                 "cost_optimization": {},
-                "pharmaceutical_metrics": {}
+                "pharmaceutical_metrics": {},
             }
 
             start_time = time.time()
@@ -262,9 +281,7 @@ class BatchProcessor:
                 if not self.request_queues[priority]:
                     continue
 
-                priority_results = await self._process_priority_queue(
-                    priority, executor_func, max_concurrent_batches
-                )
+                priority_results = await self._process_priority_queue(priority, executor_func, max_concurrent_batches)
 
                 results["batches_processed"] += priority_results["batches_processed"]
                 results["requests_processed"] += priority_results["requests_processed"]
@@ -275,18 +292,19 @@ class BatchProcessor:
             results["cost_optimization"] = self._calculate_cost_optimization()
             results["pharmaceutical_metrics"] = self._calculate_pharmaceutical_metrics()
 
-            logger.info(f"Batch processing completed: {results['requests_processed']} requests "
-                       f"in {results['batches_processed']} batches ({processing_time}ms)")
+            logger.info(
+                f"Batch processing completed: {results['requests_processed']} requests "
+                f"in {results['batches_processed']} batches ({processing_time}ms)"
+            )
 
             return {"status": "success", "results": results}
 
         finally:
             self.is_processing = False
 
-    async def _process_priority_queue(self,
-                                    priority: RequestPriority,
-                                    executor_func: Callable,
-                                    max_concurrent: int) -> Dict[str, Any]:
+    async def _process_priority_queue(
+        self, priority: RequestPriority, executor_func: Callable, max_concurrent: int
+    ) -> Dict[str, Any]:
         """Process requests from a specific priority queue."""
         queue = self.request_queues[priority]
         if not queue:
@@ -322,14 +340,11 @@ class BatchProcessor:
         # Clear processed requests from queue
         queue.clear()
 
-        return {
-            "batches_processed": processed_batches,
-            "requests_processed": processed_requests
-        }
+        return {"batches_processed": processed_batches, "requests_processed": processed_requests}
 
-    def _create_optimal_batches(self,
-                              requests: List[BatchRequest],
-                              priority: RequestPriority) -> List[List[BatchRequest]]:
+    def _create_optimal_batches(
+        self, requests: List[BatchRequest], priority: RequestPriority
+    ) -> List[List[BatchRequest]]:
         """Create optimally sized batches based on request types and costs."""
         if not requests:
             return []
@@ -343,21 +358,19 @@ class BatchProcessor:
         # Create embedding batches (can be larger)
         embedding_batch_size = min(self.strategy.max_batch_size, 100)
         for i in range(0, len(embedding_requests), embedding_batch_size):
-            batch = embedding_requests[i:i + embedding_batch_size]
+            batch = embedding_requests[i : i + embedding_batch_size]
             batches.append(batch)
 
         # Create chat batches (typically smaller for cost control)
         chat_batch_size = min(self.strategy.max_batch_size, 10)
         for i in range(0, len(chat_requests), chat_batch_size):
-            batch = chat_requests[i:i + chat_batch_size]
+            batch = chat_requests[i : i + chat_batch_size]
             batches.append(batch)
 
         logger.debug(f"Created {len(batches)} optimal batches for priority {priority.name}")
         return batches
 
-    async def _execute_batch(self,
-                           batch: List[BatchRequest],
-                           executor_func: Callable) -> Dict[str, Any]:
+    async def _execute_batch(self, batch: List[BatchRequest], executor_func: Callable) -> Dict[str, Any]:
         """Execute a single batch with rate limiting and error handling."""
         if not batch:
             return {"success": True, "requests_processed": 0}
@@ -384,7 +397,9 @@ class BatchProcessor:
                 for r in batch:
                     rt = r.request_type if r.request_type in ("embedding", "chat") else "chat"
                     self.batch_metrics["requests_by_type"][rt] = self.batch_metrics["requests_by_type"].get(rt, 0) + 1
-                    self.batch_metrics["tokens_by_type"][rt] = self.batch_metrics["tokens_by_type"].get(rt, 0) + max(0, int(r.estimated_tokens or 0))
+                    self.batch_metrics["tokens_by_type"][rt] = self.batch_metrics["tokens_by_type"].get(rt, 0) + max(
+                        0, int(r.estimated_tokens or 0)
+                    )
             except Exception:
                 pass
 
@@ -429,16 +444,12 @@ class BatchProcessor:
                 "success": True,
                 "requests_processed": len(batch),
                 "execution_time_ms": execution_time,
-                "result": batch_result
+                "result": batch_result,
             }
 
         except Exception as e:
             logger.error(f"Batch execution failed: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e),
-                "requests_processed": 0
-            }
+            return {"success": False, "error": str(e), "requests_processed": 0}
 
     def _prepare_batch_payload(self, batch: List[BatchRequest]) -> Dict[str, Any]:
         """Prepare consolidated payload for batch execution."""
@@ -454,38 +465,36 @@ class BatchProcessor:
             "batch_size": len(batch),
             "embedding_requests": [],
             "chat_requests": [],
-            "pharmaceutical_contexts": []
+            "pharmaceutical_contexts": [],
         }
 
         # Prepare embedding requests
         for req in embedding_requests:
-            payload["embedding_requests"].append({
-                "request_id": req.request_id,
-                "texts": req.payload.get("texts", []),
-                "model": req.payload.get("model")
-            })
+            payload["embedding_requests"].append(
+                {"request_id": req.request_id, "texts": req.payload.get("texts", []), "model": req.payload.get("model")}
+            )
 
             if req.pharmaceutical_context:
-                payload["pharmaceutical_contexts"].append({
-                    "request_id": req.request_id,
-                    "context": req.pharmaceutical_context
-                })
+                payload["pharmaceutical_contexts"].append(
+                    {"request_id": req.request_id, "context": req.pharmaceutical_context}
+                )
 
         # Prepare chat requests
         for req in chat_requests:
-            payload["chat_requests"].append({
-                "request_id": req.request_id,
-                "messages": req.payload.get("messages", []),
-                "model": req.payload.get("model"),
-                "max_tokens": req.payload.get("max_tokens"),
-                "temperature": req.payload.get("temperature")
-            })
+            payload["chat_requests"].append(
+                {
+                    "request_id": req.request_id,
+                    "messages": req.payload.get("messages", []),
+                    "model": req.payload.get("model"),
+                    "max_tokens": req.payload.get("max_tokens"),
+                    "temperature": req.payload.get("temperature"),
+                }
+            )
 
             if req.pharmaceutical_context:
-                payload["pharmaceutical_contexts"].append({
-                    "request_id": req.request_id,
-                    "context": req.pharmaceutical_context
-                })
+                payload["pharmaceutical_contexts"].append(
+                    {"request_id": req.request_id, "context": req.pharmaceutical_context}
+                )
 
         return payload
 
@@ -495,10 +504,7 @@ class BatchProcessor:
 
         # Clean old requests from history (keep last minute)
         minute_ago = now - timedelta(minutes=1)
-        self.request_history = [
-            req_time for req_time in self.request_history
-            if req_time > minute_ago
-        ]
+        self.request_history = [req_time for req_time in self.request_history if req_time > minute_ago]
 
         # Check if we need to throttle
         requests_per_minute = len(self.request_history)
@@ -589,7 +595,7 @@ class BatchProcessor:
             "tokens_saved": tokens_saved,
             "estimated_cost_savings_usd": round(cost_savings, 4),
             "batch_efficiency": round(actual_batch_calls / max(estimated_individual_calls, 1), 3),
-            "free_tier_optimization_active": True
+            "free_tier_optimization_active": True,
         }
 
     def _calculate_pharmaceutical_metrics(self) -> Dict[str, Any]:
@@ -641,7 +647,11 @@ class BatchProcessor:
         # Threshold from alerts config
         wf_cfg = {}
         try:
-            wf_cfg = ((self._alerts_cfg.get("pharmaceutical") or {}).get("workflow_efficiency") or {}) if isinstance(self._alerts_cfg, dict) else {}
+            wf_cfg = (
+                ((self._alerts_cfg.get("pharmaceutical") or {}).get("workflow_efficiency") or {})
+                if isinstance(self._alerts_cfg, dict)
+                else {}
+            )
         except Exception:
             wf_cfg = {}
         warn_threshold = float(wf_cfg.get("cost_per_query_warning", 0.1))
@@ -670,16 +680,14 @@ class BatchProcessor:
             "total_queued_requests": sum(len(queue) for queue in self.request_queues.values()),
             "queues_by_priority": {},
             "processing_active": self.is_processing,
-            "batch_metrics": self.batch_metrics.copy()
+            "batch_metrics": self.batch_metrics.copy(),
         }
 
         for priority, queue in self.request_queues.items():
             status["queues_by_priority"][priority.name] = {
                 "count": len(queue),
                 "estimated_tokens": sum(req.estimated_tokens for req in queue),
-                "pharmaceutical_requests": sum(
-                    1 for req in queue if req.pharmaceutical_context
-                )
+                "pharmaceutical_requests": sum(1 for req in queue if req.pharmaceutical_context),
             }
 
         return status
@@ -703,12 +711,14 @@ class BatchProcessor:
     def _load_alerts_config(self) -> Dict[str, Any]:
         """Load centralized alert configuration (best-effort)."""
         try:
-            import yaml  # type: ignore
             from pathlib import Path
+
+            import yaml  # type: ignore
+
             cfg_path = Path("config/alerts.yaml")
             if not cfg_path.exists():
                 return {}
-            with open(cfg_path, "r") as f:
+            with open(cfg_path) as f:
                 return yaml.safe_load(f) or {}
         except Exception:
             return {}
@@ -726,10 +736,10 @@ class BatchProcessor:
             return "mechanism"
         return "general"
 
+
 # Pharmaceutical research convenience functions
 def create_pharmaceutical_batch_processor(
-    enhanced_tracking: bool = True,
-    aggressive_optimization: bool = True
+    enhanced_tracking: bool = True, aggressive_optimization: bool = True
 ) -> BatchProcessor:
     """
     Create batch processor optimized for pharmaceutical research workflows.
@@ -754,14 +764,11 @@ def create_pharmaceutical_batch_processor(
         max_wait_time_seconds=20 if aggressive_optimization else 30,
         pharmaceutical_boost_factor=2.0,  # Strong pharmaceutical prioritization
         enable_intelligent_scheduling=True,
-        enable_cost_optimization=True
+        enable_cost_optimization=True,
     )
 
-    return BatchProcessor(
-        config=config,
-        credit_tracker=credit_tracker,
-        strategy=strategy
-    )
+    return BatchProcessor(config=config, credit_tracker=credit_tracker, strategy=strategy)
+
 
 if __name__ == "__main__":
     # Test pharmaceutical batch processor
@@ -775,14 +782,14 @@ if __name__ == "__main__":
             "embedding",
             {"texts": ["metformin mechanism of action in diabetes"]},
             RequestPriority.HIGH,
-            {"query": "metformin mechanism of action", "domain": "pharmaceutical"}
+            {"query": "metformin mechanism of action", "domain": "pharmaceutical"},
         )
 
         processor.queue_request(
             "chat",
             {"messages": [{"role": "user", "content": "Explain drug interactions with ACE inhibitors"}]},
             RequestPriority.CRITICAL,
-            {"query": "drug interactions ACE inhibitors", "domain": "pharmaceutical"}
+            {"query": "drug interactions ACE inhibitors", "domain": "pharmaceutical"},
         )
 
         # Show queue status

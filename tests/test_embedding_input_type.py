@@ -4,8 +4,6 @@ Tests for query-aware input_type forwarding in EnhancedNeMoClient embeddings.
 These tests avoid network by injecting a dummy cloud client that mimics the
 OpenAIWrapper embeddings.create response shape.
 """
-
-import os
 import pytest
 
 from src.clients.nemo_client_enhanced import EnhancedNeMoClient
@@ -29,13 +27,15 @@ class _DummyEmbCloud:
         self.calls = []
 
     def create_embeddings(self, texts, model=None, input_type=None, is_query=None, **kwargs):
-        self.calls.append({
-            "texts": texts,
-            "model": model,
-            "input_type": input_type,
-            "is_query": is_query,
-            "kwargs": kwargs,
-        })
+        self.calls.append(
+            {
+                "texts": texts,
+                "model": model,
+                "input_type": input_type,
+                "is_query": is_query,
+                "kwargs": kwargs,
+            }
+        )
         return _DummyEmbResponse(model=model, n=len(texts) if isinstance(texts, list) else 1)
 
 
@@ -84,4 +84,3 @@ def test_create_embeddings_uses_passage_for_non_query():
         call = dummy.calls[-1]
         assert call["is_query"] in (False, None)
         assert call["input_type"] == "passage"
-

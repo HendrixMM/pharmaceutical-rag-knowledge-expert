@@ -7,12 +7,11 @@ Lightweight HTTP client for local Ollama server, providing:
 
 API docs: https://github.com/ollama/ollama/blob/main/docs/api.md
 """
-
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import requests
 
@@ -32,13 +31,13 @@ class OllamaClientError(Exception):
 
 
 class OllamaClient:
-    def __init__(self, config: Optional[OllamaConfig] = None) -> None:
+    def __init__(self, config: OllamaConfig | None = None) -> None:
         self.config = config or OllamaConfig()
 
     def _url(self, path: str) -> str:
         return f"{self.config.base_url.rstrip('/')}{path}"
 
-    def list_models(self) -> List[str]:
+    def list_models(self) -> list[str]:
         url = self._url("/api/tags")
         try:
             resp = requests.get(url, timeout=self.config.timeout_seconds)
@@ -50,11 +49,11 @@ class OllamaClient:
         except Exception as e:
             raise OllamaClientError(f"Failed to list models: {e}")
 
-    def embed(self, texts: List[str], model: Optional[str] = None) -> List[List[float]]:
+    def embed(self, texts: list[str], model: str | None = None) -> list[list[float]]:
         """Create embeddings. Ollama API expects one prompt per request; loop for batch."""
         model = model or self.config.embed_model
         url = self._url("/api/embeddings")
-        embeddings: List[List[float]] = []
+        embeddings: list[list[float]] = []
         for t in texts:
             payload = {
                 # Ollama embeddings support 'prompt' (commonly used); 'input' may also work for some versions
@@ -73,17 +72,22 @@ class OllamaClient:
                 raise OllamaClientError(f"Embedding request failed: {e}")
         return embeddings
 
-    def chat(self, messages: List[Dict[str, str]], model: Optional[str] = None,
-             max_tokens: Optional[int] = None, temperature: Optional[float] = None) -> Dict[str, Any]:
+    def chat(
+        self,
+        messages: list[dict[str, str]],
+        model: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
         model = model or self.config.chat_model
         url = self._url("/api/chat")
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "model": model,
             "messages": messages,
             "stream": False,
         }
         # Note: Ollama uses 'options' for generation params
-        options: Dict[str, Any] = {}
+        options: dict[str, Any] = {}
         if temperature is not None:
             options["temperature"] = temperature
         if max_tokens is not None:
@@ -98,4 +102,3 @@ class OllamaClient:
             return data
         except Exception as e:
             raise OllamaClientError(f"Chat request failed: {e}")
-

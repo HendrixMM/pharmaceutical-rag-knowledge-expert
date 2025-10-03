@@ -9,6 +9,7 @@ Review Cadence: Weekly
 ---
 
 <!-- TOC -->
+
 - [Phase 0 – Governance & Readiness (0.5h)](#phase-0--governance--readiness-05h)
 - [Phase 1 – Critical Cleanup (4h)](#phase-1--critical-cleanup-4h)
   - [1. README Refactor (2.5h)](#1-readme-refactor-25h)

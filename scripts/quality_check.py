@@ -5,7 +5,6 @@ Code quality checker script for pharmaceutical RAG system.
 Runs essential code quality checks locally before commits.
 Usage: python scripts/quality_check.py [--fix]
 """
-
 import argparse
 import subprocess
 import sys
@@ -16,9 +15,7 @@ from typing import List, Tuple
 def run_command(cmd: List[str], fix_mode: bool = False) -> Tuple[int, str]:
     """Run a command and return exit code and output."""
     try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=Path(__file__).parent.parent
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path(__file__).parent.parent)
         return result.returncode, result.stdout + result.stderr
     except Exception as e:
         return 1, str(e)
@@ -137,12 +134,8 @@ def run_tests() -> bool:
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Run code quality checks")
-    parser.add_argument(
-        "--fix", action="store_true", help="Fix formatting and import issues automatically"
-    )
-    parser.add_argument(
-        "--no-tests", action="store_true", help="Skip running tests"
-    )
+    parser.add_argument("--fix", action="store_true", help="Fix formatting and import issues automatically")
+    parser.add_argument("--no-tests", action="store_true", help="Skip running tests")
     args = parser.parse_args()
 
     print("🧹 Running code quality checks for pharmaceutical RAG system...")

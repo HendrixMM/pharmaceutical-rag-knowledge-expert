@@ -1,5 +1,3 @@
-import importlib
-
 from src.enhanced_config import EnhancedRAGConfig
 
 
@@ -22,6 +20,7 @@ def test_backoff_mapping_disables_jitter_when_false(monkeypatch):
 
     # Monkeypatch the OpenAIWrapper used by the enhanced client
     import src.clients.nemo_client_enhanced as nce
+
     original = nce.OpenAIWrapper
     nce.OpenAIWrapper = DummyWrapper
     try:
@@ -53,6 +52,7 @@ def test_backoff_mapping_sets_jitter_amplitude_when_true(monkeypatch):
             captured["config"] = config
 
     import src.clients.nemo_client_enhanced as nce
+
     original = nce.OpenAIWrapper
     nce.OpenAIWrapper = DummyWrapper
     try:
@@ -65,4 +65,3 @@ def test_backoff_mapping_sets_jitter_amplitude_when_true(monkeypatch):
         assert c.request_backoff_jitter == 1.0
     finally:
         nce.OpenAIWrapper = original
-

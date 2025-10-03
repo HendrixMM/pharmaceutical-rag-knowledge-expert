@@ -1,5 +1,4 @@
 """Medical safety guardrails and validation module for pharmaceutical research systems."""
-
 from __future__ import annotations
 
 import asyncio
@@ -9,10 +8,10 @@ import json
 import logging
 import os
 import re
-from typing import Any, Dict, List, Optional, Set
-from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +41,9 @@ ENABLE_MEDICAL_GUARDRAILS = _env_flag("ENABLE_MEDICAL_GUARDRAILS", default=True)
 PRESIDIO_AVAILABLE = False
 try:
     from presidio_analyzer import AnalyzerEngine
-    from presidio_anonymizer import AnonymizerEngine
     from presidio_analyzer.nlp_engine import NlpEngineProvider
+    from presidio_anonymizer import AnonymizerEngine
+
     PRESIDIO_AVAILABLE = True
     logger.info("Presidio detected - will use for advanced PII/PHI detection when enabled")
 except ImportError:
@@ -58,6 +58,7 @@ _NEMO_IMPORT_ERROR = None
 if ENABLE_MEDICAL_GUARDRAILS:
     try:
         from nemoguardrails import LLMRails, RailsConfig
+
         NEMO_GUARDRAILS_AVAILABLE = True
     except ImportError as e:
         _NEMO_IMPORT_ERROR = e
@@ -86,28 +87,30 @@ class _GuardrailsNullLLM(_LangChainLLM if _LangChainLLM is not None else object)
         return "guardrails-dummy"
 
     @property
-    def _identifying_params(self) -> Dict[str, Any]:  # pragma: no cover - simple metadata
+    def _identifying_params(self) -> dict[str, Any]:  # pragma: no cover - simple metadata
         return {"provider": "dummy"}
 
-    def _call(self, prompt: str, stop: Optional[List[str]] = None, run_manager: Any = None, **kwargs: Any) -> str:
+    def _call(self, prompt: str, stop: list[str] | None = None, run_manager: Any = None, **kwargs: Any) -> str:
         return ""
 
 
 @dataclass
 class ValidationResult:
     """Result of medical validation check."""
+
     is_valid: bool
     severity: str  # "low", "medium", "high", "critical"
-    issues: List[str]
-    recommendations: List[str]
-    metadata: Dict[str, Any]
+    issues: list[str]
+    recommendations: list[str]
+    metadata: dict[str, Any]
 
 
 @dataclass
 class PIIDetectionResult:
     """Result of PII/PHI detection."""
+
     detected: bool
-    entities: List[Dict[str, Any]]
+    entities: list[dict[str, Any]]
     masked_text: str
     confidence: float
 
@@ -127,11 +130,11 @@ class MedicalGuardrails:
     def __init__(
         self,
         config_path: str,
-        actions: Optional[Any] = None,
+        actions: Any | None = None,
         enable_nemo_guardrails: bool = True,
-        guardrails_root: Optional[str] = None,
-        nemo_config_path: Optional[str] = None,
-        enabled: Optional[bool] = None,
+        guardrails_root: str | None = None,
+        nemo_config_path: str | None = None,
+        enabled: bool | None = None,
     ):
         """Initialize medical guardrails with configuration.
 
@@ -150,7 +153,7 @@ class MedicalGuardrails:
         self.guardrails_root = Path(guardrails_root) if guardrails_root else None
         self.nemo_config_path = Path(nemo_config_path) if nemo_config_path else None
         self.guardrails_actions_status = None  # Will store action registration status
-        
+
         # Set enabled flag - if explicitly provided, use it; otherwise fall back to environment variable
         if enabled is not None:
             self.enabled = enabled
@@ -195,49 +198,44 @@ class MedicalGuardrails:
             "drug_names": [
                 r"\b(?:acetaminophen|ibuprofen|aspirin|warfarin|metformin|lisinopril|atorvastatin)\b",
                 r"\b[a-z]+(?:cillin|mycin|azole|pril|statin|olol)\b",
-                r"\b\w+(?:mab|nib|tide)\b"  # Biologics patterns
+                r"\b\w+(?:mab|nib|tide)\b",  # Biologics patterns
             ],
             "medical_conditions": [
                 r"\b(?:hypertension|diabetes|depression|anxiety|cancer|pneumonia)\b",
                 r"\b(?:cardiovascular|respiratory|neurological|psychiatric)\b",
-                r"\b(?:diagnosis|treatment|therapy|medication|prescription)\b"
+                r"\b(?:diagnosis|treatment|therapy|medication|prescription)\b",
             ],
             "dosage_patterns": [
                 r"\b\d+\s*(?:mg|mcg|g|ml|units?)\b",
                 r"\b(?:once|twice|three times?)\s+(?:daily|per day|a day)\b",
-                r"\bevery\s+\d+\s+hours?\b"
+                r"\bevery\s+\d+\s+hours?\b",
             ],
             "clinical_terms": [
                 r"\b(?:clinical trial|study|research|review|efficacy|safety|adverse)\b",
                 r"\b(?:pharmacokinetics?|pharmacodynamics?|bioavailability)\b",
-                r"\b(?:contraindication|interactions?|side effect)\b"
-            ]
+                r"\b(?:contraindication|interactions?|side effect)\b",
+            ],
         }
 
         # PII/PHI patterns with medical context anchoring
         self.pii_patterns = {
             "names": [
                 r"\b[A-Z][a-z]+\s+[A-Z][a-z]+\b",  # Simple name pattern
-                r"\b(?:Mr|Mrs|Ms|Dr)\.?\s+[A-Z][a-z]+\b"
+                r"\b(?:Mr|Mrs|Ms|Dr)\.?\s+[A-Z][a-z]+\b",
             ],
-            "phone_numbers": [
-                r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b",
-                r"\(\d{3}\)\s*\d{3}[-.]?\d{4}\b"
-            ],
-            "email": [
-                r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
-            ],
+            "phone_numbers": [r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b", r"\(\d{3}\)\s*\d{3}[-.]?\d{4}\b"],
+            "email": [r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"],
             "medical_record_numbers": [
                 # Anchor MRN patterns to medical context terms when Presidio unavailable
                 r"(?:patient|medical record|MRN|record)[\s:]+\d{5,8}\b",
                 r"\bMRN[\s:]*\d+\b",
-                r"\bmedical record(?:\s+number)?[\s:]*\d+\b"
+                r"\bmedical record(?:\s+number)?[\s:]*\d+\b",
             ],
             "ssn": [
                 # Anchor SSN to medical/insurance context to reduce false positives
                 r"(?:SSN|social security|insurance)[\s:]*\d{3}-\d{2}-\d{4}\b",
                 r"(?:patient|billing|insurance)[\s\w]*SSN[\s:]*\d{3}-\d{2}-\d{4}\b",
-                r"\b\d{3}-\d{2}-\d{4}\b"  # Keep general pattern but lower priority
+                r"\b\d{3}-\d{2}-\d{4}\b",  # Keep general pattern but lower priority
             ],
             "dates": [
                 r"\b\d{1,2}/\d{1,2}/\d{2,4}\b",
@@ -264,23 +262,37 @@ class MedicalGuardrails:
             r"roleplay.*(?:doctor|physician|medical)",
             r"(?:jailbreak|bypass|circumvent|override).*(?:safety|guidelines?|rules?)",
             r"ignore.*(?:safety|medical|ethical)\s+(?:guidelines?|protocols?)",
-            r"provide.*(?:illegal|harmful|dangerous).*(?:advice|information|guidance)"
+            r"provide.*(?:illegal|harmful|dangerous).*(?:advice|information|guidance)",
         ]
 
         # Regulatory compliance keywords
         self.regulatory_keywords = {
             "fda_warnings": [
-                "black box", "boxed warning", "contraindicated", "serious adverse",
-                "life-threatening", "fatal", "death", "suicide"
+                "black box",
+                "boxed warning",
+                "contraindicated",
+                "serious adverse",
+                "life-threatening",
+                "fatal",
+                "death",
+                "suicide",
             ],
             "prescription_only": [
-                "prescription only", "rx only", "controlled substance",
-                "schedule II", "schedule III", "schedule IV"
+                "prescription only",
+                "rx only",
+                "controlled substance",
+                "schedule II",
+                "schedule III",
+                "schedule IV",
             ],
             "clinical_trials": [
-                "investigational", "experimental", "off-label", "unlabeled use",
-                "clinical trial", "investigational new drug"
-            ]
+                "investigational",
+                "experimental",
+                "off-label",
+                "unlabeled use",
+                "clinical trial",
+                "investigational new drug",
+            ],
         }
 
     def _initialize_nemo_guardrails(self):
@@ -326,7 +338,9 @@ class MedicalGuardrails:
             # Check config presence and provide remediation steps if missing
             if not guardrails_config_path.exists():
                 logger.info("NeMo Guardrails config.yml not found at %s", guardrails_config_path.absolute())
-                logger.info("To enable guardrails: set GUARDRAILS_ROOT environment variable or supply nemo_config_path parameter")
+                logger.info(
+                    "To enable guardrails: set GUARDRAILS_ROOT environment variable or supply nemo_config_path parameter"
+                )
                 logger.info("Continuing with fallback validation only")
                 return
 
@@ -373,21 +387,31 @@ class MedicalGuardrails:
                             total_expected = registration_status.get("total_expected", 0)
                             registered_count = len(registration_status.get("successfully_registered", []))
                             wrapped_count = len(registration_status.get("wrapped_actions", []))
-                            logger.info("NeMo Guardrails actions loaded: %d expected, %d registered, %d wrapped",
-                                       total_expected, registered_count, wrapped_count)
+                            logger.info(
+                                "NeMo Guardrails actions loaded: %d expected, %d registered, %d wrapped",
+                                total_expected,
+                                registered_count,
+                                wrapped_count,
+                            )
                         logger.info("NeMo Guardrails actions registered from %s", actions_path)
                         actions_loaded = True
                         break
-                    logger.warning("Guardrails actions module at %s does not expose an init(app) callable", actions_path)
+                    logger.warning(
+                        "Guardrails actions module at %s does not expose an init(app) callable", actions_path
+                    )
                 except Exception as actions_error:
                     logger.exception("Failed to load guardrails actions from %s", actions_path)
 
             if not actions_loaded:
-                logger.warning("NeMo Guardrails actions module could not be loaded from expected paths: %s", actions_candidates)
+                logger.warning(
+                    "NeMo Guardrails actions module could not be loaded from expected paths: %s", actions_candidates
+                )
 
             # Log successful initialization with action counts
             if self.guardrails_actions_status:
-                action_summary = f"with {len(self.guardrails_actions_status.get('successfully_registered', []))} actions"
+                action_summary = (
+                    f"with {len(self.guardrails_actions_status.get('successfully_registered', []))} actions"
+                )
             else:
                 action_summary = "without custom actions"
             logger.info("NeMo Guardrails initialized successfully %s", action_summary)
@@ -396,7 +420,7 @@ class MedicalGuardrails:
             logger.error("Error initializing NeMo Guardrails: %s", e)
             raise
 
-    async def run_input_validation_rails(self, user_message: str) -> Dict[str, Any]:
+    async def run_input_validation_rails(self, user_message: str) -> dict[str, Any]:
         """Run input validation using NeMo Guardrails flows.
 
         Args:
@@ -414,10 +438,7 @@ class MedicalGuardrails:
                 "recommendations": [],
                 "nemo_rails_used": False,
                 "sanitized_query": user_message,
-                "metadata": {
-                    "guardrails_enabled": False,
-                    "note": "Medical guardrails are disabled"
-                }
+                "metadata": {"guardrails_enabled": False, "note": "Medical guardrails are disabled"},
             }
 
         try:
@@ -436,17 +457,17 @@ class MedicalGuardrails:
                         **fallback_result.get("metadata", {}),
                         "flow_runs": {},
                         "checks_performed": fallback_result.get("checks_performed", {}),
-                        "fallback_used": True
-                    }
+                        "fallback_used": True,
+                    },
                 }
 
-            flow_runs: Dict[str, Any] = {}
+            flow_runs: dict[str, Any] = {}
             rails_context = await self._execute_flow("medical input validation", user_message=user_message)
             flow_runs["medical_input_validation"] = rails_context
             flow_variables = self._extract_flow_context(rails_context)
 
             sanitized_query = user_message or ""
-            sanitized_candidates: List[str] = []
+            sanitized_candidates: list[str] = []
 
             def _register_sanitized_candidate(candidate: Any) -> None:
                 if isinstance(candidate, str) and candidate.strip():
@@ -469,8 +490,8 @@ class MedicalGuardrails:
             toxicity_flow = await self._execute_flow("toxicity screening", user_message=user_message)
             flow_runs["toxicity_screening"] = toxicity_flow
 
-            issues: List[str] = []
-            recommendations: List[str] = []
+            issues: list[str] = []
+            recommendations: list[str] = []
             severity = "low"
 
             def escalate(new_severity: str) -> None:
@@ -526,8 +547,7 @@ class MedicalGuardrails:
 
             if pii_scan and isinstance(pii_scan, dict) and pii_scan.get("detected") and user_message:
                 mask_types = pii_scan.get("types") or [
-                    detection.get("type") for detection in pii_scan.get("detections", [])
-                    if isinstance(detection, dict)
+                    detection.get("type") for detection in pii_scan.get("detections", []) if isinstance(detection, dict)
                 ]
                 masked_via_action = await self._safe_invoke_action(
                     "mask_medical_pii",
@@ -566,9 +586,11 @@ class MedicalGuardrails:
                     "jailbreak_detected": bool(jailbreak_detected),
                     "flow_runs": flow_runs,
                     "sanitized_query": sanitized_query,
-                    "actions_wrapped": self.guardrails_actions_status.get("wrapped_actions", []) if self.guardrails_actions_status else [],
-                    "actions_registration_status": self.guardrails_actions_status
-                }
+                    "actions_wrapped": self.guardrails_actions_status.get("wrapped_actions", [])
+                    if self.guardrails_actions_status
+                    else [],
+                    "actions_registration_status": self.guardrails_actions_status,
+                },
             }
 
         except Exception as e:
@@ -588,11 +610,11 @@ class MedicalGuardrails:
                     "flow_runs": {},
                     "checks_performed": fallback_result.get("checks_performed", {}),
                     "fallback_used": True,
-                    "error": str(e)
-                }
+                    "error": str(e),
+                },
             }
 
-    async def run_output_validation_rails(self, bot_message: str, sources: Optional[List[Dict]] = None) -> Dict[str, Any]:
+    async def run_output_validation_rails(self, bot_message: str, sources: list[dict] | None = None) -> dict[str, Any]:
         """Run output validation using NeMo Guardrails flows.
 
         Args:
@@ -611,10 +633,7 @@ class MedicalGuardrails:
                 "recommendations": [],
                 "nemo_rails_used": False,
                 "validated_response": bot_message,
-                "metadata": {
-                    "guardrails_enabled": False,
-                    "note": "Medical guardrails are disabled"
-                }
+                "metadata": {"guardrails_enabled": False, "note": "Medical guardrails are disabled"},
             }
 
         try:
@@ -633,8 +652,8 @@ class MedicalGuardrails:
                         **fallback_result.get("metadata", {}),
                         "flow_runs": {},
                         "checks_performed": fallback_result.get("checks_performed", {}),
-                        "fallback_used": True
-                    }
+                        "fallback_used": True,
+                    },
                 }
 
             original_message = bot_message or ""
@@ -642,10 +661,10 @@ class MedicalGuardrails:
 
             working_message = original_message
             flow_inputs = {"bot_message": working_message, "sources": sources or []}
-            flow_runs: Dict[str, Any] = {}
-            flow_context_snapshots: Dict[str, Any] = {}
+            flow_runs: dict[str, Any] = {}
+            flow_context_snapshots: dict[str, Any] = {}
 
-            def refresh_flow_state(flow_key: str, flow_result: Dict[str, Any], current: str) -> str:
+            def refresh_flow_state(flow_key: str, flow_result: dict[str, Any], current: str) -> str:
                 context_snapshot = self._extract_flow_context(flow_result)
                 if context_snapshot:
                     flow_context_snapshots[flow_key] = context_snapshot
@@ -659,8 +678,8 @@ class MedicalGuardrails:
             working_message = refresh_flow_state("medical_disclaimer_enforcement", rails_context, working_message)
 
             severity = "low"
-            issues: List[str] = []
-            recommendations: List[str] = []
+            issues: list[str] = []
+            recommendations: list[str] = []
 
             def escalate(new_severity: str) -> None:
                 nonlocal severity
@@ -671,9 +690,7 @@ class MedicalGuardrails:
             hallucination_flow = {}
             if sources:
                 hallucination_flow = await self._execute_flow(
-                    "hallucination detection medical",
-                    bot_message=working_message,
-                    sources=sources
+                    "hallucination detection medical", bot_message=working_message, sources=sources
                 )
                 flow_runs["hallucination_detection"] = hallucination_flow
                 working_message = refresh_flow_state("hallucination_detection", hallucination_flow, working_message)
@@ -693,9 +710,7 @@ class MedicalGuardrails:
             fact_check_flow = {}
             if sources:
                 fact_check_flow = await self._execute_flow(
-                    "fact check against pubmed",
-                    bot_message=working_message,
-                    sources=sources
+                    "fact check against pubmed", bot_message=working_message, sources=sources
                 )
                 flow_runs["fact_check_against_pubmed"] = fact_check_flow
                 working_message = refresh_flow_state("fact_check_against_pubmed", fact_check_flow, working_message)
@@ -709,9 +724,7 @@ class MedicalGuardrails:
                     escalate("medium")
 
             compliance_flow = await self._execute_flow(
-                "regulatory compliance check",
-                bot_message=working_message,
-                sources=sources or []
+                "regulatory compliance check", bot_message=working_message, sources=sources or []
             )
             flow_runs["regulatory_compliance_check"] = compliance_flow
             working_message = refresh_flow_state("regulatory_compliance_check", compliance_flow, working_message)
@@ -723,16 +736,15 @@ class MedicalGuardrails:
                 escalate("high")
 
             filtering_flow = await self._execute_flow(
-                "sensitive information filtering",
-                bot_message=working_message,
-                sources=sources or []
+                "sensitive information filtering", bot_message=working_message, sources=sources or []
             )
             flow_runs["sensitive_information_filtering"] = filtering_flow
             working_message = refresh_flow_state("sensitive_information_filtering", filtering_flow, working_message)
 
-            working_message = await self._safe_invoke_action(
-                "filter_sensitive_medical_info", response=working_message
-            ) or working_message
+            working_message = (
+                await self._safe_invoke_action("filter_sensitive_medical_info", response=working_message)
+                or working_message
+            )
 
             citation_block = ""
             if sources:
@@ -748,16 +760,12 @@ class MedicalGuardrails:
                     recommendations.append("Align citations with retrieved literature")
 
             final_flow = await self._execute_flow(
-                "final medical safety validation",
-                bot_message=working_message,
-                sources=sources or []
+                "final medical safety validation", bot_message=working_message, sources=sources or []
             )
             flow_runs["final_medical_safety_validation"] = final_flow
             working_message = refresh_flow_state("final_medical_safety_validation", final_flow, working_message)
 
-            safety_assessment = await self._safe_invoke_action(
-                "comprehensive_safety_check", response=working_message
-            )
+            safety_assessment = await self._safe_invoke_action("comprehensive_safety_check", response=working_message)
             if safety_assessment and not safety_assessment.get("safe", True):
                 escalate("high")
                 issues.append("Final safety check failed for response")
@@ -765,9 +773,7 @@ class MedicalGuardrails:
             elif safety_assessment and safety_assessment.get("warnings"):
                 recommendations.extend(safety_assessment["warnings"])
 
-            evidence_levels = await self._safe_invoke_action(
-                "assess_evidence_levels", sources=sources or []
-            )
+            evidence_levels = await self._safe_invoke_action("assess_evidence_levels", sources=sources or [])
 
             final_disclaimer_present = self._contains_medical_disclaimer(working_message)
             disclaimer_added = final_disclaimer_present and not initial_disclaimer_present
@@ -790,9 +796,11 @@ class MedicalGuardrails:
                     "flow_context_snapshots": flow_context_snapshots,
                     "rails_variables": flow_context_snapshots.get("medical_disclaimer_enforcement", {}),
                     "disclaimer_added": disclaimer_added,
-                    "actions_wrapped": self.guardrails_actions_status.get("wrapped_actions", []) if self.guardrails_actions_status else [],
-                    "actions_registration_status": self.guardrails_actions_status
-                }
+                    "actions_wrapped": self.guardrails_actions_status.get("wrapped_actions", [])
+                    if self.guardrails_actions_status
+                    else [],
+                    "actions_registration_status": self.guardrails_actions_status,
+                },
             }
 
         except Exception as e:
@@ -812,11 +820,11 @@ class MedicalGuardrails:
                     "flow_runs": {},
                     "checks_performed": fallback_result.get("checks_performed", {}),
                     "fallback_used": True,
-                    "error": str(e)
-                }
+                    "error": str(e),
+                },
             }
 
-    async def run_retrieval_validation_rails(self, retrieved_documents: List[Dict], user_query: str) -> Dict[str, Any]:
+    async def run_retrieval_validation_rails(self, retrieved_documents: list[dict], user_query: str) -> dict[str, Any]:
         """Run retrieval validation using NeMo Guardrails flows.
 
         Args:
@@ -838,8 +846,8 @@ class MedicalGuardrails:
                     "guardrails_enabled": False,
                     "note": "Medical guardrails are disabled",
                     "original_count": len(retrieved_documents),
-                    "filtered_count": len(retrieved_documents)
-                }
+                    "filtered_count": len(retrieved_documents),
+                },
             }
 
         try:
@@ -851,17 +859,15 @@ class MedicalGuardrails:
 
             # Execute retrieval validation flows sequentially
             working_documents = retrieved_documents.copy()
-            flow_runs: Dict[str, Any] = {}
-            issues: List[str] = []
-            recommendations: List[str] = []
-            warnings: List[str] = []
+            flow_runs: dict[str, Any] = {}
+            issues: list[str] = []
+            recommendations: list[str] = []
+            warnings: list[str] = []
 
             # Flow 1: Validate PubMed sources
             logger.info("Running validate pubmed sources flow")
             pubmed_flow = await self._execute_flow(
-                "validate pubmed sources",
-                retrieved_documents=working_documents,
-                user_query=user_query
+                "validate pubmed sources", retrieved_documents=working_documents, user_query=user_query
             )
             flow_runs["validate_pubmed_sources"] = pubmed_flow
             pubmed_context = self._extract_flow_context(pubmed_flow)
@@ -873,9 +879,7 @@ class MedicalGuardrails:
             # Flow 2: Medical relevance filtering
             logger.info("Running medical relevance filtering flow")
             relevance_flow = await self._execute_flow(
-                "medical relevance filtering",
-                retrieved_documents=working_documents,
-                user_query=user_query
+                "medical relevance filtering", retrieved_documents=working_documents, user_query=user_query
             )
             flow_runs["medical_relevance_filtering"] = relevance_flow
             relevance_context = self._extract_flow_context(relevance_flow)
@@ -887,9 +891,7 @@ class MedicalGuardrails:
             # Flow 3: Duplicate source removal
             logger.info("Running duplicate source removal flow")
             duplicate_flow = await self._execute_flow(
-                "duplicate source removal",
-                retrieved_documents=working_documents,
-                user_query=user_query
+                "duplicate source removal", retrieved_documents=working_documents, user_query=user_query
             )
             flow_runs["duplicate_source_removal"] = duplicate_flow
             duplicate_context = self._extract_flow_context(duplicate_flow)
@@ -901,9 +903,7 @@ class MedicalGuardrails:
             # Flow 4: Impact factor assessment
             logger.info("Running impact factor assessment flow")
             impact_flow = await self._execute_flow(
-                "impact factor assessment",
-                retrieved_documents=working_documents,
-                user_query=user_query
+                "impact factor assessment", retrieved_documents=working_documents, user_query=user_query
             )
             flow_runs["impact_factor_assessment"] = impact_flow
             impact_context = self._extract_flow_context(impact_flow)
@@ -915,9 +915,7 @@ class MedicalGuardrails:
             # Flow 5: Final source quality control
             logger.info("Running final source quality control flow")
             quality_flow = await self._execute_flow(
-                "final source quality control",
-                retrieved_documents=working_documents,
-                user_query=user_query
+                "final source quality control", retrieved_documents=working_documents, user_query=user_query
             )
             flow_runs["final_source_quality_control"] = quality_flow
             quality_context = self._extract_flow_context(quality_flow)
@@ -955,9 +953,11 @@ class MedicalGuardrails:
                     "filtered_count": filtered_count,
                     "documents_removed": original_count - filtered_count,
                     "flow_runs": flow_runs,
-                    "actions_wrapped": self.guardrails_actions_status.get("wrapped_actions", []) if self.guardrails_actions_status else [],
-                    "actions_registration_status": self.guardrails_actions_status
-                }
+                    "actions_wrapped": self.guardrails_actions_status.get("wrapped_actions", [])
+                    if self.guardrails_actions_status
+                    else [],
+                    "actions_registration_status": self.guardrails_actions_status,
+                },
             }
 
         except Exception as e:
@@ -968,7 +968,7 @@ class MedicalGuardrails:
             fallback_result["metadata"]["fallback_used"] = True
             return fallback_result
 
-    async def _execute_flow(self, flow_name: str, **inputs: Any) -> Dict[str, Any]:
+    async def _execute_flow(self, flow_name: str, **inputs: Any) -> dict[str, Any]:
         """Execute a NeMo Guardrails flow if available, returning context variables."""
         if not self.nemo_rails:
             return {}
@@ -991,9 +991,9 @@ class MedicalGuardrails:
 
         return {}
 
-    def _extract_flow_context(self, flow_result: Any) -> Dict[str, Any]:
+    def _extract_flow_context(self, flow_result: Any) -> dict[str, Any]:
         """Extract variables from a flow execution result regardless of structure."""
-        context_data: Dict[str, Any] = {}
+        context_data: dict[str, Any] = {}
 
         if isinstance(flow_result, dict):
             for key in ("context", "contexts", "variables", "rails_context", "state"):
@@ -1013,7 +1013,7 @@ class MedicalGuardrails:
         return context_data
 
     @staticmethod
-    def _select_sanitized_query(original: Optional[str], candidates: List[Any]) -> str:
+    def _select_sanitized_query(original: str | None, candidates: list[Any]) -> str:
         """Return the first non-empty sanitized candidate, preferring changes over original text."""
         baseline = original or ""
 
@@ -1028,11 +1028,12 @@ class MedicalGuardrails:
         return baseline
 
     @staticmethod
-    def _contains_medical_disclaimer(text: Optional[str]) -> bool:
+    def _contains_medical_disclaimer(text: str | None) -> bool:
         """Return True when the supplied text already includes a medical disclaimer marker."""
         try:
             # Use standardized disclaimer detection from guardrails.actions
             from guardrails.actions import contains_medical_disclaimer
+
             return contains_medical_disclaimer(text)
         except ImportError:
             # Fallback to simple detection
@@ -1083,7 +1084,9 @@ class MedicalGuardrails:
 
         return None
 
-    def _validate_retrieved_documents_fallback(self, retrieved_documents: List[Dict], user_query: str) -> Dict[str, Any]:
+    def _validate_retrieved_documents_fallback(
+        self, retrieved_documents: list[dict], user_query: str
+    ) -> dict[str, Any]:
         """Fallback validation for retrieved documents."""
         try:
             validation_result = {
@@ -1094,8 +1097,8 @@ class MedicalGuardrails:
                 "metadata": {
                     "original_count": len(retrieved_documents),
                     "filtered_count": len(retrieved_documents),
-                    "duplicates_removed": 0
-                }
+                    "duplicates_removed": 0,
+                },
             }
 
             # Basic validation - check for PMID and medical relevance
@@ -1112,7 +1115,9 @@ class MedicalGuardrails:
                 if pmid or is_medical:
                     valid_documents.append(doc)
                 else:
-                    validation_result["issues"].append(f"Document lacks medical relevance: {metadata.get('title', 'Unknown')}")
+                    validation_result["issues"].append(
+                        f"Document lacks medical relevance: {metadata.get('title', 'Unknown')}"
+                    )
 
             validation_result["filtered_documents"] = valid_documents
             validation_result["metadata"]["filtered_count"] = len(valid_documents)
@@ -1133,10 +1138,10 @@ class MedicalGuardrails:
                 "filtered_documents": [],
                 "issues": [f"Validation error: {str(e)}"],
                 "recommendations": ["Manual document review required"],
-                "metadata": {"error": str(e)}
+                "metadata": {"error": str(e)},
             }
 
-    def validate_medical_query(self, query: str) -> Dict[str, Any]:
+    def validate_medical_query(self, query: str) -> dict[str, Any]:
         """Validate a medical query for safety and appropriateness.
 
         Args:
@@ -1153,16 +1158,13 @@ class MedicalGuardrails:
                 "issues": [],
                 "recommendations": [],
                 "checks_performed": {},
-                "metadata": {
-                    "guardrails_enabled": False,
-                    "note": "Medical guardrails are disabled"
-                },
+                "metadata": {"guardrails_enabled": False, "note": "Medical guardrails are disabled"},
                 "sanitized_query": query or "",
             }
 
         try:
             normalized_query = query or ""
-            pii_result: Dict[str, Any] = {
+            pii_result: dict[str, Any] = {
                 "detected": False,
                 "entities": [],
                 "masked_text": normalized_query,
@@ -1183,7 +1185,7 @@ class MedicalGuardrails:
                     "pii_phi_detection": bool(normalized_query),
                     "medical_context_check": False,
                     "jailbreak_detection": False,
-                    "regulatory_compliance": False
+                    "regulatory_compliance": False,
                 },
                 "metadata": {
                     "timestamp": datetime.now().isoformat(),
@@ -1261,7 +1263,7 @@ class MedicalGuardrails:
                 "sanitized_query": query or "",
             }
 
-    def validate_medical_response(self, response: str, sources: List[Dict]) -> Dict[str, Any]:
+    def validate_medical_response(self, response: str, sources: list[dict]) -> dict[str, Any]:
         """Validate a medical response for safety and accuracy.
 
         Args:
@@ -1286,7 +1288,7 @@ class MedicalGuardrails:
                     "response_length": len(response or ""),
                     "source_count": len(source_list),
                     "disclaimer_added": self._contains_medical_disclaimer(response),
-                }
+                },
             }
 
         try:
@@ -1301,7 +1303,7 @@ class MedicalGuardrails:
                     "source_validation": False,
                     "claim_validation": False,
                     "disclaimer_check": False,
-                    "regulatory_compliance": False
+                    "regulatory_compliance": False,
                 },
                 "metadata": {
                     "timestamp": datetime.now().isoformat(),
@@ -1309,7 +1311,7 @@ class MedicalGuardrails:
                     "source_count": len(sources_list),
                     "claim_validation": {"claims_assessed": 0, "notes": "Not evaluated"},
                     "disclaimer_added": self._contains_medical_disclaimer(response),
-                }
+                },
             }
 
             # Validate response content
@@ -1331,10 +1333,7 @@ class MedicalGuardrails:
                 validation_results["issues"].extend(source_validation["issues"])
                 validation_results["recommendations"].extend(source_validation["recommendations"])
 
-            claim_validation_summary: Dict[str, Any] = {
-                "claims_assessed": 0,
-                "notes": "Claim validation skipped"
-            }
+            claim_validation_summary: dict[str, Any] = {"claims_assessed": 0, "notes": "Claim validation skipped"}
             if sources_list:
                 claim_validation_summary = self._run_claim_level_checks(response, sources_list)
                 validation_results["checks_performed"]["claim_validation"] = bool(
@@ -1354,11 +1353,7 @@ class MedicalGuardrails:
                     validation_results["recommendations"].append(
                         "Reconcile unsupported claims with cited literature or remove them."
                     )
-                    if (
-                        isinstance(support_ratio, (int, float))
-                        and support_ratio < 0.5
-                        and len(unsupported_claims) > 1
-                    ):
+                    if isinstance(support_ratio, (int, float)) and support_ratio < 0.5 and len(unsupported_claims) > 1:
                         validation_results["is_valid"] = False
                 elif validation_results["checks_performed"]["claim_validation"]:
                     validation_results["recommendations"].append(
@@ -1404,25 +1399,24 @@ class MedicalGuardrails:
                 "metadata": {
                     "error": str(e),
                     "disclaimer_added": self._contains_medical_disclaimer(response),
-                }
+                },
             }
 
-    def _detect_pii_phi(self, text: str) -> Dict[str, Any]:
+    def _detect_pii_phi(self, text: str) -> dict[str, Any]:
         """Detect personally identifiable information and protected health information.
-        
+
         Uses Presidio when available for advanced detection, otherwise falls back to regex patterns.
         """
         # Check if Presidio is available and should be used
         use_presidio = PRESIDIO_AVAILABLE and self.config.get("use_presidio_for_pii", False)
-        
+
         if use_presidio:
             try:
                 return self._detect_pii_phi_with_presidio(text)
             except Exception as e:
                 logger.warning(f"Presidio PII/PHI detection failed, falling back to regex: {e}")
                 # Fall back to regex-based detection
-                pass
-        
+
         # Regex-based detection (fallback or when Presidio not available)
         try:
             detected_entities = []
@@ -1452,7 +1446,7 @@ class MedicalGuardrails:
                             "text": match.group(),
                             "start": match.start(),
                             "end": match.end(),
-                            "confidence": 0.8  # Static confidence for regex patterns
+                            "confidence": 0.8,  # Static confidence for regex patterns
                         }
                         detected_entities.append(entity)
 
@@ -1462,46 +1456,40 @@ class MedicalGuardrails:
                 "detected": len(detected_entities) > 0,
                 "entities": detected_entities,
                 "masked_text": masked_text,
-                "confidence": max([e["confidence"] for e in detected_entities], default=0.0)
+                "confidence": max([e["confidence"] for e in detected_entities], default=0.0),
             }
 
         except Exception as e:
             logger.error(f"Error detecting PII/PHI: {e}")
-            return {
-                "detected": False,
-                "entities": [],
-                "masked_text": text,
-                "confidence": 0.0,
-                "error": str(e)
-            }
+            return {"detected": False, "entities": [], "masked_text": text, "confidence": 0.0, "error": str(e)}
 
-    def _detect_pii_phi_with_presidio(self, text: str) -> Dict[str, Any]:
+    def _detect_pii_phi_with_presidio(self, text: str) -> dict[str, Any]:
         """Detect PII/PHI using Presidio analyzer and anonymizer."""
         try:
             # Initialize Presidio engines if not already done
-            if not hasattr(self, '_analyzer') or not hasattr(self, '_anonymizer'):
+            if not hasattr(self, "_analyzer") or not hasattr(self, "_anonymizer"):
                 # Create NLP engine provider
                 nlp_engine_provider = NlpEngineProvider()
                 nlp_engine = nlp_engine_provider.create_engine()
-                
+
                 # Initialize analyzer with the NLP engine
                 self._analyzer = AnalyzerEngine(nlp_engine=nlp_engine)
-                
+
                 # Initialize anonymizer
                 self._anonymizer = AnonymizerEngine()
 
             # Analyze the text for PII/PHI entities
-            analyzer_results = self._analyzer.analyze(text=text, language='en')
-            
+            analyzer_results = self._analyzer.analyze(text=text, language="en")
+
             # Extract detected entities
             detected_entities = []
             for result in analyzer_results:
                 entity = {
                     "type": result.entity_type,
-                    "text": text[result.start:result.end],
+                    "text": text[result.start : result.end],
                     "start": result.start,
                     "end": result.end,
-                    "confidence": result.score
+                    "confidence": result.score,
                 }
                 detected_entities.append(entity)
 
@@ -1516,14 +1504,16 @@ class MedicalGuardrails:
                 "detected": len(detected_entities) > 0,
                 "entities": detected_entities,
                 "masked_text": masked_text,
-                "confidence": max([e["confidence"] for e in detected_entities], default=0.0) if detected_entities else 0.0
+                "confidence": max([e["confidence"] for e in detected_entities], default=0.0)
+                if detected_entities
+                else 0.0,
             }
 
         except Exception as e:
             logger.error(f"Error in Presidio PII/PHI detection: {e}")
             raise
 
-    def _check_medical_context(self, query: str) -> Dict[str, Any]:
+    def _check_medical_context(self, query: str) -> dict[str, Any]:
         """Check if query is in medical context."""
         try:
             medical_indicators = []
@@ -1541,17 +1531,12 @@ class MedicalGuardrails:
                 "is_medical": is_medical,
                 "indicators": medical_indicators,
                 "confidence": min(len(medical_indicators) * 0.3, 1.0),
-                "categories": list(set([indicator[0] for indicator in medical_indicators]))
+                "categories": list({indicator[0] for indicator in medical_indicators}),
             }
 
         except Exception as e:
             logger.error(f"Error checking medical context: {e}")
-            return {
-                "is_medical": False,
-                "indicators": [],
-                "confidence": 0.0,
-                "error": str(e)
-            }
+            return {"is_medical": False, "indicators": [], "confidence": 0.0, "error": str(e)}
 
     def _detect_jailbreak_attempts(self, query: str) -> bool:
         """Detect potential jailbreak attempts."""
@@ -1569,14 +1554,10 @@ class MedicalGuardrails:
             logger.error(f"Error detecting jailbreak attempts: {e}")
             return False
 
-    def _validate_against_pubmed_sources(self, claims: str, sources: List[Dict]) -> Dict[str, Any]:
+    def _validate_against_pubmed_sources(self, claims: str, sources: list[dict]) -> dict[str, Any]:
         """Validate claims against PubMed sources."""
         try:
-            validation_result = {
-                "sources_appropriate": True,
-                "issues": [],
-                "recommendations": []
-            }
+            validation_result = {"sources_appropriate": True, "issues": [], "recommendations": []}
 
             # Check if sources are from reputable medical databases
             reputable_sources = ["pubmed", "medline", "cochrane", "nejm", "jama", "lancet"]
@@ -1598,7 +1579,9 @@ class MedicalGuardrails:
                         year_int = int(year)
                         current_year = datetime.now().year
                         if current_year - year_int > 10:
-                            validation_result["recommendations"].append(f"Consider more recent sources (source from {year})")
+                            validation_result["recommendations"].append(
+                                f"Consider more recent sources (source from {year})"
+                            )
                     except ValueError:
                         pass
 
@@ -1609,13 +1592,13 @@ class MedicalGuardrails:
             return {
                 "sources_appropriate": False,
                 "issues": [f"Source validation error: {str(e)}"],
-                "recommendations": ["Manual source review required"]
+                "recommendations": ["Manual source review required"],
             }
 
-    def _run_claim_level_checks(self, response: str, sources: List[Dict]) -> Dict[str, Any]:
+    def _run_claim_level_checks(self, response: str, sources: list[dict]) -> dict[str, Any]:
         """Perform lightweight claim extraction and check alignment with supplied sources."""
         claims = self._extract_candidate_claims(response)
-        summary: Dict[str, Any] = {
+        summary: dict[str, Any] = {
             "claims_assessed": len(claims),
             "support_ratio": None,
             "unsupported_claims": [],
@@ -1640,9 +1623,9 @@ class MedicalGuardrails:
 
         return summary
 
-    def _extract_candidate_claims(self, response: str) -> List[str]:
+    def _extract_candidate_claims(self, response: str) -> list[str]:
         """Extract declarative sentences that are suitable for fact checking."""
-        candidates: List[str] = []
+        candidates: list[str] = []
         if not response:
             return candidates
 
@@ -1662,9 +1645,9 @@ class MedicalGuardrails:
 
         return candidates
 
-    def _assess_claim_support(self, claims: List[str], sources: List[Dict]) -> Dict[str, Any]:
+    def _assess_claim_support(self, claims: list[str], sources: list[dict]) -> dict[str, Any]:
         """Approximate claim support by matching key terms against provided sources."""
-        combined_segments: List[str] = []
+        combined_segments: list[str] = []
         for source in sources:
             combined_segments.append(str(source.get("page_content") or source.get("content", "")))
             metadata = source.get("metadata", {})
@@ -1678,33 +1661,48 @@ class MedicalGuardrails:
         if not combined_corpus.strip():
             return {
                 "claim_support": [
-                    {
-                        "claim": claim,
-                        "matched_terms": [],
-                        "coverage": 0.0,
-                        "supported": False
-                    }
-                    for claim in claims
+                    {"claim": claim, "matched_terms": [], "coverage": 0.0, "supported": False} for claim in claims
                 ],
-                "support_ratio": 0.0
+                "support_ratio": 0.0,
             }
 
         token_pattern = r"[a-zA-Z][a-zA-Z\-]{3,}"
         source_terms = set(re.findall(token_pattern, combined_corpus))
-        stopwords: Set[str] = {
-            "the", "that", "this", "with", "from", "have", "patients", "study", "shows",
-            "which", "their", "there", "about", "into", "among", "after", "before", "were",
-            "those", "they", "these", "such", "based", "using", "during", "however", "reported"
+        stopwords: set[str] = {
+            "the",
+            "that",
+            "this",
+            "with",
+            "from",
+            "have",
+            "patients",
+            "study",
+            "shows",
+            "which",
+            "their",
+            "there",
+            "about",
+            "into",
+            "among",
+            "after",
+            "before",
+            "were",
+            "those",
+            "they",
+            "these",
+            "such",
+            "based",
+            "using",
+            "during",
+            "however",
+            "reported",
         }
 
-        claim_support_entries: List[Dict[str, Any]] = []
+        claim_support_entries: list[dict[str, Any]] = []
         supported_count = 0
 
         for claim in claims:
-            tokens = [
-                token for token in re.findall(token_pattern, claim.lower())
-                if token not in stopwords
-            ]
+            tokens = [token for token in re.findall(token_pattern, claim.lower()) if token not in stopwords]
             unique_tokens = set(tokens)
             matched_terms = [token for token in unique_tokens if token in source_terms]
             coverage = len(matched_terms) / max(1, len(unique_tokens))
@@ -1718,16 +1716,13 @@ class MedicalGuardrails:
                     "claim": claim,
                     "matched_terms": sorted(matched_terms)[:8],
                     "coverage": round(coverage, 3),
-                    "supported": supported
+                    "supported": supported,
                 }
             )
 
         support_ratio = supported_count / max(1, len(claims))
 
-        return {
-            "claim_support": claim_support_entries,
-            "support_ratio": support_ratio
-        }
+        return {"claim_support": claim_support_entries, "support_ratio": support_ratio}
 
     def _generate_medical_disclaimer(self, response_type: str) -> str:
         """Generate appropriate medical disclaimer."""
@@ -1737,19 +1732,19 @@ class MedicalGuardrails:
             "dosage": "Dosage information provided is for reference only. Never adjust medication dosages without consulting your healthcare provider.",
             "interactions": "Drug interaction information is for educational purposes. Always inform your healthcare provider about all medications and supplements you are taking.",
             "drug_interactions": "Drug interaction information is for educational purposes. Always inform your healthcare provider about all medications and supplements you are taking.",
-            "research": "This information is based on current research and may not reflect the most recent findings. Consult current medical literature and healthcare professionals for the latest guidance."
+            "research": "This information is based on current research and may not reflect the most recent findings. Consult current medical literature and healthcare professionals for the latest guidance.",
         }
 
         return disclaimers.get(response_type, disclaimers["general"])
 
-    def _assess_regulatory_compliance(self, response: str) -> Dict[str, Any]:
+    def _assess_regulatory_compliance(self, response: str) -> dict[str, Any]:
         """Assess regulatory compliance requirements."""
         try:
             compliance_check = {
                 "requires_disclaimer": False,
                 "disclaimer_type": "general",
                 "violations": [],
-                "recommendations": []
+                "recommendations": [],
             }
 
             response_lower = response.lower()
@@ -1782,10 +1777,10 @@ class MedicalGuardrails:
                 "requires_disclaimer": True,
                 "disclaimer_type": "general",
                 "violations": [f"Compliance check error: {str(e)}"],
-                "recommendations": ["Manual compliance review required"]
+                "recommendations": ["Manual compliance review required"],
             }
 
-    def _check_medical_advice_request(self, query: str) -> Dict[str, Any]:
+    def _check_medical_advice_request(self, query: str) -> dict[str, Any]:
         """Check if query is requesting specific medical advice."""
         advice_patterns = [
             r"what should i (?:take|do|use)",
@@ -1794,7 +1789,7 @@ class MedicalGuardrails:
             r"can i (?:take|stop|increase|decrease)",
             r"should i (?:see a doctor|go to hospital|call 911)",
             r"what (?:medication|treatment|dose) (?:should|do) i",
-            r"diagnose (?:me|my)"
+            r"diagnose (?:me|my)",
         ]
 
         query_lower = query.lower()
@@ -1802,30 +1797,32 @@ class MedicalGuardrails:
 
         # Determine severity
         high_risk_patterns = [
-            r"diagnose", r"emergency", r"urgent", r"should i see",
-            r"call 911", r"go to hospital", r"chest pain", r"difficulty breathing"
+            r"diagnose",
+            r"emergency",
+            r"urgent",
+            r"should i see",
+            r"call 911",
+            r"go to hospital",
+            r"chest pain",
+            r"difficulty breathing",
         ]
 
         severity = "high" if any(re.search(pattern, query_lower) for pattern in high_risk_patterns) else "medium"
 
-        return {
-            "is_advice_request": is_advice_request,
-            "severity": severity if is_advice_request else "low"
-        }
+        return {"is_advice_request": is_advice_request, "severity": severity if is_advice_request else "low"}
 
-    def _validate_response_content(self, response: str) -> Dict[str, Any]:
+    def _validate_response_content(self, response: str) -> dict[str, Any]:
         """Validate response content for appropriateness."""
-        validation = {
-            "is_appropriate": True,
-            "severity": "low",
-            "issues": [],
-            "recommendations": []
-        }
+        validation = {"is_appropriate": True, "severity": "low", "issues": [], "recommendations": []}
 
         # Check for inappropriate definitive medical statements
         definitive_patterns = [
-            r"you have", r"you are diagnosed with", r"you definitely",
-            r"you must", r"you should definitely", r"this will cure"
+            r"you have",
+            r"you are diagnosed with",
+            r"you definitely",
+            r"you must",
+            r"you should definitely",
+            r"this will cure",
         ]
 
         response_lower = response.lower()
@@ -1838,19 +1835,29 @@ class MedicalGuardrails:
 
         return validation
 
-    def _check_medical_disclaimers(self, response: str) -> Dict[str, Any]:
+    def _check_medical_disclaimers(self, response: str) -> dict[str, Any]:
         """Check if response contains appropriate medical disclaimers."""
         disclaimer_indicators = [
-            "educational purposes", "not medical advice", "consult healthcare",
-            "professional medical", "disclaimer", "for informational"
+            "educational purposes",
+            "not medical advice",
+            "consult healthcare",
+            "professional medical",
+            "disclaimer",
+            "for informational",
         ]
 
         has_disclaimer = any(indicator in response.lower() for indicator in disclaimer_indicators)
 
         # Determine if disclaimer is required
         medical_content_indicators = [
-            "dosage", "medication", "treatment", "therapy", "diagnosis",
-            "side effects", "interactions", "contraindications"
+            "dosage",
+            "medication",
+            "treatment",
+            "therapy",
+            "diagnosis",
+            "side effects",
+            "interactions",
+            "contraindications",
         ]
 
         requires_disclaimer = any(indicator in response.lower() for indicator in medical_content_indicators)
@@ -1858,14 +1865,14 @@ class MedicalGuardrails:
         return {
             "has_disclaimer": has_disclaimer,
             "requires_disclaimer": requires_disclaimer,
-            "disclaimer_type": "medical_advice" if requires_disclaimer else "general"
+            "disclaimer_type": "medical_advice" if requires_disclaimer else "general",
         }
 
-    def _load_config(self) -> Dict[str, Any]:
+    def _load_config(self) -> dict[str, Any]:
         """Load configuration from file."""
         try:
             if self.config_path.exists():
-                with open(self.config_path, 'r') as f:
+                with open(self.config_path) as f:
                     return json.load(f)
             else:
                 logger.warning(f"Config file not found: {self.config_path}")
@@ -1874,7 +1881,7 @@ class MedicalGuardrails:
             logger.error(f"Error loading config: {e}")
             return self._get_default_config()
 
-    def _get_default_config(self) -> Dict[str, Any]:
+    def _get_default_config(self) -> dict[str, Any]:
         """Get default configuration."""
         return {
             "pii_detection_enabled": True,
@@ -1885,12 +1892,9 @@ class MedicalGuardrails:
             "pii_detection_mode": "balanced",  # "strict", "balanced", "relaxed"
             "disclaimer_requirements": {
                 "always_include": False,
-                "conditional_triggers": ["medication", "dosage", "treatment"]
+                "conditional_triggers": ["medication", "dosage", "treatment"],
             },
-            "logging": {
-                "audit_enabled": True,
-                "log_level": "INFO"
-            }
+            "logging": {"audit_enabled": True, "log_level": "INFO"},
         }
 
     def _severity_rank(self, severity: str) -> int:
@@ -1898,7 +1902,7 @@ class MedicalGuardrails:
         ranks = {"low": 1, "medium": 2, "high": 3, "critical": 4}
         return ranks.get(severity, 0)
 
-    def _select_sanitized_query(self, original_query: str, candidates: List[str]) -> str:
+    def _select_sanitized_query(self, original_query: str, candidates: list[str]) -> str:
         """Select the best sanitized query and strip bracketed safety tags.
 
         Args:
@@ -1919,28 +1923,28 @@ class MedicalGuardrails:
             # Strip bracketed safety context tags that may have been appended
             # This ensures clean output even if the rails modification wasn't applied
             safety_tag_patterns = [
-                r'\[MEDICAL_SAFETY_CONTEXT:[^\]]*\]',
-                r'\[SAFETY_FLAG:[^\]]*\]',
-                r'\[SAFETY_CONTEXT:[^\]]*\]',
-                r'\[PHARMA_CONTEXT:[^\]]*\]'
+                r"\[MEDICAL_SAFETY_CONTEXT:[^\]]*\]",
+                r"\[SAFETY_FLAG:[^\]]*\]",
+                r"\[SAFETY_CONTEXT:[^\]]*\]",
+                r"\[PHARMA_CONTEXT:[^\]]*\]",
             ]
 
             cleaned_query = best_candidate
             for pattern in safety_tag_patterns:
-                cleaned_query = re.sub(pattern, '', cleaned_query, flags=re.IGNORECASE)
+                cleaned_query = re.sub(pattern, "", cleaned_query, flags=re.IGNORECASE)
 
             # Clean up any extra whitespace
-            cleaned_query = re.sub(r'\s+', ' ', cleaned_query).strip()
+            cleaned_query = re.sub(r"\s+", " ", cleaned_query).strip()
 
             return cleaned_query
 
         except Exception as e:
             logger.warning(f"Error selecting sanitized query: {e}")
             # Fallback: return original query with basic tag stripping
-            cleaned = re.sub(r'\[[A-Z_]+:[^\]]*\]', '', original_query or '', flags=re.IGNORECASE)
-            return re.sub(r'\s+', ' ', cleaned).strip()
+            cleaned = re.sub(r"\[[A-Z_]+:[^\]]*\]", "", original_query or "", flags=re.IGNORECASE)
+            return re.sub(r"\s+", " ", cleaned).strip()
 
-    def _filter_patterns_by_mode(self, patterns: List[str], category: str, mode: str) -> List[str]:
+    def _filter_patterns_by_mode(self, patterns: list[str], category: str, mode: str) -> list[str]:
         """Filter patterns based on detection mode to control sensitivity."""
         if mode == "relaxed":
             # In relaxed mode, only use the most specific patterns

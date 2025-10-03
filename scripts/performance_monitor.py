@@ -11,28 +11,29 @@ Real-time performance monitoring for pharmaceutical RAG system with:
 
 This system ensures optimal performance for pharmaceutical research workflows.
 """
-
-import os
-import sys
+import argparse
 import asyncio
 import json
-import time
-import psutil
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
-from pathlib import Path
-from dataclasses import dataclass, asdict
 import statistics
-import argparse
+import sys
+import time
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import psutil
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
+
 @dataclass
 class PerformanceMetric:
     """Individual performance metric measurement."""
+
     timestamp: datetime
     metric_name: str
     value: float
@@ -41,9 +42,11 @@ class PerformanceMetric:
     threshold: Optional[float] = None
     status: str = "normal"  # normal, warning, critical
 
+
 @dataclass
 class SystemSnapshot:
     """System performance snapshot."""
+
     timestamp: datetime
     cpu_percent: float
     memory_percent: float
@@ -54,9 +57,11 @@ class SystemSnapshot:
     network_recv_mb: float
     active_processes: int
 
+
 @dataclass
 class PharmaceuticalWorkflowMetrics:
     """Pharmaceutical-specific workflow performance metrics."""
+
     timestamp: datetime
     drug_safety_queries_per_second: float
     interaction_detection_time_ms: float
@@ -64,6 +69,7 @@ class PharmaceuticalWorkflowMetrics:
     batch_processing_efficiency: float
     cost_per_pharmaceutical_query: float
     safety_alert_response_time_ms: float
+
 
 class PharmaceuticalPerformanceMonitor:
     """Advanced performance monitoring for pharmaceutical RAG system."""
@@ -78,20 +84,17 @@ class PharmaceuticalPerformanceMonitor:
             "cpu_percent": 80.0,
             "memory_percent": 85.0,
             "response_time_ms": 2000.0,
-
             # Pharmaceutical performance thresholds
             "drug_safety_response_ms": 1000.0,
             "interaction_detection_ms": 500.0,
             "batch_processing_efficiency": 0.85,
             "cost_efficiency_ratio": 2.0,  # Credits per successful query
-
             # Safety system thresholds
             "safety_alert_response_ms": 500.0,
             "contraindication_detection_ms": 300.0,
-
             # API performance thresholds
             "api_success_rate": 0.95,
-            "api_response_time_ms": 1500.0
+            "api_response_time_ms": 1500.0,
         }
 
         # Metrics storage
@@ -110,9 +113,7 @@ class PharmaceuticalPerformanceMonitor:
 
         # Console handler
         console_handler = logging.StreamHandler()
-        console_formatter = logging.Formatter(
-            '%(asctime)s [PERF] %(levelname)s: %(message)s'
-        )
+        console_formatter = logging.Formatter("%(asctime)s [PERF] %(levelname)s: %(message)s")
         console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
 
@@ -120,12 +121,8 @@ class PharmaceuticalPerformanceMonitor:
         log_dir = self.project_root / "logs"
         log_dir.mkdir(exist_ok=True)
 
-        file_handler = logging.FileHandler(
-            log_dir / f"performance_monitor_{datetime.now().strftime('%Y%m%d')}.log"
-        )
-        file_formatter = logging.Formatter(
-            '%(asctime)s [PERF] %(levelname)s: %(message)s'
-        )
+        file_handler = logging.FileHandler(log_dir / f"performance_monitor_{datetime.now().strftime('%Y%m%d')}.log")
+        file_formatter = logging.Formatter("%(asctime)s [PERF] %(levelname)s: %(message)s")
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
 
@@ -140,7 +137,7 @@ class PharmaceuticalPerformanceMonitor:
             "drug_safety_accuracy": 0.95,
             "batch_processing_throughput": 50.0,  # queries per second
             "memory_usage_baseline_mb": 256.0,
-            "cpu_usage_baseline_percent": 25.0
+            "cpu_usage_baseline_percent": 25.0,
         }
 
         if baseline_file.exists():
@@ -181,7 +178,7 @@ class PharmaceuticalPerformanceMonitor:
             disk_io_write_mb=disk_write_mb,
             network_sent_mb=network_sent_mb,
             network_recv_mb=network_recv_mb,
-            active_processes=active_processes
+            active_processes=active_processes,
         )
 
         self.system_snapshots.append(snapshot)
@@ -209,7 +206,7 @@ class PharmaceuticalPerformanceMonitor:
             clinical_research_processing_time_ms=clinical_research_time_ms,
             batch_processing_efficiency=batch_efficiency,
             cost_per_pharmaceutical_query=cost_per_query,
-            safety_alert_response_time_ms=safety_alert_time_ms
+            safety_alert_response_time_ms=safety_alert_time_ms,
         )
 
         self.pharmaceutical_metrics.append(metrics)
@@ -232,14 +229,16 @@ class PharmaceuticalPerformanceMonitor:
             unit=unit,
             category=category,
             threshold=threshold,
-            status=status
+            status=status,
         )
 
         self.metrics_history.append(metric)
 
         # Log critical metrics
         if status == "critical":
-            self.logger.warning(f"🚨 Critical performance issue: {metric_name} = {value}{unit} (threshold: {threshold}{unit})")
+            self.logger.warning(
+                f"🚨 Critical performance issue: {metric_name} = {value}{unit} (threshold: {threshold}{unit})"
+            )
         elif status == "warning":
             self.logger.info(f"⚠️  Performance warning: {metric_name} = {value}{unit} (threshold: {threshold}{unit})")
 
@@ -259,7 +258,7 @@ class PharmaceuticalPerformanceMonitor:
             "pharmaceutical_measurements": len(recent_pharma_metrics),
             "trends": {},
             "performance_summary": {},
-            "alerts_generated": 0
+            "alerts_generated": 0,
         }
 
         # Analyze system performance trends
@@ -270,13 +269,13 @@ class PharmaceuticalPerformanceMonitor:
             analysis["trends"]["cpu_usage"] = {
                 "average": statistics.mean(cpu_values),
                 "max": max(cpu_values),
-                "trend": "increasing" if cpu_values[-1] > cpu_values[0] else "stable"
+                "trend": "increasing" if cpu_values[-1] > cpu_values[0] else "stable",
             }
 
             analysis["trends"]["memory_usage"] = {
                 "average": statistics.mean(memory_values),
                 "max": max(memory_values),
-                "trend": "increasing" if memory_values[-1] > memory_values[0] else "stable"
+                "trend": "increasing" if memory_values[-1] > memory_values[0] else "stable",
             }
 
         # Analyze pharmaceutical performance trends
@@ -288,18 +287,18 @@ class PharmaceuticalPerformanceMonitor:
             analysis["trends"]["drug_safety_performance"] = {
                 "avg_detection_time_ms": statistics.mean(safety_times),
                 "max_detection_time_ms": max(safety_times),
-                "performance_stable": max(safety_times) - min(safety_times) < 100
+                "performance_stable": max(safety_times) - min(safety_times) < 100,
             }
 
             analysis["trends"]["batch_processing"] = {
                 "avg_efficiency": statistics.mean(batch_efficiencies),
                 "min_efficiency": min(batch_efficiencies),
-                "efficiency_stable": max(batch_efficiencies) - min(batch_efficiencies) < 0.1
+                "efficiency_stable": max(batch_efficiencies) - min(batch_efficiencies) < 0.1,
             }
 
             analysis["trends"]["cost_optimization"] = {
                 "avg_cost_per_query": statistics.mean(cost_values),
-                "cost_trend": "increasing" if cost_values[-1] > cost_values[0] else "stable"
+                "cost_trend": "increasing" if cost_values[-1] > cost_values[0] else "stable",
             }
 
         # Performance alerts count
@@ -312,7 +311,7 @@ class PharmaceuticalPerformanceMonitor:
             "overall_health": "good" if analysis["alerts_generated"] < 5 else "needs_attention",
             "critical_issues": len(critical_metrics),
             "warnings": len(warning_metrics),
-            "pharmaceutical_performance": "optimal" if recent_pharma_metrics else "no_data"
+            "pharmaceutical_performance": "optimal" if recent_pharma_metrics else "no_data",
         }
 
         return analysis
@@ -327,7 +326,7 @@ class PharmaceuticalPerformanceMonitor:
             "system_performance": {},
             "pharmaceutical_workflows": {},
             "api_performance": {},
-            "overall_score": 0.0
+            "overall_score": 0.0,
         }
 
         # System performance benchmark
@@ -336,7 +335,7 @@ class PharmaceuticalPerformanceMonitor:
             "cpu_utilization": system_snapshot.cpu_percent,
             "memory_utilization": system_snapshot.memory_percent,
             "memory_used_mb": system_snapshot.memory_used_mb,
-            "performance_score": self._calculate_system_performance_score(system_snapshot)
+            "performance_score": self._calculate_system_performance_score(system_snapshot),
         }
 
         # Pharmaceutical workflow benchmark
@@ -346,7 +345,7 @@ class PharmaceuticalPerformanceMonitor:
             "interaction_detection_ms": pharma_metrics.interaction_detection_time_ms,
             "batch_efficiency": pharma_metrics.batch_processing_efficiency,
             "cost_efficiency": pharma_metrics.cost_per_pharmaceutical_query,
-            "pharmaceutical_score": self._calculate_pharmaceutical_performance_score(pharma_metrics)
+            "pharmaceutical_score": self._calculate_pharmaceutical_performance_score(pharma_metrics),
         }
 
         # Simulate API performance benchmark
@@ -397,7 +396,7 @@ class PharmaceuticalPerformanceMonitor:
             {"name": "drug_safety_query", "response_time_ms": 450, "success": True},
             {"name": "interaction_check", "response_time_ms": 320, "success": True},
             {"name": "clinical_research", "response_time_ms": 890, "success": True},
-            {"name": "batch_processing", "response_time_ms": 1200, "success": True}
+            {"name": "batch_processing", "response_time_ms": 1200, "success": True},
         ]
 
         total_response_time = sum(test["response_time_ms"] for test in api_tests)
@@ -411,7 +410,7 @@ class PharmaceuticalPerformanceMonitor:
             "success_rate": success_rate,
             "avg_response_time_ms": total_response_time / len(api_tests),
             "overall_api_score": api_score,
-            "test_details": api_tests
+            "test_details": api_tests,
         }
 
     def _log_benchmark_results(self, results: Dict[str, Any]):
@@ -419,7 +418,9 @@ class PharmaceuticalPerformanceMonitor:
         self.logger.info("📊 Performance Benchmark Results:")
         self.logger.info(f"   Overall Score: {results['overall_score']:.1f}/100")
         self.logger.info(f"   System Performance: {results['system_performance']['performance_score']:.1f}/100")
-        self.logger.info(f"   Pharmaceutical Workflows: {results['pharmaceutical_workflows']['pharmaceutical_score']:.1f}/100")
+        self.logger.info(
+            f"   Pharmaceutical Workflows: {results['pharmaceutical_workflows']['pharmaceutical_score']:.1f}/100"
+        )
         self.logger.info(f"   API Performance: {results['api_performance']['overall_api_score']:.1f}/100")
         self.logger.info(f"   Benchmark Duration: {results['benchmark_duration_seconds']:.2f}s")
 
@@ -432,13 +433,13 @@ class PharmaceuticalPerformanceMonitor:
             "monitoring_period": {
                 "start": min(m.timestamp for m in self.metrics_history).isoformat() if self.metrics_history else None,
                 "end": max(m.timestamp for m in self.metrics_history).isoformat() if self.metrics_history else None,
-                "total_metrics": len(self.metrics_history)
+                "total_metrics": len(self.metrics_history),
             },
             "performance_analysis": self.analyze_performance_trends(window_hours=24),
             "current_benchmark": await self.run_performance_benchmark(),
             "pharmaceutical_insights": self._generate_pharmaceutical_insights(),
             "recommendations": self._generate_performance_recommendations(),
-            "baseline_comparison": self._compare_with_baselines()
+            "baseline_comparison": self._compare_with_baselines(),
         }
 
         # Save report
@@ -457,17 +458,21 @@ class PharmaceuticalPerformanceMonitor:
             "drug_safety_performance": {
                 "avg_queries_per_second": statistics.mean(m.drug_safety_queries_per_second for m in recent_metrics),
                 "avg_detection_time_ms": statistics.mean(m.interaction_detection_time_ms for m in recent_metrics),
-                "performance_rating": "excellent" if statistics.mean(m.interaction_detection_time_ms for m in recent_metrics) < 300 else "good"
+                "performance_rating": "excellent"
+                if statistics.mean(m.interaction_detection_time_ms for m in recent_metrics) < 300
+                else "good",
             },
             "cost_optimization": {
                 "avg_cost_per_query": statistics.mean(m.cost_per_pharmaceutical_query for m in recent_metrics),
                 "cost_trend": "stable",
-                "free_tier_efficiency": "optimal"
+                "free_tier_efficiency": "optimal",
             },
             "batch_processing": {
                 "avg_efficiency": statistics.mean(m.batch_processing_efficiency for m in recent_metrics),
-                "throughput_rating": "high" if statistics.mean(m.batch_processing_efficiency for m in recent_metrics) > 0.8 else "moderate"
-            }
+                "throughput_rating": "high"
+                if statistics.mean(m.batch_processing_efficiency for m in recent_metrics) > 0.8
+                else "moderate",
+            },
         }
 
     def _generate_performance_recommendations(self) -> List[str]:
@@ -491,11 +496,13 @@ class PharmaceuticalPerformanceMonitor:
                 recommendations.append("Cost per query is elevated - review batch processing optimization")
 
         # Always include general recommendations
-        recommendations.extend([
-            "Monitor drug safety query performance daily",
-            "Implement continuous pharmaceutical workflow optimization",
-            "Review free tier utilization weekly for cost optimization"
-        ])
+        recommendations.extend(
+            [
+                "Monitor drug safety query performance daily",
+                "Implement continuous pharmaceutical workflow optimization",
+                "Review free tier utilization weekly for cost optimization",
+            ]
+        )
 
         return recommendations
 
@@ -519,12 +526,14 @@ class PharmaceuticalPerformanceMonitor:
                     "baseline": baseline_value,
                     "current_average": current_avg,
                     "variance_percent": variance_percent,
-                    "status": "within_range" if abs(variance_percent) < 20 else "outside_range"
+                    "status": "within_range" if abs(variance_percent) < 20 else "outside_range",
                 }
 
         return {
             "baseline_comparisons": comparisons,
-            "overall_baseline_health": "good" if all(c["status"] == "within_range" for c in comparisons.values()) else "needs_review"
+            "overall_baseline_health": "good"
+            if all(c["status"] == "within_range" for c in comparisons.values())
+            else "needs_review",
         }
 
     async def _save_performance_report(self, report: Dict[str, Any]):
@@ -534,12 +543,12 @@ class PharmaceuticalPerformanceMonitor:
 
         report_file = reports_dir / f"performance_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-        with open(report_file, 'w') as f:
+        with open(report_file, "w") as f:
             json.dump(report, f, indent=2, default=str)
 
         # Also save as latest report
         latest_file = reports_dir / "latest_performance_report.json"
-        with open(latest_file, 'w') as f:
+        with open(latest_file, "w") as f:
             json.dump(report, f, indent=2, default=str)
 
         self.logger.info(f"📊 Performance report saved to {report_file}")
@@ -559,7 +568,9 @@ class PharmaceuticalPerformanceMonitor:
                 # Check for performance issues
                 recent_analysis = self.analyze_performance_trends(window_hours=1)
                 if recent_analysis["alerts_generated"] > 0:
-                    self.logger.warning(f"⚠️  Performance issues detected: {recent_analysis['alerts_generated']} alerts")
+                    self.logger.warning(
+                        f"⚠️  Performance issues detected: {recent_analysis['alerts_generated']} alerts"
+                    )
 
                 # Generate report every hour
                 if len(self.metrics_history) % 60 == 0:  # Every 60 intervals
@@ -576,7 +587,9 @@ class PharmaceuticalPerformanceMonitor:
 async def main():
     """Main entry point for performance monitoring."""
     parser = argparse.ArgumentParser(description="Pharmaceutical Performance Monitor")
-    parser.add_argument("--mode", choices=["benchmark", "continuous", "report"], default="benchmark", help="Monitoring mode")
+    parser.add_argument(
+        "--mode", choices=["benchmark", "continuous", "report"], default="benchmark", help="Monitoring mode"
+    )
     parser.add_argument("--interval", type=int, default=60, help="Continuous monitoring interval (seconds)")
     parser.add_argument("--config", help="Configuration file path")
 

@@ -1,6 +1,6 @@
 """Unit tests for sample size extraction year guardrails."""
-
 import unittest
+
 from src.ranking_filter import StudyRankingFilter
 
 
@@ -80,11 +80,9 @@ class TestSampleSizeYearGuardrails(unittest.TestCase):
             # Exact year boundaries
             ("Study in 1899", 1899),  # Before 1900 - should be accepted
             ("Study in 2101", 2101),  # After 2100 - should be accepted
-
             # Year-like numbers in clear sample size context
             ("n=1900 patients", 1900),
             ("Total 2100 subjects", 2100),
-
             # Multiple numbers with date context
             ("From 2010 to 2015 (n=500)", 500),
             ("Years 2018-2020: 1000 patients enrolled", 1000),

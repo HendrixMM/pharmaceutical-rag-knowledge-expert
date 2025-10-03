@@ -2,15 +2,13 @@
 PDF Document Loader for RAG Agent
 Handles loading and processing PDF documents from local folder
 """
-
-import os
-import logging
 import json
-import html
-from io import BytesIO
+import logging
+import os
 import re
-from typing import List, Optional, Dict, Callable, Any, Pattern
+from io import BytesIO
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Pattern
 
 logger = logging.getLogger(__name__)
 
@@ -80,54 +78,50 @@ def _setup_regex_support(regex_module: Optional[Any]) -> None:
     unicode_module = regex_module
     engine = unicode_module if unicode_module is not None else re
 
-    SOFT_LINEBREAK_PATTERN = engine.compile(r'(?<=\w)\n(?=\w)')
+    SOFT_LINEBREAK_PATTERN = engine.compile(r"(?<=\w)\n(?=\w)")
     DOI_REGEX = engine.compile(DOI_PATTERN, engine.IGNORECASE)
     PMID_REGEX = engine.compile(PMID_PATTERN, engine.IGNORECASE)
     PMID_EXTRACT_REGEX = engine.compile(PMID_PATTERN_EXTRACT, engine.IGNORECASE)
     HEADER_TERMINATOR_PATTERN = engine.compile(
-        r'^(Abstract|Introduction|Background|Keywords|ABSTRACT|INTRODUCTION)\b',
+        r"^(Abstract|Introduction|Background|Keywords|ABSTRACT|INTRODUCTION)\b",
         engine.IGNORECASE,
     )
     AFFILIATION_LINE_PATTERN = engine.compile(
-        r'(@|University|Department|Institute|College|Hospital|School|Center|Centre|\.edu|\.org)',
+        r"(@|University|Department|Institute|College|Hospital|School|Center|Centre|\.edu|\.org)",
         engine.IGNORECASE,
     )
     AFFILIATION_PREFIX_PATTERN = engine.compile(
-        r'(Department|University|Hospital|Institute|College|Center|Centre)',
+        r"(Department|University|Hospital|Institute|College|Center|Centre)",
         engine.IGNORECASE,
     )
-    AUTHOR_PREFIX_PATTERN = engine.compile(r'^Authors?:\s+(.+)', engine.IGNORECASE | engine.MULTILINE)
+    AUTHOR_PREFIX_PATTERN = engine.compile(r"^Authors?:\s+(.+)", engine.IGNORECASE | engine.MULTILINE)
 
     # ASCII-safe fallback patterns that work with Python's stdlib `re`
-    AUTHOR_LINE_PATTERN_ASCII = re.compile(
-        r"^[\w'\-·]+(?:\s+[\w'\-·]+)*,\s*[\w'\-·]+(?:\s+[\w'\-·]+)*"
-    )
+    AUTHOR_LINE_PATTERN_ASCII = re.compile(r"^[\w'\-·]+(?:\s+[\w'\-·]+)*,\s*[\w'\-·]+(?:\s+[\w'\-·]+)*")
     AUTHOR_UNICODE_PREFIX_PATTERN_ASCII = re.compile(
-        r'^Author(?:s)?\s*[:：]\s*([\w\s\-·,.;.-]+)$',
+        r"^Author(?:s)?\s*[:：]\s*([\w\s\-·,.;.-]+)$",
         re.IGNORECASE,
     )
-    AUTHOR_NAME_CLUSTER_PATTERN_ASCII = re.compile(
-        r"\b[\w'\-·]+(?:\s+[\w'\-·]+)+"
-    )
+    AUTHOR_NAME_CLUSTER_PATTERN_ASCII = re.compile(r"\b[\w'\-·]+(?:\s+[\w'\-·]+)+")
     JOURNAL_PATTERN_ASCII = re.compile(
-        r'^[A-Za-z][A-Za-z\s\-:,\.]{3,}\s\d{4}(?:\s?[A-Za-z]{3})?;\s?\d{1,3}(?:\(\d{1,3}\))?:\d{1,5}(?:-\d{1,5})?',
+        r"^[A-Za-z][A-Za-z\s\-:,\.]{3,}\s\d{4}(?:\s?[A-Za-z]{3})?;\s?\d{1,3}(?:\(\d{1,3}\))?:\d{1,5}(?:-\d{1,5})?",
     )
 
     unicode_patterns_success = False
     if unicode_module is not None:
         try:
             AUTHOR_LINE_PATTERN_UNICODE = unicode_module.compile(
-                r'^\p{Lu}[\p{L}\p{M}\-·]*\.?(\s+\p{Lu}[\p{L}\p{M}\-·]*\.?)*,\s*\p{Lu}[\p{L}\p{M}\-·]*\.?(\s+\p{Lu}[\p{L}\p{M}\-·]*\.?)*'
+                r"^\p{Lu}[\p{L}\p{M}\-·]*\.?(\s+\p{Lu}[\p{L}\p{M}\-·]*\.?)*,\s*\p{Lu}[\p{L}\p{M}\-·]*\.?(\s+\p{Lu}[\p{L}\p{M}\-·]*\.?)*"
             )
             AUTHOR_UNICODE_PREFIX_PATTERN = unicode_module.compile(
-                r'^Author(?:s)?\s*[:：]\s*([\p{L}\p{M}\p{Zs}\p{Pd}·,.;.-]+)$',
+                r"^Author(?:s)?\s*[:：]\s*([\p{L}\p{M}\p{Zs}\p{Pd}·,.;.-]+)$",
                 unicode_module.IGNORECASE,
             )
             AUTHOR_NAME_CLUSTER_PATTERN_UNICODE = unicode_module.compile(
-                r'\b\p{Lu}[\p{L}\p{M}\-·]+(?:\s+\p{Lu}[\p{L}\p{M}\-·]+)+'
+                r"\b\p{Lu}[\p{L}\p{M}\-·]+(?:\s+\p{Lu}[\p{L}\p{M}\-·]+)+"
             )
             JOURNAL_PATTERN_UNICODE = unicode_module.compile(
-                r'^[\p{L}\p{M}][\p{L}\p{M}\s\-:,\.]{3,}\s\d{4}(?:\s?[A-Za-z]{3})?;\s?\d{1,3}(?:\(\d{1,3}\))?:\d{1,5}(?:-\d{1,5})?'
+                r"^[\p{L}\p{M}][\p{L}\p{M}\s\-:,\.]{3,}\s\d{4}(?:\s?[A-Za-z]{3})?;\s?\d{1,3}(?:\(\d{1,3}\))?:\d{1,5}(?:-\d{1,5})?"
             )
             unicode_patterns_success = True
         except Exception as err:
@@ -151,7 +145,7 @@ def _setup_regex_support(regex_module: Optional[Any]) -> None:
     _RE_ENGINE = unicode_module if unicode_patterns_success else re
 
     AFFILIATION_EXCLUSION_PATTERN = re.compile(
-        r'\d{4,}|[A-Z]{2,}\s+\d|PO\s+Box|\b(USA|UK|Canada|Germany|France|China|Japan)\b',
+        r"\d{4,}|[A-Z]{2,}\s+\d|PO\s+Box|\b(USA|UK|Canada|Germany|France|China|Japan)\b",
         re.IGNORECASE,
     )
 
@@ -170,24 +164,29 @@ _PENDING_REGEX_MODULE: Optional[Any] = _imported_regex
 # Import unified DOI/PMID patterns and utilities
 try:
     from .paper_schema import (
-        DOI_PATTERN, PMID_PATTERN, PMID_PATTERN_EXTRACT,
-        clean_identifier, normalize_doi, normalize_pmid
+        DOI_PATTERN,
+        PMID_PATTERN,
+        PMID_PATTERN_EXTRACT,
+        clean_identifier,
+        normalize_doi,
+        normalize_pmid,
     )
+
     PAPER_SCHEMA_AVAILABLE = True
 except ImportError:
     # Define conservative fallback patterns when paper_schema is not available
     PAPER_SCHEMA_AVAILABLE = False
 
     # Conservative DOI pattern - matches 10.xxxx/xxxx format
-    DOI_PATTERN = r'\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b'
+    DOI_PATTERN = r"\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b"
 
     # Conservative PMID pattern - matches PMIDs in various formats
-    PMID_PATTERN = r'\b(PMID:\s*)?(\d{7,8})\b'
-    PMID_PATTERN_EXTRACT = r'(\d{7,8})'
+    PMID_PATTERN = r"\b(PMID:\s*)?(\d{7,8})\b"
+    PMID_PATTERN_EXTRACT = r"(\d{7,8})"
 
     def clean_identifier(id_str: str) -> str:
         """Minimal identifier cleaning - strip whitespace and common prefixes"""
-        return id_str.strip().replace('doi:', '').replace('DOI:', '').replace('pmid:', '').replace('PMID:', '').strip()
+        return id_str.strip().replace("doi:", "").replace("DOI:", "").replace("pmid:", "").replace("PMID:", "").strip()
 
     def normalize_doi(doi: str) -> str:
         """Minimal DOI normalization - strip whitespace and prefixes"""
@@ -258,7 +257,9 @@ def _safe_findall(pattern: Optional[Pattern[str]], text: str, label: str) -> Lis
         return []
 
 
-def _prefer_unicode_pattern(unicode_pattern: Optional[Pattern[str]], ascii_pattern: Optional[Pattern[str]]) -> Optional[Pattern[str]]:
+def _prefer_unicode_pattern(
+    unicode_pattern: Optional[Pattern[str]], ascii_pattern: Optional[Pattern[str]]
+) -> Optional[Pattern[str]]:
     """Return the Unicode-capable pattern when present, otherwise fall back to ASCII pattern."""
 
     if HAS_REGEX and unicode_pattern is not None:
@@ -267,9 +268,25 @@ def _prefer_unicode_pattern(unicode_pattern: Optional[Pattern[str]], ascii_patte
 
 
 JOURNAL_KEYWORDS = [
-    'journal', 'nature', 'science', 'cell', 'lancet', 'nejm', 'bmj', 'jama',
-    'plos', 'proceedings', 'annals', 'review', 'research', 'medicine',
-    'biology', 'chemistry', 'physics', 'therapeutics', 'clinical'
+    "journal",
+    "nature",
+    "science",
+    "cell",
+    "lancet",
+    "nejm",
+    "bmj",
+    "jama",
+    "plos",
+    "proceedings",
+    "annals",
+    "review",
+    "research",
+    "medicine",
+    "biology",
+    "chemistry",
+    "physics",
+    "therapeutics",
+    "clinical",
 ]
 
 
@@ -289,6 +306,7 @@ def _get_env_int(name: str, default: int) -> int:
     except ValueError:
         logger.warning("Environment variable %s=%s is not an integer. Using default %s.", name, value, default)
         return default
+
 
 try:
     from langchain_community.document_loaders.parsers.pdf import PyPDFParser
@@ -314,9 +332,10 @@ try:
 except ImportError:
     parse_date = None
 
+
 class PDFDocumentLoader:
     """Handles loading and processing PDF documents"""
-    
+
     def __init__(
         self,
         docs_folder: str,
@@ -329,7 +348,7 @@ class PDFDocumentLoader:
     ):
         """
         Initialize the PDF document loader
-        
+
         Args:
             docs_folder: Path to folder containing PDF documents
             chunk_size: Size of text chunks for splitting
@@ -396,20 +415,17 @@ class PDFDocumentLoader:
             "strict": bool(strict_flag),
         }
         self._nemo_strict: bool = bool(strict_flag)
-        
+
         # Initialize text splitter
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            length_function=len,
-            separators=["\n\n", "\n", " ", ""]
+            chunk_size=chunk_size, chunk_overlap=chunk_overlap, length_function=len, separators=["\n\n", "\n", " ", ""]
         )
 
         # Reuse parser and PDF reader class across loads to cut redundant work.
         self._use_parser = PyPDFParser is not None and Blob is not None
         self._pdf_parser = PyPDFParser(mode="page") if self._use_parser else None
         self._pdf_reader_cls = self._detect_pdf_reader()
-        
+
         # Ensure docs folder exists
         self.docs_folder.mkdir(parents=True, exist_ok=True)
         logger.info(f"Initialized PDF loader for folder: {self.docs_folder}")
@@ -425,6 +441,7 @@ class PDFDocumentLoader:
             return self._nemo_service
         try:
             from .nemo_extraction_service import NeMoExtractionService
+
             self._nemo_service = NeMoExtractionService(self._nemo_client)
             return self._nemo_service
         except Exception as e:
@@ -454,6 +471,7 @@ class PDFDocumentLoader:
         self._nemo_metrics["used_count"] += 1
 
         import asyncio
+
         try:
             coro = service.extract_document(pdf_file, **kwargs)  # type: ignore[attr-defined]
             try:
@@ -581,18 +599,18 @@ class PDFDocumentLoader:
                 return
 
             doi_match = re.search(doi_pattern, cleaned, re.IGNORECASE)
-            if doi_match and 'doi' not in extracted:
-                raw_doi = doi_match.group().replace('doi:', '').replace('DOI:', '').strip()
-                clean_doi = clean_identifier(raw_doi.rstrip('.,;)'))
-                extracted['doi'] = normalize_doi(clean_doi)
-            elif cleaned.lower().startswith('10.') and 'doi' not in extracted:
-                clean_doi = clean_identifier(cleaned.rstrip('.,;)'))
-                extracted['doi'] = normalize_doi(clean_doi)
+            if doi_match and "doi" not in extracted:
+                raw_doi = doi_match.group().replace("doi:", "").replace("DOI:", "").strip()
+                clean_doi = clean_identifier(raw_doi.rstrip(".,;)"))
+                extracted["doi"] = normalize_doi(clean_doi)
+            elif cleaned.lower().startswith("10.") and "doi" not in extracted:
+                clean_doi = clean_identifier(cleaned.rstrip(".,;)"))
+                extracted["doi"] = normalize_doi(clean_doi)
 
             pmid_match = re.search(PMID_PATTERN, cleaned, re.IGNORECASE)
-            if pmid_match and 'pmid' not in extracted:
+            if pmid_match and "pmid" not in extracted:
                 clean_pmid = clean_identifier(pmid_match.group(1))
-                extracted['pmid'] = normalize_pmid(clean_pmid)
+                extracted["pmid"] = normalize_pmid(clean_pmid)
 
         identifiers_to_check: List[str] = []
 
@@ -604,15 +622,15 @@ class PDFDocumentLoader:
                 identifiers_to_check.extend(str(item) for item in identifiers if str(item).strip())
 
             creators = getattr(xmp, "dc_creator", None)
-            if creators and 'authors' not in extracted:
+            if creators and "authors" not in extracted:
                 if not isinstance(creators, (list, tuple)):
                     creators = [creators]
-                authors = ', '.join(str(item).strip() for item in creators if str(item).strip())
+                authors = ", ".join(str(item).strip() for item in creators if str(item).strip())
                 if authors:
-                    extracted['authors'] = sanitize_author_line(authors)
+                    extracted["authors"] = sanitize_author_line(authors)
 
             xmp_dates = getattr(xmp, "dc_date", None)
-            if xmp_dates and 'publication_date' not in extracted:
+            if xmp_dates and "publication_date" not in extracted:
                 if not isinstance(xmp_dates, (list, tuple)):
                     xmp_dates = [xmp_dates]
                 for item in xmp_dates:
@@ -623,51 +641,51 @@ class PDFDocumentLoader:
                         try:
                             parsed = parse_date(date_text)
                             if parsed:
-                                extracted['publication_date'] = parsed.isoformat()
+                                extracted["publication_date"] = parsed.isoformat()
                                 break
-                        except Exception:
+                        except Exception:  # nosec B110 - permissive parsing of optional XMP dates
                             pass
-                    extracted['publication_date'] = date_text
+                    extracted["publication_date"] = date_text
                     break
 
         for identifier in identifiers_to_check:
             _record_identifier(identifier)
-            if 'doi' in extracted and 'pmid' in extracted:
+            if "doi" in extracted and "pmid" in extracted:
                 break
 
         doc_info_get = getattr(doc_info, "get", None)
         if doc_info_get:
-            doc_author = doc_info_get('/Author')
-            if doc_author and 'authors' not in extracted:
-                extracted['authors'] = sanitize_author_line(str(doc_author))
+            doc_author = doc_info_get("/Author")
+            if doc_author and "authors" not in extracted:
+                extracted["authors"] = sanitize_author_line(str(doc_author))
 
-            for key in ('/doi', '/DOI', '/Identifier', '/Subject', '/Keywords'):
+            for key in ("/doi", "/DOI", "/Identifier", "/Subject", "/Keywords"):
                 value = doc_info_get(key)
                 if value:
                     _record_identifier(value)
-                    if 'doi' in extracted and 'pmid' in extracted:
+                    if "doi" in extracted and "pmid" in extracted:
                         break
 
-            if 'publication_date' not in extracted:
-                for key in ('/CreationDate', '/ModDate'):
+            if "publication_date" not in extracted:
+                for key in ("/CreationDate", "/ModDate"):
                     value = doc_info_get(key)
                     if not value:
                         continue
 
                     cleaned = str(value).strip()
-                    if cleaned.startswith('D:'):
+                    if cleaned.startswith("D:"):
                         cleaned = cleaned[2:]
 
                     if parse_date:
                         try:
                             parsed = parse_date(cleaned)
                             if parsed:
-                                extracted['publication_date'] = parsed.isoformat()
+                                extracted["publication_date"] = parsed.isoformat()
                                 break
-                        except Exception:
+                        except Exception:  # nosec B110 - permissive parsing of optional PDF date metadata
                             pass
 
-                    extracted['publication_date'] = cleaned
+                    extracted["publication_date"] = cleaned
                     break
 
         return extracted
@@ -696,12 +714,12 @@ class PDFDocumentLoader:
             Remove affiliations, emails, and superscripts from detected author text.
             Authors are always stored as comma-separated strings for consistency with metadata standards.
             """
-            sanitized = re.sub(r'\b\S+@\S+\b', '', raw_line)
-            sanitized = re.sub(r'\[[^\]]*\]', '', sanitized)
-            sanitized = re.sub(r'[\d*†]+', '', sanitized)
-            sanitized = re.sub(r'\s+', ' ', sanitized).strip(' ,;')
+            sanitized = re.sub(r"\b\S+@\S+\b", "", raw_line)
+            sanitized = re.sub(r"\[[^\]]*\]", "", sanitized)
+            sanitized = re.sub(r"[\d*†]+", "", sanitized)
+            sanitized = re.sub(r"\s+", " ", sanitized).strip(" ,;")
             if len(sanitized) > 200:
-                trimmed = sanitized[:197].rstrip(',; ')
+                trimmed = sanitized[:197].rstrip(",; ")
                 sanitized = f"{trimmed}..."
             return sanitized
 
@@ -720,25 +738,29 @@ class PDFDocumentLoader:
                     metadata[key] = value
 
         # Apply DOI regex across text with soft line-breaks collapsed
-        text_collapsed = _safe_sub(SOFT_LINEBREAK_PATTERN, ' ', text, 'soft_linebreak')
-        doi_match = _safe_search(DOI_REGEX, text_collapsed, 'doi_extraction')
+        text_collapsed = _safe_sub(SOFT_LINEBREAK_PATTERN, " ", text, "soft_linebreak")
+        doi_match = _safe_search(DOI_REGEX, text_collapsed, "doi_extraction")
         if doi_match:
-            raw_doi = doi_match.group().replace('doi:', '').replace('DOI:', '').strip()
-            clean_doi = clean_identifier(raw_doi.rstrip('.,;)'))
-            metadata['doi'] = normalize_doi(clean_doi)
+            raw_doi = doi_match.group().replace("doi:", "").replace("DOI:", "").strip()
+            clean_doi = clean_identifier(raw_doi.rstrip(".,;)"))
+            metadata["doi"] = normalize_doi(clean_doi)
 
         # Use shared PMID pattern for extraction
-        pmid_match = _safe_search(PMID_EXTRACT_REGEX, text, 'pmid_extraction')
+        pmid_match = _safe_search(PMID_EXTRACT_REGEX, text, "pmid_extraction")
         if pmid_match:
             clean_pmid = clean_identifier(pmid_match.group(1))
-            metadata['pmid'] = normalize_pmid(clean_pmid)
+            metadata["pmid"] = normalize_pmid(clean_pmid)
 
         # Enhanced author line heuristics with boundary detection and affiliation filtering
-        lines = text.split('\n')
+        lines = text.split("\n")
         cumulative_chars = 0
         author_line_pattern = _prefer_unicode_pattern(AUTHOR_LINE_PATTERN_UNICODE, AUTHOR_LINE_PATTERN_ASCII)
-        author_prefix_pattern = _prefer_unicode_pattern(AUTHOR_UNICODE_PREFIX_PATTERN, AUTHOR_UNICODE_PREFIX_PATTERN_ASCII)
-        author_cluster_pattern = _prefer_unicode_pattern(AUTHOR_NAME_CLUSTER_PATTERN_UNICODE, AUTHOR_NAME_CLUSTER_PATTERN_ASCII)
+        author_prefix_pattern = _prefer_unicode_pattern(
+            AUTHOR_UNICODE_PREFIX_PATTERN, AUTHOR_UNICODE_PREFIX_PATTERN_ASCII
+        )
+        author_cluster_pattern = _prefer_unicode_pattern(
+            AUTHOR_NAME_CLUSTER_PATTERN_UNICODE, AUTHOR_NAME_CLUSTER_PATTERN_ASCII
+        )
 
         for line in lines[:80]:  # Check first 80 lines with character bound
             cumulative_chars += len(line)
@@ -746,66 +768,66 @@ class PDFDocumentLoader:
                 break
             line = line.strip()
 
-            if _safe_match(HEADER_TERMINATOR_PATTERN, line, 'section_header'):
+            if _safe_match(HEADER_TERMINATOR_PATTERN, line, "section_header"):
                 break
 
-            if _safe_search(AFFILIATION_LINE_PATTERN, line, 'affiliation_line'):
+            if _safe_search(AFFILIATION_LINE_PATTERN, line, "affiliation_line"):
                 continue
 
             tokens = line.split()
-            if any(_safe_search(AFFILIATION_PREFIX_PATTERN, token, 'affiliation_prefix') for token in tokens[:2]):
+            if any(_safe_search(AFFILIATION_PREFIX_PATTERN, token, "affiliation_prefix") for token in tokens[:2]):
                 continue
 
-            author_line_match = _safe_match(author_line_pattern, line, 'author_line') if author_line_pattern else None
+            author_line_match = _safe_match(author_line_pattern, line, "author_line") if author_line_pattern else None
             if author_line_match:
-                if len(line.split(',')) >= 2 and len(line) < 200:
-                    if not _safe_search(AFFILIATION_EXCLUSION_PATTERN, line, 'author_affiliation_exclusion'):
+                if len(line.split(",")) >= 2 and len(line) < 200:
+                    if not _safe_search(AFFILIATION_EXCLUSION_PATTERN, line, "author_affiliation_exclusion"):
                         sanitized_authors = sanitize_author_line(line)
                         if sanitized_authors:
-                            metadata['authors'] = sanitized_authors
+                            metadata["authors"] = sanitized_authors
                             break
 
         # Fallback check for explicit "Authors:" prefix if not found above
-        if 'authors' not in metadata:
-            prefix_match = _safe_search(AUTHOR_PREFIX_PATTERN, text, 'authors_prefix')
+        if "authors" not in metadata:
+            prefix_match = _safe_search(AUTHOR_PREFIX_PATTERN, text, "authors_prefix")
             if prefix_match:
                 sanitized_authors = sanitize_author_line(prefix_match.group(1).strip())
                 if sanitized_authors:
-                    metadata['authors'] = sanitized_authors
+                    metadata["authors"] = sanitized_authors
 
         # Secondary Unicode-aware fallback for Author(s) lines that may include non-Latin scripts
-        if 'authors' not in metadata and author_prefix_pattern is not None:
+        if "authors" not in metadata and author_prefix_pattern is not None:
             cumulative_chars = 0
             for line in lines[:80]:
                 cumulative_chars += len(line)
                 if cumulative_chars > 2500:
                     break
-                unicode_match = _safe_match(author_prefix_pattern, line, 'unicode_author_prefix')
+                unicode_match = _safe_match(author_prefix_pattern, line, "unicode_author_prefix")
                 if unicode_match:
                     sanitized_authors = sanitize_author_line(unicode_match.group(1).strip())
                     if sanitized_authors:
-                        metadata['authors'] = sanitized_authors
+                        metadata["authors"] = sanitized_authors
                         break
 
         # Relaxed fallback: allow potential affiliation words but require multiple capitalized names
-        if 'authors' not in metadata and author_cluster_pattern is not None:
+        if "authors" not in metadata and author_cluster_pattern is not None:
             for line in lines[:80]:
                 candidate = line.strip()
                 if not candidate or len(candidate) > 140:
                     continue
-                name_matches = _safe_findall(author_cluster_pattern, candidate, 'author_name_cluster')
+                name_matches = _safe_findall(author_cluster_pattern, candidate, "author_name_cluster")
                 if len(name_matches) >= 2:
                     sanitized_authors = sanitize_author_line(candidate)
                     if sanitized_authors:
-                        metadata['authors'] = sanitized_authors
+                        metadata["authors"] = sanitized_authors
                         break
 
         # Extract date strings and parse them
         if parse_date:
             date_patterns = [
-                r'\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b',
-                r'\b\d{1,2}[-/]\d{1,2}[-/]\d{4}\b',
-                r'\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b'
+                r"\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b",
+                r"\b\d{1,2}[-/]\d{1,2}[-/]\d{4}\b",
+                r"\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b",
             ]
 
             for pattern in date_patterns:
@@ -813,13 +835,13 @@ class PDFDocumentLoader:
                 if date_match:
                     try:
                         parsed_date = parse_date(date_match.group())
-                        metadata['publication_date'] = parsed_date.isoformat()
+                        metadata["publication_date"] = parsed_date.isoformat()
                         break
-                    except:
+                    except:  # nosec B112 - permissive regex parsing fallback
                         continue
 
         # Attempt to capture journal information if still missing
-        if 'journal' not in metadata:
+        if "journal" not in metadata:
             journal_pattern = _prefer_unicode_pattern(JOURNAL_PATTERN_UNICODE, JOURNAL_PATTERN_ASCII)
             if journal_pattern is not None:
                 for i, line in enumerate(lines):
@@ -827,30 +849,30 @@ class PDFDocumentLoader:
                     if len(stripped) < 12 or len(stripped) > 200:
                         continue
 
-                    if not _safe_match(journal_pattern, stripped, 'journal_line'):
+                    if not _safe_match(journal_pattern, stripped, "journal_line"):
                         continue
 
                     validation_context = []
                     for j in range(max(0, i - 1), min(len(lines), i + 2)):
                         validation_context.append(lines[j].strip())
-                    context_text = ' '.join(validation_context)
+                    context_text = " ".join(validation_context)
                     context_text_lower = context_text.lower()
 
                     has_doi_pmid = bool(
-                        _safe_search(DOI_REGEX, context_text, 'journal_context_doi') or
-                        _safe_search(PMID_REGEX, context_text, 'journal_context_pmid')
+                        _safe_search(DOI_REGEX, context_text, "journal_context_doi")
+                        or _safe_search(PMID_REGEX, context_text, "journal_context_pmid")
                     )
 
                     has_journal_keyword = any(keyword in context_text_lower for keyword in JOURNAL_KEYWORDS)
 
                     if has_doi_pmid or has_journal_keyword:
-                        metadata['journal'] = stripped
+                        metadata["journal"] = stripped
                         break
 
         # Extract abstract content after detecting an Abstract header when missing
-        if 'abstract' not in metadata:
-            abstract_pattern = re.compile(r'^\s*Abstract\s*[:\-]?\s*$', re.IGNORECASE)
-            lines = text.split('\n')
+        if "abstract" not in metadata:
+            abstract_pattern = re.compile(r"^\s*Abstract\s*[:\-]?\s*$", re.IGNORECASE)
+            lines = text.split("\n")
             abstract_lines: List[str] = []
             capture = False
             for line in lines:
@@ -858,42 +880,46 @@ class PDFDocumentLoader:
                     capture = True
                     continue
                 if capture:
-                    if re.match(r'^\s*(Introduction|Background|Methods|Materials|Patients|Results|Discussion|Conclusion)s?\b', line, re.IGNORECASE):
+                    if re.match(
+                        r"^\s*(Introduction|Background|Methods|Materials|Patients|Results|Discussion|Conclusion)s?\b",
+                        line,
+                        re.IGNORECASE,
+                    ):
                         break
                     abstract_lines.append(line.strip())
-            abstract_text = ' '.join(chunk for chunk in abstract_lines if chunk)
+            abstract_text = " ".join(chunk for chunk in abstract_lines if chunk)
             if abstract_text:
-                metadata['abstract'] = abstract_text
+                metadata["abstract"] = abstract_text
 
         # Extract MeSH terms
         mesh_terms: List[str] = []
 
         # Look for lines starting with "MeSH terms:" or "MeSH:"
-        mesh_pattern1 = r'^(MeSH\s+terms?):\s*(.+)$'
-        for line in text.split('\n'):
+        mesh_pattern1 = r"^(MeSH\s+terms?):\s*(.+)$"
+        for line in text.split("\n"):
             line = line.strip()
             match = re.search(mesh_pattern1, line, re.IGNORECASE)
             if match:
                 mesh_text = match.group(2)
                 # Split on commas and semicolons, clean up terms
-                terms = re.split(r'[,;]', mesh_text)
+                terms = re.split(r"[,;]", mesh_text)
                 mesh_terms.extend([term.strip() for term in terms if term.strip()])
                 break
 
         # Alternative pattern: look for "MeSH terms" or "MeSH" followed by content
         if not mesh_terms:
-            mesh_pattern2 = r'\b(MeSH\s+terms?)\b[:\s]+(.+?)(?=\n\n|\n[A-Z]|\Z)'
+            mesh_pattern2 = r"\b(MeSH\s+terms?)\b[:\s]+(.+?)(?=\n\n|\n[A-Z]|\Z)"
             match = re.search(mesh_pattern2, text, re.IGNORECASE | re.DOTALL)
             if match:
                 mesh_text = match.group(2)
                 # Split on commas and semicolons, clean up terms
-                terms = re.split(r'[,;]', mesh_text)
+                terms = re.split(r"[,;]", mesh_text)
                 mesh_terms.extend([term.strip() for term in terms if term.strip()])
 
         extra_mesh_terms: List[str] = []
         if enable_mesh_from_pdf:
-            raw_lines = text.split('\n')
-            mesh_heading_pattern = re.compile(r'^(.+?)\s*\[MeSH\s+Terms\]\s*$', re.IGNORECASE)
+            raw_lines = text.split("\n")
+            mesh_heading_pattern = re.compile(r"^(.+?)\s*\[MeSH\s+Terms\]\s*$", re.IGNORECASE)
             for raw_line in raw_lines:
                 stripped = raw_line.strip()
                 if not stripped:
@@ -901,15 +927,13 @@ class PDFDocumentLoader:
                 heading_match = mesh_heading_pattern.match(stripped)
                 if heading_match:
                     extracted = heading_match.group(1)
-                    extra_mesh_terms.extend(
-                        [term.strip() for term in re.split(r'[,;/]', extracted) if term.strip()]
-                    )
+                    extra_mesh_terms.extend([term.strip() for term in re.split(r"[,;/]", extracted) if term.strip()])
 
             if not extra_mesh_terms:
                 heading_labels = {
-                    'mesh terms',
-                    'mesh headings',
-                    'major mesh terms',
+                    "mesh terms",
+                    "mesh headings",
+                    "major mesh terms",
                 }
                 for index, raw_line in enumerate(raw_lines):
                     stripped = raw_line.strip()
@@ -917,20 +941,18 @@ class PDFDocumentLoader:
                         continue
 
                     collected: List[str] = []
-                    for follower_raw in raw_lines[index + 1:index + 8]:
+                    for follower_raw in raw_lines[index + 1 : index + 8]:
                         follower = follower_raw.strip()
                         if not follower:
                             break
-                        if follower.endswith(':') and len(follower.split()) <= 4:
+                        if follower.endswith(":") and len(follower.split()) <= 4:
                             break
-                        if re.match(r'^[A-Z][A-Za-z\s/-]+:$', follower):
+                        if re.match(r"^[A-Z][A-Za-z\s/-]+:$", follower):
                             break
-                        cleaned = follower.lstrip('-*•').strip()
+                        cleaned = follower.lstrip("-*•").strip()
                         if not cleaned:
                             continue
-                        collected.extend(
-                            [term.strip() for term in re.split(r'[,;/]', cleaned) if term.strip()]
-                        )
+                        collected.extend([term.strip() for term in re.split(r"[,;/]", cleaned) if term.strip()])
                     if collected:
                         extra_mesh_terms.extend(collected)
                         break
@@ -945,7 +967,7 @@ class PDFDocumentLoader:
 
         # Add mesh_terms to metadata if found
         if mesh_terms:
-            metadata['mesh_terms'] = self._normalize_mesh_terms(mesh_terms)
+            metadata["mesh_terms"] = self._normalize_mesh_terms(mesh_terms)
 
         return metadata
 
@@ -1016,7 +1038,7 @@ class PDFDocumentLoader:
             terms_list = [str(term).strip() for term in mesh_terms if str(term).strip()]
         elif isinstance(mesh_terms, str):
             # If string, split by comma and clean
-            terms_list = [term.strip() for term in mesh_terms.split(',') if term.strip()]
+            terms_list = [term.strip() for term in mesh_terms.split(",") if term.strip()]
         else:
             return []
 
@@ -1032,13 +1054,13 @@ class PDFDocumentLoader:
     def _truncate_metadata_fields(self, metadata: Dict[str, Any], source_label: str) -> None:
         """Cap oversized metadata fields to avoid excessive payloads."""
 
-        authors_cap = _get_env_int('DOC_METADATA_AUTHORS_MAX_LEN', 500)
-        abstract_cap = _get_env_int('DOC_METADATA_ABSTRACT_MAX_LEN', 4000)
+        authors_cap = _get_env_int("DOC_METADATA_AUTHORS_MAX_LEN", 500)
+        abstract_cap = _get_env_int("DOC_METADATA_ABSTRACT_MAX_LEN", 4000)
 
-        authors_value = metadata.get('authors')
+        authors_value = metadata.get("authors")
         if isinstance(authors_value, str) and len(authors_value) > authors_cap:
             truncated = authors_value[:authors_cap].rstrip()
-            metadata['authors'] = truncated
+            metadata["authors"] = truncated
             logger.warning(
                 "Truncated authors metadata for %s from %s to %s characters.",
                 source_label,
@@ -1046,10 +1068,10 @@ class PDFDocumentLoader:
                 authors_cap,
             )
 
-        abstract_value = metadata.get('abstract')
+        abstract_value = metadata.get("abstract")
         if isinstance(abstract_value, str) and len(abstract_value) > abstract_cap:
             truncated = abstract_value[:abstract_cap].rstrip()
-            metadata['abstract'] = truncated
+            metadata["abstract"] = truncated
             logger.warning(
                 "Truncated abstract metadata for %s from %s to %s characters.",
                 source_label,
@@ -1081,14 +1103,15 @@ class PDFDocumentLoader:
         Returns:
             Dictionary with merged metadata
         """
+
         # Start with PDF/XMP extracted metadata
         def sanitize_author_line(raw_line: str) -> str:
-            sanitized = re.sub(r'\b\S+@\S+\b', '', raw_line)
-            sanitized = re.sub(r'\[[^\]]*\]', '', sanitized)
-            sanitized = re.sub(r'[\d*†]+', '', sanitized)
-            sanitized = re.sub(r'\s+', ' ', sanitized).strip(' ,;')
+            sanitized = re.sub(r"\b\S+@\S+\b", "", raw_line)
+            sanitized = re.sub(r"\[[^\]]*\]", "", sanitized)
+            sanitized = re.sub(r"[\d*†]+", "", sanitized)
+            sanitized = re.sub(r"\s+", " ", sanitized).strip(" ,;")
             if len(sanitized) > 200:
-                trimmed = sanitized[:197].rstrip(',; ')
+                trimmed = sanitized[:197].rstrip(",; ")
                 sanitized = f"{trimmed}..."
             return sanitized
 
@@ -1100,17 +1123,14 @@ class PDFDocumentLoader:
         )
 
         # Check for sidecar JSON file
-        json_path = pdf_path.with_suffix('.pubmed.json')
+        json_path = pdf_path.with_suffix(".pubmed.json")
         if json_path.exists():
             sidecar_data = self._parse_pubmed_sidecar(json_path)
             if sidecar_data:
                 logger.info(f"Loaded PubMed metadata from {json_path.name}")
 
                 # Overlay specific sidecar fields with defined precedence
-                overlay_fields = [
-                    'doi', 'pmid', 'publication_date', 'authors',
-                    'mesh_terms', 'journal', 'abstract'
-                ]
+                overlay_fields = ["doi", "pmid", "publication_date", "authors", "mesh_terms", "journal", "abstract"]
 
                 for field in overlay_fields:
                     if field in sidecar_data and sidecar_data[field]:
@@ -1131,27 +1151,27 @@ class PDFDocumentLoader:
             Returns empty dict if file cannot be parsed.
         """
         try:
-            with open(json_path, 'r', encoding='utf-8') as f:
+            with open(json_path, encoding="utf-8") as f:
                 json_data = json.load(f)
 
             # Extract and normalize metadata fields
             metadata = {}
 
             # Normalize authors field
-            authors = json_data.get('authors')
+            authors = json_data.get("authors")
             if authors:
-                metadata['authors'] = self._normalize_authors(authors)
+                metadata["authors"] = self._normalize_authors(authors)
 
             # Normalize MeSH terms
-            mesh_terms = json_data.get('mesh_terms')
+            mesh_terms = json_data.get("mesh_terms")
             if mesh_terms:
-                metadata['mesh_terms'] = self._normalize_mesh_terms(mesh_terms)
+                metadata["mesh_terms"] = self._normalize_mesh_terms(mesh_terms)
 
             # Normalize DOI
-            raw_doi = json_data.get('doi')
+            raw_doi = json_data.get("doi")
             if raw_doi is not None and str(raw_doi).strip():
                 doi_original = str(raw_doi).strip()
-                cleaned_doi = clean_identifier(doi_original.rstrip('.,;)'))
+                cleaned_doi = clean_identifier(doi_original.rstrip(".,;)"))
                 normalized_doi = normalize_doi(cleaned_doi)
                 if normalized_doi:
                     if normalized_doi != doi_original:
@@ -1161,10 +1181,10 @@ class PDFDocumentLoader:
                             doi_original,
                             normalized_doi,
                         )
-                    metadata['doi'] = normalized_doi
+                    metadata["doi"] = normalized_doi
 
             # Normalize PMID
-            raw_pmid = json_data.get('pmid')
+            raw_pmid = json_data.get("pmid")
             if raw_pmid is not None and str(raw_pmid).strip():
                 pmid_original = str(raw_pmid).strip()
                 cleaned_pmid = clean_identifier(pmid_original)
@@ -1177,22 +1197,22 @@ class PDFDocumentLoader:
                             pmid_original,
                             normalized_pmid,
                         )
-                    metadata['pmid'] = normalized_pmid
+                    metadata["pmid"] = normalized_pmid
 
             # Handle other fields, treating empty strings as missing
-            for field in ['title', 'abstract', 'publication_date', 'journal']:
+            for field in ["title", "abstract", "publication_date", "journal"]:
                 value = json_data.get(field)
                 if value is not None and str(value).strip():
                     metadata[field] = value
 
             # Optionally normalize publication_date via dateutil if it parses to a valid date
-            if 'publication_date' in metadata and parse_date:
+            if "publication_date" in metadata and parse_date:
                 try:
-                    parsed_date = parse_date(str(metadata['publication_date']))
+                    parsed_date = parse_date(str(metadata["publication_date"]))
                     if parsed_date:
-                        metadata['publication_date'] = parsed_date.isoformat()
-                except Exception:
-                    pass  # Keep original value if parsing fails
+                        metadata["publication_date"] = parsed_date.isoformat()
+                except Exception:  # nosec B110 - keep original value if parsing fails
+                    pass
 
             return metadata
 
@@ -1225,7 +1245,7 @@ class PDFDocumentLoader:
             - mesh_terms: list[str]
         """
         # Check for sidecar JSON file
-        json_path = pdf_path.with_suffix('.pubmed.json')
+        json_path = pdf_path.with_suffix(".pubmed.json")
         if not json_path.exists():
             logger.debug(f"No sidecar file found for {pdf_path.name}")
             return {}
@@ -1238,29 +1258,29 @@ class PDFDocumentLoader:
     def load_documents(self) -> List[Document]:
         """
         Load all PDF documents from the specified folder
-        
+
         Returns:
             List of Document objects
         """
         if not self.docs_folder.exists():
             logger.error(f"Documents folder does not exist: {self.docs_folder}")
             return []
-        
+
         # Get all PDF files with case-insensitive globbing
         pdf_patterns = ["*.pdf", "*.PDF"]
         pdf_files_set = set()
         for pattern in pdf_patterns:
             pdf_files_set.update(self.docs_folder.glob(pattern))
         pdf_files = sorted(pdf_files_set, key=lambda path: path.name.lower())
-        
+
         if not pdf_files:
             logger.warning(f"No PDF files found in {self.docs_folder}")
             return []
-        
+
         logger.info(f"Found {len(pdf_files)} PDF files")
-        
+
         documents = []
-        
+
         scan_pages_env = os.getenv("PUBMED_SCAN_PAGES")
         try:
             scan_pages = int(scan_pages_env) if scan_pages_env else 3
@@ -1325,9 +1345,7 @@ class PDFDocumentLoader:
                 if pdf_documents:
                     first_doc = pdf_documents[0]
                     if not isinstance(first_doc, Document) or not hasattr(first_doc, "page_content"):
-                        raise TypeError(
-                            "Configured PDF loader did not return Document objects with page_content"
-                        )
+                        raise TypeError("Configured PDF loader did not return Document objects with page_content")
 
                 # Extract PubMed metadata from JSON sidecar
                 pubmed_metadata = self._extract_pubmed_metadata(pdf_file)
@@ -1351,13 +1369,13 @@ class PDFDocumentLoader:
 
                 # Extract metadata from PDF text if not already in JSON
                 missing_fields = {
-                    'doi',
-                    'pmid',
-                    'authors',
-                    'publication_date',
-                    'mesh_terms',
-                    'journal',
-                    'abstract',
+                    "doi",
+                    "pmid",
+                    "authors",
+                    "publication_date",
+                    "mesh_terms",
+                    "journal",
+                    "abstract",
                 } - set(pubmed_metadata.keys())
                 if missing_fields and pdf_documents:
                     # Get text from first 1-3 pages for metadata extraction
@@ -1381,10 +1399,7 @@ class PDFDocumentLoader:
 
                 # Add metadata to all pages
                 for doc in pdf_documents:
-                    doc.metadata.update({
-                        "source_file": pdf_file.name,
-                        "file_path": str(pdf_file)
-                    })
+                    doc.metadata.update({"source_file": pdf_file.name, "file_path": str(pdf_file)})
                     doc.metadata.setdefault("source", doc.metadata.get("file_path", str(pdf_file)))
                     # Merge PubMed metadata
                     doc.metadata.update(pubmed_metadata)
@@ -1400,26 +1415,26 @@ class PDFDocumentLoader:
             except Exception as e:
                 logger.error(f"Error loading {pdf_file.name}: {str(e)}")
                 continue
-        
+
         logger.info(f"Total documents loaded: {len(documents)}")
         return documents
-    
+
     def split_documents(self, documents: List[Document]) -> List[Document]:
         """
         Split documents into smaller chunks
-        
+
         Args:
             documents: List of documents to split
-            
+
         Returns:
             List of split document chunks
         """
         if not documents:
             logger.warning("No documents to split")
             return []
-        
+
         logger.info(f"Splitting {len(documents)} documents into chunks")
-        
+
         # If documents are already pre-chunked (e.g., by NeMo with semantic/title chunks),
         # avoid double-splitting and just annotate chunk metadata.
         prechunked = any(isinstance(doc.metadata, dict) and doc.metadata.get("chunk_type") for doc in documents)
@@ -1427,27 +1442,24 @@ class PDFDocumentLoader:
             split_docs = list(documents)
         else:
             split_docs = self.text_splitter.split_documents(documents)
-        
+
         # Add chunk metadata
         for i, doc in enumerate(split_docs):
-            doc.metadata.update({
-                "chunk_id": i,
-                "chunk_size": len(doc.page_content)
-            })
+            doc.metadata.update({"chunk_id": i, "chunk_size": len(doc.page_content)})
 
         logger.info(f"Created {len(split_docs)} document chunks")
         return split_docs
-    
+
     def load_and_split(self) -> List[Document]:
         """
         Load all PDFs and split them into chunks
-        
+
         Returns:
             List of split document chunks
         """
         documents = self.load_documents()
         return self.split_documents(documents)
-    
+
     def get_document_stats(self, documents: List[Document]) -> dict:
         """
         Get statistics about loaded documents
@@ -1464,11 +1476,11 @@ class PDFDocumentLoader:
                 "total_chunks": 0,
                 "total_characters": 0,
                 "docs_with_doi": 0,
-                "docs_with_pmid": 0
+                "docs_with_pmid": 0,
             }
 
         total_chars = sum(len(doc.page_content) for doc in documents)
-        source_files = set(doc.metadata.get("source_file", "unknown") for doc in documents)
+        source_files = {doc.metadata.get("source_file", "unknown") for doc in documents}
 
         # Count unique source files with DOI and PMID
         files_with_doi = set()
@@ -1485,26 +1497,27 @@ class PDFDocumentLoader:
 
         return {
             "total_source_documents": len(source_files),  # Unique source PDF files
-            "total_chunks": len(documents),               # Total text chunks
+            "total_chunks": len(documents),  # Total text chunks
             "total_characters": total_chars,
             "average_chunk_size": total_chars // len(documents) if documents else 0,
             "source_files": list(source_files),
-            "num_source_files": len(source_files),        # Alias for backward compatibility
+            "num_source_files": len(source_files),  # Alias for backward compatibility
             "docs_with_doi": docs_with_doi,
-            "docs_with_pmid": docs_with_pmid
+            "docs_with_pmid": docs_with_pmid,
         }
 
 
 def main():
     """Test the document loader"""
     from dotenv import load_dotenv
+
     load_dotenv()
-    
+
     docs_folder = os.getenv("DOCS_FOLDER", "Data/Docs")
-    
+
     loader = PDFDocumentLoader(docs_folder)
     documents = loader.load_and_split()
-    
+
     stats = loader.get_document_stats(documents)
     print("Document Statistics:")
     for key, value in stats.items():

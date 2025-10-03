@@ -17,24 +17,24 @@ from typing import List, Tuple
 
 # Placeholder patterns to detect
 PLACEHOLDER_PATTERNS = [
-    r'your[_\-].*',
-    r'example[_\-\.].*',
-    r'placeholder',
-    r'replace[_\-]?this',
-    r'changeme',
-    r'xxx+',
-    r'<.*>',  # <your_key_here>
+    r"your[_\-].*",
+    r"example[_\-\.].*",
+    r"placeholder",
+    r"replace[_\-]?this",
+    r"changeme",
+    r"xxx+",
+    r"<.*>",  # <your_key_here>
 ]
 
 # Critical environment variables that must be set
 REQUIRED_VARS = [
-    'NVIDIA_API_KEY',
+    "NVIDIA_API_KEY",
 ]
 
 # Optional but recommended variables
 RECOMMENDED_VARS = [
-    'PUBMED_EMAIL',
-    'APIFY_TOKEN',
+    "PUBMED_EMAIL",
+    "APIFY_TOKEN",
 ]
 
 
@@ -61,12 +61,10 @@ def validate_environment() -> Tuple[bool, List[str], List[str]]:
     warnings: List[str] = []
 
     # Check if .env file exists
-    env_file = Path('.env')
+    env_file = Path(".env")
     if not env_file.exists():
         errors.append(
-            "❌ .env file not found!\n"
-            "   Run: cp .env.example .env\n"
-            "   Then edit .env with your real API keys"
+            "❌ .env file not found!\n" "   Run: cp .env.example .env\n" "   Then edit .env with your real API keys"
         )
         return False, errors, warnings
 
@@ -74,20 +72,11 @@ def validate_environment() -> Tuple[bool, List[str], List[str]]:
     for var in REQUIRED_VARS:
         value = os.getenv(var)
         if not value:
-            errors.append(
-                f"❌ {var} is not set\n"
-                f"   Add it to your .env file"
-            )
+            errors.append(f"❌ {var} is not set\n" f"   Add it to your .env file")
         elif is_placeholder(value):
-            errors.append(
-                f"❌ {var} appears to be a placeholder: '{value}'\n"
-                f"   Replace with a real API key in .env"
-            )
+            errors.append(f"❌ {var} appears to be a placeholder: '{value}'\n" f"   Replace with a real API key in .env")
         elif len(value) < 20:
-            errors.append(
-                f"❌ {var} is too short (must be at least 20 characters)\n"
-                f"   Current length: {len(value)}"
-            )
+            errors.append(f"❌ {var} is too short (must be at least 20 characters)\n" f"   Current length: {len(value)}")
 
     # Check recommended variables
     for var in RECOMMENDED_VARS:
@@ -104,10 +93,9 @@ def validate_environment() -> Tuple[bool, List[str], List[str]]:
             )
 
     # Check for common mistakes
-    if env_file.read_text().count('your_') > 3:
+    if env_file.read_text().count("your_") > 3:
         warnings.append(
-            "⚠️  Multiple placeholder values detected in .env\n"
-            "   Review your .env file and replace all placeholders"
+            "⚠️  Multiple placeholder values detected in .env\n" "   Review your .env file and replace all placeholders"
         )
 
     success = len(errors) == 0
@@ -119,6 +107,7 @@ def main():
     # Load .env if python-dotenv is available
     try:
         from dotenv import load_dotenv
+
         load_dotenv()
     except ImportError:
         pass
@@ -152,5 +141,5 @@ def main():
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

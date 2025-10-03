@@ -386,7 +386,7 @@ def test_stale_hits_count_as_skipped_rate_limit(fake_env, fake_client):
 
     final_stats = cache_manager.get_statistics()
     # Verify that skipped_rate_limit count increased
-    assert final_stats["skipped_rate_limit"] > initial_stats["skipped_rate_limit"], \
-        "Expected stale hit to increase skipped_rate_limit count"
-    assert final_stats["stale_hits"] > initial_stats["stale_hits"], \
-        "Expected stale hit to be recorded"
+    assert (
+        final_stats["skipped_rate_limit"] > initial_stats["skipped_rate_limit"]
+    ), "Expected stale hit to increase skipped_rate_limit count"
+    assert final_stats["stale_hits"] > initial_stats["stale_hits"], "Expected stale hit to be recorded"

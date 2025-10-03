@@ -1,11 +1,10 @@
 """Unit tests for SynthesisEngine study phase regex classification."""
-
-import unittest
-import sys
 import os
+import sys
+import unittest
 
 # Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from synthesis_engine import SynthesisEngine
 
@@ -23,13 +22,12 @@ class TestSynthesisEnginePhaseRegex(unittest.TestCase):
             "This Phase I clinical trial evaluated the safety and tolerability of drug X.",
             "A phase i dose-escalation study in patients with advanced cancer.",
             "Phase I trial investigating maximum tolerated dose.",
-            "This was a phase 1 study examining pharmacokinetics."
+            "This was a phase 1 study examining pharmacokinetics.",
         ]
 
         for abstract in test_abstracts:
             study_type = self.engine._classify_study_type(abstract)
-            self.assertEqual(study_type, "clinical_trial",
-                           f"Failed to classify Phase I trial: {abstract}")
+            self.assertEqual(study_type, "clinical_trial", f"Failed to classify Phase I trial: {abstract}")
 
     def test_phase_ii_classification(self):
         """Test Phase II trial classification."""
@@ -37,13 +35,12 @@ class TestSynthesisEnginePhaseRegex(unittest.TestCase):
             "A Phase II randomized controlled trial of drug Y.",
             "This phase ii efficacy study enrolled 100 patients.",
             "Phase 2 trial demonstrating significant improvement in outcomes.",
-            "Multi-center phase II study of combination therapy."
+            "Multi-center phase II study of combination therapy.",
         ]
 
         for abstract in test_abstracts:
             study_type = self.engine._classify_study_type(abstract)
-            self.assertEqual(study_type, "clinical_trial",
-                           f"Failed to classify Phase II trial: {abstract}")
+            self.assertEqual(study_type, "clinical_trial", f"Failed to classify Phase II trial: {abstract}")
 
     def test_phase_iii_classification(self):
         """Test Phase III trial classification."""
@@ -51,13 +48,12 @@ class TestSynthesisEnginePhaseRegex(unittest.TestCase):
             "Large Phase III trial comparing drug Z to standard care.",
             "This phase iii randomized double-blind study.",
             "Phase 3 confirmatory trial with 1000 participants.",
-            "International phase III clinical trial results."
+            "International phase III clinical trial results.",
         ]
 
         for abstract in test_abstracts:
             study_type = self.engine._classify_study_type(abstract)
-            self.assertEqual(study_type, "clinical_trial",
-                           f"Failed to classify Phase III trial: {abstract}")
+            self.assertEqual(study_type, "clinical_trial", f"Failed to classify Phase III trial: {abstract}")
 
     def test_phase_iv_classification(self):
         """Test Phase IV trial classification."""
@@ -65,13 +61,12 @@ class TestSynthesisEnginePhaseRegex(unittest.TestCase):
             "Post-marketing Phase IV surveillance study.",
             "A phase iv safety study in real-world settings.",
             "Phase 4 observational study of long-term effects.",
-            "Phase IV post-marketing clinical trial."
+            "Phase IV post-marketing clinical trial.",
         ]
 
         for abstract in test_abstracts:
             study_type = self.engine._classify_study_type(abstract)
-            self.assertEqual(study_type, "clinical_trial",
-                           f"Failed to classify Phase IV trial: {abstract}")
+            self.assertEqual(study_type, "clinical_trial", f"Failed to classify Phase IV trial: {abstract}")
 
     def test_roman_numeral_patterns(self):
         """Test various roman numeral patterns."""
@@ -83,13 +78,12 @@ class TestSynthesisEnginePhaseRegex(unittest.TestCase):
             ("phase i dose escalation", "clinical_trial"),
             ("phase ii efficacy", "clinical_trial"),
             ("phase iii confirmatory", "clinical_trial"),
-            ("phase iv post-marketing", "clinical_trial")
+            ("phase iv post-marketing", "clinical_trial"),
         ]
 
         for abstract, expected in test_cases:
             study_type = self.engine._classify_study_type(abstract)
-            self.assertEqual(study_type, expected,
-                           f"Failed classification for: {abstract}")
+            self.assertEqual(study_type, expected, f"Failed classification for: {abstract}")
 
     def test_non_clinical_trial_abstracts(self):
         """Test that non-clinical trial abstracts are not misclassified."""
@@ -98,13 +92,12 @@ class TestSynthesisEnginePhaseRegex(unittest.TestCase):
             "Meta-analysis of multiple studies discussing phases of treatment.",
             "Review article about clinical trial phases in oncology.",
             "Observational study without phase designation.",
-            "In vitro study of drug mechanisms."
+            "In vitro study of drug mechanisms.",
         ]
 
         for abstract in test_abstracts:
             study_type = self.engine._classify_study_type(abstract)
-            self.assertNotEqual(study_type, "clinical_trial",
-                              f"Incorrectly classified as clinical trial: {abstract}")
+            self.assertNotEqual(study_type, "clinical_trial", f"Incorrectly classified as clinical trial: {abstract}")
 
     def test_edge_cases(self):
         """Test edge cases and boundary conditions."""
@@ -119,9 +112,8 @@ class TestSynthesisEnginePhaseRegex(unittest.TestCase):
 
         for abstract, expected in test_cases:
             study_type = self.engine._classify_study_type(abstract)
-            self.assertEqual(study_type, expected,
-                           f"Edge case failed for: {abstract}")
+            self.assertEqual(study_type, expected, f"Edge case failed for: {abstract}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

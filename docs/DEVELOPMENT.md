@@ -7,6 +7,7 @@ Review Cadence: Bi-weekly
 # Development Guide
 
 <!-- TOC -->
+
 - [Getting Started](#getting-started)
 - [Environment Setup](#environment-setup)
 - [Project Architecture](#project-architecture)

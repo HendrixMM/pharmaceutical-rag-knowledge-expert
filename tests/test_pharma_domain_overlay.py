@@ -1,4 +1,3 @@
-import os
 import importlib.util
 from pathlib import Path
 
@@ -19,8 +18,7 @@ def _load_pharmaceutical_processor() -> type:
 def tmp_synonyms_csv(tmp_path: Path) -> Path:
     p = tmp_path / "drug_synonyms.csv"
     p.write_text(
-        "brand,generic,iupac,aliases\n"
-        "Advil,ibuprofen,2-(4-isobutylphenyl)propionic acid,Motrin|Nurofen\n",
+        "brand,generic,iupac,aliases\n" "Advil,ibuprofen,2-(4-isobutylphenyl)propionic acid,Motrin|Nurofen\n",
         encoding="utf-8",
     )
     return p
@@ -30,8 +28,7 @@ def tmp_synonyms_csv(tmp_path: Path) -> Path:
 def tmp_regulatory_csv(tmp_path: Path) -> Path:
     p = tmp_path / "regulatory_status.csv"
     p.write_text(
-        "drug,agency,status,date,notes\n"
-        "ibuprofen,FDA,Approved,2000-01-01,\n",
+        "drug,agency,status,date,notes\n" "ibuprofen,FDA,Approved,2000-01-01,\n",
         encoding="utf-8",
     )
     return p
@@ -54,7 +51,9 @@ def _build_processor(monkeypatch: pytest.MonkeyPatch, synonyms: Path | None, reg
     return PharmaceuticalProcessor()
 
 
-def test_overlay_synonyms_and_regulatory(monkeypatch: pytest.MonkeyPatch, tmp_synonyms_csv: Path, tmp_regulatory_csv: Path) -> None:
+def test_overlay_synonyms_and_regulatory(
+    monkeypatch: pytest.MonkeyPatch, tmp_synonyms_csv: Path, tmp_regulatory_csv: Path
+) -> None:
     proc = _build_processor(monkeypatch, tmp_synonyms_csv, tmp_regulatory_csv)
 
     # Prepare a simple document mentioning a brand name only
@@ -91,8 +90,7 @@ def test_overlay_cyp_species_pk(monkeypatch: pytest.MonkeyPatch, tmp_synonyms_cs
 
     # Content contains CYP inhibitor cue, human species, and PK values
     content = (
-        "Fluconazole is a CYP3A4 inhibitor in human studies. "
-        "Reported AUC 20 ng*h/mL and Cmax 50 ng/mL in trial."
+        "Fluconazole is a CYP3A4 inhibitor in human studies. " "Reported AUC 20 ng*h/mL and Cmax 50 ng/mL in trial."
     )
     doc = {"page_content": content, "metadata": {}}
 

@@ -8,17 +8,16 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import requests
 
 logger = logging.getLogger(__name__)
 
 
-def _env(name: str, default: Optional[str] = None) -> Optional[str]:
+def _env(name: str, default: str | None = None) -> str | None:
     v = os.getenv(name)
     if v is None or not str(v).strip():
         return default
@@ -28,16 +27,15 @@ def _env(name: str, default: Optional[str] = None) -> Optional[str]:
 class PubMedEutilsClient:
     """Minimal client for PubMed E-utilities with unified schema mapping."""
 
-    def __init__(self,
-                 base_url: Optional[str] = None,
-                 email: Optional[str] = None,
-                 api_key: Optional[str] = None) -> None:
-        self.base_url = (base_url or _env("PUBMED_EUTILS_BASE_URL", "https://eutils.ncbi.nlm.nih.gov/entrez/eutils")).rstrip("/")
+    def __init__(self, base_url: str | None = None, email: str | None = None, api_key: str | None = None) -> None:
+        self.base_url = (
+            base_url or _env("PUBMED_EUTILS_BASE_URL", "https://eutils.ncbi.nlm.nih.gov/entrez/eutils")
+        ).rstrip("/")
         self.email = email or _env("PUBMED_EMAIL")
         self.api_key = api_key or _env("PUBMED_EUTILS_API_KEY")
 
-    def _params(self, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        params: Dict[str, Any] = {}
+    def _params(self, extra: dict[str, Any] | None = None) -> dict[str, Any]:
+        params: dict[str, Any] = {}
         if self.email:
             params["email"] = self.email
         if self.api_key:
@@ -46,41 +44,47 @@ class PubMedEutilsClient:
             params.update(extra)
         return params
 
-    def esearch(self, query: str, retmax: int = 30) -> List[str]:
+    def esearch(self, query: str, retmax: int = 30) -> list[str]:
         url = f"{self.base_url}/esearch.fcgi"
-        params = self._params({
-            "db": "pubmed",
-            "term": query,
-            "retmode": "json",
-            "retmax": max(1, int(retmax)),
-        })
+        params = self._params(
+            {
+                "db": "pubmed",
+                "term": query,
+                "retmode": "json",
+                "retmax": max(1, int(retmax)),
+            }
+        )
         resp = requests.get(url, params=params, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         return list(data.get("esearchresult", {}).get("idlist", []) or [])
 
-    def efetch_xml(self, pmids: List[str]) -> str:
+    def efetch_xml(self, pmids: list[str]) -> str:
         if not pmids:
             return ""
         url = f"{self.base_url}/efetch.fcgi"
-        params = self._params({
-            "db": "pubmed",
-            "id": ",".join(pmids),
-            "rettype": "abstract",
-            "retmode": "xml",
-        })
+        params = self._params(
+            {
+                "db": "pubmed",
+                "id": ",".join(pmids),
+                "rettype": "abstract",
+                "retmode": "xml",
+            }
+        )
         resp = requests.get(url, params=params, timeout=30)
         resp.raise_for_status()
         return resp.text
 
-    def elink_pmc(self, pmid: str) -> Optional[str]:
+    def elink_pmc(self, pmid: str) -> str | None:
         url = f"{self.base_url}/elink.fcgi"
-        params = self._params({
-            "dbfrom": "pubmed",
-            "db": "pmc",
-            "id": pmid,
-            "retmode": "json",
-        })
+        params = self._params(
+            {
+                "dbfrom": "pubmed",
+                "db": "pmc",
+                "id": pmid,
+                "retmode": "json",
+            }
+        )
         try:
             resp = requests.get(url, params=params, timeout=30)
             resp.raise_for_status()
@@ -99,10 +103,10 @@ class PubMedEutilsClient:
             logger.debug("ELink PMC lookup failed for %s: %s", pmid, exc)
         return None
 
-    def _text(self, node: Optional[ET.Element]) -> str:
+    def _text(self, node: ET.Element | None) -> str:
         return (node.text or "").strip() if node is not None else ""
 
-    def _parse_pub_date(self, pub_date_elem: Optional[ET.Element]) -> str:
+    def _parse_pub_date(self, pub_date_elem: ET.Element | None) -> str:
         if pub_date_elem is None:
             return ""
         year = self._text(pub_date_elem.find("Year"))
@@ -127,10 +131,10 @@ class PubMedEutilsClient:
                 pass
         return year or ""
 
-    def _join_abstract(self, abstract_elem: Optional[ET.Element]) -> str:
+    def _join_abstract(self, abstract_elem: ET.Element | None) -> str:
         if abstract_elem is None:
             return ""
-        parts: List[str] = []
+        parts: list[str] = []
         for at in abstract_elem.findall("AbstractText"):
             label = at.attrib.get("Label")
             text = (at.text or "").strip()
@@ -140,10 +144,10 @@ class PubMedEutilsClient:
                 parts.append(text)
         return " ".join([p for p in parts if p])
 
-    def _authors_to_string(self, author_list_elem: Optional[ET.Element]) -> str:
+    def _authors_to_string(self, author_list_elem: ET.Element | None) -> str:
         if author_list_elem is None:
             return ""
-        names: List[str] = []
+        names: list[str] = []
         for author in author_list_elem.findall("Author"):
             last = self._text(author.find("LastName"))
             fore = self._text(author.find("ForeName")) or self._text(author.find("FirstName"))
@@ -157,7 +161,7 @@ class PubMedEutilsClient:
                 names.append(last)
         return ", ".join(names)
 
-    def _extract_doi(self, article_id_list: Optional[ET.Element]) -> str:
+    def _extract_doi(self, article_id_list: ET.Element | None) -> str:
         if article_id_list is None:
             return ""
         for aid in article_id_list.findall("ArticleId"):
@@ -165,7 +169,7 @@ class PubMedEutilsClient:
                 return (aid.text or "").strip()
         return ""
 
-    def parse_efetch(self, xml_text: str) -> List[Dict[str, Any]]:
+    def parse_efetch(self, xml_text: str) -> list[dict[str, Any]]:
         if not xml_text:
             return []
         try:
@@ -173,7 +177,7 @@ class PubMedEutilsClient:
         except ET.ParseError as exc:
             logger.warning("Failed to parse EFetch XML: %s", exc)
             return []
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         for article in root.findall("PubmedArticle"):
             try:
                 medline = article.find("MedlineCitation")
@@ -189,24 +193,26 @@ class PubMedEutilsClient:
                 doi = self._extract_doi(article.find("PubmedData/ArticleIdList"))
                 # full text URL via ELink (best-effort)
                 full_url = self.elink_pmc(pmid) or ""
-                results.append({
-                    "pmid": pmid,
-                    "doi": doi,
-                    "title": title,
-                    "abstract": abstract,
-                    "authors": author_str,
-                    "publication_date": pub_date,
-                    "journal": journal_title,
-                    "full_text_url": full_url,
-                    "provider": "pubmed_eutils",
-                    "provider_family": "ncbi",
-                    "ingestion": "eutils",
-                })
+                results.append(
+                    {
+                        "pmid": pmid,
+                        "doi": doi,
+                        "title": title,
+                        "abstract": abstract,
+                        "authors": author_str,
+                        "publication_date": pub_date,
+                        "journal": journal_title,
+                        "full_text_url": full_url,
+                        "provider": "pubmed_eutils",
+                        "provider_family": "ncbi",
+                        "ingestion": "eutils",
+                    }
+                )
             except Exception as exc:
                 logger.debug("Skipping malformed article: %s", exc)
         return results
 
-    def search_and_fetch(self, query: str, max_items: int = 30) -> List[Dict[str, Any]]:
+    def search_and_fetch(self, query: str, max_items: int = 30) -> list[dict[str, Any]]:
         pmids = self.esearch(query, retmax=max_items)
         if not pmids:
             return []

@@ -16,32 +16,32 @@ Features:
 All templates are optimized for the NVIDIA Build cloud-first architecture
 with pharmaceutical domain prioritization and cost optimization.
 """
-
 import asyncio
 import logging
-from typing import Dict, List, Any, Optional, Tuple, NamedTuple
-from dataclasses import dataclass, field
-from enum import Enum
-import json
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 try:
-    from .query_classifier import PharmaceuticalQueryClassifier, PharmaceuticalContext
-    from .safety_alert_integration import DrugSafetyAlertIntegration
     from ..clients.nemo_client_enhanced import EnhancedNeMoClient
-    from ..optimization.batch_integration import PharmaceuticalBatchClient
     from ..enhanced_config import EnhancedRAGConfig
+    from ..optimization.batch_integration import PharmaceuticalBatchClient
+    from .query_classifier import PharmaceuticalQueryClassifier
+    from .safety_alert_integration import DrugSafetyAlertIntegration
 except ImportError:
-    from src.pharmaceutical.query_classifier import PharmaceuticalQueryClassifier, PharmaceuticalContext
-    from src.pharmaceutical.safety_alert_integration import DrugSafetyAlertIntegration
     from src.clients.nemo_client_enhanced import EnhancedNeMoClient
-    from src.optimization.batch_integration import PharmaceuticalBatchClient
     from src.enhanced_config import EnhancedRAGConfig
+    from src.optimization.batch_integration import PharmaceuticalBatchClient
+    from src.pharmaceutical.query_classifier import PharmaceuticalQueryClassifier
+    from src.pharmaceutical.safety_alert_integration import DrugSafetyAlertIntegration
 
 logger = logging.getLogger(__name__)
 
+
 class WorkflowType(Enum):
     """Types of pharmaceutical research workflows."""
+
     DRUG_SAFETY_ASSESSMENT = "drug_safety_assessment"
     CLINICAL_TRIAL_RESEARCH = "clinical_trial_research"
     DRUG_INTERACTION_ANALYSIS = "drug_interaction_analysis"
@@ -53,9 +53,11 @@ class WorkflowType(Enum):
     THERAPEUTIC_EFFICACY = "therapeutic_efficacy"
     PHARMACOGENOMICS_ANALYSIS = "pharmacogenomics_analysis"
 
+
 @dataclass
 class WorkflowStep:
     """Individual step in a pharmaceutical research workflow."""
+
     step_name: str
     step_type: str  # "query", "analysis", "validation", "reporting"
     description: str
@@ -65,9 +67,11 @@ class WorkflowStep:
     safety_critical: bool = False
     cost_tier_preference: str = "free_tier"
 
+
 @dataclass
 class WorkflowResult:
     """Result from executing a pharmaceutical workflow."""
+
     workflow_type: WorkflowType
     workflow_name: str
     execution_timestamp: datetime
@@ -78,17 +82,14 @@ class WorkflowResult:
     overall_success: bool
     execution_time_ms: int
 
+
 class PharmaceuticalWorkflowTemplate:
     """
     Template for pharmaceutical research workflows with integrated
     classification, safety monitoring, and cost optimization.
     """
 
-    def __init__(self,
-                 workflow_type: WorkflowType,
-                 workflow_name: str,
-                 description: str,
-                 steps: List[WorkflowStep]):
+    def __init__(self, workflow_type: WorkflowType, workflow_name: str, description: str, steps: List[WorkflowStep]):
         """
         Initialize pharmaceutical workflow template.
 
@@ -108,7 +109,7 @@ class PharmaceuticalWorkflowTemplate:
         self.pharmaceutical_optimized = True
         self.cloud_first_enabled = True
 
-    def customize_for_drug(self, drug_name: str) -> 'PharmaceuticalWorkflowTemplate':
+    def customize_for_drug(self, drug_name: str) -> "PharmaceuticalWorkflowTemplate":
         """Create drug-specific version of workflow template."""
         customized_steps = []
 
@@ -121,7 +122,7 @@ class PharmaceuticalWorkflowTemplate:
                 expected_output_type=step.expected_output_type,
                 priority=step.priority,
                 safety_critical=step.safety_critical,
-                cost_tier_preference=step.cost_tier_preference
+                cost_tier_preference=step.cost_tier_preference,
             )
             customized_steps.append(customized_step)
 
@@ -129,8 +130,9 @@ class PharmaceuticalWorkflowTemplate:
             workflow_type=self.workflow_type,
             workflow_name=f"{self.workflow_name} - {drug_name}",
             description=f"{self.description} Customized for {drug_name}.",
-            steps=customized_steps
+            steps=customized_steps,
         )
+
 
 class PharmaceuticalWorkflowExecutor:
     """
@@ -138,8 +140,7 @@ class PharmaceuticalWorkflowExecutor:
     safety monitoring and cloud-first optimization.
     """
 
-    def __init__(self,
-                 config: Optional[EnhancedRAGConfig] = None):
+    def __init__(self, config: Optional[EnhancedRAGConfig] = None):
         """
         Initialize pharmaceutical workflow executor.
 
@@ -159,9 +160,9 @@ class PharmaceuticalWorkflowExecutor:
 
         logger.info("PharmaceuticalWorkflowExecutor initialized with integrated components")
 
-    async def execute_workflow(self,
-                             template: PharmaceuticalWorkflowTemplate,
-                             parameters: Optional[Dict[str, Any]] = None) -> WorkflowResult:
+    async def execute_workflow(
+        self, template: PharmaceuticalWorkflowTemplate, parameters: Optional[Dict[str, Any]] = None
+    ) -> WorkflowResult:
         """
         Execute pharmaceutical research workflow with full integration.
 
@@ -184,17 +185,13 @@ class PharmaceuticalWorkflowExecutor:
         try:
             # Initialize batch client if needed
             if not self.batch_client:
-                self.batch_client = PharmaceuticalBatchClient(
-                    enhanced_client=self.enhanced_client
-                )
+                self.batch_client = PharmaceuticalBatchClient(enhanced_client=self.enhanced_client)
 
             # Execute each workflow step
             for i, step in enumerate(template.steps):
                 logger.info(f"Executing step {i+1}/{len(template.steps)}: {step.step_name}")
 
-                step_result = await self._execute_workflow_step(
-                    step, parameters, template
-                )
+                step_result = await self._execute_workflow_step(step, parameters, template)
                 step_results.append(step_result)
 
                 # Collect safety alerts from step execution
@@ -214,7 +211,8 @@ class PharmaceuticalWorkflowExecutor:
 
             # Determine overall success
             overall_success = all(
-                result.get("success", False) for result in step_results
+                result.get("success", False)
+                for result in step_results
                 if result.get("step_type") != "analysis"  # Analysis steps can be informational
             )
 
@@ -229,14 +227,16 @@ class PharmaceuticalWorkflowExecutor:
                 pharmaceutical_insights=pharmaceutical_insights,
                 cost_analysis=cost_analysis,
                 overall_success=overall_success,
-                execution_time_ms=execution_time_ms
+                execution_time_ms=execution_time_ms,
             )
 
             # Store in execution history
             self.execution_history.append(result)
 
-            logger.info(f"Workflow completed: {template.workflow_name} "
-                       f"({execution_time_ms}ms, {len(safety_alerts_all)} alerts)")
+            logger.info(
+                f"Workflow completed: {template.workflow_name} "
+                f"({execution_time_ms}ms, {len(safety_alerts_all)} alerts)"
+            )
 
             return result
 
@@ -254,13 +254,12 @@ class PharmaceuticalWorkflowExecutor:
                 pharmaceutical_insights={"error": str(e)},
                 cost_analysis={"execution_failed": True},
                 overall_success=False,
-                execution_time_ms=execution_time_ms
+                execution_time_ms=execution_time_ms,
             )
 
-    async def _execute_workflow_step(self,
-                                   step: WorkflowStep,
-                                   parameters: Optional[Dict[str, Any]],
-                                   template: PharmaceuticalWorkflowTemplate) -> Dict[str, Any]:
+    async def _execute_workflow_step(
+        self, step: WorkflowStep, parameters: Optional[Dict[str, Any]], template: PharmaceuticalWorkflowTemplate
+    ) -> Dict[str, Any]:
         """Execute individual workflow step."""
         step_start_time = datetime.now()
 
@@ -279,7 +278,7 @@ class PharmaceuticalWorkflowExecutor:
                     "step_type": step.step_type,
                     "success": False,
                     "error": f"Unknown step type: {step.step_type}",
-                    "timestamp": step_start_time.isoformat()
+                    "timestamp": step_start_time.isoformat(),
                 }
 
         except Exception as e:
@@ -288,19 +287,13 @@ class PharmaceuticalWorkflowExecutor:
                 "step_type": step.step_type,
                 "success": False,
                 "error": str(e),
-                "timestamp": step_start_time.isoformat()
+                "timestamp": step_start_time.isoformat(),
             }
 
-    async def _execute_query_step(self,
-                                step: WorkflowStep,
-                                parameters: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    async def _execute_query_step(self, step: WorkflowStep, parameters: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute query step with pharmaceutical optimization."""
         if not step.query_template:
-            return {
-                "step_name": step.step_name,
-                "success": False,
-                "error": "No query template provided"
-            }
+            return {"step_name": step.step_name, "success": False, "error": "No query template provided"}
 
         # Substitute parameters in query template
         query_text = step.query_template
@@ -309,9 +302,7 @@ class PharmaceuticalWorkflowExecutor:
                 query_text = query_text.replace(f"{{{key}}}", str(value))
 
         # Classify query for pharmaceutical context
-        pharmaceutical_context, safety_alerts = await self.safety_integration.process_pharmaceutical_query(
-            query_text
-        )
+        pharmaceutical_context, safety_alerts = await self.safety_integration.process_pharmaceutical_query(query_text)
 
         # Execute query through enhanced client
         if step.expected_output_type == "embeddings":
@@ -328,26 +319,20 @@ class PharmaceuticalWorkflowExecutor:
             "pharmaceutical_context": {
                 "domain": pharmaceutical_context.domain.value,
                 "safety_urgency": pharmaceutical_context.safety_urgency.name,
-                "drug_names": pharmaceutical_context.drug_names
+                "drug_names": pharmaceutical_context.drug_names,
             },
             "response": response.data if response.success else None,
             "error": response.error if not response.success else None,
             "safety_alerts": [
-                {
-                    "alert_type": alert.alert_type.value,
-                    "urgency": alert.urgency.value,
-                    "message": alert.safety_message
-                }
+                {"alert_type": alert.alert_type.value, "urgency": alert.urgency.value, "message": alert.safety_message}
                 for alert in safety_alerts
             ],
             "cost_tier": response.cost_tier,
             "response_time_ms": response.response_time_ms,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
-    async def _execute_analysis_step(self,
-                                   step: WorkflowStep,
-                                   parameters: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    async def _execute_analysis_step(self, step: WorkflowStep, parameters: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute analysis step."""
         # Analysis steps typically process previous results
         return {
@@ -356,12 +341,12 @@ class PharmaceuticalWorkflowExecutor:
             "success": True,
             "analysis_type": "pharmaceutical_domain_analysis",
             "description": step.description,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
-    async def _execute_validation_step(self,
-                                     step: WorkflowStep,
-                                     parameters: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    async def _execute_validation_step(
+        self, step: WorkflowStep, parameters: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Execute validation step."""
         return {
             "step_name": step.step_name,
@@ -369,12 +354,10 @@ class PharmaceuticalWorkflowExecutor:
             "success": True,
             "validation_type": "pharmaceutical_safety_validation",
             "description": step.description,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
-    async def _execute_reporting_step(self,
-                                    step: WorkflowStep,
-                                    parameters: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    async def _execute_reporting_step(self, step: WorkflowStep, parameters: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute reporting step."""
         return {
             "step_name": step.step_name,
@@ -382,12 +365,12 @@ class PharmaceuticalWorkflowExecutor:
             "success": True,
             "report_type": "pharmaceutical_research_report",
             "description": step.description,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
-    def _analyze_pharmaceutical_insights(self,
-                                       step_results: List[Dict[str, Any]],
-                                       template: PharmaceuticalWorkflowTemplate) -> Dict[str, Any]:
+    def _analyze_pharmaceutical_insights(
+        self, step_results: List[Dict[str, Any]], template: PharmaceuticalWorkflowTemplate
+    ) -> Dict[str, Any]:
         """Analyze pharmaceutical insights from workflow execution."""
         insights = {
             "workflow_type": template.workflow_type.value,
@@ -395,7 +378,7 @@ class PharmaceuticalWorkflowExecutor:
             "drug_names_analyzed": [],
             "safety_considerations": [],
             "research_priorities_identified": [],
-            "cost_optimization_applied": True
+            "cost_optimization_applied": True,
         }
 
         for result in step_results:
@@ -419,15 +402,14 @@ class PharmaceuticalWorkflowExecutor:
 
         return insights
 
-    async def _calculate_workflow_cost_analysis(self,
-                                              step_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def _calculate_workflow_cost_analysis(self, step_results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Calculate cost analysis for workflow execution."""
         cost_analysis = {
             "total_queries": len([r for r in step_results if r.get("step_type") == "query"]),
             "free_tier_queries": 0,
             "infrastructure_queries": 0,
             "total_response_time_ms": 0,
-            "cost_optimized": True
+            "cost_optimized": True,
         }
 
         for result in step_results:
@@ -444,15 +426,15 @@ class PharmaceuticalWorkflowExecutor:
 
         # Calculate optimization metrics
         if cost_analysis["total_queries"] > 0:
-            cost_analysis["free_tier_utilization"] = (
-                cost_analysis["free_tier_queries"] / cost_analysis["total_queries"]
-            )
+            cost_analysis["free_tier_utilization"] = cost_analysis["free_tier_queries"] / cost_analysis["total_queries"]
         else:
             cost_analysis["free_tier_utilization"] = 0.0
 
         return cost_analysis
 
+
 # Pre-built Pharmaceutical Workflow Templates
+
 
 def create_drug_safety_assessment_workflow() -> PharmaceuticalWorkflowTemplate:
     """Create comprehensive drug safety assessment workflow."""
@@ -463,7 +445,7 @@ def create_drug_safety_assessment_workflow() -> PharmaceuticalWorkflowTemplate:
             description="Get comprehensive safety profile for {drug_name}",
             query_template="Provide a comprehensive drug safety profile for {drug_name}, including contraindications, warnings, and precautions.",
             priority="high",
-            safety_critical=True
+            safety_critical=True,
         ),
         WorkflowStep(
             step_name="Contraindications Analysis",
@@ -471,7 +453,7 @@ def create_drug_safety_assessment_workflow() -> PharmaceuticalWorkflowTemplate:
             description="Analyze contraindications and absolute restrictions for {drug_name}",
             query_template="What are the absolute contraindications for {drug_name}? Include patient populations where {drug_name} must not be used.",
             priority="critical",
-            safety_critical=True
+            safety_critical=True,
         ),
         WorkflowStep(
             step_name="Drug Interactions Assessment",
@@ -479,33 +461,34 @@ def create_drug_safety_assessment_workflow() -> PharmaceuticalWorkflowTemplate:
             description="Identify critical drug interactions for {drug_name}",
             query_template="List critical drug interactions for {drug_name}, focusing on life-threatening or severe interactions.",
             priority="high",
-            safety_critical=True
+            safety_critical=True,
         ),
         WorkflowStep(
             step_name="Monitoring Requirements",
             step_type="query",
             description="Determine monitoring requirements for {drug_name} therapy",
             query_template="What laboratory monitoring and clinical assessments are required for patients taking {drug_name}?",
-            priority="normal"
+            priority="normal",
         ),
         WorkflowStep(
             step_name="Safety Validation",
             step_type="validation",
-            description="Validate safety information completeness and accuracy"
+            description="Validate safety information completeness and accuracy",
         ),
         WorkflowStep(
             step_name="Safety Report Generation",
             step_type="reporting",
-            description="Generate comprehensive drug safety assessment report"
-        )
+            description="Generate comprehensive drug safety assessment report",
+        ),
     ]
 
     return PharmaceuticalWorkflowTemplate(
         workflow_type=WorkflowType.DRUG_SAFETY_ASSESSMENT,
         workflow_name="Comprehensive Drug Safety Assessment",
         description="Complete drug safety evaluation including contraindications, interactions, and monitoring requirements.",
-        steps=steps
+        steps=steps,
     )
+
 
 def create_clinical_trial_research_workflow() -> PharmaceuticalWorkflowTemplate:
     """Create clinical trial research workflow."""
@@ -515,14 +498,14 @@ def create_clinical_trial_research_workflow() -> PharmaceuticalWorkflowTemplate:
             step_type="query",
             description="Research clinical efficacy data for {drug_name}",
             query_template="Summarize the clinical efficacy data for {drug_name} from pivotal clinical trials, including primary endpoints.",
-            priority="normal"
+            priority="normal",
         ),
         WorkflowStep(
             step_name="Phase III Trial Results",
             step_type="query",
             description="Analyze Phase III trial outcomes for {drug_name}",
             query_template="What were the key Phase III clinical trial results for {drug_name}? Include efficacy outcomes and statistical significance.",
-            priority="normal"
+            priority="normal",
         ),
         WorkflowStep(
             step_name="Safety Profile from Trials",
@@ -530,33 +513,34 @@ def create_clinical_trial_research_workflow() -> PharmaceuticalWorkflowTemplate:
             description="Extract safety data from clinical trials",
             query_template="What adverse events and safety signals were identified in clinical trials for {drug_name}?",
             priority="high",
-            safety_critical=True
+            safety_critical=True,
         ),
         WorkflowStep(
             step_name="Regulatory Approval Basis",
             step_type="query",
             description="Analyze regulatory approval basis",
             query_template="On what clinical evidence basis was {drug_name} approved by regulatory authorities?",
-            priority="normal"
+            priority="normal",
         ),
         WorkflowStep(
             step_name="Trial Data Analysis",
             step_type="analysis",
-            description="Analyze consistency and quality of clinical trial data"
+            description="Analyze consistency and quality of clinical trial data",
         ),
         WorkflowStep(
             step_name="Clinical Research Report",
             step_type="reporting",
-            description="Generate comprehensive clinical trial research report"
-        )
+            description="Generate comprehensive clinical trial research report",
+        ),
     ]
 
     return PharmaceuticalWorkflowTemplate(
         workflow_type=WorkflowType.CLINICAL_TRIAL_RESEARCH,
         workflow_name="Clinical Trial Evidence Research",
         description="Comprehensive analysis of clinical trial data and regulatory approval evidence.",
-        steps=steps
+        steps=steps,
     )
+
 
 def create_drug_interaction_analysis_workflow() -> PharmaceuticalWorkflowTemplate:
     """Create drug interaction analysis workflow."""
@@ -567,14 +551,14 @@ def create_drug_interaction_analysis_workflow() -> PharmaceuticalWorkflowTemplat
             description="Identify major drug interactions for {drug_name}",
             query_template="What are the major drug interactions for {drug_name} that require dose adjustment or are contraindicated?",
             priority="critical",
-            safety_critical=True
+            safety_critical=True,
         ),
         WorkflowStep(
             step_name="Mechanism-Based Interactions",
             step_type="query",
             description="Analyze interaction mechanisms",
             query_template="Explain the mechanisms of drug interactions for {drug_name}, including CYP enzyme interactions and transporter effects.",
-            priority="high"
+            priority="high",
         ),
         WorkflowStep(
             step_name="Clinical Management",
@@ -582,33 +566,34 @@ def create_drug_interaction_analysis_workflow() -> PharmaceuticalWorkflowTemplat
             description="Determine clinical management strategies",
             query_template="How should clinically significant drug interactions with {drug_name} be managed? Include monitoring recommendations.",
             priority="high",
-            safety_critical=True
+            safety_critical=True,
         ),
         WorkflowStep(
             step_name="Patient Population Considerations",
             step_type="query",
             description="Analyze population-specific interaction risks",
             query_template="Are there specific patient populations at higher risk for drug interactions with {drug_name}?",
-            priority="normal"
+            priority="normal",
         ),
         WorkflowStep(
             step_name="Interaction Risk Assessment",
             step_type="analysis",
-            description="Assess overall interaction risk profile"
+            description="Assess overall interaction risk profile",
         ),
         WorkflowStep(
             step_name="Interaction Management Report",
             step_type="reporting",
-            description="Generate drug interaction management report"
-        )
+            description="Generate drug interaction management report",
+        ),
     ]
 
     return PharmaceuticalWorkflowTemplate(
         workflow_type=WorkflowType.DRUG_INTERACTION_ANALYSIS,
         workflow_name="Drug Interaction Analysis",
         description="Comprehensive drug interaction analysis with clinical management recommendations.",
-        steps=steps
+        steps=steps,
     )
+
 
 def create_pharmacokinetics_investigation_workflow() -> PharmaceuticalWorkflowTemplate:
     """Create pharmacokinetics investigation workflow."""
@@ -618,47 +603,48 @@ def create_pharmacokinetics_investigation_workflow() -> PharmaceuticalWorkflowTe
             step_type="query",
             description="Analyze ADME characteristics of {drug_name}",
             query_template="Describe the ADME (absorption, distribution, metabolism, excretion) profile of {drug_name}.",
-            priority="normal"
+            priority="normal",
         ),
         WorkflowStep(
             step_name="Pharmacokinetic Parameters",
             step_type="query",
             description="Extract key pharmacokinetic parameters",
             query_template="What are the key pharmacokinetic parameters for {drug_name} including half-life, clearance, and bioavailability?",
-            priority="normal"
+            priority="normal",
         ),
         WorkflowStep(
             step_name="Special Population PK",
             step_type="query",
             description="Analyze pharmacokinetics in special populations",
             query_template="How does the pharmacokinetics of {drug_name} change in elderly patients, patients with renal impairment, and hepatic impairment?",
-            priority="high"
+            priority="high",
         ),
         WorkflowStep(
             step_name="Dosing Implications",
             step_type="query",
             description="Determine dosing implications from PK data",
             query_template="What are the dosing implications based on the pharmacokinetic profile of {drug_name}?",
-            priority="normal"
+            priority="normal",
         ),
         WorkflowStep(
             step_name="PK Data Analysis",
             step_type="analysis",
-            description="Analyze pharmacokinetic data comprehensiveness"
+            description="Analyze pharmacokinetic data comprehensiveness",
         ),
         WorkflowStep(
             step_name="Pharmacokinetics Report",
             step_type="reporting",
-            description="Generate comprehensive pharmacokinetics report"
-        )
+            description="Generate comprehensive pharmacokinetics report",
+        ),
     ]
 
     return PharmaceuticalWorkflowTemplate(
         workflow_type=WorkflowType.PHARMACOKINETICS_INVESTIGATION,
         workflow_name="Pharmacokinetics Investigation",
         description="Comprehensive pharmacokinetic analysis with dosing implications.",
-        steps=steps
+        steps=steps,
     )
+
 
 # Workflow Template Factory
 class PharmaceuticalWorkflowFactory:
@@ -671,7 +657,7 @@ class PharmaceuticalWorkflowFactory:
             "drug_safety_assessment",
             "clinical_trial_research",
             "drug_interaction_analysis",
-            "pharmacokinetics_investigation"
+            "pharmacokinetics_investigation",
         ]
 
     @staticmethod
@@ -681,24 +667,21 @@ class PharmaceuticalWorkflowFactory:
             "drug_safety_assessment": create_drug_safety_assessment_workflow,
             "clinical_trial_research": create_clinical_trial_research_workflow,
             "drug_interaction_analysis": create_drug_interaction_analysis_workflow,
-            "pharmacokinetics_investigation": create_pharmacokinetics_investigation_workflow
+            "pharmacokinetics_investigation": create_pharmacokinetics_investigation_workflow,
         }
 
         factory_func = workflows.get(workflow_name)
         return factory_func() if factory_func else None
 
     @staticmethod
-    def create_custom_workflow(workflow_type: WorkflowType,
-                             name: str,
-                             description: str,
-                             steps: List[WorkflowStep]) -> PharmaceuticalWorkflowTemplate:
+    def create_custom_workflow(
+        workflow_type: WorkflowType, name: str, description: str, steps: List[WorkflowStep]
+    ) -> PharmaceuticalWorkflowTemplate:
         """Create custom workflow template."""
         return PharmaceuticalWorkflowTemplate(
-            workflow_type=workflow_type,
-            workflow_name=name,
-            description=description,
-            steps=steps
+            workflow_type=workflow_type, workflow_name=name, description=description, steps=steps
         )
+
 
 # Convenience functions
 async def execute_drug_safety_workflow(drug_name: str) -> WorkflowResult:
@@ -707,10 +690,8 @@ async def execute_drug_safety_workflow(drug_name: str) -> WorkflowResult:
     customized_template = template.customize_for_drug(drug_name)
 
     executor = PharmaceuticalWorkflowExecutor()
-    return await executor.execute_workflow(
-        customized_template,
-        parameters={"drug_name": drug_name}
-    )
+    return await executor.execute_workflow(customized_template, parameters={"drug_name": drug_name})
+
 
 async def execute_clinical_trial_workflow(drug_name: str) -> WorkflowResult:
     """Execute clinical trial research workflow for specific drug."""
@@ -718,10 +699,8 @@ async def execute_clinical_trial_workflow(drug_name: str) -> WorkflowResult:
     customized_template = template.customize_for_drug(drug_name)
 
     executor = PharmaceuticalWorkflowExecutor()
-    return await executor.execute_workflow(
-        customized_template,
-        parameters={"drug_name": drug_name}
-    )
+    return await executor.execute_workflow(customized_template, parameters={"drug_name": drug_name})
+
 
 if __name__ == "__main__":
     # Example workflow execution

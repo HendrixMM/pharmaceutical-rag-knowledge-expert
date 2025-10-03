@@ -18,7 +18,7 @@ Public disclosure of security vulnerabilities puts all users at risk. Instead:
 
 ### How to Report
 
-1. **Email security contact**: Send details to `security@yourorg.com`
+1. **Use GitHub Security Advisories** (preferred): Create a private vulnerability report at https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/security/advisories/new
 
 2. **Include in your report**:
 
@@ -200,7 +200,7 @@ pre-commit run --all-files
 
 3. **Report immediately**:
 
-   - Email: security@yourorg.com
+   - Create a private Security Advisory: https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/security/advisories/new
    - Include timeline, impact, actions taken
 
 4. **Document**:
@@ -253,11 +253,13 @@ pre-commit run --all-files
 If API keys were committed to git history (not just the working tree), follow the comprehensive cleanup process:
 
 1. Review the runbook:
+
    - See `docs/security/history-redaction.md` for complete procedures
    - Understand the impact (force-push required, team coordination)
    - Review approval workflow and notification requirements
 
 2. Execute cleanup scripts:
+
    ```bash
    # Identify secrets in history
    bash scripts/identify_secrets_in_history.sh --report backups/secret-scan-$(date +%Y%m%d).txt
@@ -274,16 +276,19 @@ If API keys were committed to git history (not just the working tree), follow th
    ```
 
 3. Coordinate force-push:
+
    - Schedule the window and notify the team
    - Execute force-push during the agreed window
    - Ensure all team members re-clone after push
 
 4. Rotate keys immediately:
+
    - Rotate NVIDIA, PubMed, Apify credentials
    - Update CI/CD secrets
    - Verify old keys revoked
 
 5. Document the incident:
+
    - Update `docs/security/history-redaction.md` with timestamps
    - Update `CHANGELOG.md` with security remediation entry
 
@@ -343,6 +348,7 @@ For repositories with sensitive history:
 - [ ] Regular history audits scheduled
 
 Verification Command:
+
 ```bash
 bash scripts/verify_history_cleanup.sh
 ```
@@ -373,9 +379,9 @@ bash scripts/verify_history_cleanup.sh
 
 ## 📞 Security Contacts
 
-- **Security Issues**: security@yourorg.com
-- **General Security**: security-team@yourorg.com
-- **Emergency (24/7)**: +1-XXX-XXX-XXXX
+- **Security Vulnerabilities**: Use [GitHub Security Advisories](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/security/advisories/new) for private reporting
+- **General Security Questions**: Create a [GitHub Discussion](https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/discussions) with `security` tag
+- **Critical Incidents**: Create a private Security Advisory immediately (fastest response)
 
 ## 🏆 Security Acknowledgments
 

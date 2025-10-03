@@ -3,13 +3,10 @@
 Verifies that the new oversampling configuration parameters properly
 guard against excessive memory usage and infinite loops.
 """
+from unittest.mock import Mock, patch
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, Any, List
-
-from src.vector_database import VectorDatabase
 from src.nvidia_embeddings import NVIDIAEmbeddings
+from src.vector_database import VectorDatabase
 
 
 class TestVectorSearchCaps:
@@ -34,17 +31,14 @@ class TestVectorSearchCaps:
         db.vectorstore.similarity_search.side_effect = [
             mock_docs[:50],  # First call
             mock_docs[:20],  # Second call
-            mock_docs[:5],   # Third call
+            mock_docs[:5],  # Third call
         ]
 
         db._pharma_metadata_enabled = True
 
         # Test with excessive oversample value
         results = db.similarity_search_with_pharmaceutical_filters(
-            "test query",
-            k=5,
-            filters={"drug_names": ["drug_1"]},
-            oversample=100  # Way above default cap
+            "test query", k=5, filters={"drug_names": ["drug_1"]}, oversample=100  # Way above default cap
         )
 
         # Should still return results
@@ -73,15 +67,12 @@ class TestVectorSearchCaps:
 
         # Test with filters that would match few documents
         results = db.similarity_search_with_pharmaceutical_filters(
-            "test query",
-            k=10,
-            filters={"species_preference": "mouse"},  # Few matches expected
-            oversample=5
+            "test query", k=10, filters={"species_preference": "mouse"}, oversample=5  # Few matches expected
         )
 
         # Should not attempt to fetch more than max size
         for call in db.vectorstore.similarity_search.call_args_list:
-            requested_k = call[1]['k']
+            requested_k = call[1]["k"]
             assert requested_k <= 10000, f"Requested {requested_k} exceeds max fetch size"
 
     def test_max_iterations_cap(self):
@@ -104,12 +95,9 @@ class TestVectorSearchCaps:
         db._pharma_metadata_enabled = True
 
         # Patch to reduce max iterations for faster test
-        with patch.object(db, 'VECTOR_DB_MAX_OVERSAMPLE_ITERATIONS', 2):
+        with patch.object(db, "VECTOR_DB_MAX_OVERSAMPLE_ITERATIONS", 2):
             results = db.similarity_search_with_pharmaceutical_filters(
-                "test query",
-                k=5,
-                filters={"drug_names": ["missing_drug"]},
-                oversample=5
+                "test query", k=5, filters={"drug_names": ["missing_drug"]}, oversample=5
             )
 
             # Should stop after max iterations
@@ -134,10 +122,7 @@ class TestVectorSearchCaps:
         db._pharma_metadata_enabled = True
 
         results = db.similarity_search_with_pharmaceutical_filters(
-            "test query",
-            k=20,  # Request more than we get back
-            filters={"drug_names": ["aspirin"]},
-            oversample=3
+            "test query", k=20, filters={"drug_names": ["aspirin"]}, oversample=3  # Request more than we get back
         )
 
         # Verify fetch sizes increase but are capped
@@ -153,17 +138,12 @@ class TestVectorSearchCaps:
         db = VectorDatabase(embeddings=mock_embeddings, db_path="./test_db")
         db.vectorstore = Mock()
 
-        db.vectorstore.similarity_search.return_value = [
-            Mock(page_content="Doc", metadata={"drug_names": ["aspirin"]})
-        ]
+        db.vectorstore.similarity_search.return_value = [Mock(page_content="Doc", metadata={"drug_names": ["aspirin"]})]
         db._pharma_metadata_enabled = True
 
         # Test with None oversample
         results = db.similarity_search_with_pharmaceutical_filters(
-            "test query",
-            k=5,
-            filters={"drug_names": ["aspirin"]},
-            oversample=None
+            "test query", k=5, filters={"drug_names": ["aspirin"]}, oversample=None
         )
 
         # Should use default and work normally
@@ -176,17 +156,11 @@ class TestVectorSearchCaps:
         db = VectorDatabase(embeddings=mock_embeddings, db_path="./test_db")
         db.vectorstore = Mock()
 
-        db.vectorstore.similarity_search.return_value = [
-            Mock(page_content="Doc", metadata={"drug_names": ["aspirin"]})
-        ]
+        db.vectorstore.similarity_search.return_value = [Mock(page_content="Doc", metadata={"drug_names": ["aspirin"]})]
         db._pharma_metadata_enabled = True
 
         # Test with search_with_info
-        results, info = db.search_with_info(
-            "test query",
-            k=5,
-            filters={"drug_names": ["aspirin"]}
-        )
+        results, info = db.search_with_info("test query", k=5, filters={"drug_names": ["aspirin"]})
 
         # Should have filter stats
         assert "filter_stats" in info
@@ -209,15 +183,11 @@ class TestVectorSearchCaps:
         ]
         db._pharma_metadata_enabled = True
 
-        with patch('src.vector_database.logger') as mock_logger:
+        with patch("src.vector_database.logger") as mock_logger:
             results = db.similarity_search_with_pharmaceutical_filters(
-                "test query",
-                k=5,
-                filters={},  # No filters to trigger oversampling
-                oversample=10  # High oversample
+                "test query", k=5, filters={}, oversample=10  # No filters to trigger oversampling  # High oversample
             )
 
             # Should log warning about excessive growth
-            warning_calls = [call for call in mock_logger.warning.call_args_list
-                           if "growing too large" in str(call)]
+            warning_calls = [call for call in mock_logger.warning.call_args_list if "growing too large" in str(call)]
             assert len(warning_calls) > 0

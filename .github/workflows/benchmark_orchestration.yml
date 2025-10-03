@@ -2,7 +2,7 @@ name: Benchmark Orchestration (Cloud-First)
 
 on:
   schedule:
-    - cron: '0 5 * * *'
+    - cron: "0 5 * * *"
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -63,7 +63,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Cache pip
         uses: actions/cache@v4
@@ -78,7 +78,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Orchestrate Benchmarks (smoke: preflight → run)
+      - name: "Orchestrate Benchmarks (smoke: preflight → run)"
         run: |
           PRESET_ARG=""; if [ -n "${{ matrix.preset }}" ]; then PRESET_ARG="--preset ${{ matrix.preset }}"; fi
           python scripts/orchestrate_benchmarks.py \
@@ -151,7 +151,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Cache pip
         uses: actions/cache@v4

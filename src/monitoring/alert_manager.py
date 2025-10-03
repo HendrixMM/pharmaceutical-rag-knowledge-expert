@@ -16,15 +16,14 @@ Integration:
 - Integrates with PharmaceuticalCreditTracker
 - Provides actionable pharmaceutical insights
 """
-
-import os
-import yaml
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Callable
-from pathlib import Path
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import yaml
 
 try:
     from .credit_tracker import PharmaceuticalCreditTracker
@@ -33,16 +32,20 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 class AlertSeverity(Enum):
     """Alert severity levels."""
+
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"
     URGENT = "urgent"
 
+
 @dataclass
 class Alert:
     """Represents a system alert."""
+
     id: str
     severity: AlertSeverity
     category: str
@@ -53,6 +56,7 @@ class Alert:
     acknowledged: bool = False
     resolved: bool = False
 
+
 class PharmaceuticalAlertManager:
     """
     Alert manager for pharmaceutical research with daily burn rate monitoring.
@@ -61,10 +65,9 @@ class PharmaceuticalAlertManager:
     cost optimization opportunities, and research workflow efficiency.
     """
 
-    def __init__(self,
-                 tracker: PharmaceuticalCreditTracker,
-                 config_path: Optional[str] = None,
-                 enable_notifications: bool = True):
+    def __init__(
+        self, tracker: PharmaceuticalCreditTracker, config_path: Optional[str] = None, enable_notifications: bool = True
+    ):
         """
         Initialize pharmaceutical alert manager.
 
@@ -117,15 +120,15 @@ class PharmaceuticalAlertManager:
                     category="cost_monitoring",
                     title="Daily Credit Burn Rate Alert",
                     message=f"Daily usage ({today_usage} requests) exceeds threshold ({daily_threshold:.0f} requests). "
-                           f"Current pace projects to {today_usage * 30} requests/month.",
+                    f"Current pace projects to {today_usage * 30} requests/month.",
                     timestamp=datetime.now(),
                     data={
                         "today_usage": today_usage,
                         "daily_threshold": daily_threshold,
                         "monthly_projection": today_usage * 30,
                         "monthly_limit": monthly_limit,
-                        "pharmaceutical_analytics": analytics
-                    }
+                        "pharmaceutical_analytics": analytics,
+                    },
                 )
                 alerts.append(alert)
 
@@ -163,7 +166,7 @@ class PharmaceuticalAlertManager:
                         category="budget_management",
                         title=f"Project Budget Warning: {project.name}",
                         message=f"Project '{project.name}' has used {usage_percentage:.1%} of its budget "
-                               f"({project.queries_used}/{project.budget_limit} requests).",
+                        f"({project.queries_used}/{project.budget_limit} requests).",
                         timestamp=datetime.now(),
                         data={
                             "project_id": project_id,
@@ -171,8 +174,8 @@ class PharmaceuticalAlertManager:
                             "usage_percentage": usage_percentage,
                             "queries_used": project.queries_used,
                             "budget_limit": project.budget_limit,
-                            "remaining_budget": project.budget_limit - project.queries_used
-                        }
+                            "remaining_budget": project.budget_limit - project.queries_used,
+                        },
                     )
                     alerts.append(alert)
 
@@ -184,7 +187,7 @@ class PharmaceuticalAlertManager:
                         category="budget_management",
                         title=f"Project Budget Critical: {project.name}",
                         message=f"Project '{project.name}' has used {usage_percentage:.1%} of its budget. "
-                               f"Immediate attention required to avoid budget overrun.",
+                        f"Immediate attention required to avoid budget overrun.",
                         timestamp=datetime.now(),
                         data={
                             "project_id": project_id,
@@ -197,9 +200,9 @@ class PharmaceuticalAlertManager:
                                 "Review remaining research priorities",
                                 "Consider increasing project budget",
                                 "Optimize query efficiency",
-                                "Implement batch processing"
-                            ]
-                        }
+                                "Implement batch processing",
+                            ],
+                        },
                     )
                     alerts.append(alert)
 
@@ -231,7 +234,7 @@ class PharmaceuticalAlertManager:
                     category="performance_optimization",
                     title="Query Response Time Optimization Opportunity",
                     message=f"Average response time ({avg_response_time:.0f}ms) exceeds optimal threshold "
-                           f"({max_acceptable_time}ms). Consider optimization strategies.",
+                    f"({max_acceptable_time}ms). Consider optimization strategies.",
                     timestamp=datetime.now(),
                     data={
                         "avg_response_time_ms": avg_response_time,
@@ -240,9 +243,9 @@ class PharmaceuticalAlertManager:
                             "Enable batch processing for similar queries",
                             "Use cloud-first endpoints for better performance",
                             "Optimize query length and complexity",
-                            "Consider caching for frequent pharmaceutical queries"
-                        ]
-                    }
+                            "Consider caching for frequent pharmaceutical queries",
+                        ],
+                    },
                 )
                 alerts.append(alert)
 
@@ -257,7 +260,7 @@ class PharmaceuticalAlertManager:
                     category="efficiency_optimization",
                     title="Query Token Usage Optimization",
                     message=f"Average tokens per query ({avg_tokens:.0f}) is higher than recommended "
-                           f"({token_warning_threshold}). Consider more concise pharmaceutical queries.",
+                    f"({token_warning_threshold}). Consider more concise pharmaceutical queries.",
                     timestamp=datetime.now(),
                     data={
                         "avg_tokens_per_query": avg_tokens,
@@ -266,9 +269,9 @@ class PharmaceuticalAlertManager:
                             "Use specific pharmaceutical terminology",
                             "Focus on single drug/interaction per query",
                             "Utilize domain-specific abbreviations",
-                            "Structure queries with clear medical context"
-                        ]
-                    }
+                            "Structure queries with clear medical context",
+                        ],
+                    },
                 )
                 alerts.append(alert)
 
@@ -303,15 +306,15 @@ class PharmaceuticalAlertManager:
                     category="cost_optimization",
                     title="Free Tier Utilization Opportunity",
                     message=f"Currently utilizing free tier for {free_tier_percentage:.1f}% of queries. "
-                           f"Target: {min_free_tier}% for optimal cost efficiency.",
+                    f"Target: {min_free_tier}% for optimal cost efficiency.",
                     timestamp=datetime.now(),
                     data={
                         "current_free_tier_percentage": free_tier_percentage,
                         "target_percentage": min_free_tier,
                         "optimization_recommendations": recommendations,
                         "immediate_actions": [r["action"] for r in high_priority_recs],
-                        "potential_monthly_savings": self._calculate_potential_savings(analytics, min_free_tier)
-                    }
+                        "potential_monthly_savings": self._calculate_potential_savings(analytics, min_free_tier),
+                    },
                 )
                 alerts.append(alert)
 
@@ -334,7 +337,7 @@ class PharmaceuticalAlertManager:
             self.check_daily_burn_rate,
             self.check_pharmaceutical_project_budgets,
             self.check_pharmaceutical_query_efficiency,
-            self.check_cost_optimization_opportunities
+            self.check_cost_optimization_opportunities,
         ]
 
         for check_func in alert_checks:
@@ -371,21 +374,21 @@ class PharmaceuticalAlertManager:
                     severity.value: len([a for a in active_alerts if a.severity == severity])
                     for severity in AlertSeverity
                 },
-                "by_category": self._group_alerts_by_category(active_alerts)
+                "by_category": self._group_alerts_by_category(active_alerts),
             },
             "cost_optimization": {
                 "recommendations": self.tracker.get_cost_optimization_recommendations(),
-                "potential_savings": self._calculate_optimization_potential(analytics)
+                "potential_savings": self._calculate_optimization_potential(analytics),
             },
             "pharmaceutical_insights": self._generate_daily_pharmaceutical_insights(analytics),
-            "action_items": self._generate_daily_action_items(active_alerts, analytics)
+            "action_items": self._generate_daily_action_items(active_alerts, analytics),
         }
 
     def _load_alerts_config(self) -> Dict[str, Any]:
         """Load alerts configuration from YAML file."""
         try:
             if self.config_path.exists():
-                with open(self.config_path, 'r') as f:
+                with open(self.config_path) as f:
                     return yaml.safe_load(f)
             else:
                 logger.warning(f"Alerts config not found: {self.config_path}")
@@ -397,15 +400,12 @@ class PharmaceuticalAlertManager:
     def _get_default_config(self) -> Dict[str, Any]:
         """Get default configuration if config file not available."""
         return {
-            "nvidia_build": {
-                "monthly_free_requests": 10000,
-                "usage_alerts": {"daily_burn_rate": 0.05}
-            },
+            "nvidia_build": {"monthly_free_requests": 10000, "usage_alerts": {"daily_burn_rate": 0.05}},
             "pharmaceutical": {
                 "project_budget": {"warning_threshold": 0.75, "critical_threshold": 0.90},
                 "query_performance": {"max_acceptable_response_time_ms": 3000, "avg_tokens_warning": 500},
-                "workflow_efficiency": {"min_free_tier_usage_percentage": 80}
-            }
+                "workflow_efficiency": {"min_free_tier_usage_percentage": 80},
+            },
         }
 
     def _initialize_notification_channels(self) -> None:
@@ -461,7 +461,7 @@ class PharmaceuticalAlertManager:
             AlertSeverity.INFO: "ℹ️",
             AlertSeverity.WARNING: "⚠️",
             AlertSeverity.CRITICAL: "🚨",
-            AlertSeverity.URGENT: "🔥"
+            AlertSeverity.URGENT: "🔥",
         }
 
         icon = severity_icons.get(alert.severity, "📢")
@@ -475,7 +475,7 @@ class PharmaceuticalAlertManager:
 
             alert_file = alerts_dir / f"alerts_{datetime.now().strftime('%Y%m%d')}.log"
 
-            with open(alert_file, 'a') as f:
+            with open(alert_file, "a") as f:
                 f.write(f"[{alert.timestamp.isoformat()}] {alert.severity.value.upper()} - {alert.title}\n")
                 f.write(f"Message: {alert.message}\n")
                 f.write(f"Category: {alert.category}\n")
@@ -513,7 +513,7 @@ class PharmaceuticalAlertManager:
             return {
                 "queries_optimizable": int(queries_to_optimize),
                 "percentage_improvement": target_percentage - current_percentage,
-                "monthly_optimization_potential": f"{queries_to_optimize:.0f} additional free tier queries"
+                "monthly_optimization_potential": f"{queries_to_optimize:.0f} additional free tier queries",
             }
 
         return {"optimization_potential": "Already optimized"}
@@ -530,7 +530,7 @@ class PharmaceuticalAlertManager:
         return {
             "free_tier_optimization": analytics["cost_analysis"]["cost_optimization_percentage"],
             "performance_optimization": 100 - (analytics["performance_metrics"]["avg_response_time_ms"] / 3000 * 100),
-            "cost_efficiency_score": analytics["cost_analysis"]["cost_optimization_percentage"]
+            "cost_efficiency_score": analytics["cost_analysis"]["cost_optimization_percentage"],
         }
 
     def _generate_daily_pharmaceutical_insights(self, analytics: Dict[str, Any]) -> List[str]:
@@ -559,7 +559,7 @@ class PharmaceuticalAlertManager:
         # Cost optimization
         free_tier_percentage = analytics["cost_analysis"]["cost_optimization_percentage"]
         if free_tier_percentage < 80:
-            action_items.append("Optimize free tier utilization (current: {:.1f}%)".format(free_tier_percentage))
+            action_items.append(f"Optimize free tier utilization (current: {free_tier_percentage:.1f}%)")
 
         # Performance optimization
         avg_response_time = analytics["performance_metrics"]["avg_response_time_ms"]
@@ -567,6 +567,7 @@ class PharmaceuticalAlertManager:
             action_items.append("Optimize query response times")
 
         return action_items
+
 
 # Convenience function for pharmaceutical alert management
 def create_pharmaceutical_alert_manager(tracker: PharmaceuticalCreditTracker) -> PharmaceuticalAlertManager:
@@ -580,6 +581,7 @@ def create_pharmaceutical_alert_manager(tracker: PharmaceuticalCreditTracker) ->
         Configured PharmaceuticalAlertManager instance
     """
     return PharmaceuticalAlertManager(tracker)
+
 
 if __name__ == "__main__":
     # Quick test of alert management

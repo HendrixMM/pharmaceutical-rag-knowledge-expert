@@ -15,15 +15,14 @@ Usage example:
     --preflight-sample-count 2 --preflight-min-concurrency 2 --fail-on-preflight \
     --min-cloud-score 0.40 --max-cloud-latency-ms 6000 --fail-on-regressions
 """
-
 from __future__ import annotations
 
 import argparse
 import os
-import sys
 import subprocess
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
 
 
 def run_cmd(cmd: list[str], env: dict | None = None) -> int:
@@ -63,11 +62,16 @@ def main() -> int:
 
     # Step 1: Preflight (preflight-only)
     preflight_cmd = [
-        sys.executable, "scripts/run_pharmaceutical_benchmarks.py",
-        "--preflight", "--preflight-only",
-        "--preflight-output", str(preflight_json),
-        "--preflight-sample-count", str(int(args.preflight_sample_count)),
-        "--mode", args.mode,
+        sys.executable,
+        "scripts/run_pharmaceutical_benchmarks.py",
+        "--preflight",
+        "--preflight-only",
+        "--preflight-output",
+        str(preflight_json),
+        "--preflight-sample-count",
+        str(int(args.preflight_sample_count)),
+        "--mode",
+        args.mode,
     ]
     if args.preset:
         preflight_cmd += ["--preset", args.preset]
@@ -84,10 +88,15 @@ def main() -> int:
 
     # Step 2: Benchmark run using preflight map
     run_cmdline = [
-        sys.executable, "scripts/run_pharmaceutical_benchmarks.py",
-        "--mode", args.mode,
-        "--save-results", "--output", str(out_dir),
-        "--preflight-map-input", str(preflight_json),
+        sys.executable,
+        "scripts/run_pharmaceutical_benchmarks.py",
+        "--mode",
+        args.mode,
+        "--save-results",
+        "--output",
+        str(out_dir),
+        "--preflight-map-input",
+        str(preflight_json),
     ]
     if args.summary_output:
         run_cmdline += ["--summary-output", args.summary_output]
@@ -114,4 +123,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

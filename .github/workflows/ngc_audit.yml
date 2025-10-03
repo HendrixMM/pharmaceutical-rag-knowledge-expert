@@ -3,7 +3,7 @@ name: NGC Dependency Audit
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   audit:

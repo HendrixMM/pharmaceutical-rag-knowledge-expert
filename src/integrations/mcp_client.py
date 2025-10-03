@@ -8,12 +8,11 @@ Note: This implementation provides a framework for MCP integration.
 Since Microsoft Learn doesn't currently expose an MCP endpoint,
 this includes fallback mechanisms for demonstration and future use.
 """
-
 import asyncio
 import json
 import logging
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 try:
     from mcp_use import MCPClient
@@ -74,7 +73,7 @@ class NeMoMCPClient:
 
         try:
             # Get server names from config
-            server_names = self.mcp_client.get_server_names()
+            self.mcp_client.get_server_names()
 
             # Create sessions for all servers
             sessions = await self.mcp_client.create_all_sessions()
@@ -128,7 +127,7 @@ class NeMoMCPClient:
                         for tool in tools:
                             if "search" in tool.name.lower() or "query" in tool.name.lower():
                                 result = await session.call_tool(tool.name, {"query": query, "limit": max_results})
-                                if result and hasattr(result, 'content'):
+                                if result and hasattr(result, "content"):
                                     # Parse the result and add to results
                                     doc_data = self._parse_tool_result(result, query)
                                     results.extend(doc_data[:max_results])
@@ -138,12 +137,14 @@ class NeMoMCPClient:
                         for resource in resources[:max_results]:
                             if query.lower() in resource.uri.lower() or "nemo" in resource.uri.lower():
                                 resource_content = await session.read_resource(resource.uri)
-                                results.append({
-                                    'title': f"Resource: {resource.name}",
-                                    'url': str(resource.uri),
-                                    'content': str(resource_content.contents),
-                                    'relevance_score': 0.8
-                                })
+                                results.append(
+                                    {
+                                        "title": f"Resource: {resource.name}",
+                                        "url": str(resource.uri),
+                                        "content": str(resource_content.contents),
+                                        "relevance_score": 0.8,
+                                    }
+                                )
 
                     except Exception as e:
                         logger.warning(f"Failed to query session {server_name}: {e}")
@@ -181,28 +182,32 @@ class NeMoMCPClient:
         """Parse MCP tool result into standardized format."""
         docs = []
         try:
-            if hasattr(result, 'content') and isinstance(result.content, list):
+            if hasattr(result, "content") and isinstance(result.content, list):
                 for item in result.content:
-                    if hasattr(item, 'text'):
+                    if hasattr(item, "text"):
                         # Try to parse as JSON or extract structured data
                         try:
                             data = json.loads(item.text)
                             if isinstance(data, list):
                                 for doc in data:
-                                    docs.append({
-                                        'title': doc.get('title', 'Unknown Title'),
-                                        'url': doc.get('url', 'Unknown URL'),
-                                        'content': doc.get('content', doc.get('summary', '')),
-                                        'relevance_score': doc.get('score', 0.7)
-                                    })
+                                    docs.append(
+                                        {
+                                            "title": doc.get("title", "Unknown Title"),
+                                            "url": doc.get("url", "Unknown URL"),
+                                            "content": doc.get("content", doc.get("summary", "")),
+                                            "relevance_score": doc.get("score", 0.7),
+                                        }
+                                    )
                         except json.JSONDecodeError:
                             # Treat as plain text result
-                            docs.append({
-                                'title': f"Search result for: {query}",
-                                'url': 'https://learn.microsoft.com',
-                                'content': item.text[:500],
-                                'relevance_score': 0.6
-                            })
+                            docs.append(
+                                {
+                                    "title": f"Search result for: {query}",
+                                    "url": "https://learn.microsoft.com",
+                                    "content": item.text[:500],
+                                    "relevance_score": 0.6,
+                                }
+                            )
         except Exception as e:
             logger.warning(f"Failed to parse tool result: {e}")
 
@@ -221,69 +226,81 @@ class NeMoMCPClient:
         fallback_docs = []
 
         if "nemo" in query_lower and "retriever" in query_lower:
-            fallback_docs.extend([
-                {
-                    'title': 'NVIDIA NeMo Retriever Overview',
-                    'url': 'https://docs.nvidia.com/nemo/retriever/overview.html',
-                    'content': 'NVIDIA NeMo Retriever is a cloud-native solution for building and deploying retrieval-augmented generation (RAG) applications. It provides optimized embedding models and vector search capabilities.',
-                    'relevance_score': 0.9
-                },
-                {
-                    'title': 'NeMo Retriever Embedding NIMs',
-                    'url': 'https://docs.nvidia.com/nemo/retriever/embedding-nims.html',
-                    'content': 'NeMo Retriever includes pre-built NVIDIA Inference Microservices (NIMs) for embedding generation, supporting various embedding models optimized for different use cases.',
-                    'relevance_score': 0.85
-                }
-            ])
+            fallback_docs.extend(
+                [
+                    {
+                        "title": "NVIDIA NeMo Retriever Overview",
+                        "url": "https://docs.nvidia.com/nemo/retriever/overview.html",
+                        "content": "NVIDIA NeMo Retriever is a cloud-native solution for building and deploying retrieval-augmented generation (RAG) applications. It provides optimized embedding models and vector search capabilities.",
+                        "relevance_score": 0.9,
+                    },
+                    {
+                        "title": "NeMo Retriever Embedding NIMs",
+                        "url": "https://docs.nvidia.com/nemo/retriever/embedding-nims.html",
+                        "content": "NeMo Retriever includes pre-built NVIDIA Inference Microservices (NIMs) for embedding generation, supporting various embedding models optimized for different use cases.",
+                        "relevance_score": 0.85,
+                    },
+                ]
+            )
 
         if "langchain" in query_lower:
-            fallback_docs.append({
-                'title': 'Integrating NeMo Retriever with LangChain',
-                'url': 'https://docs.nvidia.com/nemo/retriever/langchain-integration.html',
-                'content': 'Learn how to integrate NVIDIA NeMo Retriever with LangChain frameworks for enhanced RAG applications. Includes examples for embedding and retrieval chain setup.',
-                'relevance_score': 0.8
-            })
+            fallback_docs.append(
+                {
+                    "title": "Integrating NeMo Retriever with LangChain",
+                    "url": "https://docs.nvidia.com/nemo/retriever/langchain-integration.html",
+                    "content": "Learn how to integrate NVIDIA NeMo Retriever with LangChain frameworks for enhanced RAG applications. Includes examples for embedding and retrieval chain setup.",
+                    "relevance_score": 0.8,
+                }
+            )
 
         if "embedding" in query_lower:
-            fallback_docs.append({
-                'title': 'NeMo Retriever Embedding Models',
-                'url': 'https://docs.nvidia.com/nemo/retriever/embedding-models.html',
-                'content': 'Comprehensive guide to NVIDIA NeMo Retriever embedding models, including performance benchmarks and best practices for different document types.',
-                'relevance_score': 0.85
-            })
+            fallback_docs.append(
+                {
+                    "title": "NeMo Retriever Embedding Models",
+                    "url": "https://docs.nvidia.com/nemo/retriever/embedding-models.html",
+                    "content": "Comprehensive guide to NVIDIA NeMo Retriever embedding models, including performance benchmarks and best practices for different document types.",
+                    "relevance_score": 0.85,
+                }
+            )
 
         if "migration" in query_lower:
-            fallback_docs.append({
-                'title': 'Migrating to NeMo Retriever',
-                'url': 'https://docs.nvidia.com/nemo/retriever/migration-guide.html',
-                'content': 'Step-by-step guide for migrating existing RAG systems to NVIDIA NeMo Retriever, including code examples and best practices.',
-                'relevance_score': 0.9
-            })
+            fallback_docs.append(
+                {
+                    "title": "Migrating to NeMo Retriever",
+                    "url": "https://docs.nvidia.com/nemo/retriever/migration-guide.html",
+                    "content": "Step-by-step guide for migrating existing RAG systems to NVIDIA NeMo Retriever, including code examples and best practices.",
+                    "relevance_score": 0.9,
+                }
+            )
 
         if "performance" in query_lower or "optimization" in query_lower:
-            fallback_docs.append({
-                'title': 'NeMo Retriever Performance Optimization',
-                'url': 'https://docs.nvidia.com/nemo/retriever/performance-optimization.html',
-                'content': 'Best practices for optimizing NVIDIA NeMo Retriever performance, including batch processing, GPU utilization, and caching strategies.',
-                'relevance_score': 0.8
-            })
+            fallback_docs.append(
+                {
+                    "title": "NeMo Retriever Performance Optimization",
+                    "url": "https://docs.nvidia.com/nemo/retriever/performance-optimization.html",
+                    "content": "Best practices for optimizing NVIDIA NeMo Retriever performance, including batch processing, GPU utilization, and caching strategies.",
+                    "relevance_score": 0.8,
+                }
+            )
 
         if "troubleshooting" in query_lower or "error" in query_lower:
-            fallback_docs.append({
-                'title': 'NeMo Retriever Troubleshooting Guide',
-                'url': 'https://docs.nvidia.com/nemo/retriever/troubleshooting.html',
-                'content': 'Common issues and solutions when working with NVIDIA NeMo Retriever, including CUDA memory errors, authentication issues, and performance problems.',
-                'relevance_score': 0.85
-            })
+            fallback_docs.append(
+                {
+                    "title": "NeMo Retriever Troubleshooting Guide",
+                    "url": "https://docs.nvidia.com/nemo/retriever/troubleshooting.html",
+                    "content": "Common issues and solutions when working with NVIDIA NeMo Retriever, including CUDA memory errors, authentication issues, and performance problems.",
+                    "relevance_score": 0.85,
+                }
+            )
 
         # If no specific matches, provide general docs
         if not fallback_docs:
             fallback_docs = [
                 {
-                    'title': 'NVIDIA NeMo Retriever Documentation',
-                    'url': 'https://docs.nvidia.com/nemo/retriever/',
-                    'content': 'Complete documentation for NVIDIA NeMo Retriever, including API references, tutorials, and best practices for building RAG applications.',
-                    'relevance_score': 0.7
+                    "title": "NVIDIA NeMo Retriever Documentation",
+                    "url": "https://docs.nvidia.com/nemo/retriever/",
+                    "content": "Complete documentation for NVIDIA NeMo Retriever, including API references, tutorials, and best practices for building RAG applications.",
+                    "relevance_score": 0.7,
                 }
             ]
 
@@ -310,7 +327,7 @@ class NeMoMCPClient:
                 context_section = "\n## Relevant Documentation Context:\n"
                 for doc in docs:
                     context_section += f"- **{doc['title']}**: {doc['url']}\n"
-                    if doc['content']:
+                    if doc["content"]:
                         context_section += f"  {doc['content'][:200]}...\n"
                 context_section += "\n"
                 return mcp_header + context_section + base_prompt
@@ -328,7 +345,7 @@ class NeMoMCPClient:
             "nvidia nemo retriever embedding",
             "nemo retriever langchain integration",
             "nvidia nim embedding models",
-            "faiss vector database nvidia"
+            "faiss vector database nvidia",
         ]
 
         all_docs = []
@@ -343,7 +360,7 @@ class NeMoMCPClient:
         for doc in all_docs:
             context += f"### {doc['title']}\n"
             context += f"URL: {doc['url']}\n"
-            if doc['content']:
+            if doc["content"]:
                 context += f"Summary: {doc['content'][:300]}...\n"
             context += "\n"
 

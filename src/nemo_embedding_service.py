@@ -14,24 +14,24 @@ Key Features:
 
 Based on latest NVIDIA NeMo Retriever documentation patterns and best practices.
 """
-
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union, Tuple
-import json
+from typing import Any, Dict, List, Optional
 
-from langchain_core.embeddings import Embeddings
 from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
 
 from .nemo_retriever_client import NeMoRetrieverClient, create_nemo_client
 from .nvidia_embeddings import NVIDIAEmbeddings as LegacyNVIDIAEmbeddings
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class EmbeddingResult:
     """Result from embedding operation."""
+
     success: bool
     embeddings: Optional[List[List[float]]] = None
     model_used: Optional[str] = None
@@ -39,9 +39,11 @@ class EmbeddingResult:
     cache_hit: bool = False
     error: Optional[str] = None
 
+
 @dataclass
 class EmbeddingConfig:
     """Configuration for embedding operations."""
+
     model: str = "nv-embedqa-e5-v5"
     batch_size: int = 100
     enable_caching: bool = True
@@ -51,13 +53,16 @@ class EmbeddingConfig:
     normalize_embeddings: bool = True
     pharmaceutical_optimization: bool = True
 
+
 @dataclass
 class PharmaceuticalContext:
     """Context information for pharmaceutical content optimization."""
+
     content_type: str = "general"  # "clinical_trial", "drug_label", "patent", "research_paper"
     domain_terms: List[str] = field(default_factory=list)
     requires_precision: bool = False  # For regulatory/safety-critical content
     language: str = "en"
+
 
 class NeMoEmbeddingService(Embeddings):
     """
@@ -71,60 +76,92 @@ class NeMoEmbeddingService(Embeddings):
     PHARMACEUTICAL_MODEL_RECOMMENDATIONS = {
         "clinical_trial": {
             "primary": "nv-embedqa-e5-v5",
-            "reason": "Optimized for question-answering retrieval in medical context"
+            "reason": "Optimized for question-answering retrieval in medical context",
         },
         "drug_label": {
             "primary": "nv-embedqa-e5-v5",
-            "reason": "High precision for safety-critical pharmaceutical information"
+            "reason": "High precision for safety-critical pharmaceutical information",
         },
         "patent": {
             "primary": "nv-embedqa-mistral7b-v2",
-            "reason": "Better handling of complex technical and legal language"
+            "reason": "Better handling of complex technical and legal language",
         },
         "research_paper": {
             "primary": "nv-embedqa-mistral7b-v2",
-            "reason": "Superior performance on long-form scientific content"
+            "reason": "Superior performance on long-form scientific content",
         },
         "regulatory_document": {
             "primary": "nv-embedqa-e5-v5",
-            "reason": "Consistent and reliable embeddings for compliance"
+            "reason": "Consistent and reliable embeddings for compliance",
         },
-        "multilingual_content": {
-            "primary": "nv-embedqa-mistral7b-v2",
-            "reason": "Native multilingual support"
-        },
-        "general": {
-            "primary": "nv-embedqa-e5-v5",
-            "reason": "Balanced performance for mixed pharmaceutical content"
-        }
+        "multilingual_content": {"primary": "nv-embedqa-mistral7b-v2", "reason": "Native multilingual support"},
+        "general": {"primary": "nv-embedqa-e5-v5", "reason": "Balanced performance for mixed pharmaceutical content"},
     }
 
     # Pharmaceutical terminology that benefits from specialized handling
     PHARMA_TERMINOLOGY = {
         "drug_classes": [
-            "antibiotics", "antivirals", "antifungals", "analgesics", "anti-inflammatory",
-            "anticoagulants", "antihistamines", "antidepressants", "antipsychotics",
-            "beta-blockers", "ace inhibitors", "diuretics", "statins", "biologics"
+            "antibiotics",
+            "antivirals",
+            "antifungals",
+            "analgesics",
+            "anti-inflammatory",
+            "anticoagulants",
+            "antihistamines",
+            "antidepressants",
+            "antipsychotics",
+            "beta-blockers",
+            "ace inhibitors",
+            "diuretics",
+            "statins",
+            "biologics",
         ],
         "medical_terms": [
-            "pharmacokinetics", "pharmacodynamics", "bioavailability", "metabolism",
-            "clearance", "half-life", "bioequivalence", "contraindication", "indication",
-            "adverse event", "side effect", "drug interaction", "dosage", "titration"
+            "pharmacokinetics",
+            "pharmacodynamics",
+            "bioavailability",
+            "metabolism",
+            "clearance",
+            "half-life",
+            "bioequivalence",
+            "contraindication",
+            "indication",
+            "adverse event",
+            "side effect",
+            "drug interaction",
+            "dosage",
+            "titration",
         ],
         "regulatory_terms": [
-            "clinical trial", "phase I", "phase II", "phase III", "IRB", "IND", "NDA",
-            "BLA", "ANDA", "FDA", "EMA", "ICH", "GCP", "GLP", "cGMP", "validation"
-        ]
+            "clinical trial",
+            "phase I",
+            "phase II",
+            "phase III",
+            "IRB",
+            "IND",
+            "NDA",
+            "BLA",
+            "ANDA",
+            "FDA",
+            "EMA",
+            "ICH",
+            "GCP",
+            "GLP",
+            "cGMP",
+            "validation",
+        ],
     }
 
-    def __init__(self,
-                 nemo_client: Optional[NeMoRetrieverClient] = None,
-                 config: Optional[EmbeddingConfig] = None,
-                 pharmaceutical_context: Optional[PharmaceuticalContext] = None,
-                 enable_legacy_fallback: bool = True,
-                 legacy_embeddings_config: Optional[Dict[str, Any]] = None,
-                 enable_multi_model_strategy: bool = True,
-                 enable_performance_monitoring: bool = True):
+    def __init__(
+        self,
+        nemo_client: Optional[NeMoRetrieverClient] = None,
+        config: Optional[EmbeddingConfig] = None,
+        pharmaceutical_context: Optional[PharmaceuticalContext] = None,
+        enable_legacy_fallback: bool = True,
+        legacy_embeddings_config: Optional[Dict[str, Any]] = None,
+        enable_multi_model_strategy: bool = True,
+        enable_performance_monitoring: bool = True,
+    ):
         """
         Initialize NeMo Embedding Service.
 
@@ -161,8 +198,7 @@ class NeMoEmbeddingService(Embeddings):
         if enable_performance_monitoring:
             # Register this service with the global performance monitor
             performance_monitor.register_service(
-                service_name=self.service_name,
-                health_check_function=self._health_check
+                service_name=self.service_name, health_check_function=self._health_check
             )
             logger.info(f"Performance monitoring enabled for {self.service_name}")
 
@@ -182,11 +218,7 @@ class NeMoEmbeddingService(Embeddings):
 
         # Caching
         self.embedding_cache = {}
-        self.cache_stats = {
-            "hits": 0,
-            "misses": 0,
-            "total_requests": 0
-        }
+        self.cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
 
         # Performance metrics
         self.metrics = {
@@ -195,7 +227,7 @@ class NeMoEmbeddingService(Embeddings):
             "models_used": {},
             "pharmaceutical_optimizations": 0,
             "multi_model_selections": 0,
-            "cache_performance": self.cache_stats
+            "cache_performance": self.cache_stats,
         }
 
     async def _ensure_nemo_client(self) -> NeMoRetrieverClient:
@@ -237,10 +269,20 @@ class NeMoEmbeddingService(Embeddings):
             domain_terms.extend(found_terms)
 
         # Determine if high precision is required
-        requires_precision = any(term in combined_text for term in [
-            "safety", "contraindication", "black box", "warning", "adverse",
-            "dosage", "regulatory", "compliance", "validation"
-        ])
+        requires_precision = any(
+            term in combined_text
+            for term in [
+                "safety",
+                "contraindication",
+                "black box",
+                "warning",
+                "adverse",
+                "dosage",
+                "regulatory",
+                "compliance",
+                "validation",
+            ]
+        )
 
         # Basic language detection (simplified)
         language = "en"  # Default to English
@@ -251,7 +293,7 @@ class NeMoEmbeddingService(Embeddings):
             content_type=content_type,
             domain_terms=domain_terms,
             requires_precision=requires_precision,
-            language=language
+            language=language,
         )
 
     def _select_optimal_model(self, texts: List[str], pharma_context: Optional[PharmaceuticalContext] = None) -> str:
@@ -271,7 +313,7 @@ class NeMoEmbeddingService(Embeddings):
                 selection_result = select_optimal_embedding_model(
                     texts=texts,
                     content_type=pharma_context.content_type if pharma_context else None,
-                    pharmaceutical_optimization=self.config.pharmaceutical_optimization
+                    pharmaceutical_optimization=self.config.pharmaceutical_optimization,
                 )
 
                 self.last_model_selection = selection_result
@@ -329,10 +371,7 @@ class NeMoEmbeddingService(Embeddings):
     def _cache_embeddings(self, cache_key: str, embeddings: List[List[float]]) -> None:
         """Cache embeddings for future use."""
         if self.config.enable_caching:
-            self.embedding_cache[cache_key] = {
-                "embeddings": embeddings,
-                "timestamp": time.time()
-            }
+            self.embedding_cache[cache_key] = {"embeddings": embeddings, "timestamp": time.time()}
 
     def _preprocess_texts(self, texts: List[str], pharma_context: PharmaceuticalContext) -> List[str]:
         """
@@ -365,7 +404,7 @@ class NeMoEmbeddingService(Embeddings):
                     enable_drug_normalization=True,
                     enable_terminology_standardization=True,
                     enable_safety_detection=True,
-                    enable_regulatory_enhancement=True
+                    enable_regulatory_enhancement=True,
                 )
 
                 # Extract optimized texts and update metrics
@@ -396,14 +435,14 @@ class NeMoEmbeddingService(Embeddings):
             # Handle text length limits
             if len(processed_text) > self.config.max_text_length:
                 if self.config.truncate_strategy == "end":
-                    processed_text = processed_text[:self.config.max_text_length]
+                    processed_text = processed_text[: self.config.max_text_length]
                 elif self.config.truncate_strategy == "start":
-                    processed_text = processed_text[-self.config.max_text_length:]
+                    processed_text = processed_text[-self.config.max_text_length :]
                 elif self.config.truncate_strategy == "middle":
                     mid_point = len(processed_text) // 2
                     half_max = self.config.max_text_length // 2
                     start_part = processed_text[:half_max]
-                    end_part = processed_text[mid_point - half_max:]
+                    end_part = processed_text[mid_point - half_max :]
                     processed_text = start_part + "..." + end_part
 
             processed_texts.append(processed_text)
@@ -496,9 +535,7 @@ class NeMoEmbeddingService(Embeddings):
 
             # Use NeMo client to generate embeddings
             response = await client.embed_texts(
-                texts=texts,
-                model=model,
-                use_langchain=True  # Prefer LangChain integration when available
+                texts=texts, model=model, use_langchain=True  # Prefer LangChain integration when available
             )
 
             if response.success:
@@ -509,24 +546,13 @@ class NeMoEmbeddingService(Embeddings):
                     embeddings = [self._normalize_embedding(emb) for emb in embeddings]
 
                 return EmbeddingResult(
-                    success=True,
-                    embeddings=embeddings,
-                    model_used=model,
-                    processing_time_ms=response.response_time_ms
+                    success=True, embeddings=embeddings, model_used=model, processing_time_ms=response.response_time_ms
                 )
             else:
-                return EmbeddingResult(
-                    success=False,
-                    error=response.error,
-                    model_used=model
-                )
+                return EmbeddingResult(success=False, error=response.error, model_used=model)
 
         except Exception as e:
-            return EmbeddingResult(
-                success=False,
-                error=str(e),
-                model_used=model
-            )
+            return EmbeddingResult(success=False, error=str(e), model_used=model)
 
     def _normalize_embedding(self, embedding: List[float]) -> List[float]:
         """Normalize embedding vector to unit length."""
@@ -557,9 +583,9 @@ class NeMoEmbeddingService(Embeddings):
         return asyncio.run(self.embed_query(text))
 
     # Additional pharmaceutical-specific methods
-    async def embed_pharmaceutical_documents(self,
-                                           documents: List[Document],
-                                           preserve_metadata: bool = True) -> List[Document]:
+    async def embed_pharmaceutical_documents(
+        self, documents: List[Document], preserve_metadata: bool = True
+    ) -> List[Document]:
         """
         Embed pharmaceutical documents with enhanced metadata preservation.
 
@@ -576,17 +602,16 @@ class NeMoEmbeddingService(Embeddings):
         enhanced_docs = []
         for doc, embedding in zip(documents, embeddings):
             new_metadata = doc.metadata.copy() if preserve_metadata else {}
-            new_metadata.update({
-                "embedding": embedding,
-                "embedding_model": self.config.model,
-                "embedding_service": "nemo_enhanced",
-                "embedding_timestamp": time.time()
-            })
-
-            enhanced_doc = Document(
-                page_content=doc.page_content,
-                metadata=new_metadata
+            new_metadata.update(
+                {
+                    "embedding": embedding,
+                    "embedding_model": self.config.model,
+                    "embedding_service": "nemo_enhanced",
+                    "embedding_timestamp": time.time(),
+                }
             )
+
+            enhanced_doc = Document(page_content=doc.page_content, metadata=new_metadata)
             enhanced_docs.append(enhanced_doc)
 
         return enhanced_docs
@@ -623,12 +648,7 @@ class NeMoEmbeddingService(Embeddings):
             return ServiceHealth.UNHEALTHY
 
     def _update_metrics(
-        self,
-        text_count: int,
-        processing_time_ms: float,
-        model_used: str,
-        cache_hit: bool = False,
-        success: bool = True
+        self, text_count: int, processing_time_ms: float, model_used: str, cache_hit: bool = False, success: bool = True
     ):
         """
         Update embedding performance metrics.
@@ -657,11 +677,7 @@ class NeMoEmbeddingService(Embeddings):
 
         # Update multi-model strategy performance if enabled
         if not cache_hit:  # Only update performance for actual model calls
-            self.update_model_performance(
-                model_name=model_used,
-                response_time_ms=processing_time_ms,
-                success=success
-            )
+            self.update_model_performance(model_name=model_used, response_time_ms=processing_time_ms, success=success)
 
         # Update global performance monitor if enabled
         if self.enable_performance_monitoring:
@@ -670,22 +686,17 @@ class NeMoEmbeddingService(Embeddings):
                 response_time_ms=processing_time_ms,
                 success=success,
                 is_pharmaceutical=self.config.pharmaceutical_optimization,
-                cache_hit=cache_hit
+                cache_hit=cache_hit,
             )
 
     def get_pharmaceutical_model_recommendation(self, content_type: str) -> Dict[str, str]:
         """Get model recommendation for specific pharmaceutical content type."""
         return self.PHARMACEUTICAL_MODEL_RECOMMENDATIONS.get(
-            content_type,
-            self.PHARMACEUTICAL_MODEL_RECOMMENDATIONS["general"]
+            content_type, self.PHARMACEUTICAL_MODEL_RECOMMENDATIONS["general"]
         )
 
     def update_model_performance(
-        self,
-        model_name: str,
-        response_time_ms: float,
-        success: bool,
-        accuracy_score: Optional[float] = None
+        self, model_name: str, response_time_ms: float, success: bool, accuracy_score: Optional[float] = None
     ):
         """
         Update performance metrics for multi-model strategy.
@@ -703,7 +714,7 @@ class NeMoEmbeddingService(Embeddings):
                     response_time_ms=response_time_ms,
                     success=success,
                     accuracy_score=accuracy_score,
-                    pharmaceutical_context=self.config.pharmaceutical_optimization
+                    pharmaceutical_context=self.config.pharmaceutical_optimization,
                 )
             except Exception as e:
                 logger.warning(f"Failed to update multi-model performance: {e}")
@@ -718,7 +729,7 @@ class NeMoEmbeddingService(Embeddings):
         info = {
             "current_model": self.current_model,
             "multi_model_strategy_enabled": self.enable_multi_model_strategy,
-            "last_selection": None
+            "last_selection": None,
         }
 
         if self.last_model_selection:
@@ -727,7 +738,7 @@ class NeMoEmbeddingService(Embeddings):
                 "confidence_score": self.last_model_selection.confidence_score,
                 "selection_reason": self.last_model_selection.selection_reason,
                 "fallback_models": self.last_model_selection.fallback_models,
-                "pharmaceutical_optimization_applied": self.last_model_selection.pharmaceutical_optimization_applied
+                "pharmaceutical_optimization_applied": self.last_model_selection.pharmaceutical_optimization_applied,
             }
 
         return info
@@ -762,12 +773,7 @@ class NeMoEmbeddingService(Embeddings):
 
         return None
 
-    def add_custom_pharmaceutical_term(
-        self,
-        drug_name: str,
-        synonyms: List[str],
-        category: str = "custom"
-    ):
+    def add_custom_pharmaceutical_term(self, drug_name: str, synonyms: List[str], category: str = "custom"):
         """
         Add custom pharmaceutical term mapping for specialized content.
 
@@ -778,9 +784,7 @@ class NeMoEmbeddingService(Embeddings):
         """
         if self.pharmaceutical_optimizer:
             self.pharmaceutical_optimizer.add_custom_drug_mapping(
-                canonical_name=drug_name,
-                synonyms=synonyms,
-                category=category
+                canonical_name=drug_name, synonyms=synonyms, category=category
             )
             logger.info(f"Added custom pharmaceutical term: {drug_name}")
 
@@ -805,9 +809,8 @@ class NeMoEmbeddingService(Embeddings):
                     "performance_data": service_data,
                     "optimization_recommendations": performance_monitor.get_optimization_recommendations(),
                     "active_alerts": [
-                        alert for alert in performance_monitor.active_alerts
-                        if alert.service_name == self.service_name
-                    ]
+                        alert for alert in performance_monitor.active_alerts if alert.service_name == self.service_name
+                    ],
                 }
             except Exception as e:
                 logger.warning(f"Failed to get performance monitoring report: {e}")
@@ -844,9 +847,7 @@ class NeMoEmbeddingService(Embeddings):
         metrics = self.metrics.copy()
 
         if metrics["total_embeddings"] > 0:
-            metrics["avg_processing_time_ms"] = (
-                metrics["total_processing_time_ms"] / metrics["total_embeddings"]
-            )
+            metrics["avg_processing_time_ms"] = metrics["total_processing_time_ms"] / metrics["total_embeddings"]
         else:
             metrics["avg_processing_time_ms"] = 0.0
 
@@ -868,9 +869,7 @@ class NeMoEmbeddingService(Embeddings):
 
 # Factory functions for easy integration
 async def create_nemo_embedding_service(
-    config: Optional[EmbeddingConfig] = None,
-    enable_pharmaceutical_optimization: bool = True,
-    **kwargs
+    config: Optional[EmbeddingConfig] = None, enable_pharmaceutical_optimization: bool = True, **kwargs
 ) -> NeMoEmbeddingService:
     """
     Factory function to create NeMo Embedding Service.
@@ -884,10 +883,7 @@ async def create_nemo_embedding_service(
         Configured NeMoEmbeddingService
     """
     if not config:
-        config = EmbeddingConfig(
-            pharmaceutical_optimization=enable_pharmaceutical_optimization,
-            **kwargs
-        )
+        config = EmbeddingConfig(pharmaceutical_optimization=enable_pharmaceutical_optimization, **kwargs)
 
     service = NeMoEmbeddingService(config=config)
 
@@ -898,9 +894,7 @@ async def create_nemo_embedding_service(
 
 
 def create_nemo_embedding_service_sync(
-    config: Optional[EmbeddingConfig] = None,
-    enable_pharmaceutical_optimization: bool = True,
-    **kwargs
+    config: Optional[EmbeddingConfig] = None, enable_pharmaceutical_optimization: bool = True, **kwargs
 ) -> NeMoEmbeddingService:
     """
     Synchronous factory function for NeMo Embedding Service.
@@ -913,18 +907,16 @@ def create_nemo_embedding_service_sync(
     Returns:
         Configured NeMoEmbeddingService
     """
-    return asyncio.run(create_nemo_embedding_service(
-        config=config,
-        enable_pharmaceutical_optimization=enable_pharmaceutical_optimization,
-        **kwargs
-    ))
+    return asyncio.run(
+        create_nemo_embedding_service(
+            config=config, enable_pharmaceutical_optimization=enable_pharmaceutical_optimization, **kwargs
+        )
+    )
 
 
 # Convenience function for pharmaceutical RAG systems
 async def create_pharmaceutical_embedding_service(
-    content_types: List[str] = None,
-    enable_caching: bool = True,
-    **kwargs
+    content_types: List[str] = None, enable_caching: bool = True, **kwargs
 ) -> NeMoEmbeddingService:
     """
     Create embedding service optimized for pharmaceutical content.
@@ -937,11 +929,7 @@ async def create_pharmaceutical_embedding_service(
     Returns:
         Pharmaceutical-optimized NeMoEmbeddingService
     """
-    config = EmbeddingConfig(
-        pharmaceutical_optimization=True,
-        enable_caching=enable_caching,
-        **kwargs
-    )
+    config = EmbeddingConfig(pharmaceutical_optimization=True, enable_caching=enable_caching, **kwargs)
 
     service = await create_nemo_embedding_service(config=config)
 
@@ -952,6 +940,7 @@ async def create_pharmaceutical_embedding_service(
 
 # Example usage
 if __name__ == "__main__":
+
     async def test_embedding_service():
         """Test NeMo embedding service functionality."""
         service = await create_pharmaceutical_embedding_service()
@@ -960,7 +949,7 @@ if __name__ == "__main__":
         test_texts = [
             "Aspirin is an NSAID used for pain relief and inflammation reduction.",
             "Phase III clinical trial showed 85% efficacy in reducing cardiovascular events.",
-            "Contraindications include active bleeding and severe hepatic impairment."
+            "Contraindications include active bleeding and severe hepatic impairment.",
         ]
 
         try:

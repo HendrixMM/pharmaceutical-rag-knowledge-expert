@@ -14,47 +14,52 @@ Features:
 This monitoring system ensures pharmaceutical research continuity
 regardless of NGC API changes scheduled for March 2026.
 """
-
 import asyncio
-import logging
-import time
 import json
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple, NamedTuple
-from dataclasses import dataclass, field
-from enum import Enum
-from collections import deque, defaultdict
+import logging
 import statistics
+import time
+from collections import defaultdict, deque
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 try:
-    from ..clients.openai_wrapper import OpenAIWrapper, NVIDIABuildConfig
+    from ..clients.openai_wrapper import NVIDIABuildConfig, OpenAIWrapper
     from ..enhanced_config import EnhancedRAGConfig
     from ..validation.model_validator import NVIDIABuildModelValidator
 except ImportError:
-    from src.clients.openai_wrapper import OpenAIWrapper, NVIDIABuildConfig
+    from src.clients.openai_wrapper import NVIDIABuildConfig, OpenAIWrapper
     from src.enhanced_config import EnhancedRAGConfig
     from src.validation.model_validator import NVIDIABuildModelValidator
 
 logger = logging.getLogger(__name__)
 
+
 class HealthStatus(Enum):
     """Health status levels for endpoints."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
     UNKNOWN = "unknown"
 
+
 class AlertSeverity(Enum):
     """Alert severity levels."""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
     INFO = "info"
 
+
 @dataclass
 class HealthMetrics:
     """Health metrics for an endpoint."""
+
     endpoint_url: str
     timestamp: datetime
     status: HealthStatus
@@ -65,9 +70,11 @@ class HealthMetrics:
     ngc_independent: bool = True
     pharmaceutical_optimized: bool = True
 
+
 @dataclass
 class HealthAlert:
     """Health monitoring alert."""
+
     alert_id: str
     severity: AlertSeverity
     endpoint_url: str
@@ -75,6 +82,7 @@ class HealthAlert:
     timestamp: datetime
     resolved: bool = False
     resolution_timestamp: Optional[datetime] = None
+
 
 class EndpointHealthMonitor:
     """
@@ -84,10 +92,12 @@ class EndpointHealthMonitor:
     pharmaceutical research optimization and NGC deprecation immunity.
     """
 
-    def __init__(self,
-                 config: Optional[EnhancedRAGConfig] = None,
-                 monitoring_interval_seconds: int = 60,
-                 history_retention_hours: int = 24):
+    def __init__(
+        self,
+        config: Optional[EnhancedRAGConfig] = None,
+        monitoring_interval_seconds: int = 60,
+        history_retention_hours: int = 24,
+    ):
         """
         Initialize endpoint health monitor.
 
@@ -114,9 +124,9 @@ class EndpointHealthMonitor:
         # Performance baselines
         self.performance_baselines = {
             "nvidia_build_response_time_ms": 2000,  # 2 second baseline
-            "model_availability_threshold": 5,      # Minimum 5 models
-            "success_rate_threshold": 95.0,         # 95% success rate
-            "error_rate_threshold": 5.0             # Max 5% error rate
+            "model_availability_threshold": 5,  # Minimum 5 models
+            "success_rate_threshold": 95.0,  # 95% success rate
+            "error_rate_threshold": 5.0,  # Max 5% error rate
         }
 
         # Monitoring state
@@ -135,10 +145,7 @@ class EndpointHealthMonitor:
             self.nvidia_build_client = OpenAIWrapper(nvidia_config)
 
             # Model validator for comprehensive testing
-            self.model_validator = NVIDIABuildModelValidator(
-                config=self.config,
-                enable_pharmaceutical_testing=True
-            )
+            self.model_validator = NVIDIABuildModelValidator(config=self.config, enable_pharmaceutical_testing=True)
 
             logger.info("Health monitoring clients initialized")
 
@@ -208,8 +215,9 @@ class EndpointHealthMonitor:
             # Add to history
             self.health_history["nvidia_build"].append(health_metrics)
 
-            logger.debug(f"NVIDIA Build health: {health_metrics.status.value} "
-                        f"({health_metrics.response_time_ms}ms)")
+            logger.debug(
+                f"NVIDIA Build health: {health_metrics.status.value} " f"({health_metrics.response_time_ms}ms)"
+            )
 
     async def _check_nvidia_build_health(self) -> HealthMetrics:
         """Check NVIDIA Build endpoint health."""
@@ -238,10 +246,10 @@ class EndpointHealthMonitor:
                 error_rate=error_rate,
                 success_rate=success_rate,
                 ngc_independent=True,  # NVIDIA Build is NGC-independent
-                pharmaceutical_optimized=True
+                pharmaceutical_optimized=True,
             )
 
-        except Exception as e:
+        except Exception:
             response_time = int((time.time() - start_time) * 1000)
 
             return HealthMetrics(
@@ -253,7 +261,7 @@ class EndpointHealthMonitor:
                 error_rate=100.0,
                 success_rate=0.0,
                 ngc_independent=True,
-                pharmaceutical_optimized=True
+                pharmaceutical_optimized=True,
             )
 
     async def _analyze_health_trends(self) -> None:
@@ -288,13 +296,12 @@ class EndpointHealthMonitor:
     async def _process_health_alerts(self) -> None:
         """Process and generate health alerts."""
         for endpoint, current_health in self.current_health.items():
-
             # Check for critical issues
             if current_health.status == HealthStatus.UNHEALTHY:
                 await self._create_alert(
                     endpoint=endpoint,
                     severity=AlertSeverity.CRITICAL,
-                    message=f"Endpoint {endpoint} is unhealthy - pharmaceutical research impacted"
+                    message=f"Endpoint {endpoint} is unhealthy - pharmaceutical research impacted",
                 )
 
             # Check for performance degradation
@@ -303,7 +310,7 @@ class EndpointHealthMonitor:
                     await self._create_alert(
                         endpoint=endpoint,
                         severity=AlertSeverity.HIGH,
-                        message=f"Endpoint {endpoint} response time severely degraded: {current_health.response_time_ms}ms"
+                        message=f"Endpoint {endpoint} response time severely degraded: {current_health.response_time_ms}ms",
                     )
 
             # Check for model availability issues
@@ -311,19 +318,17 @@ class EndpointHealthMonitor:
                 await self._create_alert(
                     endpoint=endpoint,
                     severity=AlertSeverity.MEDIUM,
-                    message=f"Low model availability on {endpoint}: {current_health.available_models} models"
+                    message=f"Low model availability on {endpoint}: {current_health.available_models} models",
                 )
 
-    async def _create_alert(self,
-                           endpoint: str,
-                           severity: AlertSeverity,
-                           message: str) -> None:
+    async def _create_alert(self, endpoint: str, severity: AlertSeverity, message: str) -> None:
         """Create health monitoring alert."""
         alert_id = f"{endpoint}_{severity.value}_{int(time.time())}"
 
         # Check if similar alert already exists
         existing_alerts = [
-            alert for alert in self.active_alerts.values()
+            alert
+            for alert in self.active_alerts.values()
             if alert.endpoint_url == endpoint and alert.severity == severity and not alert.resolved
         ]
 
@@ -332,11 +337,7 @@ class EndpointHealthMonitor:
             return
 
         alert = HealthAlert(
-            alert_id=alert_id,
-            severity=severity,
-            endpoint_url=endpoint,
-            message=message,
-            timestamp=datetime.now()
+            alert_id=alert_id, severity=severity, endpoint_url=endpoint, message=message, timestamp=datetime.now()
         )
 
         self.active_alerts[alert_id] = alert
@@ -359,7 +360,8 @@ class EndpointHealthMonitor:
         # Clean up resolved alerts older than 1 hour
         alert_cutoff = datetime.now() - timedelta(hours=1)
         alerts_to_remove = [
-            alert_id for alert_id, alert in self.active_alerts.items()
+            alert_id
+            for alert_id, alert in self.active_alerts.items()
             if alert.resolved and alert.resolution_timestamp and alert.resolution_timestamp < alert_cutoff
         ]
 
@@ -374,7 +376,7 @@ class EndpointHealthMonitor:
             "endpoints": {},
             "overall_health": "unknown",
             "ngc_independence": True,
-            "pharmaceutical_optimization": True
+            "pharmaceutical_optimization": True,
         }
 
         # Compile endpoint health
@@ -387,7 +389,7 @@ class EndpointHealthMonitor:
                 "error_rate": health.error_rate,
                 "last_check": health.timestamp.isoformat(),
                 "ngc_independent": health.ngc_independent,
-                "pharmaceutical_optimized": health.pharmaceutical_optimized
+                "pharmaceutical_optimized": health.pharmaceutical_optimized,
             }
 
             if status["last_check"] is None or health.timestamp > datetime.fromisoformat(status["last_check"]):
@@ -405,10 +407,9 @@ class EndpointHealthMonitor:
 
         # Add alert summary
         status["active_alerts"] = len([a for a in self.active_alerts.values() if not a.resolved])
-        status["critical_alerts"] = len([
-            a for a in self.active_alerts.values()
-            if not a.resolved and a.severity == AlertSeverity.CRITICAL
-        ])
+        status["critical_alerts"] = len(
+            [a for a in self.active_alerts.values() if not a.resolved and a.severity == AlertSeverity.CRITICAL]
+        )
 
         return status
 
@@ -440,23 +441,20 @@ class EndpointHealthMonitor:
                 "health_distribution": {
                     "healthy": len([h for h in recent_history if h.status == HealthStatus.HEALTHY]),
                     "degraded": len([h for h in recent_history if h.status == HealthStatus.DEGRADED]),
-                    "unhealthy": len([h for h in recent_history if h.status == HealthStatus.UNHEALTHY])
-                }
+                    "unhealthy": len([h for h in recent_history if h.status == HealthStatus.UNHEALTHY]),
+                },
             }
 
         return {
             "time_period_hours": hours_back,
             "analysis_timestamp": datetime.now().isoformat(),
             "endpoint_trends": trends,
-            "ngc_independence_verified": True
+            "ngc_independence_verified": True,
         }
 
     def get_active_alerts(self) -> List[Dict[str, Any]]:
         """Get all active health alerts."""
-        active_alerts = [
-            alert for alert in self.active_alerts.values()
-            if not alert.resolved
-        ]
+        active_alerts = [alert for alert in self.active_alerts.values() if not alert.resolved]
 
         return [
             {
@@ -465,7 +463,7 @@ class EndpointHealthMonitor:
                 "endpoint": alert.endpoint_url,
                 "message": alert.message,
                 "timestamp": alert.timestamp.isoformat(),
-                "duration_minutes": int((datetime.now() - alert.timestamp).total_seconds() / 60)
+                "duration_minutes": int((datetime.now() - alert.timestamp).total_seconds() / 60),
             }
             for alert in sorted(active_alerts, key=lambda x: x.timestamp, reverse=True)
         ]
@@ -494,22 +492,18 @@ class EndpointHealthMonitor:
             "model_validation": model_validation_results,
             "ngc_independence_status": {
                 "verified": True,
-                "nvidia_build_operational": any(
-                    h.ngc_independent for h in self.current_health.values()
-                ),
-                "pharmaceutical_optimization": any(
-                    h.pharmaceutical_optimized for h in self.current_health.values()
-                )
-            }
+                "nvidia_build_operational": any(h.ngc_independent for h in self.current_health.values()),
+                "pharmaceutical_optimization": any(h.pharmaceutical_optimized for h in self.current_health.values()),
+            },
         }
 
         logger.info("Comprehensive health check completed")
         return results
 
+
 # Convenience functions for health monitoring
 def create_endpoint_health_monitor(
-    monitoring_interval: int = 60,
-    pharmaceutical_focused: bool = True
+    monitoring_interval: int = 60, pharmaceutical_focused: bool = True
 ) -> EndpointHealthMonitor:
     """
     Create endpoint health monitor with optimal configuration.
@@ -524,10 +518,9 @@ def create_endpoint_health_monitor(
     config = EnhancedRAGConfig.from_env()
 
     return EndpointHealthMonitor(
-        config=config,
-        monitoring_interval_seconds=monitoring_interval,
-        history_retention_hours=24
+        config=config, monitoring_interval_seconds=monitoring_interval, history_retention_hours=24
     )
+
 
 async def quick_health_check() -> Dict[str, Any]:
     """
@@ -538,6 +531,7 @@ async def quick_health_check() -> Dict[str, Any]:
     """
     monitor = create_endpoint_health_monitor(pharmaceutical_focused=True)
     return await monitor.perform_comprehensive_health_check()
+
 
 if __name__ == "__main__":
     # Run comprehensive health monitoring test

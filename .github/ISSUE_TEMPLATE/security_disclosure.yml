@@ -1,0 +1,179 @@
+name: Security Vulnerability Disclosure
+description: Report a security vulnerability (PRIVATE REPORTING PREFERRED)
+title: "[SECURITY]: "
+labels: ["security", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ⚠️ IMPORTANT: Private Reporting Preferred
+
+        **DO NOT** disclose security vulnerabilities publicly in GitHub Issues.
+
+        ### For Responsible Disclosure, Please:
+        1. **GitHub Security Advisories** (preferred): Create a private report at https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever/security/advisories/new
+        2. **Private Issue**: Create a private GitHub issue with `[SECURITY]` label as an alternative
+
+        ### Only Use This Public Template If:
+        - The vulnerability is already publicly known
+        - You need to reference an existing CVE
+        - The issue is low severity and doesn't pose immediate risk
+
+        See [SECURITY.md](../../SECURITY.md) for our full security policy and reporting procedures.
+
+        ---
+
+  - type: checkboxes
+    id: acknowledgment
+    attributes:
+      label: Acknowledgment
+      description: Please confirm you understand the implications of public disclosure
+      options:
+        - label: I have read the security policy ([SECURITY.md](../../SECURITY.md))
+          required: true
+        - label: I understand this is a PUBLIC issue and will not disclose sensitive details
+          required: true
+        - label: I have already reported this privately OR this is a low-severity issue
+          required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity Assessment
+      description: How severe is this vulnerability? (See SECURITY.md for definitions)
+      options:
+        - Critical (immediate exploitation possible, severe impact)
+        - High (significant security impact, requires user interaction)
+        - Medium (limited impact, specific conditions required)
+        - Low (minimal security impact, theoretical)
+        - Informational (security-related information, no direct vulnerability)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: vulnerability-type
+    attributes:
+      label: Vulnerability Type
+      description: What type of vulnerability is this?
+      options:
+        - API Key Exposure
+        - Authentication Bypass
+        - Code Injection
+        - Data Breach
+        - Denial of Service
+        - Information Disclosure
+        - Privilege Escalation
+        - XSS/CSRF
+        - Dependency Vulnerability
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-component
+    attributes:
+      label: Affected Component
+      description: Which component is affected?
+      options:
+        - API Keys/Secrets Management
+        - Authentication
+        - NVIDIA Integration
+        - PubMed Integration
+        - Vector Database
+        - Web Interface
+        - CLI
+        - Dependencies
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Brief, non-sensitive description (DO NOT include exploit details)
+      placeholder: |
+        Provide a brief description WITHOUT revealing:
+        - Exact exploit steps
+        - Proof-of-concept code
+        - Sensitive system details
+        - Attack vectors
+
+        Example: "Potential information disclosure in error handling"
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What is the potential impact? Who is affected? (Avoid revealing exploit details)
+      placeholder: |
+        Describe potential impact WITHOUT revealing exploit:
+        - Who could be affected?
+        - What data could be at risk?
+        - What systems could be compromised?
+
+        DO NOT include specific attack scenarios.
+    validations:
+      required: true
+
+  - type: input
+    id: cve-reference
+    attributes:
+      label: CVE/Reference
+      description: Existing CVE number or public reference (only if already publicly disclosed)
+      placeholder: "CVE-2024-XXXXX or https://example.com/advisory"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: private-reporting
+    attributes:
+      label: Private Reporting Status
+      description: Have you reported this through private channels?
+      options:
+        - label: I have created a private Security Advisory with detailed information
+          required: false
+        - label: I am waiting for response from the security team
+          required: false
+        - label: This is a follow-up to a private report
+          required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other non-sensitive information
+      placeholder: |
+        - Environment where discovered
+        - Affected versions
+        - Related issues
+        - Mitigation suggestions
+
+        Remember: NO exploit details or sensitive information!
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        ### Response Timeline
+        - **Critical/High**: 48 hours for initial response
+        - **Medium**: 72 hours for initial response
+        - **Low/Informational**: 1 week for initial response
+
+        ### Additional Resources
+        - [Security Policy](../../SECURITY.md) - Full security reporting procedures
+        - [History Redaction Guide](../../docs/security/history-redaction.md) - Git history cleanup procedures
+        - [Contributing Guidelines](../../CONTRIBUTING.md) - Development workflow and standards
+
+        ### Thank You
+        We appreciate responsible disclosure and will acknowledge your contribution in our security advisories (if you wish to be credited).
+
+        **Remember**: For vulnerabilities that could cause immediate harm, please use private reporting channels (email or GitHub Security Advisories).

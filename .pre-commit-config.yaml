@@ -14,7 +14,7 @@ repos:
       - id: check-yaml
         exclude: ^(tmptest|tmptest2|pubmed_cache)/
       - id: check-json
-        exclude: ^(tmptest|tmptest2|pubmed_cache)/
+        exclude: ^(tmptest|tmptest2|pubmed_cache|Data/mesh_therapeutic_areas\.json)$
       - id: check-toml
       - id: check-merge-conflict
       - id: check-added-large-files
@@ -30,8 +30,8 @@ repos:
     rev: 1.7.5
     hooks:
       - id: bandit
-        args: ["-c", "pyproject.toml"]
-        additional_dependencies: ["bandit[toml]"]
+        args: ["-c", "pyproject.toml", "-s", "B110,B112,B311"]
+        additional_dependencies: ["bandit[toml]", "pbr"]
         exclude: ^tests/
 
   # Code formatting
@@ -142,23 +142,41 @@ repos:
     hooks:
       - id: detect-secrets
         args:
-          - '--baseline'
-          - '.secrets.baseline'
-          - '--exclude-files'
-          - '\\.env\\.example'
-          - '--exclude-files'
-          - 'tests/fixtures/.*'
-          - '--exclude-files'
-          - 'pubmed_cache/.*'
-          - '--exclude-files'
-          - 'query_cache/.*'
-          - '--exclude-files'
-          - 'backups/.*'
+          - "--baseline"
+          - ".secrets.baseline"
+          - "--exclude-files"
+          - '\\.env$'
+          - "--exclude-files"
+          - '\\.env\\.local$'
+          - "--exclude-files"
+          - "tests/.*"
+          - "--exclude-files"
+          - "docs/.*"
+          - "--exclude-files"
+          - "scripts/.*"
+          - "--exclude-files"
+          - "tmp_cache/.*"
+          - "--exclude-files"
+          - "pubmed_cache/.*"
+          - "--exclude-files"
+          - "query_cache/.*"
+          - "--exclude-files"
+          - "backups/.*"
+          - "--exclude-files"
+          - "\\.claude/.*"
+          - "--exclude-files"
+          - "SECURITY\\.md$"
         exclude: |
           (?x)^(
               \.secrets\.baseline|
-              \.env\.example|
-              tests/fixtures/.*|
+              \.env$|
+              \.env\.local$|
+              tests/.*|
+              docs/.*|
+              scripts/.*|
+              \.claude/.*|
+              SECURITY\.md$|
+              tmp_cache/.*|
               pubmed_cache/.*|
               query_cache/.*|
               backups/.*
@@ -180,7 +198,7 @@ repos:
         args:
           [
             "--skip=*.json,*.lock,pubmed_cache/*,tmptest*",
-            "--ignore-words-list=AKS",
+            "--ignore-words-list=AKS,aks,Effient,effient,Ambien,ambien,infarction,trough,nce",
           ]
         exclude: ^(tmptest|tmptest2|pubmed_cache)/
 

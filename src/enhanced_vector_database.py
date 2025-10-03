@@ -14,16 +14,13 @@ Features:
 
 <<use_mcp microsoft-learn>>
 """
-
-import asyncio
 import logging
-import os
 import pickle
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from langchain_core.documents import Document
@@ -32,6 +29,7 @@ from langchain_core.documents import Document
 try:
     import faiss
     from langchain_community.vectorstores import FAISS
+
     FAISS_AVAILABLE = True
 except ImportError:
     faiss = None
@@ -43,6 +41,7 @@ except ImportError:
 try:
     import cupy as cp
     import cuvs
+
     CUVS_AVAILABLE = True
 except ImportError:
     cp = None
@@ -50,29 +49,35 @@ except ImportError:
     CUVS_AVAILABLE = False
     logging.info("cuVS not available, using CPU-only mode")
 
+from .embedding_performance_monitor import monitor_embedding_request
+
 # Import existing components
 from .nvidia_embeddings_v2 import NVIDIAEmbeddings
 from .pharmaceutical_processor import PharmaceuticalProcessor
-from .embedding_performance_monitor import monitor_embedding_request
-from . import pharma_utils
 
 logger = logging.getLogger(__name__)
 
+
 class VectorBackend(Enum):
     """Available vector database backends."""
+
     FAISS_CPU = "faiss_cpu"
     CUVS_GPU = "cuvs_gpu"
     AUTO = "auto"
 
+
 class IndexType(Enum):
     """Vector index types."""
+
     FLAT = "flat"  # Exact search
-    IVF = "ivf"    # Inverted file index
+    IVF = "ivf"  # Inverted file index
     HNSW = "hnsw"  # Hierarchical navigable small world
+
 
 @dataclass
 class VectorDatabaseConfig:
     """Configuration for enhanced vector database."""
+
     backend: VectorBackend = VectorBackend.AUTO
     index_type: IndexType = IndexType.FLAT
     dimension: Optional[int] = None
@@ -82,14 +87,17 @@ class VectorDatabaseConfig:
     cache_size_mb: int = 512
     index_options: Dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class SearchResult:
     """Result from vector search."""
+
     documents: List[Document]
     scores: List[float]
     search_time_ms: float
     backend_used: str
     pharmaceutical_enhanced: bool
+
 
 class EnhancedVectorDatabase:
     """
@@ -105,7 +113,7 @@ class EnhancedVectorDatabase:
         config: Optional[VectorDatabaseConfig] = None,
         db_path: str = "./enhanced_vector_db",
         index_name: str = "hybrid_index",
-        pharmaceutical_processor: Optional[PharmaceuticalProcessor] = None
+        pharmaceutical_processor: Optional[PharmaceuticalProcessor] = None,
     ):
         """
         Initialize enhanced vector database.
@@ -139,7 +147,7 @@ class EnhancedVectorDatabase:
             "faiss_searches": 0,
             "cuvs_searches": 0,
             "avg_search_time_ms": 0.0,
-            "pharmaceutical_enhancements": 0
+            "pharmaceutical_enhancements": 0,
         }
 
         # Create database directory
@@ -155,9 +163,7 @@ class EnhancedVectorDatabase:
         """Initialize the optimal vector backend."""
         if self.config.backend == VectorBackend.AUTO:
             # Auto-select based on availability and capabilities
-            if (CUVS_AVAILABLE and
-                self.config.enable_gpu_acceleration and
-                self._check_gpu_availability()):
+            if CUVS_AVAILABLE and self.config.enable_gpu_acceleration and self._check_gpu_availability():
                 self.current_backend = VectorBackend.CUVS_GPU
                 logger.info("Auto-selected cuVS GPU backend")
             elif FAISS_AVAILABLE:
@@ -189,11 +195,7 @@ class EnhancedVectorDatabase:
             logger.debug(f"GPU not available: {e}")
             return False
 
-    def create_index(
-        self,
-        documents: List[Document],
-        extract_pharmaceutical_metadata: bool = None
-    ) -> bool:
+    def create_index(self, documents: List[Document], extract_pharmaceutical_metadata: bool = None) -> bool:
         """
         Create vector index from documents using optimal backend.
 
@@ -250,7 +252,7 @@ class EnhancedVectorDatabase:
                         service_name=f"enhanced_vector_db_{self.current_backend.value}",
                         response_time_ms=processing_time,
                         success=True,
-                        is_pharmaceutical=extract_pharmaceutical_metadata
+                        is_pharmaceutical=extract_pharmaceutical_metadata,
                     )
 
             return success
@@ -275,11 +277,7 @@ class EnhancedVectorDatabase:
             metadatas = [doc.metadata for doc in documents]
 
             # Create FAISS vectorstore
-            self.faiss_vectorstore = FAISS.from_texts(
-                texts=texts,
-                embedding=self.embeddings,
-                metadatas=metadatas
-            )
+            self.faiss_vectorstore = FAISS.from_texts(texts=texts, embedding=self.embeddings, metadatas=metadatas)
 
             logger.info("FAISS index created successfully")
             return True
@@ -297,27 +295,16 @@ class EnhancedVectorDatabase:
             # Create cuVS index based on type
             if self.config.index_type == IndexType.FLAT:
                 # Use brute force for exact search
-                self.cuvs_index = {
-                    "embeddings": gpu_embeddings,
-                    "documents": documents,
-                    "type": "flat"
-                }
+                self.cuvs_index = {"embeddings": gpu_embeddings, "documents": documents, "type": "flat"}
             elif self.config.index_type == IndexType.IVF:
                 # Create IVF index for faster approximate search
                 nlist = min(int(np.sqrt(len(embeddings_array))), 1024)
                 index_params = cuvs.IvfFlatSearchParams(nlist=nlist)
 
                 # Build index
-                index = cuvs.IvfFlat.build(
-                    params=index_params,
-                    dataset=gpu_embeddings
-                )
+                index = cuvs.IvfFlat.build(params=index_params, dataset=gpu_embeddings)
 
-                self.cuvs_index = {
-                    "index": index,
-                    "documents": documents,
-                    "type": "ivf"
-                }
+                self.cuvs_index = {"index": index, "documents": documents, "type": "ivf"}
             else:
                 logger.warning(f"Index type {self.config.index_type} not supported for cuVS, using flat")
                 return self._create_cuvs_index(embeddings_array, documents)
@@ -345,10 +332,7 @@ class EnhancedVectorDatabase:
 
                 # Create enhanced document
                 enhanced_metadata = {**doc.metadata, **pharma_metadata}
-                enhanced_doc = Document(
-                    page_content=doc.page_content,
-                    metadata=enhanced_metadata
-                )
+                enhanced_doc = Document(page_content=doc.page_content, metadata=enhanced_metadata)
                 enhanced_docs.append(enhanced_doc)
 
             except Exception as e:
@@ -358,11 +342,7 @@ class EnhancedVectorDatabase:
         return enhanced_docs
 
     def search(
-        self,
-        query: str,
-        k: int = 5,
-        filter_criteria: Optional[Dict[str, Any]] = None,
-        search_type: str = "similarity"
+        self, query: str, k: int = 5, filter_criteria: Optional[Dict[str, Any]] = None, search_type: str = "similarity"
     ) -> SearchResult:
         """
         Search for similar documents.
@@ -397,9 +377,8 @@ class EnhancedVectorDatabase:
 
             # Update search statistics
             self.search_stats["avg_search_time_ms"] = (
-                (self.search_stats["avg_search_time_ms"] * (self.search_stats["total_searches"] - 1) + search_time_ms)
-                / self.search_stats["total_searches"]
-            )
+                self.search_stats["avg_search_time_ms"] * (self.search_stats["total_searches"] - 1) + search_time_ms
+            ) / self.search_stats["total_searches"]
 
             # Record performance metrics
             if self.config.enable_performance_monitoring:
@@ -407,7 +386,7 @@ class EnhancedVectorDatabase:
                     service_name=f"enhanced_vector_db_{self.current_backend.value}",
                     response_time_ms=search_time_ms,
                     success=True,
-                    is_pharmaceutical=self.config.enable_pharmaceutical_enhancement
+                    is_pharmaceutical=self.config.enable_pharmaceutical_enhancement,
                 )
 
             return SearchResult(
@@ -415,7 +394,7 @@ class EnhancedVectorDatabase:
                 scores=scores,
                 search_time_ms=search_time_ms,
                 backend_used=self.current_backend.value,
-                pharmaceutical_enhanced=self.config.enable_pharmaceutical_enhancement
+                pharmaceutical_enhanced=self.config.enable_pharmaceutical_enhancement,
             )
 
         except Exception as e:
@@ -428,7 +407,7 @@ class EnhancedVectorDatabase:
                     service_name=f"enhanced_vector_db_{self.current_backend.value}",
                     response_time_ms=search_time_ms,
                     success=False,
-                    is_pharmaceutical=self.config.enable_pharmaceutical_enhancement
+                    is_pharmaceutical=self.config.enable_pharmaceutical_enhancement,
                 )
 
             # Return empty result
@@ -437,15 +416,11 @@ class EnhancedVectorDatabase:
                 scores=[],
                 search_time_ms=search_time_ms,
                 backend_used=self.current_backend.value,
-                pharmaceutical_enhanced=False
+                pharmaceutical_enhanced=False,
             )
 
     def _search_faiss(
-        self,
-        query_embedding: List[float],
-        k: int,
-        filter_criteria: Optional[Dict[str, Any]],
-        search_type: str
+        self, query_embedding: List[float], k: int, filter_criteria: Optional[Dict[str, Any]], search_type: str
     ) -> Tuple[List[Document], List[float]]:
         """Search using FAISS backend."""
         if not self.faiss_vectorstore:
@@ -467,9 +442,7 @@ class EnhancedVectorDatabase:
 
             # Search with filtering
             docs_and_scores = self.faiss_vectorstore.similarity_search_with_score(
-                query=query_embedding,
-                k=k * 3,  # Oversample to account for filtering
-                filter=filter_func
+                query=query_embedding, k=k * 3, filter=filter_func  # Oversample to account for filtering
             )
 
             # Extract results
@@ -478,26 +451,17 @@ class EnhancedVectorDatabase:
         else:
             # Standard similarity search
             if search_type == "mmr":
-                documents = self.faiss_vectorstore.max_marginal_relevance_search(
-                    query=query_embedding,
-                    k=k
-                )
+                documents = self.faiss_vectorstore.max_marginal_relevance_search(query=query_embedding, k=k)
                 scores = [0.0] * len(documents)  # MMR doesn't return scores
             else:
-                docs_and_scores = self.faiss_vectorstore.similarity_search_with_score(
-                    query=query_embedding,
-                    k=k
-                )
+                docs_and_scores = self.faiss_vectorstore.similarity_search_with_score(query=query_embedding, k=k)
                 documents = [doc for doc, score in docs_and_scores]
                 scores = [score for doc, score in docs_and_scores]
 
         return documents, scores
 
     def _search_cuvs(
-        self,
-        query_embedding: List[float],
-        k: int,
-        filter_criteria: Optional[Dict[str, Any]]
+        self, query_embedding: List[float], k: int, filter_criteria: Optional[Dict[str, Any]]
     ) -> Tuple[List[Document], List[float]]:
         """Search using cuVS backend."""
         if not self.cuvs_index:
@@ -512,8 +476,7 @@ class EnhancedVectorDatabase:
 
             # Compute similarities (cosine similarity)
             similarities = cp.dot(query_gpu, embeddings_gpu.T) / (
-                cp.linalg.norm(query_gpu, axis=1, keepdims=True) *
-                cp.linalg.norm(embeddings_gpu, axis=1)
+                cp.linalg.norm(query_gpu, axis=1, keepdims=True) * cp.linalg.norm(embeddings_gpu, axis=1)
             )
 
             # Get top k indices
@@ -529,12 +492,7 @@ class EnhancedVectorDatabase:
             search_params = cuvs.IvfFlatSearchParams(nprobe=min(32, self.cuvs_index["index"].nlist))
 
             # Perform search
-            scores, indices = cuvs.search(
-                index=self.cuvs_index["index"],
-                params=search_params,
-                queries=query_gpu,
-                k=k
-            )
+            scores, indices = cuvs.search(index=self.cuvs_index["index"], params=search_params, queries=query_gpu, k=k)
 
             # Convert to CPU
             indices_cpu = cp.asnumpy(indices[0])
@@ -588,7 +546,9 @@ class EnhancedVectorDatabase:
                 index_data = {
                     "type": self.cuvs_index["type"],
                     "documents": self.cuvs_index["documents"],
-                    "embeddings_cpu": cp.asnumpy(self.cuvs_index["embeddings"]) if "embeddings" in self.cuvs_index else None
+                    "embeddings_cpu": cp.asnumpy(self.cuvs_index["embeddings"])
+                    if "embeddings" in self.cuvs_index
+                    else None,
                 }
 
                 with open(self.db_path / f"{self.index_name}_cuvs.pkl", "wb") as f:
@@ -600,7 +560,7 @@ class EnhancedVectorDatabase:
                 "config": self.config,
                 "dimension": self.dimension,
                 "num_documents": len(self.documents),
-                "search_stats": self.search_stats
+                "search_stats": self.search_stats,
             }
 
             with open(self.db_path / f"{self.index_name}_metadata.pkl", "wb") as f:
@@ -640,10 +600,7 @@ class EnhancedVectorDatabase:
             if saved_backend == VectorBackend.FAISS_CPU:
                 if FAISS_AVAILABLE:
                     self.faiss_vectorstore = FAISS.load_local(
-                        str(self.db_path),
-                        self.embeddings,
-                        self.index_name,
-                        allow_dangerous_deserialization=True
+                        str(self.db_path), self.embeddings, self.index_name, allow_dangerous_deserialization=True
                     )
                     self.current_backend = VectorBackend.FAISS_CPU
                 else:
@@ -662,7 +619,7 @@ class EnhancedVectorDatabase:
                         self.cuvs_index = {
                             "embeddings": gpu_embeddings,
                             "documents": index_data["documents"],
-                            "type": index_data["type"]
+                            "type": index_data["type"],
                         }
                         self.current_backend = VectorBackend.CUVS_GPU
                     else:
@@ -742,13 +699,13 @@ class EnhancedVectorDatabase:
                 "backend": self.config.backend.value,
                 "index_type": self.config.index_type.value,
                 "enable_gpu_acceleration": self.config.enable_gpu_acceleration,
-                "enable_pharmaceutical_enhancement": self.config.enable_pharmaceutical_enhancement
+                "enable_pharmaceutical_enhancement": self.config.enable_pharmaceutical_enhancement,
             },
             "capabilities": {
                 "faiss_available": FAISS_AVAILABLE,
                 "cuvs_available": CUVS_AVAILABLE,
-                "gpu_available": self._check_gpu_availability()
-            }
+                "gpu_available": self._check_gpu_availability(),
+            },
         }
 
     def optimize_performance(self) -> Dict[str, Any]:
@@ -758,50 +715,47 @@ class EnhancedVectorDatabase:
         Returns:
             Performance optimization report
         """
-        report = {
-            "current_performance": self.search_stats.copy(),
-            "recommendations": [],
-            "optimizations_applied": []
-        }
+        report = {"current_performance": self.search_stats.copy(), "recommendations": [], "optimizations_applied": []}
 
         # Analyze search performance
         if self.search_stats["total_searches"] > 0:
             avg_search_time = self.search_stats["avg_search_time_ms"]
 
             # GPU acceleration recommendation
-            if (self.current_backend == VectorBackend.FAISS_CPU and
-                CUVS_AVAILABLE and
-                self._check_gpu_availability() and
-                avg_search_time > 100):
-
-                report["recommendations"].append({
-                    "type": "backend_migration",
-                    "recommendation": "Migrate to cuVS GPU backend for better performance",
-                    "expected_improvement": "50-80% faster search times",
-                    "action": "call migrate_to_backend(VectorBackend.CUVS_GPU)"
-                })
+            if (
+                self.current_backend == VectorBackend.FAISS_CPU
+                and CUVS_AVAILABLE
+                and self._check_gpu_availability()
+                and avg_search_time > 100
+            ):
+                report["recommendations"].append(
+                    {
+                        "type": "backend_migration",
+                        "recommendation": "Migrate to cuVS GPU backend for better performance",
+                        "expected_improvement": "50-80% faster search times",
+                        "action": "call migrate_to_backend(VectorBackend.CUVS_GPU)",
+                    }
+                )
 
             # Index optimization recommendation
-            if (len(self.documents) > 10000 and
-                self.config.index_type == IndexType.FLAT):
-
-                report["recommendations"].append({
-                    "type": "index_optimization",
-                    "recommendation": "Switch to IVF index for large document collections",
-                    "expected_improvement": "Faster search with minimal accuracy loss",
-                    "action": "recreate index with IndexType.IVF"
-                })
+            if len(self.documents) > 10000 and self.config.index_type == IndexType.FLAT:
+                report["recommendations"].append(
+                    {
+                        "type": "index_optimization",
+                        "recommendation": "Switch to IVF index for large document collections",
+                        "expected_improvement": "Faster search with minimal accuracy loss",
+                        "action": "recreate index with IndexType.IVF",
+                    }
+                )
 
         return report
 
 
 # Factory functions for easy integration
 
+
 def create_enhanced_vector_database(
-    embeddings: NVIDIAEmbeddings,
-    enable_gpu: bool = True,
-    enable_pharmaceutical: bool = True,
-    **kwargs
+    embeddings: NVIDIAEmbeddings, enable_gpu: bool = True, enable_pharmaceutical: bool = True, **kwargs
 ) -> EnhancedVectorDatabase:
     """
     Create enhanced vector database with optimal configuration.
@@ -819,18 +773,14 @@ def create_enhanced_vector_database(
         backend=VectorBackend.AUTO,
         enable_gpu_acceleration=enable_gpu,
         enable_pharmaceutical_enhancement=enable_pharmaceutical,
-        **kwargs
+        **kwargs,
     )
 
-    return EnhancedVectorDatabase(
-        embeddings=embeddings,
-        config=config
-    )
+    return EnhancedVectorDatabase(embeddings=embeddings, config=config)
+
 
 def migrate_legacy_faiss_database(
-    legacy_db_path: str,
-    embeddings: NVIDIAEmbeddings,
-    target_backend: VectorBackend = VectorBackend.AUTO
+    legacy_db_path: str, embeddings: NVIDIAEmbeddings, target_backend: VectorBackend = VectorBackend.AUTO
 ) -> EnhancedVectorDatabase:
     """
     Migrate legacy FAISS database to enhanced vector database.

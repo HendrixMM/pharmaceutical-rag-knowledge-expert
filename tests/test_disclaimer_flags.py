@@ -4,7 +4,6 @@ Tests for pharma disclaimer flags in EnhancedNeMoClient chat responses.
 This test avoids network by injecting a dummy cloud client that mimics the
 OpenAIWrapper chat response shape.
 """
-
 import os
 from unittest.mock import patch
 
@@ -37,22 +36,26 @@ class _DummyCloudClient:
 
 @pytest.mark.asyncio
 async def test_enhanced_client_chat_adds_disclaimer_flag():
-    with patch.dict(os.environ, {
-        "PHARMA_REQUIRE_DISCLAIMER": "true",
-        "APPEND_DISCLAIMER_IN_ANSWER": "true",
-        "MEDICAL_DISCLAIMER": "[DISCLAIMER] Not medical advice.",
-        # Ensure cloud-first strategy does not require actual OpenAI SDK
-        "ENABLE_NVIDIA_BUILD_FALLBACK": "false",
-    }, clear=False):
+    with patch.dict(
+        os.environ,
+        {
+            "PHARMA_REQUIRE_DISCLAIMER": "true",
+            "APPEND_DISCLAIMER_IN_ANSWER": "true",
+            "MEDICAL_DISCLAIMER": "[DISCLAIMER] Not medical advice.",
+            # Ensure cloud-first strategy does not require actual OpenAI SDK
+            "ENABLE_NVIDIA_BUILD_FALLBACK": "false",
+        },
+        clear=False,
+    ):
         cfg = EnhancedRAGConfig.from_env()
         client = EnhancedNeMoClient(config=cfg, enable_fallback=True, pharmaceutical_optimized=True)
 
         # Inject dummy cloud client regardless of OpenAI availability
         client.cloud_client = _DummyCloudClient()
 
-        resp = client.create_chat_completion([
-            {"role": "user", "content": "What are common interactions for metformin?"}
-        ])
+        resp = client.create_chat_completion(
+            [{"role": "user", "content": "What are common interactions for metformin?"}]
+        )
 
         assert resp.success is True
         assert isinstance(resp.data, dict)
@@ -65,12 +68,16 @@ async def test_enhanced_client_chat_adds_disclaimer_flag():
 @pytest.mark.asyncio
 async def test_enhanced_client_chat_disclaimer_cached_and_count_once():
     # Verify disclaimer flags persist on cached responses and cloud call count is 1
-    with patch.dict(os.environ, {
-        "PHARMA_REQUIRE_DISCLAIMER": "true",
-        "APPEND_DISCLAIMER_IN_ANSWER": "true",
-        "MEDICAL_DISCLAIMER": "[DISCLAIMER] Not medical advice.",
-        "ENABLE_NVIDIA_BUILD_FALLBACK": "false",
-    }, clear=False):
+    with patch.dict(
+        os.environ,
+        {
+            "PHARMA_REQUIRE_DISCLAIMER": "true",
+            "APPEND_DISCLAIMER_IN_ANSWER": "true",
+            "MEDICAL_DISCLAIMER": "[DISCLAIMER] Not medical advice.",
+            "ENABLE_NVIDIA_BUILD_FALLBACK": "false",
+        },
+        clear=False,
+    ):
         cfg = EnhancedRAGConfig.from_env()
         client = EnhancedNeMoClient(config=cfg, enable_fallback=True, pharmaceutical_optimized=True)
 
@@ -78,6 +85,7 @@ async def test_enhanced_client_chat_disclaimer_cached_and_count_once():
             def __init__(self):
                 super().__init__()
                 self.calls = 0
+
             def create_chat_completion(self, *args, **kwargs):
                 self.calls += 1
                 return super().create_chat_completion(*args, **kwargs)
@@ -101,19 +109,21 @@ async def test_enhanced_client_chat_disclaimer_cached_and_count_once():
 @pytest.mark.asyncio
 async def test_enhanced_client_chat_disclaimer_flag_without_append():
     # Verify flag is set but content not modified when append=false
-    with patch.dict(os.environ, {
-        "PHARMA_REQUIRE_DISCLAIMER": "true",
-        "APPEND_DISCLAIMER_IN_ANSWER": "false",
-        "MEDICAL_DISCLAIMER": "[DISCLAIMER] Not medical advice.",
-        "ENABLE_NVIDIA_BUILD_FALLBACK": "false",
-    }, clear=False):
+    with patch.dict(
+        os.environ,
+        {
+            "PHARMA_REQUIRE_DISCLAIMER": "true",
+            "APPEND_DISCLAIMER_IN_ANSWER": "false",
+            "MEDICAL_DISCLAIMER": "[DISCLAIMER] Not medical advice.",
+            "ENABLE_NVIDIA_BUILD_FALLBACK": "false",
+        },
+        clear=False,
+    ):
         cfg = EnhancedRAGConfig.from_env()
         client = EnhancedNeMoClient(config=cfg, enable_fallback=True, pharmaceutical_optimized=True)
         client.cloud_client = _DummyCloudClient()
 
-        resp = client.create_chat_completion([
-            {"role": "user", "content": "Interactions for ibuprofen?"}
-        ])
+        resp = client.create_chat_completion([{"role": "user", "content": "Interactions for ibuprofen?"}])
 
         assert resp.success is True
         assert resp.data.get("disclaimer_added") is True

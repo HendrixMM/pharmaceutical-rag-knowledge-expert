@@ -6,19 +6,14 @@ Validates all three verification comments:
 2. Comment 2: Tracker parses dual-endpoint results correctly
 3. Comment 3: Tracker is wired into runner and exports artifacts
 """
-
-import pytest
 import sys
 from pathlib import Path
-from typing import Dict, Any
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.monitoring.pharmaceutical_benchmark_tracker import (
-    PharmaceuticalBenchmarkTracker,
-    BenchmarkMetrics,
-    RegressionDetector
-)
+from src.monitoring.pharmaceutical_benchmark_tracker import PharmaceuticalBenchmarkTracker
 
 
 @pytest.mark.pharmaceutical
@@ -89,7 +84,7 @@ class TestMonitoringIntegration:
                 "total_queries": 5,
                 "cloud_successful_queries": 5,
                 "self_hosted_successful_queries": 4,
-                "failed_queries": 1
+                "failed_queries": 1,
             },
             "metrics": {
                 "cloud": {
@@ -97,16 +92,16 @@ class TestMonitoringIntegration:
                     "average_overall_score": 0.80,
                     "average_latency_ms": 450.0,
                     "average_credits_per_query": 12.5,
-                    "total_credits": 62.5
+                    "total_credits": 62.5,
                 },
                 "self_hosted": {
                     "average_accuracy": 0.82,
                     "average_overall_score": 0.78,
                     "average_latency_ms": 850.0,
                     "average_credits_per_query": 0.0,
-                    "total_credits": 0.0
-                }
-            }
+                    "total_credits": 0.0,
+                },
+            },
         }
 
         # Track the result
@@ -150,15 +145,15 @@ class TestMonitoringIntegration:
                 "mode": "cloud",
                 "total_queries": 10,
                 "successful_queries": 9,
-                "failed_queries": 1
+                "failed_queries": 1,
             },
             "metrics": {
                 "average_accuracy": 0.88,
                 "average_overall_score": 0.85,
                 "average_latency_ms": 500.0,
                 "average_credits_per_query": 15.0,
-                "total_credits": 135.0
-            }
+                "total_credits": 135.0,
+            },
         }
 
         # Track the result
@@ -184,16 +179,8 @@ class TestMonitoringIntegration:
         # Create baseline with both endpoints
         baseline = {
             "drug_interactions": {
-                "cloud": {
-                    "accuracy": 0.90,
-                    "cost_per_query": 10.0,
-                    "latency_ms": 400.0
-                },
-                "self_hosted": {
-                    "accuracy": 0.85,
-                    "cost_per_query": 0.0,
-                    "latency_ms": 800.0
-                }
+                "cloud": {"accuracy": 0.90, "cost_per_query": 10.0, "latency_ms": 400.0},
+                "self_hosted": {"accuracy": 0.85, "cost_per_query": 0.0, "latency_ms": 800.0},
             }
         }
 
@@ -208,20 +195,20 @@ class TestMonitoringIntegration:
                 "total_queries": 5,
                 "cloud_successful_queries": 5,
                 "self_hosted_successful_queries": 5,
-                "failed_queries": 0
+                "failed_queries": 0,
             },
             "metrics": {
                 "cloud": {
                     "average_accuracy": 0.80,  # 10% drop from baseline
                     "average_credits_per_query": 10.0,
-                    "average_latency_ms": 400.0
+                    "average_latency_ms": 400.0,
                 },
                 "self_hosted": {
                     "average_accuracy": 0.85,  # No change
                     "average_credits_per_query": 0.0,
-                    "average_latency_ms": 800.0
-                }
-            }
+                    "average_latency_ms": 800.0,
+                },
+            },
         }
 
         tracker.track_benchmark_run(result_with_regression)
@@ -250,7 +237,7 @@ class TestMonitoringIntegration:
             accuracy=0.90,
             cost=12.5,
             latency_ms=450.0,
-            success=True
+            success=True,
         )
 
         tracker.track_query_result(
@@ -259,7 +246,7 @@ class TestMonitoringIntegration:
             accuracy=0.85,
             cost=10.0,
             latency_ms=500.0,
-            success=True
+            success=True,
         )
 
         # Track benchmark run
@@ -269,13 +256,9 @@ class TestMonitoringIntegration:
                 "mode": "cloud",
                 "total_queries": 2,
                 "successful_queries": 2,
-                "failed_queries": 0
+                "failed_queries": 0,
             },
-            "metrics": {
-                "average_accuracy": 0.875,
-                "average_credits_per_query": 11.25,
-                "average_latency_ms": 475.0
-            }
+            "metrics": {"average_accuracy": 0.875, "average_credits_per_query": 11.25, "average_latency_ms": 475.0},
         }
 
         tracker.track_benchmark_run(benchmark_result)
@@ -289,7 +272,8 @@ class TestMonitoringIntegration:
 
         # Verify export (to temp file)
         import tempfile
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             temp_path = f.name
 
         try:
@@ -298,7 +282,8 @@ class TestMonitoringIntegration:
 
             # Verify exported content
             import json
-            with open(temp_path, 'r') as f:
+
+            with open(temp_path) as f:
                 exported = json.load(f)
 
             assert "timestamp" in exported
@@ -372,12 +357,7 @@ class TestMonitoringIntegration:
 
         # Should still work for tracking
         tracker.track_query_result(
-            category="test",
-            query_type="test_type",
-            accuracy=0.9,
-            cost=10.0,
-            latency_ms=100.0,
-            success=True
+            category="test", query_type="test_type", accuracy=0.9, cost=10.0, latency_ms=100.0, success=True
         )
 
         summary = tracker.get_metrics_summary()
@@ -405,16 +385,16 @@ class TestMonitoringIntegration:
                 "total_queries": 1,
                 "cloud_successful_queries": 0,
                 "self_hosted_successful_queries": 1,
-                "failed_queries": 0
+                "failed_queries": 0,
             },
             "metrics": {
                 "cloud": {},  # Empty (graceful handling test)
                 "self_hosted": {
                     "average_accuracy": 0.85,
                     "average_credits_per_query": 0.0,
-                    "average_latency_ms": 850.0
-                }
-            }
+                    "average_latency_ms": 850.0,
+                },
+            },
         }
 
         # Should not crash even with empty cloud metrics
@@ -424,7 +404,6 @@ class TestMonitoringIntegration:
         assert summary["total_queries"] == 2, "1 query × 2 endpoints = 2 total"
         assert summary["successful_queries"] == 1, "Only self-hosted succeeded"
         assert summary["failed_queries"] == 1, "Cloud failed"
-
 
     def test_no_double_counting_dual_mode(self):
         """
@@ -446,7 +425,7 @@ class TestMonitoringIntegration:
                 accuracy=0.90,
                 cost=12.5,
                 latency_ms=450.0,
-                success=True
+                success=True,
             )
             # Self-hosted endpoint succeeds
             tracker.track_query_result(
@@ -455,7 +434,7 @@ class TestMonitoringIntegration:
                 accuracy=0.85,
                 cost=0.0,
                 latency_ms=850.0,
-                success=True
+                success=True,
             )
 
         # After individual tracking: total_queries should be 6 (3 queries × 2 endpoints)
@@ -471,20 +450,16 @@ class TestMonitoringIntegration:
                 "total_queries": 3,
                 "cloud_successful_queries": 3,
                 "self_hosted_successful_queries": 3,
-                "failed_queries": 0
+                "failed_queries": 0,
             },
             "metrics": {
-                "cloud": {
-                    "average_accuracy": 0.90,
-                    "average_credits_per_query": 12.5,
-                    "average_latency_ms": 450.0
-                },
+                "cloud": {"average_accuracy": 0.90, "average_credits_per_query": 12.5, "average_latency_ms": 450.0},
                 "self_hosted": {
                     "average_accuracy": 0.85,
                     "average_credits_per_query": 0.0,
-                    "average_latency_ms": 850.0
-                }
-            }
+                    "average_latency_ms": 850.0,
+                },
+            },
         }
 
         tracker.track_benchmark_run(benchmark_result)
@@ -496,7 +471,9 @@ class TestMonitoringIntegration:
 
         # Success rate must be <= 100%
         summary = tracker.get_metrics_summary()
-        assert summary["success_rate"] <= 1.0, f"Success rate {summary['success_rate']:.2%} exceeds 100% (double-counting bug!)"
+        assert (
+            summary["success_rate"] <= 1.0
+        ), f"Success rate {summary['success_rate']:.2%} exceeds 100% (double-counting bug!)"
         assert summary["success_rate"] == 1.0, f"Expected 100% success rate, got {summary['success_rate']:.2%}"
 
     def test_no_double_counting_single_mode(self):
@@ -513,7 +490,7 @@ class TestMonitoringIntegration:
                 accuracy=0.88,
                 cost=10.0,
                 latency_ms=500.0,
-                success=True
+                success=True,
             )
 
         # After individual tracking: total_queries should be 5
@@ -527,13 +504,9 @@ class TestMonitoringIntegration:
                 "mode": "cloud",
                 "total_queries": 5,
                 "successful_queries": 5,
-                "failed_queries": 0
+                "failed_queries": 0,
             },
-            "metrics": {
-                "average_accuracy": 0.88,
-                "average_credits_per_query": 10.0,
-                "average_latency_ms": 500.0
-            }
+            "metrics": {"average_accuracy": 0.88, "average_credits_per_query": 10.0, "average_latency_ms": 500.0},
         }
 
         tracker.track_benchmark_run(benchmark_result)
@@ -582,12 +555,9 @@ class TestMonitoringIntegration:
                 "total_queries": 4,
                 "cloud_successful_queries": 2,
                 "self_hosted_successful_queries": 2,
-                "failed_queries": 1  # Only 1 query failed on BOTH endpoints
+                "failed_queries": 1,  # Only 1 query failed on BOTH endpoints
             },
-            "metrics": {
-                "cloud": {"average_accuracy": 0.6},
-                "self_hosted": {"average_accuracy": 0.57}
-            }
+            "metrics": {"cloud": {"average_accuracy": 0.6}, "self_hosted": {"average_accuracy": 0.57}},
         }
 
         tracker.track_benchmark_run(benchmark_result)

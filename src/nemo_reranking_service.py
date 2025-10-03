@@ -17,13 +17,11 @@ Key Features:
 
 Based on latest NVIDIA NeMo Retriever reranking patterns and best practices.
 """
-
 import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Union
-import math
+from typing import Any, Dict, List, Optional
 
 from langchain_core.documents import Document
 
@@ -31,9 +29,11 @@ from .nemo_retriever_client import NeMoRetrieverClient, create_nemo_client
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class RerankingResult:
     """Result from reranking operation."""
+
     success: bool
     reranked_documents: Optional[List[Document]] = None
     scores: Optional[List[float]] = None
@@ -44,9 +44,11 @@ class RerankingResult:
     returned_count: int = 0
     error: Optional[str] = None
 
+
 @dataclass
 class RerankingConfig:
     """Configuration for reranking operations."""
+
     model: str = "nv-rerankqa-mistral4b-v3"
     top_k: Optional[int] = None  # Return all by default
     min_score_threshold: float = 0.0
@@ -57,14 +59,17 @@ class RerankingConfig:
     cross_modal_weighting: bool = True
     preserve_original_order_on_tie: bool = True
 
+
 @dataclass
 class PharmaceuticalRerankingContext:
     """Context for pharmaceutical-specific reranking optimizations."""
+
     query_type: str = "general"  # "safety", "efficacy", "dosing", "mechanism", "regulatory"
     content_priorities: Dict[str, float] = field(default_factory=dict)
     safety_critical: bool = False
     requires_recent_data: bool = False
     regulatory_context: bool = False
+
 
 class NeMoRerankingService:
     """
@@ -77,25 +82,65 @@ class NeMoRerankingService:
     # Pharmaceutical query type patterns for optimization
     PHARMACEUTICAL_QUERY_PATTERNS = {
         "safety": [
-            "adverse", "side effect", "contraindication", "warning", "safety",
-            "toxicity", "overdose", "interaction", "risk", "caution"
+            "adverse",
+            "side effect",
+            "contraindication",
+            "warning",
+            "safety",
+            "toxicity",
+            "overdose",
+            "interaction",
+            "risk",
+            "caution",
         ],
         "efficacy": [
-            "efficacy", "effectiveness", "response", "outcome", "benefit",
-            "improvement", "success", "cure", "treatment", "therapeutic"
+            "efficacy",
+            "effectiveness",
+            "response",
+            "outcome",
+            "benefit",
+            "improvement",
+            "success",
+            "cure",
+            "treatment",
+            "therapeutic",
         ],
         "dosing": [
-            "dosage", "dose", "administration", "frequency", "schedule",
-            "titration", "adjustment", "concentration", "amount", "regimen"
+            "dosage",
+            "dose",
+            "administration",
+            "frequency",
+            "schedule",
+            "titration",
+            "adjustment",
+            "concentration",
+            "amount",
+            "regimen",
         ],
         "mechanism": [
-            "mechanism", "action", "pathway", "target", "receptor",
-            "pharmacology", "binding", "metabolism", "clearance", "kinetics"
+            "mechanism",
+            "action",
+            "pathway",
+            "target",
+            "receptor",
+            "pharmacology",
+            "binding",
+            "metabolism",
+            "clearance",
+            "kinetics",
         ],
         "regulatory": [
-            "approval", "fda", "ema", "indication", "labeling", "guideline",
-            "regulation", "compliance", "submission", "review"
-        ]
+            "approval",
+            "fda",
+            "ema",
+            "indication",
+            "labeling",
+            "guideline",
+            "regulation",
+            "compliance",
+            "submission",
+            "review",
+        ],
     }
 
     # Content type weights for cross-modal reranking
@@ -107,24 +152,22 @@ class NeMoRerankingService:
         "formula": 1.3,  # Chemical formulas highly relevant
         "clinical_data": 1.4,  # Clinical data prioritized for medical queries
         "regulatory": 1.5,  # Regulatory info highly important for compliance
-        "safety": 1.6   # Safety information gets highest priority
+        "safety": 1.6,  # Safety information gets highest priority
     }
 
     # Source authority weights for pharmaceutical content
     SOURCE_AUTHORITY_WEIGHTS = {
-        "pubmed": 1.3,      # PubMed articles are authoritative
-        "fda_label": 1.5,   # FDA drug labels are highly authoritative
+        "pubmed": 1.3,  # PubMed articles are authoritative
+        "fda_label": 1.5,  # FDA drug labels are highly authoritative
         "clinical_trial": 1.4,  # Clinical trial data is reliable
-        "patent": 0.9,     # Patents less authoritative for clinical use
-        "textbook": 1.1,   # Medical textbooks are reliable
+        "patent": 0.9,  # Patents less authoritative for clinical use
+        "textbook": 1.1,  # Medical textbooks are reliable
         "guideline": 1.4,  # Clinical guidelines are important
         "local_doc": 1.0,  # Local documents baseline
-        "unknown": 1.0     # Unknown sources baseline
+        "unknown": 1.0,  # Unknown sources baseline
     }
 
-    def __init__(self,
-                 nemo_client: Optional[NeMoRetrieverClient] = None,
-                 config: Optional[RerankingConfig] = None):
+    def __init__(self, nemo_client: Optional[NeMoRetrieverClient] = None, config: Optional[RerankingConfig] = None):
         """
         Initialize NeMo Reranking Service.
 
@@ -142,7 +185,7 @@ class NeMoRerankingService:
             "total_processing_time_ms": 0.0,
             "pharmaceutical_optimizations": 0,
             "cross_modal_operations": 0,
-            "average_score_improvement": 0.0
+            "average_score_improvement": 0.0,
         }
 
     async def _ensure_nemo_client(self) -> NeMoRetrieverClient:
@@ -176,54 +219,46 @@ class NeMoRerankingService:
         # Determine content priorities based on query type
         content_priorities = {}
         if query_type == "safety":
-            content_priorities = {
-                "safety": 1.8,
-                "regulatory": 1.6,
-                "clinical_data": 1.5,
-                "text": 1.0
-            }
+            content_priorities = {"safety": 1.8, "regulatory": 1.6, "clinical_data": 1.5, "text": 1.0}
         elif query_type == "efficacy":
-            content_priorities = {
-                "clinical_data": 1.6,
-                "table": 1.4,
-                "chart": 1.3,
-                "text": 1.0
-            }
+            content_priorities = {"clinical_data": 1.6, "table": 1.4, "chart": 1.3, "text": 1.0}
         elif query_type == "dosing":
-            content_priorities = {
-                "table": 1.5,
-                "regulatory": 1.4,
-                "text": 1.0
-            }
+            content_priorities = {"table": 1.5, "regulatory": 1.4, "text": 1.0}
         elif query_type == "mechanism":
-            content_priorities = {
-                "formula": 1.5,
-                "chart": 1.3,
-                "text": 1.0
-            }
+            content_priorities = {"formula": 1.5, "chart": 1.3, "text": 1.0}
         else:
             content_priorities = self.CONTENT_TYPE_WEIGHTS.copy()
 
         # Determine critical flags
-        safety_critical = any(term in query_lower for term in [
-            "safety", "adverse", "toxic", "warning", "contraindication",
-            "black box", "death", "serious", "severe"
-        ])
+        safety_critical = any(
+            term in query_lower
+            for term in [
+                "safety",
+                "adverse",
+                "toxic",
+                "warning",
+                "contraindication",
+                "black box",
+                "death",
+                "serious",
+                "severe",
+            ]
+        )
 
-        requires_recent_data = any(term in query_lower for term in [
-            "recent", "latest", "new", "current", "updated", "2023", "2024"
-        ])
+        requires_recent_data = any(
+            term in query_lower for term in ["recent", "latest", "new", "current", "updated", "2023", "2024"]
+        )
 
-        regulatory_context = any(term in query_lower for term in [
-            "fda", "ema", "approval", "regulation", "guideline", "compliance"
-        ])
+        regulatory_context = any(
+            term in query_lower for term in ["fda", "ema", "approval", "regulation", "guideline", "compliance"]
+        )
 
         return PharmaceuticalRerankingContext(
             query_type=query_type,
             content_priorities=content_priorities,
             safety_critical=safety_critical,
             requires_recent_data=requires_recent_data,
-            regulatory_context=regulatory_context
+            regulatory_context=regulatory_context,
         )
 
     def _calculate_source_authority_score(self, document: Document) -> float:
@@ -245,9 +280,9 @@ class NeMoRerankingService:
 
         return self.SOURCE_AUTHORITY_WEIGHTS.get(source_type, 1.0)
 
-    def _calculate_content_type_score(self,
-                                    document: Document,
-                                    pharma_context: PharmaceuticalRerankingContext) -> float:
+    def _calculate_content_type_score(
+        self, document: Document, pharma_context: PharmaceuticalRerankingContext
+    ) -> float:
         """Calculate content type score based on pharmaceutical context."""
         metadata = document.metadata
         content_type = metadata.get("element_type", "text")
@@ -259,7 +294,7 @@ class NeMoRerankingService:
             "image": "image",
             "text": "text",
             "Title": "text",
-            "NarrativeText": "text"
+            "NarrativeText": "text",
         }
 
         mapped_type = type_mapping.get(content_type, "text")
@@ -276,10 +311,7 @@ class NeMoRerankingService:
             mapped_type = "formula"
 
         # Get weight from pharmaceutical context or default
-        return pharma_context.content_priorities.get(
-            mapped_type,
-            self.CONTENT_TYPE_WEIGHTS.get(mapped_type, 1.0)
-        )
+        return pharma_context.content_priorities.get(mapped_type, self.CONTENT_TYPE_WEIGHTS.get(mapped_type, 1.0))
 
     def _calculate_recency_score(self, document: Document, requires_recent: bool) -> float:
         """Calculate recency score for documents."""
@@ -311,10 +343,9 @@ class NeMoRerankingService:
         # No date information, neutral score
         return 1.0
 
-    async def rerank_documents(self,
-                             query: str,
-                             documents: List[Document],
-                             return_top_k: Optional[int] = None) -> RerankingResult:
+    async def rerank_documents(
+        self, query: str, documents: List[Document], return_top_k: Optional[int] = None
+    ) -> RerankingResult:
         """
         Rerank documents based on relevance to query using NeMo reranking models.
 
@@ -338,12 +369,12 @@ class NeMoRerankingService:
                     original_count=0,
                     returned_count=0,
                     model_used=self.config.model,
-                    processing_time_ms=0.0
+                    processing_time_ms=0.0,
                 )
 
             # Limit documents if too many
             if len(documents) > self.config.max_documents:
-                documents = documents[:self.config.max_documents]
+                documents = documents[: self.config.max_documents]
                 logger.warning(f"Truncated documents from {original_count} to {len(documents)}")
 
             # Analyze pharmaceutical context
@@ -361,15 +392,13 @@ class NeMoRerankingService:
                     error=nemo_result.error,
                     model_used=self.config.model,
                     original_count=original_count,
-                    processing_time_ms=(time.time() - start_time) * 1000
+                    processing_time_ms=(time.time() - start_time) * 1000,
                 )
 
             base_scores = nemo_result.scores
 
             # Apply pharmaceutical and cross-modal optimizations
-            enhanced_scores = self._apply_pharmaceutical_optimizations(
-                documents, base_scores, pharma_context
-            )
+            enhanced_scores = self._apply_pharmaceutical_optimizations(documents, base_scores, pharma_context)
 
             # Sort documents by enhanced scores
             scored_docs = list(zip(documents, enhanced_scores))
@@ -377,10 +406,7 @@ class NeMoRerankingService:
 
             # Apply score threshold filtering
             if self.config.min_score_threshold > 0:
-                scored_docs = [
-                    (doc, score) for doc, score in scored_docs
-                    if score >= self.config.min_score_threshold
-                ]
+                scored_docs = [(doc, score) for doc, score in scored_docs if score >= self.config.min_score_threshold]
 
             # Apply top-k filtering
             top_k = return_top_k or self.config.top_k
@@ -393,16 +419,12 @@ class NeMoRerankingService:
             # Generate explanations if requested
             explanations = None
             if self.config.enable_explanations:
-                explanations = self._generate_explanations(
-                    query, reranked_documents, final_scores, pharma_context
-                )
+                explanations = self._generate_explanations(query, reranked_documents, final_scores, pharma_context)
 
             processing_time = (time.time() - start_time) * 1000
 
             # Update metrics
-            self._update_metrics(
-                len(documents), processing_time, base_scores, enhanced_scores
-            )
+            self._update_metrics(len(documents), processing_time, base_scores, enhanced_scores)
 
             return RerankingResult(
                 success=True,
@@ -412,7 +434,7 @@ class NeMoRerankingService:
                 model_used=self.config.model,
                 processing_time_ms=processing_time,
                 original_count=original_count,
-                returned_count=len(reranked_documents)
+                returned_count=len(reranked_documents),
             )
 
         except Exception as e:
@@ -425,7 +447,7 @@ class NeMoRerankingService:
                 model_used=self.config.model,
                 processing_time_ms=processing_time,
                 original_count=original_count,
-                returned_count=0
+                returned_count=0,
             )
 
     async def _rerank_with_nemo(self, query: str, documents: List[Document]) -> RerankingResult:
@@ -438,10 +460,7 @@ class NeMoRerankingService:
 
             # Call NeMo reranking service
             response = await client.rerank_passages(
-                query=query,
-                passages=passages,
-                model=self.config.model,
-                use_langchain=True
+                query=query, passages=passages, model=self.config.model, use_langchain=True
             )
 
             if response.success:
@@ -459,34 +478,24 @@ class NeMoRerankingService:
                                 scores[idx] = item.get("score", 0.0)
                     else:
                         # Format: [0.9, 0.7, 0.5, ...]
-                        scores = reranked_data[:len(documents)]
+                        scores = reranked_data[: len(documents)]
                 else:
                     # Fallback: uniform scores
                     scores = [0.5] * len(documents)
 
-                return RerankingResult(
-                    success=True,
-                    scores=scores,
-                    model_used=self.config.model
-                )
+                return RerankingResult(success=True, scores=scores, model_used=self.config.model)
             else:
-                return RerankingResult(
-                    success=False,
-                    error=response.error,
-                    model_used=self.config.model
-                )
+                return RerankingResult(success=False, error=response.error, model_used=self.config.model)
 
         except Exception as e:
-            return RerankingResult(
-                success=False,
-                error=str(e),
-                model_used=self.config.model
-            )
+            return RerankingResult(success=False, error=str(e), model_used=self.config.model)
 
-    def _apply_pharmaceutical_optimizations(self,
-                                          documents: List[Document],
-                                          base_scores: List[float],
-                                          pharma_context: Optional[PharmaceuticalRerankingContext]) -> List[float]:
+    def _apply_pharmaceutical_optimizations(
+        self,
+        documents: List[Document],
+        base_scores: List[float],
+        pharma_context: Optional[PharmaceuticalRerankingContext],
+    ) -> List[float]:
         """Apply pharmaceutical domain optimizations to reranking scores."""
         if not pharma_context:
             return base_scores
@@ -526,11 +535,13 @@ class NeMoRerankingService:
 
         return enhanced_scores
 
-    def _generate_explanations(self,
-                             query: str,
-                             documents: List[Document],
-                             scores: List[float],
-                             pharma_context: Optional[PharmaceuticalRerankingContext]) -> List[str]:
+    def _generate_explanations(
+        self,
+        query: str,
+        documents: List[Document],
+        scores: List[float],
+        pharma_context: Optional[PharmaceuticalRerankingContext],
+    ) -> List[str]:
         """Generate explanations for reranking decisions."""
         explanations = []
 
@@ -566,11 +577,9 @@ class NeMoRerankingService:
 
         return explanations
 
-    def _update_metrics(self,
-                       num_documents: int,
-                       processing_time_ms: float,
-                       base_scores: List[float],
-                       enhanced_scores: List[float]):
+    def _update_metrics(
+        self, num_documents: int, processing_time_ms: float, base_scores: List[float], enhanced_scores: List[float]
+    ):
         """Update performance metrics."""
         self.metrics["total_reranking_operations"] += 1
         self.metrics["total_documents_reranked"] += num_documents
@@ -581,16 +590,16 @@ class NeMoRerankingService:
             base_avg = sum(base_scores) / len(base_scores)
             enhanced_avg = sum(enhanced_scores) / len(enhanced_scores)
             improvement = enhanced_avg - base_avg
-            self.metrics["average_score_improvement"] = (
-                (self.metrics["average_score_improvement"] + improvement) / 2
-            )
+            self.metrics["average_score_improvement"] = (self.metrics["average_score_improvement"] + improvement) / 2
 
-    async def rerank_hybrid_results(self,
-                                  query: str,
-                                  local_documents: List[Document],
-                                  pubmed_documents: List[Document],
-                                  local_weight: float = 1.0,
-                                  pubmed_weight: float = 1.3) -> RerankingResult:
+    async def rerank_hybrid_results(
+        self,
+        query: str,
+        local_documents: List[Document],
+        pubmed_documents: List[Document],
+        local_weight: float = 1.0,
+        pubmed_weight: float = 1.3,
+    ) -> RerankingResult:
         """
         Rerank hybrid results from local documents and PubMed with source weighting.
 
@@ -664,7 +673,7 @@ class NeMoRerankingService:
             "safety_critical": context.safety_critical,
             "requires_recent_data": context.requires_recent_data,
             "regulatory_context": context.regulatory_context,
-            "optimization_suggestions": self._get_optimization_suggestions(context)
+            "optimization_suggestions": self._get_optimization_suggestions(context),
         }
 
     def _get_optimization_suggestions(self, context: PharmaceuticalRerankingContext) -> List[str]:
@@ -696,9 +705,7 @@ class NeMoRerankingService:
 
 # Convenience functions
 async def create_nemo_reranking_service(
-    config: Optional[RerankingConfig] = None,
-    enable_pharmaceutical_optimization: bool = True,
-    **kwargs
+    config: Optional[RerankingConfig] = None, enable_pharmaceutical_optimization: bool = True, **kwargs
 ) -> NeMoRerankingService:
     """
     Factory function to create NeMo Reranking Service.
@@ -712,10 +719,7 @@ async def create_nemo_reranking_service(
         Configured NeMoRerankingService
     """
     if not config:
-        config = RerankingConfig(
-            pharmaceutical_optimization=enable_pharmaceutical_optimization,
-            **kwargs
-        )
+        config = RerankingConfig(pharmaceutical_optimization=enable_pharmaceutical_optimization, **kwargs)
 
     service = NeMoRerankingService(config=config)
 
@@ -726,10 +730,7 @@ async def create_nemo_reranking_service(
 
 
 async def rerank_pharmaceutical_documents(
-    query: str,
-    documents: List[Document],
-    top_k: Optional[int] = None,
-    **kwargs
+    query: str, documents: List[Document], top_k: Optional[int] = None, **kwargs
 ) -> RerankingResult:
     """
     Quick function to rerank pharmaceutical documents with optimized settings.
@@ -749,6 +750,7 @@ async def rerank_pharmaceutical_documents(
 
 # Example usage
 if __name__ == "__main__":
+
     async def test_reranking_service():
         """Test NeMo reranking service functionality."""
         service = await create_nemo_reranking_service()
@@ -757,16 +759,16 @@ if __name__ == "__main__":
         test_docs = [
             Document(
                 page_content="Aspirin is an NSAID with anti-inflammatory and analgesic properties.",
-                metadata={"source": "medical_textbook.pdf", "page": 1}
+                metadata={"source": "medical_textbook.pdf", "page": 1},
             ),
             Document(
                 page_content="Clinical trial NCT123456 showed 85% efficacy in cardiovascular protection.",
-                metadata={"source": "pubmed_article.pdf", "clinical_trial_id": "NCT123456"}
+                metadata={"source": "pubmed_article.pdf", "clinical_trial_id": "NCT123456"},
             ),
             Document(
                 page_content="FDA warns about increased bleeding risk with aspirin use.",
-                metadata={"source": "fda_safety_alert.pdf", "source_type": "regulatory"}
-            )
+                metadata={"source": "fda_safety_alert.pdf", "source_type": "regulatory"},
+            ),
         ]
 
         query = "What are the safety concerns with aspirin?"

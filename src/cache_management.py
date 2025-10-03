@@ -8,17 +8,17 @@ future alternatives (for example, Redis or in-memory caches).
 """
 from __future__ import annotations
 
-import atexit
 import asyncio
+import atexit
 import json
 import logging
 import os
 import threading
-from functools import partial
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Tuple
+from typing import Any, Iterable, Mapping, Sequence
 
 from .utils.cache_utils import (
     CacheAnalytics,
@@ -113,13 +113,13 @@ class NCBICacheManager:
         rate_limit_integration: bool = True,
         pharmaceutical_optimization: bool = True,
         pharma_ttl_bonus_hours: float = 12.0,
-        cache_allow_stale_within_grace: Optional[bool] = None,
+        cache_allow_stale_within_grace: bool | None = None,
         cache_write_on_access: bool = True,
         cleanup_run_on_start: bool = False,
         cache_pretty_json: bool = False,
         strict_ncbi_ttl: bool = False,
         cleanup_daemon_enabled: bool = False,
-        rate_limiter: Optional[Any] = None,  # Optional rate limiter instance
+        rate_limiter: Any | None = None,  # Optional rate limiter instance
     ) -> None:
         self.cache_backend = cache_backend
         if cache_backend != "file":
@@ -167,7 +167,7 @@ class NCBICacheManager:
         self.pharma_optimizer = PharmaceuticalCacheOptimizer()
         self.cleanup_daemon_enabled = bool(cleanup_daemon_enabled and self.enable_cleanup)
         self._cleanup_stop_event = threading.Event()
-        self._cleanup_thread: Optional[threading.Thread] = None
+        self._cleanup_thread: threading.Thread | None = None
         self._cleanup_atexit_registered = False
 
         if self.cleanup_daemon_enabled:
@@ -178,10 +178,10 @@ class NCBICacheManager:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_env(cls) -> "NCBICacheManager":
+    def from_env(cls) -> NCBICacheManager:
         """Create a cache manager from environment configuration."""
         cache_dir = os.getenv("PUBMED_CACHE_DIR", "./pubmed_cache")
-        config: Dict[str, Any] = {
+        config: dict[str, Any] = {
             "cache_backend": os.getenv("CACHE_BACKEND", "file"),
             "enable_metadata": _env_flag("CACHE_METADATA_ENABLED", "true"),
             "enable_statistics": _env_flag("CACHE_STATISTICS_ENABLED", "true"),
@@ -225,7 +225,7 @@ class NCBICacheManager:
     def build_cache_key(self, query: str, params: Mapping[str, Any], *, version: str | int = "1") -> str:
         return CacheKeyNormalizer.normalize(query, params, version=version or self.SCHEMA_VERSION)
 
-    def get(self, cache_key: str, *, allow_stale: bool = True) -> Optional[CacheLookupResult]:
+    def get(self, cache_key: str, *, allow_stale: bool = True) -> CacheLookupResult | None:
         """Return cached payload for ``cache_key`` if available."""
         with self._lock:
             path = self._entry_path(cache_key)
@@ -275,7 +275,7 @@ class NCBICacheManager:
 
             return CacheLookupResult(payload=payload, metadata=metadata, stale=stale)
 
-    async def aget(self, cache_key: str, *, allow_stale: bool = True) -> Optional[CacheLookupResult]:
+    async def aget(self, cache_key: str, *, allow_stale: bool = True) -> CacheLookupResult | None:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, partial(self.get, cache_key, allow_stale=allow_stale))
 
@@ -284,23 +284,23 @@ class NCBICacheManager:
         cache_key: str,
         payload: Any,
         *,
-        metadata: Optional[Mapping[str, Any]] = None,
+        metadata: Mapping[str, Any] | None = None,
         status: str = "success",
         preserve_expiry: bool = False,
-        explicit_expiry: Optional[datetime] = None,
-        explicit_grace_expiry: Optional[datetime] = None,
+        explicit_expiry: datetime | None = None,
+        explicit_grace_expiry: datetime | None = None,
     ) -> None:
         with self._lock:
             now = datetime.now(UTC)
 
             path = self._entry_path(cache_key)
-            existing_entry: Optional[Dict[str, Any]] = None
+            existing_entry: dict[str, Any] | None = None
             if preserve_expiry or explicit_expiry or explicit_grace_expiry:
                 existing_entry = self._read_entry(path)
 
             if self.enable_metadata:
                 base_metadata = dict(metadata or {})
-                results_payload: Optional[Sequence[Any]] = None
+                results_payload: Sequence[Any] | None = None
                 if isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
                     results_payload = payload  # type: ignore[assignment]
 
@@ -371,11 +371,11 @@ class NCBICacheManager:
         cache_key: str,
         payload: Any,
         *,
-        metadata: Optional[Mapping[str, Any]] = None,
+        metadata: Mapping[str, Any] | None = None,
         status: str = "success",
         preserve_expiry: bool = False,
-        explicit_expiry: Optional[datetime] = None,
-        explicit_grace_expiry: Optional[datetime] = None,
+        explicit_expiry: datetime | None = None,
+        explicit_grace_expiry: datetime | None = None,
     ) -> None:
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
@@ -420,7 +420,7 @@ class NCBICacheManager:
         self.cleanup_scheduler.mark_ran()
         return removed
 
-    def warmable_entries(self) -> Dict[str, Dict[str, Any]]:
+    def warmable_entries(self) -> dict[str, dict[str, Any]]:
         """Get warmable entries using rate limiter optimal timing.
 
         Returns entries marked as 'due' for warming based on:
@@ -430,61 +430,58 @@ class NCBICacheManager:
 
         Defer decisions are kept for future warming cycles.
         """
-        if hasattr(self.warming_scheduler, 'get_warming_schedule'):
+        if hasattr(self.warming_scheduler, "get_warming_schedule"):
             # Use new rate limiter-aware timing method
             schedule = self.warming_scheduler.get_warming_schedule()
             due_entries = {}
 
             # Extract entries that are due now
             for cache_key, entry_info in schedule.items():
-                if entry_info.get('due_now', False):
-                    due_entries[cache_key] = entry_info['metadata']
+                if entry_info.get("due_now", False):
+                    due_entries[cache_key] = entry_info["metadata"]
 
             if due_entries and self.analytics:
                 self.analytics.record_warming(len(due_entries))
 
             # Log detailed decision summary
             due_count = len(due_entries)
-            defer_count = sum(1 for info in schedule.values() if not info.get('due_now', False))
+            defer_count = sum(1 for info in schedule.values() if not info.get("due_now", False))
             logger.debug(
-                "Cache warming decisions - Due: %d, Defer: %d, Total: %d",
-                due_count,
-                defer_count,
-                len(schedule)
+                "Cache warming decisions - Due: %d, Defer: %d, Total: %d", due_count, defer_count, len(schedule)
             )
 
             # Update decision summary for compatibility with existing tests
-            if hasattr(self.warming_scheduler, '_decisions'):
+            if hasattr(self.warming_scheduler, "_decisions"):
                 with self.warming_scheduler._lock:
                     # Clear old decisions
                     self.warming_scheduler._decisions.clear()
                     # Add new decisions based on timing results
                     for cache_key, info in schedule.items():
                         from src.utils.cache_utils import WarmingDecision
-                        decision = "due" if info.get('due_now', False) else "defer"
-                        reason = info.get('reason', 'Unknown')
-                        priority = info.get('priority', 0)
-                        defer_until = info.get('defer_until')
+
+                        decision = "due" if info.get("due_now", False) else "defer"
+                        reason = info.get("reason", "Unknown")
+                        priority = info.get("priority", 0)
+                        defer_until = info.get("defer_until")
                         suggested_defer_time = (
-                            (defer_until - datetime.now(UTC)).total_seconds()
-                            if defer_until else None
+                            (defer_until - datetime.now(UTC)).total_seconds() if defer_until else None
                         )
 
                         self.warming_scheduler._decisions[cache_key] = WarmingDecision(
                             cache_key=cache_key,
-                            metadata=info['metadata'],
+                            metadata=info["metadata"],
                             decision=decision,
                             reason=reason,
                             priority=priority,
-                            suggested_defer_time=suggested_defer_time
+                            suggested_defer_time=suggested_defer_time,
                         )
 
             # Log sample of deferred entries for debugging
             if defer_count > 0 and logger.isEnabledFor(logging.DEBUG):
                 deferred_samples = [
-                    (key, info.get('reason', 'unknown'), info.get('defer_until'))
+                    (key, info.get("reason", "unknown"), info.get("defer_until"))
                     for key, info in list(schedule.items())[:3]
-                    if not info.get('due_now', False)
+                    if not info.get("due_now", False)
                 ]
                 for key, reason, defer_time in deferred_samples:
                     if defer_time:
@@ -493,20 +490,20 @@ class NCBICacheManager:
                         logger.debug("Deferred entry %s: %s", key, reason)
 
             return due_entries
-        elif hasattr(self.warming_scheduler, 'pop_due_entries'):
+        elif hasattr(self.warming_scheduler, "pop_due_entries"):
             # Fallback to older rate limiter-aware method
             due_entries = self.warming_scheduler.pop_due_entries()
             if due_entries and self.analytics:
                 self.analytics.record_warming(len(due_entries))
 
             # Log decision summary if available
-            if hasattr(self.warming_scheduler, 'get_decision_summary'):
+            if hasattr(self.warming_scheduler, "get_decision_summary"):
                 summary = self.warming_scheduler.get_decision_summary()
                 logger.debug(
                     "Cache warming decisions - Due: %d, Defer: %d, Skip: %d",
-                    summary.get('due', 0),
-                    summary.get('defer', 0),
-                    summary.get('skip', 0)
+                    summary.get("due", 0),
+                    summary.get("defer", 0),
+                    summary.get("skip", 0),
                 )
 
             return due_entries
@@ -566,7 +563,7 @@ class NCBICacheManager:
             logger.debug("Failed to prune legacy cache entry %s: %s", cache_key, exc)
             return False
 
-    def get_statistics(self) -> Dict[str, int]:
+    def get_statistics(self) -> dict[str, int]:
         if not self.analytics:
             return {
                 "hits": 0,
@@ -591,7 +588,9 @@ class NCBICacheManager:
 
     def import_cache(self, source: Path | str) -> int:
         path = Path(source)
-        count = CacheExportImportUtils.import_entries(path, self.advanced_cache_dir, target_schema_version=self.SCHEMA_VERSION)
+        count = CacheExportImportUtils.import_entries(
+            path, self.advanced_cache_dir, target_schema_version=self.SCHEMA_VERSION
+        )
         if self.analytics:
             self.analytics.record_import(count)
         logger.info("Imported %s cache entries from %s", count, path)
@@ -604,7 +603,7 @@ class NCBICacheManager:
     def _entry_path(self, cache_key: str) -> Path:
         return self.advanced_cache_dir / f"{cache_key}.json"
 
-    def _read_entry(self, path: Path) -> Optional[Dict[str, Any]]:
+    def _read_entry(self, path: Path) -> dict[str, Any] | None:
         if not path.exists():
             return None
         try:
@@ -623,7 +622,7 @@ class NCBICacheManager:
             if self.cache_pretty_json:
                 json.dump(entry, fh, ensure_ascii=False, indent=2)
             else:
-                json.dump(entry, fh, ensure_ascii=False, separators=(',', ':'))
+                json.dump(entry, fh, ensure_ascii=False, separators=(",", ":"))
         tmp_path.replace(path)
 
     def _evict_path(self, path: Path) -> None:
@@ -634,7 +633,7 @@ class NCBICacheManager:
         else:
             self._record_eviction()
 
-    def _iter_entries(self) -> Iterable[Tuple[Path, Dict[str, Any]]]:
+    def _iter_entries(self) -> Iterable[tuple[Path, dict[str, Any]]]:
         for entry_path in self.advanced_cache_dir.glob("*.json"):
             entry = self._read_entry(entry_path)
             if entry:
@@ -668,7 +667,7 @@ class NCBICacheManager:
             self._evict_path(path)
 
     @staticmethod
-    def _total_size(entries: Sequence[Tuple[Path, Mapping[str, Any]]]) -> int:
+    def _total_size(entries: Sequence[tuple[Path, Mapping[str, Any]]]) -> int:
         total = 0
         for path, _entry in entries:
             if path.exists():

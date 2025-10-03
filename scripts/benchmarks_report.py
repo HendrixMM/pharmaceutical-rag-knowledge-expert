@@ -12,10 +12,9 @@ from __future__ import annotations
 import argparse
 import csv
 from pathlib import Path
-from typing import List
 
 
-def _percentile(values: List[float], pct: float) -> float:
+def _percentile(values: list[float], pct: float) -> float:
     if not values:
         return 0.0
     xs = sorted(values)
@@ -62,4 +61,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

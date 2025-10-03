@@ -1,5 +1,4 @@
 """Study ranking and filtering utilities for pharmaceutical literature."""
-
 from __future__ import annotations
 
 import hashlib
@@ -10,22 +9,25 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from difflib import SequenceMatcher
-from typing import Any, Dict, Iterable, List, Optional, Set, Literal
+from typing import Any, Iterable, Literal
 
 logger = logging.getLogger(__name__)
 
 # Optional dependencies for enhanced MinHash performance
 try:
-    import numpy as np
+    pass
+
     HAS_NUMPY = True
 except ImportError:
     HAS_NUMPY = False
 
 try:
     from datasketch import MinHash, MinHashLSH
+
     HAS_DATASKETCH = True
 except ImportError:
     HAS_DATASKETCH = False
+
 
 # Helper function to parse environment variables as truthy values
 def _env_true(env_var: str, default: bool = False) -> bool:
@@ -166,7 +168,7 @@ class RankingBreakdown:
     species: float
     pharma_relevance: float
 
-    def to_dict(self) -> Dict[str, float]:
+    def to_dict(self) -> dict[str, float]:
         return {
             "quality": self.quality,
             "recency": self.recency,
@@ -181,11 +183,11 @@ class StudyRankingFilter:
 
     def __init__(
         self,
-        weights: Optional[Dict[str, float]] = None,
+        weights: dict[str, float] | None = None,
         *,
-        recency_decay_years: Optional[float] = None,
+        recency_decay_years: float | None = None,
         diversity_threshold: float = 0.92,
-        max_pairs: Optional[int] = 5000,
+        max_pairs: int | None = 5000,
     ) -> None:
         self.weights = dict(DEFAULT_WEIGHTS)
         if weights:
@@ -202,21 +204,19 @@ class StudyRankingFilter:
             max_pairs = None
         self.max_pairs = max_pairs
 
-    def rank_studies(self, papers: List[Dict[str, Any]], query: str = "") -> List[Dict[str, Any]]:
+    def rank_studies(self, papers: list[dict[str, Any]], query: str = "") -> list[dict[str, Any]]:
         """Attach ranking metadata to each paper and sort in-place."""
         if not papers:
             return papers
 
-        ranked: List[Dict[str, Any]] = []
+        ranked: list[dict[str, Any]] = []
         diversified = self.apply_diversity_filter(papers)
         for paper in diversified:
             tags = paper.get("study_types") or paper.get("tags") or []
             quality = self._calculate_study_quality_score(tags)
             recency = self._calculate_recency_score(paper.get("publication_year") or paper.get("year"))
             sample_size = self._calculate_sample_size_score(paper)
-            species_source = " ".join(
-                str(paper.get(key, "")) for key in ("species", "mesh_terms", "title", "abstract")
-            )
+            species_source = " ".join(str(paper.get(key, "")) for key in ("species", "mesh_terms", "title", "abstract"))
             species = self._calculate_species_preference_score(species_source)
             pharma_relevance = self._calculate_pharmaceutical_relevance_score(paper, query)
 
@@ -239,12 +239,12 @@ class StudyRankingFilter:
 
     def apply_diversity_filter(
         self,
-        papers: Iterable[Dict[str, Any]],
+        papers: Iterable[dict[str, Any]],
         *,
-        threshold: Optional[float] = None,
-        max_pairs: Optional[int] = None,
+        threshold: float | None = None,
+        max_pairs: int | None = None,
         method: Literal["signature", "minhash"] = "signature",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Drop near duplicates based on title/abstract similarity with optimizations for large sets.
 
         Args:
@@ -260,13 +260,10 @@ class StudyRankingFilter:
         papers_list = list(papers)
         input_size = len(papers_list)
 
-          # Use minhash method for large sets to improve performance
+        # Use minhash method for large sets to improve performance
         # Check if MinHash is enabled, datasketch is available, and input size meets minimum requirement
         use_minhash = (
-            method == "minhash" and
-            ENABLE_MINHASH_DIVERSITY and
-            HAS_DATASKETCH and
-            input_size >= MINHASH_MIN_INPUT_SIZE
+            method == "minhash" and ENABLE_MINHASH_DIVERSITY and HAS_DATASKETCH and input_size >= MINHASH_MIN_INPUT_SIZE
         )
 
         if use_minhash:
@@ -285,23 +282,21 @@ class StudyRankingFilter:
         else:
             max_pairs = None if max_pairs <= 0 else int(max_pairs)
 
-        filtered: List[Dict[str, Any]] = []
-        seen_texts: List[str] = []
-        seen_signatures: List[Set[str]] = []
-        seen_hashes: List[str] = []  # Fast prefilter using hash
+        filtered: list[dict[str, Any]] = []
+        seen_texts: list[str] = []
+        seen_signatures: list[set[str]] = []
+        seen_hashes: list[str] = []  # Fast prefilter using hash
         comparisons = 0
 
         for paper in papers_list:
-            full_text = " ".join(
-                str(paper.get(key, "")) for key in ("title", "abstract", "summary")
-            ).strip()
+            full_text = " ".join(str(paper.get(key, "")) for key in ("title", "abstract", "summary")).strip()
             normalised = re.sub(r"\s+", " ", full_text.lower())
             if not normalised:
                 filtered.append(paper)
                 continue
 
             # Fast prefilter using md5 hash (deterministic across Python runs)
-            text_hash = hashlib.md5(normalised.encode('utf-8')).hexdigest()
+            text_hash = hashlib.md5(normalised.encode("utf-8")).hexdigest()
             if text_hash in seen_hashes:
                 # Potential exact duplicate, skip detailed comparison
                 continue
@@ -348,10 +343,10 @@ class StudyRankingFilter:
 
     def _apply_minhash_diversity(
         self,
-        papers: List[Dict[str, Any]],
+        papers: list[dict[str, Any]],
         threshold: float,
-        max_pairs: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
+        max_pairs: int | None = None,
+    ) -> list[dict[str, Any]]:
         """Apply minhash-based diversity filtering for large document sets.
 
         Uses locality-sensitive hashing to cluster similar documents before
@@ -393,9 +388,7 @@ class StudyRankingFilter:
         whitespace_regex = re.compile(r"\s+")
 
         for paper in papers:
-            full_text = " ".join(
-                str(paper.get(key, "")) for key in ("title", "abstract", "summary")
-            ).strip()
+            full_text = " ".join(str(paper.get(key, "")) for key in ("title", "abstract", "summary")).strip()
             normalised = whitespace_regex.sub(" ", full_text.lower())
 
             if not normalised:
@@ -417,7 +410,7 @@ class StudyRankingFilter:
                 words = set(list(words)[:1000])
 
             for i in range(num_permutations):
-                min_hash = float('inf')
+                min_hash = float("inf")
                 # Use a more efficient hash combination
                 hash_input = f"{i}_".encode()
                 for word in words:
@@ -497,14 +490,16 @@ class StudyRankingFilter:
                 continue
 
             # Calculate actual similarity
-            text1 = " ".join(
-                str(text_to_paper[idx1].get(key, ""))
-                for key in ("title", "abstract", "summary")
-            ).strip().lower()
-            text2 = " ".join(
-                str(text_to_paper[idx2].get(key, ""))
-                for key in ("title", "abstract", "summary")
-            ).strip().lower()
+            text1 = (
+                " ".join(str(text_to_paper[idx1].get(key, "")) for key in ("title", "abstract", "summary"))
+                .strip()
+                .lower()
+            )
+            text2 = (
+                " ".join(str(text_to_paper[idx2].get(key, "")) for key in ("title", "abstract", "summary"))
+                .strip()
+                .lower()
+            )
 
             similarity = SequenceMatcher(None, text1, text2).ratio()
             comparisons += 1
@@ -523,10 +518,10 @@ class StudyRankingFilter:
 
     def _apply_minhash_datasketch(
         self,
-        papers: List[Dict[str, Any]],
+        papers: list[dict[str, Any]],
         threshold: float,
-        max_pairs: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
+        max_pairs: int | None = None,
+    ) -> list[dict[str, Any]]:
         """Apply MinHash using datasketch library for optimized performance.
 
         Args:
@@ -541,11 +536,7 @@ class StudyRankingFilter:
             return []
 
         # Create LSH index with configurable parameters
-        lsh = MinHashLSH(
-            num_perm=MINHASH_NUM_PERMUTATIONS,
-            num_bands=MINHASH_NUM_BANDS,
-            threshold=threshold
-        )
+        lsh = MinHashLSH(num_perm=MINHASH_NUM_PERMUTATIONS, num_bands=MINHASH_NUM_BANDS, threshold=threshold)
 
         # Track minhashes and papers for later retrieval
         minhashes = []
@@ -556,9 +547,7 @@ class StudyRankingFilter:
 
         for idx, paper in enumerate(papers):
             # Extract and normalize text
-            full_text = " ".join(
-                str(paper.get(key, "")) for key in ("title", "abstract", "summary")
-            ).strip()
+            full_text = " ".join(str(paper.get(key, "")) for key in ("title", "abstract", "summary")).strip()
             normalised = whitespace_regex.sub(" ", full_text.lower())
 
             if not normalised:
@@ -574,7 +563,7 @@ class StudyRankingFilter:
 
             # Add words to MinHash
             for word in words:
-                mh.update(word.encode('utf-8'))
+                mh.update(word.encode("utf-8"))
 
             # Insert into LSH
             try:
@@ -597,17 +586,18 @@ class StudyRankingFilter:
                 result = lsh.query(minhashes[int(idx_str)])
                 for dup_idx_str in result:
                     dup_idx = paper_map.get(dup_idx_str, (None, None))[0]
-                    if (dup_idx is not None and
-                        dup_idx != orig_idx and
-                        dup_idx not in removed_indices):
-
+                    if dup_idx is not None and dup_idx != orig_idx and dup_idx not in removed_indices:
                         # Verify with actual similarity to avoid false positives
-                        text1 = " ".join(
-                            str(paper.get(key, "")) for key in ("title", "abstract", "summary")
-                        ).strip().lower()
-                        text2 = " ".join(
-                            str(papers[dup_idx].get(key, "")) for key in ("title", "abstract", "summary")
-                        ).strip().lower()
+                        text1 = (
+                            " ".join(str(paper.get(key, "")) for key in ("title", "abstract", "summary"))
+                            .strip()
+                            .lower()
+                        )
+                        text2 = (
+                            " ".join(str(papers[dup_idx].get(key, "")) for key in ("title", "abstract", "summary"))
+                            .strip()
+                            .lower()
+                        )
 
                         similarity = SequenceMatcher(None, text1, text2).ratio()
                         comparisons += 1
@@ -627,21 +617,21 @@ class StudyRankingFilter:
             if idx not in removed_indices:
                 result.append(paper)
 
-        logger.debug("Datasketch MinHash processed %d papers with %d comparisons",
-                    len(papers), comparisons)
+        logger.debug("Datasketch MinHash processed %d papers with %d comparisons", len(papers), comparisons)
         return result
 
     def filter_by_criteria(
         self,
-        papers: Iterable[Dict[str, Any]],
+        papers: Iterable[dict[str, Any]],
         *,
-        year_range: Optional[List[int]] = None,
-        study_types: Optional[Iterable[str]] = None,
-        min_sample_size: Optional[int] = None,
-        min_ranking_score: Optional[float] = None,
-    ) -> List[Dict[str, Any]]:
+        year_range: list[int] | None = None,
+        study_types: Iterable[str] | None = None,
+        min_sample_size: int | None = None,
+        min_ranking_score: float | None = None,
+    ) -> list[dict[str, Any]]:
         """Filter ranked papers according to user-provided criteria."""
-        def _within_year_range(paper: Dict[str, Any]) -> bool:
+
+        def _within_year_range(paper: dict[str, Any]) -> bool:
             if not year_range or len(year_range) != 2:
                 return True
             year = paper.get("publication_year") or paper.get("year")
@@ -654,17 +644,14 @@ class StudyRankingFilter:
                 return False
             return True
 
-        def _matches_study_type(paper: Dict[str, Any]) -> bool:
+        def _matches_study_type(paper: dict[str, Any]) -> bool:
             if not study_types:
                 return True
-            types_available = [
-                str(value).lower()
-                for value in (paper.get("study_types") or paper.get("tags") or [])
-            ]
+            types_available = [str(value).lower() for value in (paper.get("study_types") or paper.get("tags") or [])]
             allowed = {str(st).lower() for st in study_types}
             return bool(allowed.intersection(types_available))
 
-        def _meets_sample_size(paper: Dict[str, Any]) -> bool:
+        def _meets_sample_size(paper: dict[str, Any]) -> bool:
             if min_sample_size is None or min_sample_size <= 0:
                 return True
             sample_size = paper.get("sample_size")
@@ -674,7 +661,7 @@ class StudyRankingFilter:
             estimated = self._estimate_sample_size_from_text(abstract)
             return estimated is None or estimated >= min_sample_size
 
-        def _meets_ranking(paper: Dict[str, Any]) -> bool:
+        def _meets_ranking(paper: dict[str, Any]) -> bool:
             if min_ranking_score is None:
                 return True
             score = paper.get("relevance_score")
@@ -682,14 +669,19 @@ class StudyRankingFilter:
                 score = paper.get("ranking_score", 0.0)
             return score >= float(min_ranking_score)
 
-        filtered: List[Dict[str, Any]] = []
+        filtered: list[dict[str, Any]] = []
         for paper in papers:
-            if not (_within_year_range(paper) and _matches_study_type(paper) and _meets_sample_size(paper) and _meets_ranking(paper)):
+            if not (
+                _within_year_range(paper)
+                and _matches_study_type(paper)
+                and _meets_sample_size(paper)
+                and _meets_ranking(paper)
+            ):
                 continue
             filtered.append(paper)
         return filtered
 
-    def get_ranking_explanation(self, paper: Dict[str, Any], *, verbose: bool = False) -> str:
+    def get_ranking_explanation(self, paper: dict[str, Any], *, verbose: bool = False) -> str:
         """Return a human-readable explanation for the ranking score."""
         breakdown = paper.get("ranking_breakdown") or {}
         score = paper.get("ranking_score", 0.0)
@@ -753,11 +745,7 @@ class StudyRankingFilter:
             self.weights[key] = max(0.0, float(value)) / total
 
     def _weighted_score(self, breakdown: RankingBreakdown) -> float:
-        return sum(
-            self.weights[name] * getattr(breakdown, name)
-            for name in self.weights
-            if hasattr(breakdown, name)
-        )
+        return sum(self.weights[name] * getattr(breakdown, name) for name in self.weights if hasattr(breakdown, name))
 
     def _calculate_study_quality_score(self, tags: Any) -> float:
         if not tags:
@@ -766,7 +754,7 @@ class StudyRankingFilter:
             tags_iterable = [tags]
         else:
             tags_iterable = list(tags)
-        scores: List[float] = []
+        scores: list[float] = []
         for tag in tags_iterable:
             lower = str(tag).lower()
 
@@ -785,46 +773,50 @@ class StudyRankingFilter:
     def _match_tag_with_patterns(self, tag: str) -> float:
         """Use pattern matching to identify study types from non-standard tags."""
         # High-quality patterns
-        if re.search(r'\brandomized.*trial\b', tag, re.IGNORECASE) or re.search(r'\brandomised.*trial\b', tag, re.IGNORECASE) or re.search(r'\brct\b', tag, re.IGNORECASE):
+        if (
+            re.search(r"\brandomized.*trial\b", tag, re.IGNORECASE)
+            or re.search(r"\brandomised.*trial\b", tag, re.IGNORECASE)
+            or re.search(r"\brct\b", tag, re.IGNORECASE)
+        ):
             return 0.9
-        elif re.search(r'\bphase\s+([ivx]+|\d+)', tag, re.IGNORECASE):
+        elif re.search(r"\bphase\s+([ivx]+|\d+)", tag, re.IGNORECASE):
             # Extract phase number for scoring
-            phase_match = re.search(r'\bphase\s+([ivx]+|\d+)', tag, re.IGNORECASE)
+            phase_match = re.search(r"\bphase\s+([ivx]+|\d+)", tag, re.IGNORECASE)
             if phase_match:
                 phase = phase_match.group(1).lower()
                 # Normalize roman numerals to digits
-                roman_map = {'iv': '4', 'iii': '3', 'ii': '2', 'i': '1'}
+                roman_map = {"iv": "4", "iii": "3", "ii": "2", "i": "1"}
                 normalized_phase = roman_map.get(phase, phase)
 
-                if normalized_phase in ['4', 'iv']:
+                if normalized_phase in ["4", "iv"]:
                     return 0.88
-                elif normalized_phase in ['3', 'iii']:
+                elif normalized_phase in ["3", "iii"]:
                     return 0.88
-                elif normalized_phase in ['2', 'ii']:
+                elif normalized_phase in ["2", "ii"]:
                     return 0.82
-                elif normalized_phase in ['1', 'i']:
+                elif normalized_phase in ["1", "i"]:
                     return 0.78
-        elif re.search(r'\bmeta\s*-?\s*analysis\b', tag, re.IGNORECASE):
+        elif re.search(r"\bmeta\s*-?\s*analysis\b", tag, re.IGNORECASE):
             return 0.95
-        elif re.search(r'\bsystematic\s+review\b', tag, re.IGNORECASE):
+        elif re.search(r"\bsystematic\s+review\b", tag, re.IGNORECASE):
             return 0.95
-        elif re.search(r'\bcohort\b', tag, re.IGNORECASE):
+        elif re.search(r"\bcohort\b", tag, re.IGNORECASE):
             return 0.7
-        elif re.search(r'\bcase\s*-?\s*control\b', tag, re.IGNORECASE):
+        elif re.search(r"\bcase\s*-?\s*control\b", tag, re.IGNORECASE):
             return 0.7
-        elif re.search(r'\bobservational\b', tag, re.IGNORECASE):
+        elif re.search(r"\bobservational\b", tag, re.IGNORECASE):
             return 0.7
-        elif re.search(r'\bobservational\s+(?:study|studies)\b', tag, re.IGNORECASE):
+        elif re.search(r"\bobservational\s+(?:study|studies)\b", tag, re.IGNORECASE):
             return 0.7
 
         # Lower-quality patterns
-        elif re.search(r'\bcase\s+report\b', tag):
+        elif re.search(r"\bcase\s+report\b", tag):
             return 0.4
-        elif re.search(r'\banimal\b', tag):
+        elif re.search(r"\banimal\b", tag):
             return 0.4
-        elif re.search(r'\bin\s+vitro\b', tag):
+        elif re.search(r"\bin\s+vitro\b", tag):
             return 0.35
-        elif tag in ['letter', 'editorial', 'comment']:
+        elif tag in ["letter", "editorial", "comment"]:
             return 0.3
 
         # Default score for unknown patterns
@@ -840,7 +832,7 @@ class StudyRankingFilter:
         # Exponential decay favouring recent publications, configurable via recency_decay_years
         return math.exp(-age / self.recency_decay_years)
 
-    def _calculate_sample_size_score(self, paper: Dict[str, Any]) -> float:
+    def _calculate_sample_size_score(self, paper: dict[str, Any]) -> float:
         sample_size = paper.get("sample_size")
         if isinstance(sample_size, (int, float)):
             sample_size = int(sample_size)
@@ -867,17 +859,26 @@ class StudyRankingFilter:
             return 0.5
         return 0.35
 
-    def _estimate_sample_size_from_text(self, text: str) -> Optional[int]:
+    def _estimate_sample_size_from_text(self, text: str) -> int | None:
         if not text:
             return None
 
         # Keywords that indicate valid sample size context
         context_keywords = [
-            'patients', 'subjects', 'participants', 'enrolled', 'included',
-            'sample', 'cohort', 'population', 'n=', 'n =', 'total'
+            "patients",
+            "subjects",
+            "participants",
+            "enrolled",
+            "included",
+            "sample",
+            "cohort",
+            "population",
+            "n=",
+            "n =",
+            "total",
         ]
 
-        counts_by_priority: Dict[str, List[int]] = {name: [] for name, _ in _SAMPLE_SIZE_PATTERNS}
+        counts_by_priority: dict[str, list[int]] = {name: [] for name, _ in _SAMPLE_SIZE_PATTERNS}
         for name, pattern in _SAMPLE_SIZE_PATTERNS:
             for match in pattern.finditer(text):
                 raw_value = match.group("count")
@@ -892,7 +893,7 @@ class StudyRankingFilter:
                 parsed = self._parse_sample_size_candidate(raw_value, context)
                 if parsed is not None:
                     # Check proximity to keywords for better scoring
-                    context_lower = context.lower()
+                    context.lower()
 
                     # Score based on keyword proximity
                     keyword_score = 0
@@ -910,7 +911,7 @@ class StudyRankingFilter:
                 return max(values)
         return None
 
-    def _parse_sample_size_candidate(self, raw_value: Optional[str], context: str = "") -> Optional[int]:
+    def _parse_sample_size_candidate(self, raw_value: str | None, context: str = "") -> int | None:
         if not raw_value:
             return None
         normalized = raw_value.replace(",", "")
@@ -923,8 +924,18 @@ class StudyRankingFilter:
         if len(normalized) == 4 and 1900 <= value <= 2100:
             # Additional check for date context words
             date_context_keywords = [
-                'year', 'years', 'period', 'duration', 'follow-up', 'followup',
-                'study period', 'from', 'to', 'between', 'during', 'until'
+                "year",
+                "years",
+                "period",
+                "duration",
+                "follow-up",
+                "followup",
+                "study period",
+                "from",
+                "to",
+                "between",
+                "during",
+                "until",
             ]
             context_lower = context.lower()
 
@@ -947,23 +958,24 @@ class StudyRankingFilter:
 
         # Tokenize text for stricter matching
         import re
-        tokens = set(re.findall(r'\b[a-zA-Z]+\b', text.lower()))
+
+        tokens = set(re.findall(r"\b[a-zA-Z]+\b", text.lower()))
         lower_text = text.lower()
 
         # Check for negation terms including non-human variants
         negation_patterns = [
-            r'\bin vitro\b',
-            r'\bcell culture\b',
-            r'\bcultured cells\b',
-            r'\btissue culture\b',
-            r'\bcell line\b',
-            r'\bnon-?human\b',  # Handles both 'non-human' and 'nonhuman'
+            r"\bin vitro\b",
+            r"\bcell culture\b",
+            r"\bcultured cells\b",
+            r"\btissue culture\b",
+            r"\bcell line\b",
+            r"\bnon-?human\b",  # Handles both 'non-human' and 'nonhuman'
         ]
 
         has_negation = any(re.search(pattern, lower_text) for pattern in negation_patterns)
 
         # Special handling for non-human detection
-        non_human_match = re.search(r'\bnon-?human\b', lower_text)
+        non_human_match = re.search(r"\bnon-?human\b", lower_text)
 
         # Check for exact token matches to reduce false positives
         for species, weight in _SPECIES_PRIORITIES.items():
@@ -975,7 +987,7 @@ class StudyRankingFilter:
                 return weight
         return 0.45
 
-    def _calculate_pharmaceutical_relevance_score(self, paper: Dict[str, Any], query: str = "") -> float:
+    def _calculate_pharmaceutical_relevance_score(self, paper: dict[str, Any], query: str = "") -> float:
         text_fields = [
             paper.get("title"),
             paper.get("abstract"),
@@ -998,13 +1010,9 @@ class StudyRankingFilter:
                 if keyword in lower_query:
                     score += weight * 0.5
 
-        query_terms = {
-            token
-            for token in re.split(r"[^a-z0-9]+", query.lower())
-            if len(token) >= 4
-        }
+        query_terms = {token for token in re.split(r"[^a-z0-9]+", query.lower()) if len(token) >= 4}
 
-        drug_terms: Set[str] = set()
+        drug_terms: set[str] = set()
         for entry in paper.get("drug_names", []) or []:
             if isinstance(entry, dict):
                 name = entry.get("name")
@@ -1027,11 +1035,7 @@ class StudyRankingFilter:
             if mesh_overlap:
                 score += min(0.15, 0.05 * len(mesh_overlap))
 
-        cyp_entries = {
-            str(entry).lower().replace(" ", "")
-            for entry in (paper.get("cyp_enzymes") or [])
-            if entry
-        }
+        cyp_entries = {str(entry).lower().replace(" ", "") for entry in (paper.get("cyp_enzymes") or []) if entry}
         if cyp_entries:
             overlap = cyp_entries & _KNOWN_CYP_ENZYMES
             if query_terms:

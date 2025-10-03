@@ -16,28 +16,28 @@ Integration:
 - Integrates with batch processing for cost optimization
 - Provides actionable insights for research budget management
 """
-
-import logging
 import json
-import time
-from datetime import datetime, timedelta, date
-from typing import Dict, List, Any, Optional, Tuple, NamedTuple
-from dataclasses import dataclass, field
-from enum import Enum
+import logging
 import statistics
 from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 try:
-    from .credit_tracker import PharmaceuticalCreditTracker
     from ..enhanced_config import EnhancedRAGConfig
+    from .credit_tracker import PharmaceuticalCreditTracker
 except ImportError:
-    from src.monitoring.credit_tracker import PharmaceuticalCreditTracker
     from src.enhanced_config import EnhancedRAGConfig
+    from src.monitoring.credit_tracker import PharmaceuticalCreditTracker
 
 logger = logging.getLogger(__name__)
 
+
 class PharmaceuticalQueryType(Enum):
     """Pharmaceutical research query categories for cost analysis."""
+
     DRUG_SAFETY = "drug_safety"  # Highest value - safety critical
     CLINICAL_TRIALS = "clinical_trials"  # High value - research critical
     DRUG_INTERACTIONS = "drug_interactions"  # High value - safety critical
@@ -47,9 +47,11 @@ class PharmaceuticalQueryType(Enum):
     GENERAL_RESEARCH = "general_research"  # Standard value
     EXPLORATORY = "exploratory"  # Lower value - discovery
 
+
 @dataclass
 class PharmaceuticalQueryRecord:
     """Record of a pharmaceutical research query with cost analysis."""
+
     query_id: str
     query_text: str
     query_type: PharmaceuticalQueryType
@@ -62,14 +64,11 @@ class PharmaceuticalQueryRecord:
     project_id: Optional[str] = None
     tags: List[str] = field(default_factory=list)
 
+
 class ResearchProjectBudget:
     """Budget tracking for pharmaceutical research projects."""
 
-    def __init__(self,
-                 project_id: str,
-                 project_name: str,
-                 monthly_budget_usd: float,
-                 priority_level: int = 3):
+    def __init__(self, project_id: str, project_name: str, monthly_budget_usd: float, priority_level: int = 3):
         self.project_id = project_id
         self.project_name = project_name
         self.monthly_budget_usd = monthly_budget_usd
@@ -91,7 +90,7 @@ class ResearchProjectBudget:
         high_value_types = {
             PharmaceuticalQueryType.DRUG_SAFETY,
             PharmaceuticalQueryType.CLINICAL_TRIALS,
-            PharmaceuticalQueryType.DRUG_INTERACTIONS
+            PharmaceuticalQueryType.DRUG_INTERACTIONS,
         }
         if query_type in high_value_types:
             self.high_value_queries += 1
@@ -119,8 +118,9 @@ class ResearchProjectBudget:
             "avg_cost_per_query": round(avg_cost, 4),
             "estimated_remaining_queries": remaining_queries,
             "priority_level": self.priority_level,
-            "last_activity": self.last_activity.isoformat()
+            "last_activity": self.last_activity.isoformat(),
         }
+
 
 class PharmaceuticalCostAnalyzer:
     """
@@ -130,9 +130,9 @@ class PharmaceuticalCostAnalyzer:
     recommendations specifically for pharmaceutical research applications.
     """
 
-    def __init__(self,
-                 credit_tracker: Optional[PharmaceuticalCreditTracker] = None,
-                 config: Optional[EnhancedRAGConfig] = None):
+    def __init__(
+        self, credit_tracker: Optional[PharmaceuticalCreditTracker] = None, config: Optional[EnhancedRAGConfig] = None
+    ):
         """
         Initialize pharmaceutical cost analyzer.
 
@@ -161,18 +161,20 @@ class PharmaceuticalCostAnalyzer:
             PharmaceuticalQueryType.PHARMACOKINETICS: 3.5,
             PharmaceuticalQueryType.DOSAGE_GUIDELINES: 3.0,
             PharmaceuticalQueryType.GENERAL_RESEARCH: 2.0,
-            PharmaceuticalQueryType.EXPLORATORY: 1.0
+            PharmaceuticalQueryType.EXPLORATORY: 1.0,
         }
 
         logger.info("PharmaceuticalCostAnalyzer initialized with domain-specific optimization")
 
-    def record_pharmaceutical_query(self,
-                                  query_id: str,
-                                  query_text: str,
-                                  cost_tier: str,
-                                  estimated_tokens: int,
-                                  project_id: Optional[str] = None,
-                                  tags: Optional[List[str]] = None) -> PharmaceuticalQueryRecord:
+    def record_pharmaceutical_query(
+        self,
+        query_id: str,
+        query_text: str,
+        cost_tier: str,
+        estimated_tokens: int,
+        project_id: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+    ) -> PharmaceuticalQueryRecord:
         """
         Record a pharmaceutical query for cost analysis.
 
@@ -203,7 +205,7 @@ class PharmaceuticalCostAnalyzer:
             estimated_tokens=estimated_tokens,
             estimated_cost_usd=estimated_cost,
             project_id=project_id,
-            tags=tags or []
+            tags=tags or [],
         )
 
         # Calculate research value score
@@ -219,8 +221,9 @@ class PharmaceuticalCostAnalyzer:
         # Invalidate cache
         self._invalidate_cache()
 
-        logger.debug(f"Recorded pharmaceutical query {query_id}: {query_type.value} "
-                    f"(${estimated_cost:.4f}, {cost_tier})")
+        logger.debug(
+            f"Recorded pharmaceutical query {query_id}: {query_type.value} " f"(${estimated_cost:.4f}, {cost_tier})"
+        )
 
         return record
 
@@ -230,56 +233,102 @@ class PharmaceuticalCostAnalyzer:
 
         # Drug safety indicators (highest priority)
         safety_keywords = [
-            "adverse", "side effect", "toxicity", "contraindication", "warning",
-            "danger", "risk", "safety", "overdose", "poisoning", "fatal"
+            "adverse",
+            "side effect",
+            "toxicity",
+            "contraindication",
+            "warning",
+            "danger",
+            "risk",
+            "safety",
+            "overdose",
+            "poisoning",
+            "fatal",
         ]
         if any(keyword in query_lower for keyword in safety_keywords):
             return PharmaceuticalQueryType.DRUG_SAFETY
 
         # Drug interaction indicators
         interaction_keywords = [
-            "interaction", "combined", "together", "concurrent", "simultaneous",
-            "contraindicated", "incompatible"
+            "interaction",
+            "combined",
+            "together",
+            "concurrent",
+            "simultaneous",
+            "contraindicated",
+            "incompatible",
         ]
         if any(keyword in query_lower for keyword in interaction_keywords):
             return PharmaceuticalQueryType.DRUG_INTERACTIONS
 
         # Clinical trials indicators
         trial_keywords = [
-            "clinical trial", "study", "efficacy", "effectiveness", "trial data",
-            "clinical evidence", "phase", "randomized", "placebo"
+            "clinical trial",
+            "study",
+            "efficacy",
+            "effectiveness",
+            "trial data",
+            "clinical evidence",
+            "phase",
+            "randomized",
+            "placebo",
         ]
         if any(keyword in query_lower for keyword in trial_keywords):
             return PharmaceuticalQueryType.CLINICAL_TRIALS
 
         # Pharmacokinetics indicators
         pk_keywords = [
-            "pharmacokinetics", "absorption", "metabolism", "distribution",
-            "excretion", "clearance", "half-life", "bioavailability"
+            "pharmacokinetics",
+            "absorption",
+            "metabolism",
+            "distribution",
+            "excretion",
+            "clearance",
+            "half-life",
+            "bioavailability",
         ]
         if any(keyword in query_lower for keyword in pk_keywords):
             return PharmaceuticalQueryType.PHARMACOKINETICS
 
         # Mechanism of action indicators
         mechanism_keywords = [
-            "mechanism", "action", "pathway", "target", "receptor", "enzyme",
-            "how does", "how works", "mode of action"
+            "mechanism",
+            "action",
+            "pathway",
+            "target",
+            "receptor",
+            "enzyme",
+            "how does",
+            "how works",
+            "mode of action",
         ]
         if any(keyword in query_lower for keyword in mechanism_keywords):
             return PharmaceuticalQueryType.MECHANISM_OF_ACTION
 
         # Dosage guidelines
         dosage_keywords = [
-            "dose", "dosage", "dosing", "administration", "frequency",
-            "how much", "how often", "regimen"
+            "dose",
+            "dosage",
+            "dosing",
+            "administration",
+            "frequency",
+            "how much",
+            "how often",
+            "regimen",
         ]
         if any(keyword in query_lower for keyword in dosage_keywords):
             return PharmaceuticalQueryType.DOSAGE_GUIDELINES
 
         # Check for general pharmaceutical research terms
         research_keywords = [
-            "drug", "medication", "pharmaceutical", "treatment", "therapy",
-            "medicine", "compound", "molecule"
+            "drug",
+            "medication",
+            "pharmaceutical",
+            "treatment",
+            "therapy",
+            "medicine",
+            "compound",
+            "molecule",
         ]
         if any(keyword in query_lower for keyword in research_keywords):
             return PharmaceuticalQueryType.GENERAL_RESEARCH
@@ -287,10 +336,7 @@ class PharmaceuticalCostAnalyzer:
         # Default to exploratory
         return PharmaceuticalQueryType.EXPLORATORY
 
-    def _calculate_query_cost(self,
-                            tokens: int,
-                            cost_tier: str,
-                            query_type: PharmaceuticalQueryType) -> float:
+    def _calculate_query_cost(self, tokens: int, cost_tier: str, query_type: PharmaceuticalQueryType) -> float:
         """Calculate estimated cost for a pharmaceutical query."""
         if cost_tier == "free_tier":
             # Free tier has opportunity cost rather than direct cost
@@ -312,7 +358,7 @@ class PharmaceuticalCostAnalyzer:
             PharmaceuticalQueryType.PHARMACOKINETICS: 1.0,
             PharmaceuticalQueryType.DOSAGE_GUIDELINES: 1.0,
             PharmaceuticalQueryType.GENERAL_RESEARCH: 1.1,
-            PharmaceuticalQueryType.EXPLORATORY: 1.2
+            PharmaceuticalQueryType.EXPLORATORY: 1.2,
         }.get(query_type, 1.0)
 
         return base_cost * type_multiplier
@@ -331,11 +377,9 @@ class PharmaceuticalCostAnalyzer:
 
         return base_value * cost_efficiency * complexity_factor
 
-    def create_research_project(self,
-                              project_id: str,
-                              project_name: str,
-                              monthly_budget_usd: float,
-                              priority_level: int = 3) -> ResearchProjectBudget:
+    def create_research_project(
+        self, project_id: str, project_name: str, monthly_budget_usd: float, priority_level: int = 3
+    ) -> ResearchProjectBudget:
         """Create a new research project budget."""
         if project_id in self.projects:
             logger.warning(f"Project {project_id} already exists, updating budget")
@@ -344,7 +388,7 @@ class PharmaceuticalCostAnalyzer:
             project_id=project_id,
             project_name=project_name,
             monthly_budget_usd=monthly_budget_usd,
-            priority_level=priority_level
+            priority_level=priority_level,
         )
 
         self.projects[project_id] = project
@@ -352,9 +396,7 @@ class PharmaceuticalCostAnalyzer:
 
         return project
 
-    def get_cost_analysis(self,
-                         days_back: int = 30,
-                         force_refresh: bool = False) -> Dict[str, Any]:
+    def get_cost_analysis(self, days_back: int = 30, force_refresh: bool = False) -> Dict[str, Any]:
         """
         Get comprehensive cost analysis for pharmaceutical research.
 
@@ -366,29 +408,28 @@ class PharmaceuticalCostAnalyzer:
             Comprehensive cost analysis report
         """
         # Check cache validity
-        if (not force_refresh and
-            self._cache_timestamp and
-            self._analysis_cache and
-            (datetime.now() - self._cache_timestamp).seconds < self._cache_ttl_seconds):
+        if (
+            not force_refresh
+            and self._cache_timestamp
+            and self._analysis_cache
+            and (datetime.now() - self._cache_timestamp).seconds < self._cache_ttl_seconds
+        ):
             return self._analysis_cache
 
         cutoff_date = datetime.now() - timedelta(days=days_back)
-        recent_queries = [
-            record for record in self.query_records
-            if record.timestamp >= cutoff_date
-        ]
+        recent_queries = [record for record in self.query_records if record.timestamp >= cutoff_date]
 
         analysis = {
             "analysis_period": {
                 "days_back": days_back,
                 "cutoff_date": cutoff_date.isoformat(),
-                "total_queries_analyzed": len(recent_queries)
+                "total_queries_analyzed": len(recent_queries),
             },
             "cost_breakdown": self._analyze_cost_breakdown(recent_queries),
             "pharmaceutical_insights": self._analyze_pharmaceutical_value(recent_queries),
             "free_tier_optimization": self._analyze_free_tier_usage(recent_queries),
             "project_analysis": self._analyze_project_costs(),
-            "recommendations": self._generate_cost_recommendations(recent_queries)
+            "recommendations": self._generate_cost_recommendations(recent_queries),
         }
 
         # Update cache
@@ -423,7 +464,7 @@ class PharmaceuticalCostAnalyzer:
                 qtype: {
                     "total_cost": round(cost, 4),
                     "query_count": queries_by_type[qtype],
-                    "avg_cost": round(cost / queries_by_type[qtype], 4) if queries_by_type[qtype] > 0 else 0
+                    "avg_cost": round(cost / queries_by_type[qtype], 4) if queries_by_type[qtype] > 0 else 0,
                 }
                 for qtype, cost in cost_by_type.items()
             },
@@ -432,8 +473,8 @@ class PharmaceuticalCostAnalyzer:
                 "infrastructure_queries": len([q for q in queries if q.cost_tier == "infrastructure"]),
                 "free_tier_percentage": round(
                     len([q for q in queries if q.cost_tier == "free_tier"]) / len(queries) * 100, 1
-                )
-            }
+                ),
+            },
         }
 
     def _analyze_pharmaceutical_value(self, queries: List[PharmaceuticalQueryRecord]) -> Dict[str, Any]:
@@ -456,22 +497,27 @@ class PharmaceuticalCostAnalyzer:
 
         return {
             "total_research_value": round(total_value, 2),
-            "roi_ratio": round(total_value / total_cost, 2) if total_cost > 0 else float('inf'),
+            "roi_ratio": round(total_value / total_cost, 2) if total_cost > 0 else float("inf"),
             "high_value_queries": len(high_value_queries),
             "high_value_percentage": round(len(high_value_queries) / len(queries) * 100, 1),
             "avg_value_by_type": {
                 qtype: {
                     "avg_value": round(statistics.mean(values), 2),
                     "max_value": round(max(values), 2),
-                    "query_count": len(values)
+                    "query_count": len(values),
                 }
-                for qtype, values in value_by_type.items() if values
+                for qtype, values in value_by_type.items()
+                if values
             },
             "pharmaceutical_focus": {
                 "safety_queries": len([q for q in queries if q.query_type == PharmaceuticalQueryType.DRUG_SAFETY]),
-                "clinical_queries": len([q for q in queries if q.query_type == PharmaceuticalQueryType.CLINICAL_TRIALS]),
-                "interaction_queries": len([q for q in queries if q.query_type == PharmaceuticalQueryType.DRUG_INTERACTIONS])
-            }
+                "clinical_queries": len(
+                    [q for q in queries if q.query_type == PharmaceuticalQueryType.CLINICAL_TRIALS]
+                ),
+                "interaction_queries": len(
+                    [q for q in queries if q.query_type == PharmaceuticalQueryType.DRUG_INTERACTIONS]
+                ),
+            },
         }
 
     def _analyze_free_tier_usage(self, queries: List[PharmaceuticalQueryRecord]) -> Dict[str, Any]:
@@ -491,14 +537,10 @@ class PharmaceuticalCostAnalyzer:
             "efficiency_score": round(efficiency_score, 3),
             "free_tier_queries": len(free_tier_queries),
             "total_queries": len(queries),
-            "free_tier_value_extraction": round(
-                free_tier_value / total_value, 3
-            ) if total_value > 0 else 0,
+            "free_tier_value_extraction": round(free_tier_value / total_value, 3) if total_value > 0 else 0,
             "optimization_status": (
-                "excellent" if efficiency_score >= 0.8 else
-                "good" if efficiency_score >= 0.6 else
-                "needs_improvement"
-            )
+                "excellent" if efficiency_score >= 0.8 else "good" if efficiency_score >= 0.6 else "needs_improvement"
+            ),
         }
 
     def _analyze_project_costs(self) -> Dict[str, Any]:
@@ -517,10 +559,7 @@ class PharmaceuticalCostAnalyzer:
             total_spent += project.spent_this_month
 
         # Find high-utilization projects
-        high_utilization_projects = [
-            p for p in project_summaries.values()
-            if p["budget_utilization"] > 0.8
-        ]
+        high_utilization_projects = [p for p in project_summaries.values() if p["budget_utilization"] > 0.8]
 
         return {
             "project_count": len(self.projects),
@@ -528,7 +567,7 @@ class PharmaceuticalCostAnalyzer:
             "total_spent_this_month": round(total_spent, 4),
             "overall_utilization": round(total_spent / total_monthly_budgets, 3) if total_monthly_budgets > 0 else 0,
             "high_utilization_projects": len(high_utilization_projects),
-            "project_details": project_summaries
+            "project_details": project_summaries,
         }
 
     def _generate_cost_recommendations(self, queries: List[PharmaceuticalQueryRecord]) -> List[Dict[str, Any]]:
@@ -544,39 +583,45 @@ class PharmaceuticalCostAnalyzer:
         free_tier_pct = free_tier_queries / total_queries if total_queries > 0 else 0
 
         if free_tier_pct < 0.7:
-            recommendations.append({
-                "type": "free_tier_optimization",
-                "priority": "high",
-                "title": "Increase Free Tier Utilization",
-                "description": f"Only {free_tier_pct*100:.1f}% of queries use free tier. Target 70%+ for cost optimization.",
-                "action": "Review query batching and cloud-first configuration settings",
-                "potential_savings_usd": round((0.7 - free_tier_pct) * total_queries * 0.01, 3)
-            })
+            recommendations.append(
+                {
+                    "type": "free_tier_optimization",
+                    "priority": "high",
+                    "title": "Increase Free Tier Utilization",
+                    "description": f"Only {free_tier_pct*100:.1f}% of queries use free tier. Target 70%+ for cost optimization.",
+                    "action": "Review query batching and cloud-first configuration settings",
+                    "potential_savings_usd": round((0.7 - free_tier_pct) * total_queries * 0.01, 3),
+                }
+            )
 
         # Query type optimization
         exploratory_queries = len([q for q in queries if q.query_type == PharmaceuticalQueryType.EXPLORATORY])
         if exploratory_queries > total_queries * 0.3:
-            recommendations.append({
-                "type": "query_optimization",
-                "priority": "medium",
-                "title": "Focus on High-Value Pharmaceutical Queries",
-                "description": f"{exploratory_queries} exploratory queries detected. Focus on drug safety and clinical research.",
-                "action": "Prioritize drug safety, clinical trials, and drug interaction queries",
-                "research_value_impact": "high"
-            })
+            recommendations.append(
+                {
+                    "type": "query_optimization",
+                    "priority": "medium",
+                    "title": "Focus on High-Value Pharmaceutical Queries",
+                    "description": f"{exploratory_queries} exploratory queries detected. Focus on drug safety and clinical research.",
+                    "action": "Prioritize drug safety, clinical trials, and drug interaction queries",
+                    "research_value_impact": "high",
+                }
+            )
 
         # Project budget recommendations
         for project_id, project in self.projects.items():
             status = project.get_budget_status()
             if status["budget_utilization"] > 0.9:
-                recommendations.append({
-                    "type": "budget_alert",
-                    "priority": "critical",
-                    "title": f"Project Budget Alert: {status['project_name']}",
-                    "description": f"Project {project_id} has used {status['budget_utilization']*100:.1f}% of monthly budget",
-                    "action": "Review project queries or increase budget allocation",
-                    "project_id": project_id
-                })
+                recommendations.append(
+                    {
+                        "type": "budget_alert",
+                        "priority": "critical",
+                        "title": f"Project Budget Alert: {status['project_name']}",
+                        "description": f"Project {project_id} has used {status['budget_utilization']*100:.1f}% of monthly budget",
+                        "action": "Review project queries or increase budget allocation",
+                        "project_id": project_id,
+                    }
+                )
 
         return recommendations
 
@@ -585,9 +630,7 @@ class PharmaceuticalCostAnalyzer:
         self._analysis_cache = {}
         self._cache_timestamp = None
 
-    def export_cost_report(self,
-                          filepath: Optional[str] = None,
-                          days_back: int = 30) -> str:
+    def export_cost_report(self, filepath: Optional[str] = None, days_back: int = 30) -> str:
         """Export detailed cost analysis report to JSON file."""
         analysis = self.get_cost_analysis(days_back=days_back, force_refresh=True)
 
@@ -600,7 +643,7 @@ class PharmaceuticalCostAnalyzer:
                 "generated_at": datetime.now().isoformat(),
                 "analysis_period_days": days_back,
                 "total_queries_analyzed": len(self.query_records),
-                "projects_tracked": len(self.projects)
+                "projects_tracked": len(self.projects),
             },
             "cost_analysis": analysis,
             "raw_query_data": [
@@ -611,22 +654,21 @@ class PharmaceuticalCostAnalyzer:
                     "cost_tier": record.cost_tier,
                     "estimated_cost_usd": record.estimated_cost_usd,
                     "research_value_score": record.research_value_score,
-                    "project_id": record.project_id
+                    "project_id": record.project_id,
                 }
                 for record in self.query_records[-500:]  # Last 500 queries
-            ]
+            ],
         }
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(report_data, f, indent=2)
 
         logger.info(f"Cost analysis report exported to {filepath}")
         return filepath
 
+
 # Convenience function for pharmaceutical cost tracking
-def create_pharmaceutical_cost_tracker(
-    enable_project_budgeting: bool = True
-) -> PharmaceuticalCostAnalyzer:
+def create_pharmaceutical_cost_tracker(enable_project_budgeting: bool = True) -> PharmaceuticalCostAnalyzer:
     """
     Create pharmaceutical cost analyzer with optimal configuration.
 
@@ -639,10 +681,7 @@ def create_pharmaceutical_cost_tracker(
     credit_tracker = PharmaceuticalCreditTracker()
     config = EnhancedRAGConfig.from_env()
 
-    analyzer = PharmaceuticalCostAnalyzer(
-        credit_tracker=credit_tracker,
-        config=config
-    )
+    analyzer = PharmaceuticalCostAnalyzer(credit_tracker=credit_tracker, config=config)
 
     if enable_project_budgeting:
         # Create default pharmaceutical research project
@@ -650,10 +689,11 @@ def create_pharmaceutical_cost_tracker(
             project_id="default_pharma_research",
             project_name="General Pharmaceutical Research",
             monthly_budget_usd=50.0,  # Conservative default budget
-            priority_level=3
+            priority_level=3,
         )
 
     return analyzer
+
 
 if __name__ == "__main__":
     # Test pharmaceutical cost analyzer
@@ -666,7 +706,7 @@ if __name__ == "__main__":
         cost_tier="free_tier",
         estimated_tokens=150,
         project_id="default_pharma_research",
-        tags=["drug_safety", "elderly", "kidney"]
+        tags=["drug_safety", "elderly", "kidney"],
     )
 
     analyzer.record_pharmaceutical_query(
@@ -675,7 +715,7 @@ if __name__ == "__main__":
         cost_tier="free_tier",
         estimated_tokens=200,
         project_id="default_pharma_research",
-        tags=["mechanism", "cardiovascular"]
+        tags=["mechanism", "cardiovascular"],
     )
 
     # Generate analysis

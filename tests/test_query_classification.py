@@ -10,42 +10,31 @@ Comprehensive testing of the pharmaceutical query classification system with:
 
 Tests validate intelligent query classification for pharmaceutical research optimization.
 """
+import time
 
 import pytest
-import asyncio
-import os
-import json
-import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
-from unittest.mock import Mock, patch, MagicMock
 
 # Import modules under test
 try:
     from src.pharmaceutical.query_classifier import (
-        PharmaceuticalQueryClassifier,
+        ClassificationConfidence,
         PharmaceuticalDomain,
-        SafetyUrgency,
+        PharmaceuticalQueryClassifier,
         ResearchPriority,
-        QueryClassification,
-        ClassificationConfidence
+        SafetyUrgency,
     )
-    from src.pharmaceutical.domain_ontology import PharmaceuticalOntology
-    from src.pharmaceutical.safety_analyzer import DrugSafetyAnalyzer
 except ImportError:
     import sys
     from pathlib import Path
+
     sys.path.append(str(Path(__file__).parent.parent))
     from src.pharmaceutical.query_classifier import (
-        PharmaceuticalQueryClassifier,
+        ClassificationConfidence,
         PharmaceuticalDomain,
-        SafetyUrgency,
+        PharmaceuticalQueryClassifier,
         ResearchPriority,
-        QueryClassification,
-        ClassificationConfidence
+        SafetyUrgency,
     )
-    from src.pharmaceutical.domain_ontology import PharmaceuticalOntology
-    from src.pharmaceutical.safety_analyzer import DrugSafetyAnalyzer
 
 
 class TestPharmaceuticalQueryClassifier:
@@ -59,33 +48,33 @@ class TestPharmaceuticalQueryClassifier:
                 "drug_safety": {
                     "keywords": ["safety", "adverse", "toxicity", "contraindication", "warning"],
                     "priority_weight": 3.0,
-                    "urgency_threshold": 0.7
+                    "urgency_threshold": 0.7,
                 },
                 "drug_interactions": {
                     "keywords": ["interaction", "contraindication", "combination", "concurrent"],
                     "priority_weight": 3.0,
-                    "urgency_threshold": 0.8
+                    "urgency_threshold": 0.8,
                 },
                 "clinical_research": {
                     "keywords": ["trial", "study", "efficacy", "phase", "clinical"],
                     "priority_weight": 2.0,
-                    "urgency_threshold": 0.5
+                    "urgency_threshold": 0.5,
                 },
                 "pharmacokinetics": {
                     "keywords": ["absorption", "distribution", "metabolism", "excretion", "clearance"],
                     "priority_weight": 1.5,
-                    "urgency_threshold": 0.4
+                    "urgency_threshold": 0.4,
                 },
                 "pharmacodynamics": {
                     "keywords": ["mechanism", "action", "receptor", "target", "pathway"],
                     "priority_weight": 1.5,
-                    "urgency_threshold": 0.4
+                    "urgency_threshold": 0.4,
                 },
                 "general_pharma": {
                     "keywords": ["drug", "medication", "pharmaceutical", "therapy"],
                     "priority_weight": 1.0,
-                    "urgency_threshold": 0.3
-                }
+                    "urgency_threshold": 0.3,
+                },
             }
         }
 
@@ -93,16 +82,13 @@ class TestPharmaceuticalQueryClassifier:
 
     def test_classifier_initialization(self):
         """Test pharmaceutical query classifier initialization."""
-        classifier = PharmaceuticalQueryClassifier(
-            config=self.classifier_config,
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(config=self.classifier_config, pharmaceutical_optimized=True)
 
         assert classifier is not None
-        assert hasattr(classifier, 'pharmaceutical_optimized')
+        assert hasattr(classifier, "pharmaceutical_optimized")
         assert classifier.pharmaceutical_optimized == True
-        assert hasattr(classifier, 'domain_keywords')
-        assert hasattr(classifier, 'safety_analyzer')
+        assert hasattr(classifier, "domain_keywords")
+        assert hasattr(classifier, "safety_analyzer")
 
         # Should load domain-specific configurations
         assert "drug_safety" in classifier.domain_keywords
@@ -110,17 +96,14 @@ class TestPharmaceuticalQueryClassifier:
 
     def test_drug_safety_query_classification(self):
         """Test classification of drug safety queries with proper urgency assessment."""
-        classifier = PharmaceuticalQueryClassifier(
-            config=self.classifier_config,
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(config=self.classifier_config, pharmaceutical_optimized=True)
 
         # High-urgency drug safety queries
         critical_safety_queries = [
             "What are the contraindications for warfarin in patients with active bleeding?",
             "Metformin toxicity symptoms in kidney disease patients",
             "Serious adverse reactions to ACE inhibitors in elderly patients",
-            "Drug safety alert: new black box warning for diabetes medication"
+            "Drug safety alert: new black box warning for diabetes medication",
         ]
 
         for query in critical_safety_queries:
@@ -137,16 +120,13 @@ class TestPharmaceuticalQueryClassifier:
 
     def test_drug_interaction_classification(self):
         """Test classification of drug interaction queries."""
-        classifier = PharmaceuticalQueryClassifier(
-            config=self.classifier_config,
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(config=self.classifier_config, pharmaceutical_optimized=True)
 
         interaction_queries = [
             "Drug interactions between warfarin and NSAIDs",
             "Can I take metformin with ACE inhibitors?",
             "Contraindications for concurrent use of statins and fibrates",
-            "Dangerous drug combinations with MAO inhibitors"
+            "Dangerous drug combinations with MAO inhibitors",
         ]
 
         for query in interaction_queries:
@@ -163,16 +143,13 @@ class TestPharmaceuticalQueryClassifier:
 
     def test_clinical_research_classification(self):
         """Test classification of clinical research queries."""
-        classifier = PharmaceuticalQueryClassifier(
-            config=self.classifier_config,
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(config=self.classifier_config, pharmaceutical_optimized=True)
 
         research_queries = [
             "Phase III clinical trial results for diabetes medications",
             "Systematic review of cardiovascular outcomes with ACE inhibitors",
             "Meta-analysis of statin efficacy in primary prevention",
-            "Randomized controlled trial design for hypertension treatment"
+            "Randomized controlled trial design for hypertension treatment",
         ]
 
         for query in research_queries:
@@ -189,16 +166,13 @@ class TestPharmaceuticalQueryClassifier:
 
     def test_pharmacokinetic_classification(self):
         """Test classification of pharmacokinetic queries."""
-        classifier = PharmaceuticalQueryClassifier(
-            config=self.classifier_config,
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(config=self.classifier_config, pharmaceutical_optimized=True)
 
         pk_queries = [
             "Metformin absorption in gastrointestinal disorders",
             "Warfarin metabolism through CYP2C9 pathway",
             "Renal clearance of ACE inhibitors in kidney disease",
-            "First-pass metabolism effects on drug bioavailability"
+            "First-pass metabolism effects on drug bioavailability",
         ]
 
         for query in pk_queries:
@@ -216,10 +190,7 @@ class TestPharmaceuticalQueryClassifier:
 
     def test_multi_domain_query_classification(self):
         """Test classification of queries spanning multiple pharmaceutical domains."""
-        classifier = PharmaceuticalQueryClassifier(
-            config=self.classifier_config,
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(config=self.classifier_config, pharmaceutical_optimized=True)
 
         # Complex query combining safety, interactions, and pharmacokinetics
         complex_query = (
@@ -234,7 +205,7 @@ class TestPharmaceuticalQueryClassifier:
         assert classification.primary_domain == PharmaceuticalDomain.DRUG_SAFETY
 
         # Should identify secondary domains
-        assert hasattr(classification, 'secondary_domains')
+        assert hasattr(classification, "secondary_domains")
         secondary = classification.secondary_domains
         assert PharmaceuticalDomain.DRUG_INTERACTIONS in secondary
         assert PharmaceuticalDomain.PHARMACOKINETICS in secondary
@@ -247,16 +218,13 @@ class TestPharmaceuticalQueryClassifier:
 
     def test_confidence_scoring_accuracy(self):
         """Test accuracy of confidence scoring for different query types."""
-        classifier = PharmaceuticalQueryClassifier(
-            config=self.classifier_config,
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(config=self.classifier_config, pharmaceutical_optimized=True)
 
         # High confidence queries (clear domain indicators)
         high_confidence_queries = [
             ("warfarin bleeding contraindications", PharmaceuticalDomain.DRUG_SAFETY),
             ("phase III diabetes trial results", PharmaceuticalDomain.CLINICAL_RESEARCH),
-            ("metformin renal clearance", PharmaceuticalDomain.PHARMACOKINETICS)
+            ("metformin renal clearance", PharmaceuticalDomain.PHARMACOKINETICS),
         ]
 
         for query_text, expected_domain in high_confidence_queries:
@@ -279,11 +247,7 @@ class TestPharmaceuticalQueryClassifier:
             assert 0.5 <= classification.confidence_score <= 0.8
 
         # Low confidence queries (ambiguous or general)
-        low_confidence_queries = [
-            "tell me about medicine",
-            "pharmaceutical industry overview",
-            "what is a drug?"
-        ]
+        low_confidence_queries = ["tell me about medicine", "pharmaceutical industry overview", "what is a drug?"]
 
         for query_text in low_confidence_queries:
             classification = classifier.classify_query(query_text)
@@ -293,17 +257,14 @@ class TestPharmaceuticalQueryClassifier:
 
     def test_safety_urgency_escalation(self):
         """Test safety urgency escalation logic."""
-        classifier = PharmaceuticalQueryClassifier(
-            config=self.classifier_config,
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(config=self.classifier_config, pharmaceutical_optimized=True)
 
         # Critical urgency scenarios
         critical_scenarios = [
             "patient experiencing warfarin overdose symptoms",
             "immediate contraindications for emergency medication",
             "severe allergic reaction to prescribed drug",
-            "toxic drug interaction causing hospitalization"
+            "toxic drug interaction causing hospitalization",
         ]
 
         for scenario in critical_scenarios:
@@ -317,7 +278,7 @@ class TestPharmaceuticalQueryClassifier:
         medium_scenarios = [
             "potential drug interactions with new prescription",
             "side effects monitoring for chronic medication",
-            "dose adjustment considerations for elderly patient"
+            "dose adjustment considerations for elderly patient",
         ]
 
         for scenario in medium_scenarios:
@@ -328,31 +289,24 @@ class TestPharmaceuticalQueryClassifier:
 
     def test_cost_aware_classification(self):
         """Test cost-aware classification for query routing."""
-        classifier = PharmaceuticalQueryClassifier(
-            config=self.classifier_config,
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(config=self.classifier_config, pharmaceutical_optimized=True)
 
         # High-cost queries (complex, multi-domain)
         high_cost_queries = [
             "comprehensive drug interaction analysis for polypharmacy patient with cardiovascular, diabetes, and kidney disease",
             "systematic review of all clinical trials for novel diabetes medications with cardiovascular outcomes",
-            "detailed pharmacokinetic modeling for personalized dosing in special populations"
+            "detailed pharmacokinetic modeling for personalized dosing in special populations",
         ]
 
         for query in high_cost_queries:
             classification = classifier.classify_query(query)
 
-            assert hasattr(classification, 'estimated_cost_tier')
+            assert hasattr(classification, "estimated_cost_tier")
             assert classification.estimated_cost_tier in ["high", "premium"]
             assert classification.processing_complexity >= 0.8
 
         # Low-cost queries (simple, single domain)
-        low_cost_queries = [
-            "what is metformin?",
-            "basic mechanism of ACE inhibitors",
-            "common side effects of statins"
-        ]
+        low_cost_queries = ["what is metformin?", "basic mechanism of ACE inhibitors", "common side effects of statins"]
 
         for query in low_cost_queries:
             classification = classifier.classify_query(query)
@@ -363,10 +317,7 @@ class TestPharmaceuticalQueryClassifier:
     @pytest.mark.asyncio
     async def test_real_time_classification_performance(self):
         """Test real-time classification performance and accuracy."""
-        classifier = PharmaceuticalQueryClassifier(
-            config=self.classifier_config,
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(config=self.classifier_config, pharmaceutical_optimized=True)
 
         # Test batch classification performance
         test_queries = [
@@ -379,7 +330,7 @@ class TestPharmaceuticalQueryClassifier:
             "pharmacokinetics of statins in elderly",
             "adverse reactions to beta blockers",
             "clinical efficacy of hypertension treatments",
-            "drug metabolism through liver enzymes"
+            "drug metabolism through liver enzymes",
         ]
 
         # Measure classification performance
@@ -412,23 +363,20 @@ class TestPharmaceuticalQueryClassifier:
 
     def test_pharmaceutical_ontology_integration(self):
         """Test integration with pharmaceutical ontology for enhanced classification."""
-        classifier = PharmaceuticalQueryClassifier(
-            config=self.classifier_config,
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(config=self.classifier_config, pharmaceutical_optimized=True)
 
         # Test ontology-enhanced classification
         ontology_queries = [
             "ACE inhibitor induced angioedema in African American patients",  # Specific drug class + ethnic consideration
             "SGLT-2 inhibitor cardiovascular benefits in heart failure patients",  # Novel drug class + indication
-            "CYP2D6 polymorphism effects on antidepressant metabolism"  # Pharmacogenomics
+            "CYP2D6 polymorphism effects on antidepressant metabolism",  # Pharmacogenomics
         ]
 
         for query in ontology_queries:
             classification = classifier.classify_query(query)
 
             # Should use ontology for enhanced understanding
-            assert hasattr(classification, 'ontology_matches')
+            assert hasattr(classification, "ontology_matches")
             ontology_matches = classification.ontology_matches
 
             assert "drug_classes" in ontology_matches or "specific_drugs" in ontology_matches
@@ -445,39 +393,37 @@ class TestIntegratedQueryClassification:
     async def test_end_to_end_classification_workflow(self):
         """Test complete query classification workflow for pharmaceutical research."""
 
-        classifier = PharmaceuticalQueryClassifier(
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(pharmaceutical_optimized=True)
 
         # Realistic pharmaceutical research workflow
         research_workflow = [
             {
                 "query": "What are the contraindications for metformin in patients with chronic kidney disease?",
                 "expected_domain": PharmaceuticalDomain.DRUG_SAFETY,
-                "expected_urgency": SafetyUrgency.HIGH
+                "expected_urgency": SafetyUrgency.HIGH,
             },
             {
                 "query": "Phase III clinical trial results for SGLT-2 inhibitors in cardiovascular outcomes",
                 "expected_domain": PharmaceuticalDomain.CLINICAL_RESEARCH,
-                "expected_urgency": SafetyUrgency.LOW
+                "expected_urgency": SafetyUrgency.LOW,
             },
             {
                 "query": "Drug interactions between warfarin and commonly prescribed antibiotics",
                 "expected_domain": PharmaceuticalDomain.DRUG_INTERACTIONS,
-                "expected_urgency": SafetyUrgency.HIGH
+                "expected_urgency": SafetyUrgency.HIGH,
             },
             {
                 "query": "Pharmacokinetics of ACE inhibitors in elderly patients with multiple comorbidities",
                 "expected_domain": PharmaceuticalDomain.PHARMACOKINETICS,
-                "expected_urgency": SafetyUrgency.MEDIUM
-            }
+                "expected_urgency": SafetyUrgency.MEDIUM,
+            },
         ]
 
         classification_results = []
         processing_metrics = {
             "total_time": 0,
             "accuracy_score": 0,
-            "confidence_distribution": {"high": 0, "medium": 0, "low": 0}
+            "confidence_distribution": {"high": 0, "medium": 0, "low": 0},
         }
 
         start_time = time.time()
@@ -487,12 +433,14 @@ class TestIntegratedQueryClassification:
             classification = await classifier.classify_query_async(item["query"])
             query_end = time.time()
 
-            classification_results.append({
-                "query": item["query"],
-                "classification": classification,
-                "expected": item,
-                "processing_time": query_end - query_start
-            })
+            classification_results.append(
+                {
+                    "query": item["query"],
+                    "classification": classification,
+                    "expected": item,
+                    "processing_time": query_end - query_start,
+                }
+            )
 
             # Check accuracy
             if classification.primary_domain == item["expected_domain"]:
@@ -540,24 +488,19 @@ class TestIntegratedQueryClassification:
 
     def test_classification_cost_optimization_integration(self):
         """Test classification integration with cost optimization systems."""
-        classifier = PharmaceuticalQueryClassifier(
-            pharmaceutical_optimized=True
-        )
+        classifier = PharmaceuticalQueryClassifier(pharmaceutical_optimized=True)
 
         # Test cost-aware query routing
         query_batches = {
             "high_priority_safety": [
                 "emergency warfarin overdose treatment protocol",
-                "immediate contraindications for prescribed medication"
+                "immediate contraindications for prescribed medication",
             ],
             "standard_research": [
                 "diabetes medication efficacy systematic review",
-                "hypertension treatment guidelines meta-analysis"
+                "hypertension treatment guidelines meta-analysis",
             ],
-            "general_information": [
-                "basic pharmacology principles explanation",
-                "drug classification system overview"
-            ]
+            "general_information": ["basic pharmacology principles explanation", "drug classification system overview"],
         }
 
         routing_results = {}
@@ -573,7 +516,7 @@ class TestIntegratedQueryClassification:
                 "classifications": batch_classifications,
                 "avg_cost_tier": classifier.calculate_average_cost_tier(batch_classifications),
                 "processing_priority": classifier.calculate_processing_priority(batch_classifications),
-                "resource_allocation": classifier.recommend_resource_allocation(batch_classifications)
+                "resource_allocation": classifier.recommend_resource_allocation(batch_classifications),
             }
 
         # Validate cost-aware routing

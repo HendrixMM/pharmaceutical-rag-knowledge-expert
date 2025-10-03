@@ -10,15 +10,15 @@ All functions are safe to import in non-Colab environments (no-ops).
 """
 from __future__ import annotations
 
-import os
 import shutil
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 def is_colab() -> bool:
     try:
         import google.colab  # type: ignore
+
         return True
     except Exception:
         return False
@@ -95,7 +95,7 @@ def wipe_cache(cache_dir: str = "query_cache") -> bool:
         return False
 
 
-def save_run_summary(summary: Dict[str, Any], dest_dir: str = "./persist", filename: Optional[str] = None) -> Optional[Path]:
+def save_run_summary(summary: dict[str, Any], dest_dir: str = "./persist", filename: str | None = None) -> Path | None:
     """Persist a JSON summary of the last run.
 
     Returns the path to the saved file or None on failure.
@@ -114,4 +114,3 @@ def save_run_summary(summary: Dict[str, Any], dest_dir: str = "./persist", filen
         return out_path
     except Exception:
         return None
-

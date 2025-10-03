@@ -8,21 +8,21 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import requests
 
 logger = logging.getLogger(__name__)
 
 
-def _env(name: str, default: Optional[str] = None) -> Optional[str]:
+def _env(name: str, default: str | None = None) -> str | None:
     v = os.getenv(name)
     if v is None or not str(v).strip():
         return default
     return str(v).strip()
 
 
-def _reconstruct_abstract(inverted_index: Optional[Dict[str, List[int]]]) -> str:
+def _reconstruct_abstract(inverted_index: dict[str, list[int]] | None) -> str:
     if not isinstance(inverted_index, dict) or not inverted_index:
         return ""
     try:
@@ -30,7 +30,7 @@ def _reconstruct_abstract(inverted_index: Optional[Dict[str, List[int]]]) -> str
         for positions in inverted_index.values():
             if positions:
                 max_pos = max(max_pos, max(positions))
-        tokens: List[Optional[str]] = [None] * (max_pos + 1)
+        tokens: list[str | None] = [None] * (max_pos + 1)
         for token, positions in inverted_index.items():
             for pos in positions:
                 if 0 <= pos < len(tokens):
@@ -41,21 +41,22 @@ def _reconstruct_abstract(inverted_index: Optional[Dict[str, List[int]]]) -> str
         return ""
 
 
-def _extract_pmid(ids: Optional[Dict[str, Any]]) -> str:
+def _extract_pmid(ids: dict[str, Any] | None) -> str:
     if not isinstance(ids, dict):
         return ""
     pmid_url = ids.get("pmid") or ""
     if not isinstance(pmid_url, str):
         return ""
     import re
+
     m = re.search(r"(\d{6,9})", pmid_url)
     return m.group(1) if m else ""
 
 
-def _normalize_authors(authorships: Optional[List[Dict[str, Any]]]) -> str:
+def _normalize_authors(authorships: list[dict[str, Any]] | None) -> str:
     if not isinstance(authorships, list):
         return ""
-    names: List[str] = []
+    names: list[str] = []
     for a in authorships:
         try:
             author = a.get("author") or {}
@@ -67,7 +68,7 @@ def _normalize_authors(authorships: Optional[List[Dict[str, Any]]]) -> str:
     return ", ".join(names)
 
 
-def _normalize_journal(work: Dict[str, Any]) -> str:
+def _normalize_journal(work: dict[str, Any]) -> str:
     host = work.get("host_venue") or {}
     src = work.get("primary_location", {}).get("source") or {}
     for candidate in (host.get("display_name"), src.get("display_name")):
@@ -76,7 +77,7 @@ def _normalize_journal(work: Dict[str, Any]) -> str:
     return ""
 
 
-def _full_text_url(work: Dict[str, Any]) -> str:
+def _full_text_url(work: dict[str, Any]) -> str:
     oa = work.get("open_access") or {}
     if isinstance(oa, dict):
         u = oa.get("oa_url")
@@ -91,13 +92,11 @@ def _full_text_url(work: Dict[str, Any]) -> str:
 
 
 class OpenAlexClient:
-    def __init__(self,
-                 base_url: Optional[str] = None,
-                 email: Optional[str] = None) -> None:
+    def __init__(self, base_url: str | None = None, email: str | None = None) -> None:
         self.base_url = (base_url or _env("OPENALEX_BASE_URL", "https://api.openalex.org")).rstrip("/")
         self.email = email or _env("OPENALEX_EMAIL")
 
-    def _get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         params = dict(params or {})
         if self.email and "mailto" not in params:
             params["mailto"] = self.email
@@ -106,13 +105,13 @@ class OpenAlexClient:
         resp.raise_for_status()
         return resp.json()
 
-    def search_works(self, query: str, max_items: int = 30) -> List[Dict[str, Any]]:
+    def search_works(self, query: str, max_items: int = 30) -> list[dict[str, Any]]:
         if not query or not str(query).strip():
             return []
         data = self._get("/works", {"search": query.strip(), "per_page": max(1, min(int(max_items), 200))})
         return list(data.get("results") or [])
 
-    def normalize_work(self, work: Dict[str, Any]) -> Dict[str, Any]:
+    def normalize_work(self, work: dict[str, Any]) -> dict[str, Any]:
         ids = work.get("ids") or {}
         title = work.get("display_name") or ""
         doi = work.get("doi") or ids.get("doi") or ""
@@ -139,4 +138,3 @@ class OpenAlexClient:
             "ingestion": "openalex",
             "openalex_id": work.get("id"),
         }
-

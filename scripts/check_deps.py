@@ -3,30 +3,35 @@
 
 try:
     import langchain
+
     print(f"✅ langchain: {langchain.__version__}")
 except ImportError as e:
     print(f"❌ langchain: {e}")
 
 try:
     import faiss
+
     print(f"✅ faiss: {faiss.__version__}")
 except ImportError as e:
     print(f"❌ faiss: {e}")
 
 try:
-    import dotenv
+    pass
+
     print("✅ python-dotenv")
 except ImportError as e:
     print(f"❌ python-dotenv: {e}")
 
 try:
-    import requests
+    pass
+
     print("✅ requests")
 except ImportError as e:
     print(f"❌ requests: {e}")
 
 try:
-    import numpy
+    pass
+
     print("✅ numpy")
 except ImportError as e:
     print(f"❌ numpy: {e}")

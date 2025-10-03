@@ -18,18 +18,14 @@ Features:
 4. Batch processing optimization
 5. Integration with langchain-nvidia-ai-endpoints
 """
-
 import asyncio
 import logging
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union, Tuple
-from urllib.parse import urljoin
-import json
+from typing import Any, Dict, List, Optional, Union
 
 import aiohttp
-import requests
 from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings, NVIDIARerank
 
 logger = logging.getLogger(__name__)
@@ -38,19 +34,23 @@ logger = logging.getLogger(__name__)
 try:
     from .clients.nemo_client_enhanced import EnhancedNeMoClient
     from .enhanced_config import EnhancedRAGConfig
+
     ENHANCED_CLIENT_AVAILABLE = True
 except ImportError:
     try:
         from src.clients.nemo_client_enhanced import EnhancedNeMoClient
         from src.enhanced_config import EnhancedRAGConfig
+
         ENHANCED_CLIENT_AVAILABLE = True
     except ImportError:
         logger.warning("Enhanced client not available, using standard NeMo client only")
         ENHANCED_CLIENT_AVAILABLE = False
 
+
 @dataclass
 class NeMoServiceConfig:
     """Configuration for a specific NeMo NIM service."""
+
     name: str
     endpoint: str
     model: str
@@ -60,15 +60,18 @@ class NeMoServiceConfig:
     retry_delay_seconds: float = 1.0
     headers: Dict[str, str] = field(default_factory=dict)
 
+
 @dataclass
 class NeMoAPIResponse:
     """Standardized response from NeMo APIs."""
+
     success: bool
     data: Any = None
     error: Optional[str] = None
     response_time_ms: float = 0.0
     service: Optional[str] = None
     model: Optional[str] = None
+
 
 class NVIDIABuildCreditsMonitor:
     """
@@ -109,11 +112,9 @@ class NVIDIABuildCreditsMonitor:
         logger.info("Credits: service=%s used=%s remaining=%s", service, tokens, self.credits_remaining)
 
     # ------------------------ Pharma-aware helpers ------------------------
-    def log_api_call_pharma(self,
-                            service: str,
-                            tokens_used: int = 1,
-                            query_text: Optional[str] = None,
-                            query_type: Optional[str] = None) -> None:
+    def log_api_call_pharma(
+        self, service: str, tokens_used: int = 1, query_text: Optional[str] = None, query_type: Optional[str] = None
+    ) -> None:
         """Record a call with pharmaceutical context and optional classification.
 
         This delegates to log_api_call() for counters and adds per-query-type
@@ -216,22 +217,22 @@ class NeMoRetrieverClient:
             "dimensions": 1024,
             "max_length": 32768,
             "description": "Optimized for question-answering retrieval",
-            "recommended_for": ["pharmaceutical_qa", "medical_literature", "technical_docs"]
+            "recommended_for": ["pharmaceutical_qa", "medical_literature", "technical_docs"],
         },
         "nv-embedqa-mistral7b-v2": {
             "full_name": "nvidia/nv-embedqa-mistral7b-v2",
             "dimensions": 4096,
             "max_length": 32768,
             "description": "Multilingual model for text embedding and QA",
-            "recommended_for": ["multilingual_content", "complex_reasoning", "long_documents"]
+            "recommended_for": ["multilingual_content", "complex_reasoning", "long_documents"],
         },
         "snowflake-arctic-embed-l": {
             "full_name": "Snowflake/snowflake-arctic-embed-l",
             "dimensions": 1024,
             "max_length": 8192,
             "description": "Optimized for text embedding tasks",
-            "recommended_for": ["general_text", "similarity_search", "clustering"]
-        }
+            "recommended_for": ["general_text", "similarity_search", "clustering"],
+        },
     }
 
     # Available reranking models
@@ -240,22 +241,29 @@ class NeMoRetrieverClient:
             "full_name": "nvidia/nv-rerankqa-mistral4b-v3",
             "max_pairs": 1000,
             "description": "Fine-tuned for text reranking and accurate QA",
-            "recommended_for": ["pharmaceutical_reranking", "medical_relevance", "cross_modal"]
+            "recommended_for": ["pharmaceutical_reranking", "medical_relevance", "cross_modal"],
         },
         "llama-3_2-nemoretriever-500m-rerank-v2": {
             "full_name": "meta/llama-3_2-nemoretriever-500m-rerank-v2",
             "max_pairs": 1000,
             "description": "Latest NeMo Retriever reranking model optimized for pharmaceutical content",
-            "recommended_for": ["pharmaceutical_reranking", "medical_literature", "regulatory_documents", "clinical_trials"]
-        }
+            "recommended_for": [
+                "pharmaceutical_reranking",
+                "medical_literature",
+                "regulatory_documents",
+                "clinical_trials",
+            ],
+        },
     }
 
-    def __init__(self,
-                 api_key: Optional[str] = None,
-                 base_endpoints: Optional[Dict[str, str]] = None,
-                 custom_headers: Optional[Dict[str, str]] = None,
-                 enable_langchain_integration: bool = True,
-                 credits_monitor: Optional[NVIDIABuildCreditsMonitor] = None):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        base_endpoints: Optional[Dict[str, str]] = None,
+        custom_headers: Optional[Dict[str, str]] = None,
+        enable_langchain_integration: bool = True,
+        credits_monitor: Optional[NVIDIABuildCreditsMonitor] = None,
+    ):
         """
         Initialize NeMo Retriever client.
 
@@ -277,7 +285,7 @@ class NeMoRetrieverClient:
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "User-Agent": "NeMo-Retriever-Client/1.0"
+            "User-Agent": "NeMo-Retriever-Client/1.0",
         }
         if custom_headers:
             self.headers.update(custom_headers)
@@ -303,7 +311,7 @@ class NeMoRetrieverClient:
             "successful_requests": 0,
             "failed_requests": 0,
             "total_latency_ms": 0.0,
-            "avg_latency_ms": 0.0
+            "avg_latency_ms": 0.0,
         }
 
     def _initialize_service_configs(self) -> Dict[str, NeMoServiceConfig]:
@@ -315,7 +323,7 @@ class NeMoRetrieverClient:
                 model="nvidia/nv-embedqa-e5-v5",  # Default model
                 max_batch_size=100,
                 timeout_seconds=30,
-                headers=self.headers.copy()
+                headers=self.headers.copy(),
             ),
             "reranking": NeMoServiceConfig(
                 name="reranking",
@@ -323,7 +331,7 @@ class NeMoRetrieverClient:
                 model="nvidia/nv-rerankqa-mistral4b-v3",
                 max_batch_size=50,
                 timeout_seconds=45,
-                headers=self.headers.copy()
+                headers=self.headers.copy(),
             ),
             "extraction": NeMoServiceConfig(
                 name="extraction",
@@ -331,8 +339,8 @@ class NeMoRetrieverClient:
                 model="nvidia/nv-ingest",
                 max_batch_size=10,  # Document processing is more resource intensive
                 timeout_seconds=120,
-                headers=self.headers.copy()
-            )
+                headers=self.headers.copy(),
+            ),
         }
 
     def _initialize_langchain_integrations(self) -> None:
@@ -342,8 +350,7 @@ class NeMoRetrieverClient:
             for model_key, model_info in self.EMBEDDING_MODELS.items():
                 try:
                     self.langchain_embeddings[model_key] = NVIDIAEmbeddings(
-                        model=model_info["full_name"],
-                        nvidia_api_key=self.api_key
+                        model=model_info["full_name"], nvidia_api_key=self.api_key
                     )
                     logger.info(f"Initialized LangChain embedding for {model_key}")
                 except Exception as e:
@@ -352,8 +359,7 @@ class NeMoRetrieverClient:
             # Initialize reranker
             try:
                 self.langchain_reranker = NVIDIARerank(
-                    model="nvidia/nv-rerankqa-mistral4b-v3",
-                    nvidia_api_key=self.api_key
+                    model="nvidia/nv-rerankqa-mistral4b-v3", nvidia_api_key=self.api_key
                 )
                 logger.info("Initialized LangChain reranker")
             except Exception as e:
@@ -382,15 +388,13 @@ class NeMoRetrieverClient:
 
         if service == "embedding":
             # Check both the key and the full_name in EMBEDDING_MODELS
-            return (
-                model_key in NeMoRetrieverClient.EMBEDDING_MODELS or
-                any(info.get("full_name") == model for info in NeMoRetrieverClient.EMBEDDING_MODELS.values())
+            return model_key in NeMoRetrieverClient.EMBEDDING_MODELS or any(
+                info.get("full_name") == model for info in NeMoRetrieverClient.EMBEDDING_MODELS.values()
             )
         elif service == "reranking":
             # Check both the key and the full_name in RERANKING_MODELS
-            return (
-                model_key in NeMoRetrieverClient.RERANKING_MODELS or
-                any(info.get("full_name") == model for info in NeMoRetrieverClient.RERANKING_MODELS.values())
+            return model_key in NeMoRetrieverClient.RERANKING_MODELS or any(
+                info.get("full_name") == model for info in NeMoRetrieverClient.RERANKING_MODELS.values()
             )
         else:
             # Unknown service type
@@ -420,11 +424,7 @@ class NeMoRetrieverClient:
                 test_payload = self._get_health_check_payload(service_name)
 
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-                    async with session.post(
-                        config.endpoint,
-                        headers=config.headers,
-                        json=test_payload
-                    ) as response:
+                    async with session.post(config.endpoint, headers=config.headers, json=test_payload) as response:
                         response_time = (time.time() - start_time) * 1000
 
                         if response.status == 200:
@@ -432,21 +432,17 @@ class NeMoRetrieverClient:
                                 "status": "healthy",
                                 "response_time_ms": response_time,
                                 "endpoint": config.endpoint,
-                                "model": config.model
+                                "model": config.model,
                             }
                         else:
                             health_results[service_name] = {
                                 "status": "unhealthy",
                                 "error": f"HTTP {response.status}",
-                                "endpoint": config.endpoint
+                                "endpoint": config.endpoint,
                             }
 
             except Exception as e:
-                health_results[service_name] = {
-                    "status": "error",
-                    "error": str(e),
-                    "endpoint": config.endpoint
-                }
+                health_results[service_name] = {"status": "error", "error": str(e), "endpoint": config.endpoint}
 
         self.service_health = health_results
         self._last_health_check = current_time
@@ -456,28 +452,17 @@ class NeMoRetrieverClient:
     def _get_health_check_payload(self, service_name: str) -> Dict[str, Any]:
         """Get minimal payload for health checking a specific service."""
         if service_name == "embedding":
-            return {
-                "input": ["health check"],
-                "model": self.services[service_name].model
-            }
+            return {"input": ["health check"], "model": self.services[service_name].model}
         elif service_name == "reranking":
-            return {
-                "query": "health check",
-                "passages": ["test passage"],
-                "model": self.services[service_name].model
-            }
+            return {"query": "health check", "passages": ["test passage"], "model": self.services[service_name].model}
         elif service_name == "extraction":
-            return {
-                "input": "health check text",
-                "model": self.services[service_name].model
-            }
+            return {"input": "health check text", "model": self.services[service_name].model}
         else:
             return {}
 
-    async def embed_texts(self,
-                         texts: List[str],
-                         model: str = "nv-embedqa-e5-v5",
-                         use_langchain: bool = True) -> NeMoAPIResponse:
+    async def embed_texts(
+        self, texts: List[str], model: str = "nv-embedqa-e5-v5", use_langchain: bool = True
+    ) -> NeMoAPIResponse:
         """
         Generate embeddings for texts using NeMo Embedding NIMs.
 
@@ -504,7 +489,7 @@ class NeMoRetrieverClient:
                     data={"embeddings": embeddings},
                     response_time_ms=response_time,
                     service="embedding",
-                    model=model
+                    model=model,
                 )
 
             # Fallback to direct API calls
@@ -516,11 +501,7 @@ class NeMoRetrieverClient:
 
             logger.error(f"Embedding failed: {e}")
             return NeMoAPIResponse(
-                success=False,
-                error=str(e),
-                response_time_ms=response_time,
-                service="embedding",
-                model=model
+                success=False, error=str(e), response_time_ms=response_time, service="embedding", model=model
             )
 
     async def _embed_with_langchain(self, texts: List[str], model: str) -> List[List[float]]:
@@ -529,11 +510,7 @@ class NeMoRetrieverClient:
 
         # LangChain embeddings are typically sync, so run in executor
         loop = asyncio.get_event_loop()
-        embeddings = await loop.run_in_executor(
-            None,
-            langchain_embedder.embed_documents,
-            texts
-        )
+        embeddings = await loop.run_in_executor(None, langchain_embedder.embed_documents, texts)
 
         return embeddings
 
@@ -545,17 +522,10 @@ class NeMoRetrieverClient:
         if not model_info:
             raise ValueError(f"Unknown embedding model: {model}")
 
-        payload = {
-            "input": texts,
-            "model": model_info["full_name"]
-        }
+        payload = {"input": texts, "model": model_info["full_name"]}
 
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=config.timeout_seconds)) as session:
-            async with session.post(
-                config.endpoint,
-                headers=config.headers,
-                json=payload
-            ) as response:
+            async with session.post(config.endpoint, headers=config.headers, json=payload) as response:
                 response_time = (time.time() - start_time) * 1000
 
                 if response.status == 200:
@@ -574,7 +544,7 @@ class NeMoRetrieverClient:
                         data={"embeddings": embeddings},
                         response_time_ms=response_time,
                         service="embedding",
-                        model=model
+                        model=model,
                     )
                 else:
                     error_text = await response.text()
@@ -585,15 +555,17 @@ class NeMoRetrieverClient:
                         error=f"API error {response.status}: {error_text}",
                         response_time_ms=response_time,
                         service="embedding",
-                        model=model
+                        model=model,
                     )
 
-    async def rerank_passages(self,
-                            query: str,
-                            passages: List[str],
-                            model: str = "nv-rerankqa-mistral4b-v3",
-                            top_k: Optional[int] = None,
-                            use_langchain: bool = True) -> NeMoAPIResponse:
+    async def rerank_passages(
+        self,
+        query: str,
+        passages: List[str],
+        model: str = "nv-rerankqa-mistral4b-v3",
+        top_k: Optional[int] = None,
+        use_langchain: bool = True,
+    ) -> NeMoAPIResponse:
         """
         Rerank passages for relevance to query using NeMo Reranking NIMs.
 
@@ -622,7 +594,7 @@ class NeMoRetrieverClient:
                     data={"reranked_passages": reranked},
                     response_time_ms=response_time,
                     service="reranking",
-                    model=model
+                    model=model,
                 )
 
             # Fallback to direct API calls
@@ -634,14 +606,12 @@ class NeMoRetrieverClient:
 
             logger.error(f"Reranking failed: {e}")
             return NeMoAPIResponse(
-                success=False,
-                error=str(e),
-                response_time_ms=response_time,
-                service="reranking",
-                model=model
+                success=False, error=str(e), response_time_ms=response_time, service="reranking", model=model
             )
 
-    async def _rerank_with_langchain(self, query: str, passages: List[str], top_k: Optional[int]) -> List[Dict[str, Any]]:
+    async def _rerank_with_langchain(
+        self, query: str, passages: List[str], top_k: Optional[int]
+    ) -> List[Dict[str, Any]]:
         """Rerank passages using LangChain integration."""
         # Create documents for reranking
         from langchain_core.documents import Document
@@ -650,25 +620,24 @@ class NeMoRetrieverClient:
 
         # LangChain reranking is typically sync, so run in executor
         loop = asyncio.get_event_loop()
-        reranked_docs = await loop.run_in_executor(
-            None,
-            self.langchain_reranker.compress_documents,
-            docs,
-            query
-        )
+        reranked_docs = await loop.run_in_executor(None, self.langchain_reranker.compress_documents, docs, query)
 
         # Convert back to our format
         results = []
         for i, doc in enumerate(reranked_docs[:top_k] if top_k else reranked_docs):
-            results.append({
-                "text": doc.page_content,
-                "score": getattr(doc.metadata, 'relevance_score', 1.0 - (i * 0.1)),  # Fallback scoring
-                "index": i
-            })
+            results.append(
+                {
+                    "text": doc.page_content,
+                    "score": getattr(doc.metadata, "relevance_score", 1.0 - (i * 0.1)),  # Fallback scoring
+                    "index": i,
+                }
+            )
 
         return results
 
-    async def _rerank_with_direct_api(self, query: str, passages: List[str], model: str, top_k: Optional[int], start_time: float) -> NeMoAPIResponse:
+    async def _rerank_with_direct_api(
+        self, query: str, passages: List[str], model: str, top_k: Optional[int], start_time: float
+    ) -> NeMoAPIResponse:
         """Rerank passages using direct API calls."""
         config = self.services["reranking"]
         model_info = self.RERANKING_MODELS.get(model)
@@ -676,21 +645,13 @@ class NeMoRetrieverClient:
         if not model_info:
             raise ValueError(f"Unknown reranking model: {model}")
 
-        payload = {
-            "query": query,
-            "passages": passages,
-            "model": model_info["full_name"]
-        }
+        payload = {"query": query, "passages": passages, "model": model_info["full_name"]}
 
         if top_k:
             payload["top_n"] = top_k
 
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=config.timeout_seconds)) as session:
-            async with session.post(
-                config.endpoint,
-                headers=config.headers,
-                json=payload
-            ) as response:
+            async with session.post(config.endpoint, headers=config.headers, json=payload) as response:
                 response_time = (time.time() - start_time) * 1000
 
                 if response.status == 200:
@@ -702,9 +663,9 @@ class NeMoRetrieverClient:
                         data={"reranked_passages": result["rankings"]},
                         response_time_ms=response_time,
                         service="reranking",
-                        model=model
+                        model=model,
                     )
-                
+
                 else:
                     error_text = await response.text()
                     self._update_metrics(False, response_time)
@@ -714,7 +675,7 @@ class NeMoRetrieverClient:
                         error=f"API error {response.status}: {error_text}",
                         response_time_ms=response_time,
                         service="reranking",
-                        model=model
+                        model=model,
                     )
 
     def _update_metrics(self, success: bool, response_time_ms: float) -> None:
@@ -726,9 +687,7 @@ class NeMoRetrieverClient:
             self.metrics["failed_requests"] += 1
 
         self.metrics["total_latency_ms"] += response_time_ms
-        self.metrics["avg_latency_ms"] = (
-            self.metrics["total_latency_ms"] / self.metrics["total_requests"]
-        )
+        self.metrics["avg_latency_ms"] = self.metrics["total_latency_ms"] / self.metrics["total_requests"]
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get performance metrics."""
@@ -741,13 +700,13 @@ class NeMoRetrieverClient:
             "metrics": self.metrics,
             "available_models": {
                 "embedding": list(self.EMBEDDING_MODELS.keys()),
-                "reranking": list(self.RERANKING_MODELS.keys())
+                "reranking": list(self.RERANKING_MODELS.keys()),
             },
             "langchain_integration": {
                 "enabled": self.enable_langchain_integration,
                 "embeddings_available": list(self.langchain_embeddings.keys()),
-                "reranker_available": self.langchain_reranker is not None
-            }
+                "reranker_available": self.langchain_reranker is not None,
+            },
         }
 
     def get_model_info(self, service: str, model: str) -> Optional[Dict[str, Any]]:
@@ -792,7 +751,7 @@ class NeMoRetrieverClient:
         return {
             "embedding": embedding_model,
             "reranking": reranking_model,
-            "reasoning": f"Recommended for {use_case} with {content_type} content"
+            "reasoning": f"Recommended for {use_case} with {content_type} content",
         }
 
 
@@ -813,7 +772,9 @@ def create_client() -> Union["NeMoClientWrapper", "NeMoRetrieverClient"]:
         if ENHANCED_CLIENT_AVAILABLE:
             cfg = EnhancedRAGConfig.from_env()
             if cfg.enable_nvidia_build_fallback and not cfg.has_nvidia_build_credentials():
-                logger.info("Enhanced client available with cloud functionality disabled: NVIDIA Build credentials missing")
+                logger.info(
+                    "Enhanced client available with cloud functionality disabled: NVIDIA Build credentials missing"
+                )
             # Return wrapper to preserve legacy async interface whenever enhanced client is available
             return NeMoClientWrapper()
     except Exception as e:
@@ -849,15 +810,17 @@ class NeMoClientWrapper:
             **kwargs: Additional arguments (ignored for compatibility)
         """
         if not ENHANCED_CLIENT_AVAILABLE:
-            raise ImportError(
-                "Enhanced client not available for wrapper. Use NeMoRetrieverClient directly."
-            )
+            raise ImportError("Enhanced client not available for wrapper. Use NeMoRetrieverClient directly.")
 
         # Construct enhanced client directly to avoid factory recursion
         cfg = EnhancedRAGConfig.from_env()
-        self._enhanced = EnhancedNeMoClient(config=cfg, enable_fallback=True, pharmaceutical_optimized=True, api_key=api_key)
+        self._enhanced = EnhancedNeMoClient(
+            config=cfg, enable_fallback=True, pharmaceutical_optimized=True, api_key=api_key
+        )
 
-    async def embed_texts(self, texts: List[str], model: str = "nvidia/nv-embedqa-e5-v5", use_langchain: bool = True) -> NeMoAPIResponse:
+    async def embed_texts(
+        self, texts: List[str], model: str = "nvidia/nv-embedqa-e5-v5", use_langchain: bool = True
+    ) -> NeMoAPIResponse:
         """
         Generate embeddings using enhanced client. Always returns NeMoAPIResponse
         to preserve legacy compatibility regardless of enhanced client internals.
@@ -874,6 +837,7 @@ class NeMoClientWrapper:
         # Normalize short model names to full for cloud path defense-in-depth
         try:
             from .clients.model_normalization import normalize_model as _normalize_model
+
             model_full = _normalize_model(model, True)
         except Exception:
             model_full = model
@@ -953,8 +917,14 @@ class NeMoClientWrapper:
                 model=model_full,
             )
 
-    async def rerank_passages(self, query: str, passages: List[str], model: str = "nvidia/nv-rerankqa-mistral4b-v3",
-                              top_k: Optional[int] = None, use_langchain: bool = True) -> NeMoAPIResponse:
+    async def rerank_passages(
+        self,
+        query: str,
+        passages: List[str],
+        model: str = "nvidia/nv-rerankqa-mistral4b-v3",
+        top_k: Optional[int] = None,
+        use_langchain: bool = True,
+    ) -> NeMoAPIResponse:
         """
         Rerank passages using enhanced client.
 
@@ -973,6 +943,7 @@ class NeMoClientWrapper:
         # Normalize short model names to full
         try:
             from .clients.model_normalization import normalize_model as _normalize_model
+
             model_full = _normalize_model(model, True)
         except Exception:
             model_full = model
@@ -992,7 +963,7 @@ class NeMoClientWrapper:
                     data={"reranked_passages": reranked_passages},
                     response_time_ms=response_time,
                     service="reranking",
-                    model=model_full
+                    model=model_full,
                 )
             else:
                 return NeMoAPIResponse(
@@ -1000,7 +971,7 @@ class NeMoClientWrapper:
                     error=response.error or "Reranking failed",
                     response_time_ms=response_time,
                     service="reranking",
-                    model=model_full
+                    model=model_full,
                 )
 
         except Exception as e:
@@ -1008,11 +979,7 @@ class NeMoClientWrapper:
             logger.error(f"Wrapper reranking failed: {e}")
 
             return NeMoAPIResponse(
-                success=False,
-                error=str(e),
-                response_time_ms=response_time,
-                service="reranking",
-                model=model_full
+                success=False, error=str(e), response_time_ms=response_time, service="reranking", model=model_full
             )
 
     async def health_check(self, force: bool = False) -> Dict[str, Any]:
@@ -1065,7 +1032,9 @@ class NeMoClientWrapper:
 
 
 # Convenience functions for easy integration
-async def create_nemo_client(api_key: Optional[str] = None, credits_monitor: Optional[NVIDIABuildCreditsMonitor] = None) -> NeMoRetrieverClient:
+async def create_nemo_client(
+    api_key: Optional[str] = None, credits_monitor: Optional[NVIDIABuildCreditsMonitor] = None
+) -> NeMoRetrieverClient:
     """
     DEPRECATED: Factory function to create and validate NeMo Retriever client.
 
@@ -1079,9 +1048,7 @@ async def create_nemo_client(api_key: Optional[str] = None, credits_monitor: Opt
     Returns:
         Initialized and validated NeMoRetrieverClient
     """
-    logger.warning(
-        "create_nemo_client() is deprecated. Use create_client() for enhanced cloud-first functionality."
-    )
+    logger.warning("create_nemo_client() is deprecated. Use create_client() for enhanced cloud-first functionality.")
     client = NeMoRetrieverClient(api_key=api_key, credits_monitor=credits_monitor)
 
     # Perform initial health check
@@ -1099,6 +1066,7 @@ async def create_nemo_client(api_key: Optional[str] = None, credits_monitor: Opt
 
 # Example usage for integration testing
 if __name__ == "__main__":
+
     async def test_client():
         """Test NeMo client functionality."""
         try:
@@ -1106,8 +1074,7 @@ if __name__ == "__main__":
 
             # Test embedding
             embed_response = await client.embed_texts(
-                ["What are the effects of aspirin?", "How does ibuprofen work?"],
-                model="nv-embedqa-e5-v5"
+                ["What are the effects of aspirin?", "How does ibuprofen work?"], model="nv-embedqa-e5-v5"
             )
 
             if embed_response.success:
@@ -1121,8 +1088,8 @@ if __name__ == "__main__":
                 passages=[
                     "Aspirin can cause stomach upset and bleeding.",
                     "Ibuprofen may lead to kidney problems.",
-                    "Acetaminophen is generally safe but can cause liver damage in high doses."
-                ]
+                    "Acetaminophen is generally safe but can cause liver damage in high doses.",
+                ],
             )
 
             if rerank_response.success:

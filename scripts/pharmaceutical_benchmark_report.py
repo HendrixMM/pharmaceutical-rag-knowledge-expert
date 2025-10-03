@@ -10,7 +10,6 @@ Usage:
     python scripts/pharmaceutical_benchmark_report.py results/ --format markdown
     python scripts/pharmaceutical_benchmark_report.py results/ --compare v1 v2
 """
-
 import argparse
 import json
 import logging
@@ -18,15 +17,12 @@ import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -64,7 +60,7 @@ class ReportGenerator:
         if ReportGenerator._is_dual_mode(result):
             return [
                 ("cloud", result.get("metrics", {}).get("cloud", {})),
-                ("self_hosted", result.get("metrics", {}).get("self_hosted", {}))
+                ("self_hosted", result.get("metrics", {}).get("self_hosted", {})),
             ]
         else:
             mode = result.get("metadata", {}).get("mode", "single")
@@ -98,7 +94,7 @@ class ReportGenerator:
             "success_rate": total_successful / total_queries if total_queries > 0 else 0,
             "overall_average_score": round(overall_avg, 3),
             "total_credits_used": total_credits,
-            "average_credits_per_query": round(total_credits / total_queries, 2) if total_queries > 0 else 0
+            "average_credits_per_query": round(total_credits / total_queries, 2) if total_queries > 0 else 0,
         }
 
     def generate_category_breakdown(self) -> Dict[str, Any]:
@@ -126,7 +122,7 @@ class ReportGenerator:
                     "average_latency_ms": metrics.get("average_latency_ms", 0),
                     "average_credits": metrics.get("average_credits_per_query", 0),
                     "total_credits": metrics.get("total_credits", 0),
-                    "average_tokens": metrics.get("average_tokens", 0)
+                    "average_tokens": metrics.get("average_tokens", 0),
                 }
 
         return breakdown
@@ -147,11 +143,13 @@ class ReportGenerator:
                 else:
                     category_key = category
 
-                cost_by_category[category_key].append({
-                    "avg_credits_per_query": metrics.get("average_credits_per_query", 0),
-                    "total_credits": metrics.get("total_credits", 0),
-                    "query_count": total_queries
-                })
+                cost_by_category[category_key].append(
+                    {
+                        "avg_credits_per_query": metrics.get("average_credits_per_query", 0),
+                        "total_credits": metrics.get("total_credits", 0),
+                        "query_count": total_queries,
+                    }
+                )
 
         # Calculate cost efficiency (score per credit)
         cost_efficiency = {}
@@ -178,20 +176,17 @@ class ReportGenerator:
         return {
             "cost_by_category": dict(cost_by_category),
             "cost_efficiency": cost_efficiency,
-            "total_cost": total_cost
+            "total_cost": total_cost,
         }
 
     def generate_full_report(self) -> Dict[str, Any]:
         """Generate complete report."""
         return {
-            "report_metadata": {
-                "generated_at": datetime.now().isoformat(),
-                "report_version": "1.0"
-            },
+            "report_metadata": {"generated_at": datetime.now().isoformat(), "report_version": "1.0"},
             "executive_summary": self.generate_executive_summary(),
             "category_breakdown": self.generate_category_breakdown(),
             "cost_analysis": self.generate_cost_analysis(),
-            "detailed_results": self.results
+            "detailed_results": self.results,
         }
 
 
@@ -315,9 +310,7 @@ class ComparisonReportGenerator:
                     current_metrics = self._extract_metrics_for_comparison(current_result, endpoint)
 
                     category_key = f"{category} ({endpoint})"
-                    comparisons[category_key] = self._build_comparison(
-                        baseline_metrics, current_metrics
-                    )
+                    comparisons[category_key] = self._build_comparison(baseline_metrics, current_metrics)
             elif baseline_mode == "both" or current_mode == "both":
                 # Mode mismatch: extract matching endpoint from dual-mode result
                 # Determine which mode to extract from dual-mode result
@@ -342,24 +335,26 @@ class ComparisonReportGenerator:
     def _build_comparison(self, baseline_metrics: Dict[str, Any], current_metrics: Dict[str, Any]) -> Dict[str, Any]:
         """Build comparison dict from baseline and current metrics."""
         accuracy_change = current_metrics.get("average_accuracy", 0) - baseline_metrics.get("average_accuracy", 0)
-        cost_change = current_metrics.get("average_credits_per_query", 0) - baseline_metrics.get("average_credits_per_query", 0)
+        cost_change = current_metrics.get("average_credits_per_query", 0) - baseline_metrics.get(
+            "average_credits_per_query", 0
+        )
         latency_change = current_metrics.get("average_latency_ms", 0) - baseline_metrics.get("average_latency_ms", 0)
 
         return {
             "baseline": {
                 "accuracy": baseline_metrics.get("average_accuracy", 0),
                 "cost": baseline_metrics.get("average_credits_per_query", 0),
-                "latency": baseline_metrics.get("average_latency_ms", 0)
+                "latency": baseline_metrics.get("average_latency_ms", 0),
             },
             "current": {
                 "accuracy": current_metrics.get("average_accuracy", 0),
                 "cost": current_metrics.get("average_credits_per_query", 0),
-                "latency": current_metrics.get("average_latency_ms", 0)
+                "latency": current_metrics.get("average_latency_ms", 0),
             },
             "changes": {
                 "accuracy_change": round(accuracy_change, 3),
                 "cost_change": round(cost_change, 2),
-                "latency_change": round(latency_change, 2)
+                "latency_change": round(latency_change, 2),
             },
             "regression_flags": self._check_regressions(
                 baseline_accuracy=baseline_metrics.get("average_accuracy", 0),
@@ -367,8 +362,8 @@ class ComparisonReportGenerator:
                 baseline_cost=baseline_metrics.get("average_credits_per_query", 0),
                 current_cost=current_metrics.get("average_credits_per_query", 0),
                 baseline_latency=baseline_metrics.get("average_latency_ms", 0),
-                current_latency=current_metrics.get("average_latency_ms", 0)
-            )
+                current_latency=current_metrics.get("average_latency_ms", 0),
+            ),
         }
 
     @staticmethod
@@ -378,7 +373,7 @@ class ComparisonReportGenerator:
         baseline_cost: float,
         current_cost: float,
         baseline_latency: float,
-        current_latency: float
+        current_latency: float,
     ) -> List[str]:
         """
         Check for performance regressions using proper percentage calculations.
@@ -420,14 +415,14 @@ class ComparisonReportGenerator:
 def load_results(path: Path) -> List[Dict[str, Any]]:
     """Load benchmark results from file or directory."""
     if path.is_file():
-        with open(path, 'r') as f:
+        with open(path) as f:
             data = json.load(f)
             return data if isinstance(data, list) else [data]
 
     elif path.is_dir():
         results = []
         for file in sorted(path.glob("benchmark_results_*.json")):
-            with open(file, 'r') as f:
+            with open(file) as f:
                 data = json.load(f)
                 results.extend(data if isinstance(data, list) else [data])
         return results
@@ -438,29 +433,13 @@ def load_results(path: Path) -> List[Dict[str, Any]]:
 
 def main():
     """Main entry point for report generation."""
-    parser = argparse.ArgumentParser(
-        description="Generate pharmaceutical benchmark reports"
-    )
+    parser = argparse.ArgumentParser(description="Generate pharmaceutical benchmark reports")
+    parser.add_argument("results_path", help="Path to results file or directory")
     parser.add_argument(
-        'results_path',
-        help='Path to results file or directory'
+        "--format", choices=["json", "yaml", "markdown", "all"], default="markdown", help="Output format"
     )
-    parser.add_argument(
-        '--format',
-        choices=['json', 'yaml', 'markdown', 'all'],
-        default='markdown',
-        help='Output format'
-    )
-    parser.add_argument(
-        '--output',
-        help='Output file path'
-    )
-    parser.add_argument(
-        '--compare',
-        nargs=2,
-        metavar=('BASELINE', 'CURRENT'),
-        help='Compare two result files'
-    )
+    parser.add_argument("--output", help="Output file path")
+    parser.add_argument("--compare", nargs=2, metavar=("BASELINE", "CURRENT"), help="Compare two result files")
 
     args = parser.parse_args()
 
@@ -480,7 +459,7 @@ def main():
             report = {
                 "comparison": comparator.generate_comparison(),
                 "baseline_summary": ReportGenerator(baseline).generate_executive_summary(),
-                "current_summary": ReportGenerator(current).generate_executive_summary()
+                "current_summary": ReportGenerator(current).generate_executive_summary(),
             }
         else:
             # Standard report
@@ -488,31 +467,31 @@ def main():
             report = generator.generate_full_report()
 
         # Output report
-        if args.format == 'json' or args.format == 'all':
+        if args.format == "json" or args.format == "all":
             output = json.dumps(report, indent=2)
             if args.output:
-                output_path = Path(args.output).with_suffix('.json')
-                with open(output_path, 'w') as f:
+                output_path = Path(args.output).with_suffix(".json")
+                with open(output_path, "w") as f:
                     f.write(output)
                 logger.info(f"JSON report saved to {output_path}")
             else:
                 print(output)
 
-        if args.format == 'yaml' or args.format == 'all':
+        if args.format == "yaml" or args.format == "all":
             output = yaml.dump(report, default_flow_style=False)
             if args.output:
-                output_path = Path(args.output).with_suffix('.yaml')
-                with open(output_path, 'w') as f:
+                output_path = Path(args.output).with_suffix(".yaml")
+                with open(output_path, "w") as f:
                     f.write(output)
                 logger.info(f"YAML report saved to {output_path}")
             else:
                 print(output)
 
-        if args.format == 'markdown' or args.format == 'all':
+        if args.format == "markdown" or args.format == "all":
             output = MarkdownReportGenerator.generate(report)
             if args.output:
-                output_path = Path(args.output).with_suffix('.md')
-                with open(output_path, 'w') as f:
+                output_path = Path(args.output).with_suffix(".md")
+                with open(output_path, "w") as f:
                     f.write(output)
                 logger.info(f"Markdown report saved to {output_path}")
             else:

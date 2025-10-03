@@ -2,7 +2,6 @@
 """
 Standalone test script for NVIDIA Build reranking via OpenAIWrapper.
 """
-
 from __future__ import annotations
 
 import json
@@ -11,14 +10,16 @@ import sys
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
-except Exception:
+except Exception:  # nosec B110 - optional dotenv import should not fail tests
     pass
 
 try:
     from src.clients.openai_wrapper import OpenAIWrapper
 except ModuleNotFoundError:
     from pathlib import Path
+
     ROOT = Path(__file__).resolve().parents[1]
     sys.path.append(str(ROOT))
     from src.clients.openai_wrapper import OpenAIWrapper  # type: ignore
@@ -48,4 +49,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

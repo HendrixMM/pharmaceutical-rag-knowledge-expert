@@ -1,5 +1,4 @@
 """Unit tests for the Paper schema."""
-
 from src.paper_schema import Paper
 
 

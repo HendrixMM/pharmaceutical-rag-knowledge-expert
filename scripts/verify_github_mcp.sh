@@ -10,10 +10,11 @@ echo "Listing MCP servers…"
 claude mcp list || true
 
 echo "Details for 'github' server…"
-claude mcp get github || {
+# Mask any Authorization tokens in CLI output
+MASK='s/(Bearer )[A-Za-z0-9_\-]+/\1REDACTED/g'
+claude mcp get github | sed -E "$MASK" || {
   echo "GitHub MCP server not found in current scope. Try: make mcp-github-add" >&2
   exit 2
 }
 
 echo "✅ Verification complete."
-

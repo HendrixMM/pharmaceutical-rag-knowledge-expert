@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-
 pytestmark = pytest.mark.integration
 
 
@@ -51,53 +50,70 @@ def test_real_nemo_extraction_end_to_end(tmp_path):
     dst_pdf = docs_dir / src_pdf.name
     shutil.copyfile(src_pdf, dst_pdf)
 
-    # Import loader via package path
-# Provide minimal stubs for langchain modules if not installed.
-if not _require("langchain_core") or not _require("langchain_community") or not _require("langchain"):
-    import sys, types
-    # langchain_core
-    if not _require("langchain_core"):
-        lc_core = types.ModuleType("langchain_core"); lc_core.__path__ = []
-        sys.modules["langchain_core"] = lc_core
-        lc_core_documents = types.ModuleType("langchain_core.documents")
-        class Document:
-            def __init__(self, page_content: str, metadata: dict | None = None):
-                self.page_content = page_content
-                self.metadata = dict(metadata or {})
-        lc_core_documents.Document = Document
-        sys.modules["langchain_core.documents"] = lc_core_documents
-        lc_core_documents_base = types.ModuleType("langchain_core.documents.base")
-        class Blob:
-            @classmethod
-            def from_data(cls, data: bytes, path: str | None = None):
-                return cls()
-        lc_core_documents_base.Blob = Blob
-        sys.modules["langchain_core.documents.base"] = lc_core_documents_base
-    # langchain
-    if not _require("langchain"):
-        lc_pkg = types.ModuleType("langchain"); lc_pkg.__path__ = []
-        sys.modules["langchain"] = lc_pkg
-        ts = types.ModuleType("langchain.text_splitter")
-        class RecursiveCharacterTextSplitter:
-            def __init__(self, *args, **kwargs): pass
-            def split_documents(self, documents): return list(documents)
-        ts.RecursiveCharacterTextSplitter = RecursiveCharacterTextSplitter
-        sys.modules["langchain.text_splitter"] = ts
-    # langchain_community
-    if not _require("langchain_community"):
-        comm = types.ModuleType("langchain_community"); comm.__path__ = []
-        sys.modules["langchain_community"] = comm
-        dls = types.ModuleType("langchain_community.document_loaders")
-        class PyPDFLoader:
-            def __init__(self, path: str): self.path = path
-            def load(self):
-                # Only used on fallback; returning minimal structure is fine
-                Document = sys.modules["langchain_core.documents"].Document
-                return [Document("page", {"page": 1})]
-        dls.PyPDFLoader = PyPDFLoader
-        sys.modules["langchain_community.document_loaders"] = dls
+    # Provide minimal stubs for langchain modules if not installed.
+    if not _require("langchain_core") or not _require("langchain_community") or not _require("langchain"):
+        import sys
+        import types
 
-from src.document_loader import PDFDocumentLoader
+        # langchain_core
+        if not _require("langchain_core"):
+            lc_core = types.ModuleType("langchain_core")
+            lc_core.__path__ = []
+            sys.modules["langchain_core"] = lc_core
+            lc_core_documents = types.ModuleType("langchain_core.documents")
+
+            class Document:
+                def __init__(self, page_content: str, metadata: dict | None = None):
+                    self.page_content = page_content
+                    self.metadata = dict(metadata or {})
+
+            lc_core_documents.Document = Document
+            sys.modules["langchain_core.documents"] = lc_core_documents
+            lc_core_documents_base = types.ModuleType("langchain_core.documents.base")
+
+            class Blob:
+                @classmethod
+                def from_data(cls, data: bytes, path: str | None = None):
+                    return cls()
+
+            lc_core_documents_base.Blob = Blob
+            sys.modules["langchain_core.documents.base"] = lc_core_documents_base
+        # langchain
+        if not _require("langchain"):
+            lc_pkg = types.ModuleType("langchain")
+            lc_pkg.__path__ = []
+            sys.modules["langchain"] = lc_pkg
+            ts = types.ModuleType("langchain.text_splitter")
+
+            class RecursiveCharacterTextSplitter:
+                def __init__(self, *args, **kwargs):
+                    pass
+
+                def split_documents(self, documents):
+                    return list(documents)
+
+            ts.RecursiveCharacterTextSplitter = RecursiveCharacterTextSplitter
+            sys.modules["langchain.text_splitter"] = ts
+        # langchain_community
+        if not _require("langchain_community"):
+            comm = types.ModuleType("langchain_community")
+            comm.__path__ = []
+            sys.modules["langchain_community"] = comm
+            dls = types.ModuleType("langchain_community.document_loaders")
+
+            class PyPDFLoader:
+                def __init__(self, path: str):
+                    self.path = path
+
+                def load(self):
+                    # Only used on fallback; returning minimal structure is fine
+                    Document = sys.modules["langchain_core.documents"].Document
+                    return [Document("page", {"page": 1})]
+
+            dls.PyPDFLoader = PyPDFLoader
+            sys.modules["langchain_community.document_loaders"] = dls
+
+    from src.document_loader import PDFDocumentLoader
 
     # Force NeMo strategy by constructor (overrides env)
     loader = PDFDocumentLoader(

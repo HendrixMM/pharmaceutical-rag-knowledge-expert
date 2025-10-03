@@ -8,6 +8,7 @@ Purpose: Canonical navigation structure for all project documentation
 # Documentation Navigation (Canonical TOC)
 
 <!-- TOC -->
+
 - [Getting Started](#getting-started)
 - [Core Documentation](#core-documentation)
 - [Specialized Guides](#specialized-guides)
@@ -22,8 +23,8 @@ This is the canonical navigation blueprint for the repository. It defines the lo
 ## Getting Started
 
 - [README.md](../../README.md) — Project overview, quick start, and links
-- [QUICK_START.md](../../QUICK_START.md) — Step-by-step quick start
-- [SETUP_GUIDE.md](../../SETUP_GUIDE.md) — Detailed environment and setup guide
+- [QUICK_START.md](../technical-history/QUICK_START.md) — Step-by-step quick start
+- [SETUP_GUIDE.md](../technical-history/SETUP_GUIDE.md) — Detailed environment and setup guide
 
 ## Core Documentation
 

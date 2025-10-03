@@ -17,44 +17,38 @@ Integration Flow:
 3. Batches executed via EnhancedNeMoClient with fallback logic
 4. Results aggregated and returned with performance metrics
 """
-
 import asyncio
 import logging
 import time
-from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
-import json
+from typing import Any, Dict, List, Optional
 
 try:
-    from .batch_processor import (
-        BatchProcessor, BatchRequest, RequestPriority,
-        create_pharmaceutical_batch_processor
-    )
-    from ..clients.nemo_client_enhanced import EnhancedNeMoClient, ClientResponse
-    from ..enhanced_config import EnhancedRAGConfig
+    from ..clients.nemo_client_enhanced import EnhancedNeMoClient
+    from .batch_processor import BatchProcessor, RequestPriority, create_pharmaceutical_batch_processor
 except ImportError:
-    from src.optimization.batch_processor import (
-        BatchProcessor, BatchRequest, RequestPriority,
-        create_pharmaceutical_batch_processor
-    )
-    from src.clients.nemo_client_enhanced import EnhancedNeMoClient, ClientResponse
-    from src.enhanced_config import EnhancedRAGConfig
+    from src.clients.nemo_client_enhanced import EnhancedNeMoClient
+    from src.optimization.batch_processor import BatchProcessor, RequestPriority, create_pharmaceutical_batch_processor
 
 logger = logging.getLogger(__name__)
+
 
 class BatchExecutionResult:
     """Result wrapper for batch execution operations."""
 
-    def __init__(self,
-                 success: bool,
-                 results: List[Dict[str, Any]] = None,
-                 metrics: Dict[str, Any] = None,
-                 errors: List[str] = None):
+    def __init__(
+        self,
+        success: bool,
+        results: List[Dict[str, Any]] = None,
+        metrics: Dict[str, Any] = None,
+        errors: List[str] = None,
+    ):
         self.success = success
         self.results = results or []
         self.metrics = metrics or {}
         self.errors = errors or []
         self.timestamp = datetime.now()
+
 
 class PharmaceuticalBatchClient:
     """
@@ -64,10 +58,12 @@ class PharmaceuticalBatchClient:
     to maximize free tier value while maintaining pharmaceutical domain advantages.
     """
 
-    def __init__(self,
-                 enhanced_client: Optional[EnhancedNeMoClient] = None,
-                 batch_processor: Optional[BatchProcessor] = None,
-                 auto_process_interval: Optional[int] = None):
+    def __init__(
+        self,
+        enhanced_client: Optional[EnhancedNeMoClient] = None,
+        batch_processor: Optional[BatchProcessor] = None,
+        auto_process_interval: Optional[int] = None,
+    ):
         """
         Initialize pharmaceutical batch client.
 
@@ -76,12 +72,9 @@ class PharmaceuticalBatchClient:
             batch_processor: Batch processor for optimization
             auto_process_interval: Automatic processing interval in seconds
         """
-        self.enhanced_client = enhanced_client or EnhancedNeMoClient(
-            pharmaceutical_optimized=True
-        )
+        self.enhanced_client = enhanced_client or EnhancedNeMoClient(pharmaceutical_optimized=True)
         self.batch_processor = batch_processor or create_pharmaceutical_batch_processor(
-            enhanced_tracking=True,
-            aggressive_optimization=True
+            enhanced_tracking=True, aggressive_optimization=True
         )
 
         # Auto-processing configuration
@@ -98,7 +91,7 @@ class PharmaceuticalBatchClient:
             "pharmaceutical_requests_processed": 0,
             "free_tier_requests": 0,
             "fallback_requests": 0,
-            "total_execution_time_ms": 0.0
+            "total_execution_time_ms": 0.0,
         }
 
         logger.info("PharmaceuticalBatchClient initialized with enhanced optimization")
@@ -113,11 +106,13 @@ class PharmaceuticalBatchClient:
         """Async context manager exit."""
         await self.stop_auto_processing()
 
-    async def queue_embedding_request(self,
-                                    texts: List[str],
-                                    model: Optional[str] = None,
-                                    priority: RequestPriority = RequestPriority.NORMAL,
-                                    pharmaceutical_context: Optional[Dict[str, Any]] = None) -> str:
+    async def queue_embedding_request(
+        self,
+        texts: List[str],
+        model: Optional[str] = None,
+        priority: RequestPriority = RequestPriority.NORMAL,
+        pharmaceutical_context: Optional[Dict[str, Any]] = None,
+    ) -> str:
         """
         Queue embedding request for batch processing.
 
@@ -130,28 +125,24 @@ class PharmaceuticalBatchClient:
         Returns:
             Request ID for tracking
         """
-        payload = {
-            "texts": texts,
-            "model": model
-        }
+        payload = {"texts": texts, "model": model}
 
         request_id = self.batch_processor.queue_request(
-            request_type="embedding",
-            payload=payload,
-            priority=priority,
-            pharmaceutical_context=pharmaceutical_context
+            request_type="embedding", payload=payload, priority=priority, pharmaceutical_context=pharmaceutical_context
         )
 
         logger.debug(f"Queued embedding request {request_id} for {len(texts)} texts")
         return request_id
 
-    async def queue_chat_request(self,
-                               messages: List[Dict[str, str]],
-                               model: Optional[str] = None,
-                               max_tokens: Optional[int] = None,
-                               temperature: Optional[float] = None,
-                               priority: RequestPriority = RequestPriority.NORMAL,
-                               pharmaceutical_context: Optional[Dict[str, Any]] = None) -> str:
+    async def queue_chat_request(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        priority: RequestPriority = RequestPriority.NORMAL,
+        pharmaceutical_context: Optional[Dict[str, Any]] = None,
+    ) -> str:
         """
         Queue chat completion request for batch processing.
 
@@ -166,25 +157,16 @@ class PharmaceuticalBatchClient:
         Returns:
             Request ID for tracking
         """
-        payload = {
-            "messages": messages,
-            "model": model,
-            "max_tokens": max_tokens,
-            "temperature": temperature
-        }
+        payload = {"messages": messages, "model": model, "max_tokens": max_tokens, "temperature": temperature}
 
         request_id = self.batch_processor.queue_request(
-            request_type="chat",
-            payload=payload,
-            priority=priority,
-            pharmaceutical_context=pharmaceutical_context
+            request_type="chat", payload=payload, priority=priority, pharmaceutical_context=pharmaceutical_context
         )
 
         logger.debug(f"Queued chat request {request_id}")
         return request_id
 
-    async def process_batches_now(self,
-                                max_concurrent: int = 3) -> BatchExecutionResult:
+    async def process_batches_now(self, max_concurrent: int = 3) -> BatchExecutionResult:
         """
         Process all queued batches immediately.
 
@@ -199,8 +181,7 @@ class PharmaceuticalBatchClient:
         try:
             # Execute batches via processor
             processing_result = await self.batch_processor.process_batches(
-                executor_func=self._execute_batch_payload,
-                max_concurrent_batches=max_concurrent
+                executor_func=self._execute_batch_payload, max_concurrent_batches=max_concurrent
             )
 
             execution_time = int((time.time() - start_time) * 1000)
@@ -215,16 +196,14 @@ class PharmaceuticalBatchClient:
                 self.execution_metrics["total_requests_processed"] += results.get("requests_processed", 0)
 
                 return BatchExecutionResult(
-                    success=True,
-                    results=[results],
-                    metrics=self._compile_execution_metrics(results, execution_time)
+                    success=True, results=[results], metrics=self._compile_execution_metrics(results, execution_time)
                 )
             else:
                 self.execution_metrics["failed_executions"] += 1
                 return BatchExecutionResult(
                     success=False,
                     errors=[f"Batch processing failed: {processing_result.get('status')}"],
-                    metrics=self._compile_execution_metrics({}, execution_time)
+                    metrics=self._compile_execution_metrics({}, execution_time),
                 )
 
         except Exception as e:
@@ -234,7 +213,7 @@ class PharmaceuticalBatchClient:
             return BatchExecutionResult(
                 success=False,
                 errors=[str(e)],
-                metrics=self._compile_execution_metrics({}, int((time.time() - start_time) * 1000))
+                metrics=self._compile_execution_metrics({}, int((time.time() - start_time) * 1000)),
             )
 
     async def _execute_batch_payload(self, batch_payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -256,8 +235,8 @@ class PharmaceuticalBatchClient:
                 "successful_requests": 0,
                 "failed_requests": 0,
                 "cloud_requests": 0,
-                "fallback_requests": 0
-            }
+                "fallback_requests": 0,
+            },
         }
 
         # Process embedding requests
@@ -265,18 +244,19 @@ class PharmaceuticalBatchClient:
         for embed_req in embedding_requests:
             try:
                 response = self.enhanced_client.create_embeddings(
-                    texts=embed_req.get("texts", []),
-                    model=embed_req.get("model")
+                    texts=embed_req.get("texts", []), model=embed_req.get("model")
                 )
 
-                results["embedding_results"].append({
-                    "request_id": embed_req.get("request_id"),
-                    "success": response.success,
-                    "data": response.data,
-                    "endpoint_type": response.endpoint_type.value if response.endpoint_type else None,
-                    "cost_tier": response.cost_tier,
-                    "response_time_ms": response.response_time_ms
-                })
+                results["embedding_results"].append(
+                    {
+                        "request_id": embed_req.get("request_id"),
+                        "success": response.success,
+                        "data": response.data,
+                        "endpoint_type": response.endpoint_type.value if response.endpoint_type else None,
+                        "cost_tier": response.cost_tier,
+                        "response_time_ms": response.response_time_ms,
+                    }
+                )
 
                 # Update execution metrics
                 if response.success:
@@ -292,11 +272,9 @@ class PharmaceuticalBatchClient:
 
             except Exception as e:
                 logger.error(f"Embedding request {embed_req.get('request_id')} failed: {str(e)}")
-                results["embedding_results"].append({
-                    "request_id": embed_req.get("request_id"),
-                    "success": False,
-                    "error": str(e)
-                })
+                results["embedding_results"].append(
+                    {"request_id": embed_req.get("request_id"), "success": False, "error": str(e)}
+                )
                 results["execution_summary"]["failed_requests"] += 1
 
         # Process chat requests
@@ -307,17 +285,19 @@ class PharmaceuticalBatchClient:
                     messages=chat_req.get("messages", []),
                     model=chat_req.get("model"),
                     max_tokens=chat_req.get("max_tokens"),
-                    temperature=chat_req.get("temperature")
+                    temperature=chat_req.get("temperature"),
                 )
 
-                results["chat_results"].append({
-                    "request_id": chat_req.get("request_id"),
-                    "success": response.success,
-                    "data": response.data,
-                    "endpoint_type": response.endpoint_type.value if response.endpoint_type else None,
-                    "cost_tier": response.cost_tier,
-                    "response_time_ms": response.response_time_ms
-                })
+                results["chat_results"].append(
+                    {
+                        "request_id": chat_req.get("request_id"),
+                        "success": response.success,
+                        "data": response.data,
+                        "endpoint_type": response.endpoint_type.value if response.endpoint_type else None,
+                        "cost_tier": response.cost_tier,
+                        "response_time_ms": response.response_time_ms,
+                    }
+                )
 
                 # Update execution metrics
                 if response.success:
@@ -333,26 +313,24 @@ class PharmaceuticalBatchClient:
 
             except Exception as e:
                 logger.error(f"Chat request {chat_req.get('request_id')} failed: {str(e)}")
-                results["chat_results"].append({
-                    "request_id": chat_req.get("request_id"),
-                    "success": False,
-                    "error": str(e)
-                })
+                results["chat_results"].append(
+                    {"request_id": chat_req.get("request_id"), "success": False, "error": str(e)}
+                )
                 results["execution_summary"]["failed_requests"] += 1
 
         # Count pharmaceutical requests
         pharmaceutical_contexts = batch_payload.get("pharmaceutical_contexts", [])
         self.execution_metrics["pharmaceutical_requests_processed"] += len(pharmaceutical_contexts)
 
-        logger.info(f"Batch {results['batch_id']} executed: "
-                   f"{results['execution_summary']['successful_requests']} successful, "
-                   f"{results['execution_summary']['failed_requests']} failed")
+        logger.info(
+            f"Batch {results['batch_id']} executed: "
+            f"{results['execution_summary']['successful_requests']} successful, "
+            f"{results['execution_summary']['failed_requests']} failed"
+        )
 
         return results
 
-    def _compile_execution_metrics(self,
-                                 batch_results: Dict[str, Any],
-                                 execution_time_ms: int) -> Dict[str, Any]:
+    def _compile_execution_metrics(self, batch_results: Dict[str, Any], execution_time_ms: int) -> Dict[str, Any]:
         """Compile comprehensive execution metrics."""
         return {
             "batch_execution_time_ms": execution_time_ms,
@@ -363,8 +341,8 @@ class PharmaceuticalBatchClient:
             "pharmaceutical_optimization": {
                 "pharmaceutical_requests_processed": self.execution_metrics["pharmaceutical_requests_processed"],
                 "free_tier_utilization": self._calculate_free_tier_utilization(),
-                "cost_optimization_active": True
-            }
+                "cost_optimization_active": True,
+            },
         }
 
     def _calculate_free_tier_utilization(self) -> Dict[str, Any]:
@@ -381,8 +359,11 @@ class PharmaceuticalBatchClient:
             "utilization_percentage": round(utilization_pct, 2),
             "free_tier_requests": free_tier_requests,
             "total_requests": total_requests,
-            "optimization_status": "excellent" if utilization_pct > 80 else
-                                 "good" if utilization_pct > 60 else "needs_improvement"
+            "optimization_status": "excellent"
+            if utilization_pct > 80
+            else "good"
+            if utilization_pct > 60
+            else "needs_improvement",
         }
 
     async def start_auto_processing(self) -> None:
@@ -447,15 +428,15 @@ class PharmaceuticalBatchClient:
             "auto_processing": {
                 "enabled": self.auto_process_interval is not None,
                 "interval_seconds": self.auto_process_interval,
-                "active": self._auto_process_task is not None and not self._auto_process_task.done()
+                "active": self._auto_process_task is not None and not self._auto_process_task.done(),
             },
-            "free_tier_optimization": self._calculate_free_tier_utilization()
+            "free_tier_optimization": self._calculate_free_tier_utilization(),
         }
+
 
 # Pharmaceutical research convenience functions
 async def create_pharmaceutical_research_session(
-    auto_process_seconds: int = 30,
-    aggressive_optimization: bool = True
+    auto_process_seconds: int = 30, aggressive_optimization: bool = True
 ) -> PharmaceuticalBatchClient:
     """
     Create optimized pharmaceutical research batch session.
@@ -468,41 +449,37 @@ async def create_pharmaceutical_research_session(
         Configured PharmaceuticalBatchClient for research workflows
     """
     # Create enhanced client with pharmaceutical optimization
-    enhanced_client = EnhancedNeMoClient(
-        pharmaceutical_optimized=True,
-        enable_fallback=True
-    )
+    enhanced_client = EnhancedNeMoClient(pharmaceutical_optimized=True, enable_fallback=True)
 
     # Create batch processor with pharmaceutical prioritization
     batch_processor = create_pharmaceutical_batch_processor(
-        enhanced_tracking=True,
-        aggressive_optimization=aggressive_optimization
+        enhanced_tracking=True, aggressive_optimization=aggressive_optimization
     )
 
     return PharmaceuticalBatchClient(
-        enhanced_client=enhanced_client,
-        batch_processor=batch_processor,
-        auto_process_interval=auto_process_seconds
+        enhanced_client=enhanced_client, batch_processor=batch_processor, auto_process_interval=auto_process_seconds
     )
+
 
 # Example pharmaceutical research workflow
 async def pharmaceutical_research_workflow_example():
     """Example pharmaceutical research workflow using batch optimization."""
 
     async with await create_pharmaceutical_research_session(auto_process_seconds=20) as client:
-
         # High priority drug safety query
         safety_request = await client.queue_chat_request(
-            messages=[{
-                "role": "user",
-                "content": "What are the contraindications and drug interactions for metformin in elderly patients?"
-            }],
+            messages=[
+                {
+                    "role": "user",
+                    "content": "What are the contraindications and drug interactions for metformin in elderly patients?",
+                }
+            ],
             priority=RequestPriority.CRITICAL,
             pharmaceutical_context={
                 "query": "metformin contraindications drug interactions elderly",
                 "domain": "pharmaceutical_safety",
-                "research_type": "drug_safety"
-            }
+                "research_type": "drug_safety",
+            },
         )
 
         # Normal priority mechanism query
@@ -510,14 +487,14 @@ async def pharmaceutical_research_workflow_example():
             texts=[
                 "ACE inhibitor mechanism of action in hypertension treatment",
                 "beta-blocker cardioselective properties and clinical applications",
-                "calcium channel blocker pharmacokinetics and drug metabolism"
+                "calcium channel blocker pharmacokinetics and drug metabolism",
             ],
             priority=RequestPriority.NORMAL,
             pharmaceutical_context={
                 "query": "cardiovascular drug mechanisms",
                 "domain": "pharmacology",
-                "research_type": "mechanism_analysis"
-            }
+                "research_type": "mechanism_analysis",
+            },
         )
 
         # Process batches and get results
@@ -526,9 +503,12 @@ async def pharmaceutical_research_workflow_example():
         if result.success:
             print("Pharmaceutical research batch completed successfully")
             print(f"Processed {len(result.results)} batches")
-            print(f"Free tier utilization: {result.metrics.get('pharmaceutical_optimization', {}).get('free_tier_utilization', {})}")
+            print(
+                f"Free tier utilization: {result.metrics.get('pharmaceutical_optimization', {}).get('free_tier_utilization', {})}"
+            )
 
         return result
+
 
 if __name__ == "__main__":
     # Run pharmaceutical research workflow example

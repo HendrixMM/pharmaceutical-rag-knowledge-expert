@@ -10,24 +10,20 @@ This script tests all the newly implemented pharmaceutical-aware search methods:
 - _extract_pharmaceutical_metadata (via VectorDatabase)
 - Extended get_stats with pharmaceutical statistics
 """
-
+import logging
 import os
 import sys
-import json
-import logging
 from pathlib import Path
-from typing import Dict, Any, List
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from rag_agent import RAGAgent
-from vector_database import VectorDatabase
-from nvidia_embeddings import NVIDIAEmbeddings
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
 
 def test_pharmaceutical_filters():
     """Test all pharmaceutical filter methods"""
@@ -50,11 +46,7 @@ def test_pharmaceutical_filters():
     print(f"   Vector DB path: {vector_db_path}")
 
     try:
-        rag_agent = RAGAgent(
-            docs_folder=docs_folder,
-            api_key=api_key,
-            vector_db_path=vector_db_path
-        )
+        rag_agent = RAGAgent(docs_folder=docs_folder, api_key=api_key, vector_db_path=vector_db_path)
         print("✅ RAG Agent initialized successfully")
     except Exception as e:
         print(f"❌ Failed to initialize RAG Agent: {str(e)}")
@@ -80,8 +72,8 @@ def test_pharmaceutical_filters():
         print(f"   Document count: {stats.get('document_count', 0)}")
 
         # Check if pharmaceutical stats are included
-        if 'pharmaceutical' in stats:
-            pharma_stats = stats['pharmaceutical']
+        if "pharmaceutical" in stats:
+            pharma_stats = stats["pharmaceutical"]
             print(f"   Drug annotation ratio: {pharma_stats.get('drug_annotation_ratio', 'N/A')}")
             print(f"   Top drugs: {pharma_stats.get('top_drug_names', [])[:3]}")
             print("✅ Pharmaceutical stats included in knowledge base stats")
@@ -115,7 +107,7 @@ def test_pharmaceutical_filters():
             if results:
                 # Show first result metadata
                 first_doc = results[0]
-                if hasattr(first_doc, 'metadata'):
+                if hasattr(first_doc, "metadata"):
                     metadata = first_doc.metadata
                     print(f"      First doc has {len(metadata.get('drug_names', []))} drug names")
                     print(f"      Species: {metadata.get('species', 'Unknown')}")
@@ -132,32 +124,22 @@ def test_pharmaceutical_filters():
             "name": "Drug names filter",
             "query": "drug interactions",
             "filters": {"drug_names": ["aspirin", "warfarin"]},
-            "k": 3
+            "k": 3,
         },
-        {
-            "name": "Species filter",
-            "query": "clinical trial",
-            "filters": {"species_preference": "human"},
-            "k": 3
-        },
+        {"name": "Species filter", "query": "clinical trial", "filters": {"species_preference": "human"}, "k": 3},
         {
             "name": "Therapeutic area filter",
             "query": "treatment outcomes",
             "filters": {"therapeutic_areas": ["cardiology", "neurology"]},
-            "k": 3
+            "k": 3,
         },
         {
             "name": "Study type filter",
             "query": "drug efficacy",
             "filters": {"study_types": ["randomized controlled trial"]},
-            "k": 3
+            "k": 3,
         },
-        {
-            "name": "Year range filter",
-            "query": "recent developments",
-            "filters": {"year_range": [2020, 2024]},
-            "k": 3
-        },
+        {"name": "Year range filter", "query": "recent developments", "filters": {"year_range": [2020, 2024]}, "k": 3},
         {
             "name": "Combined filters",
             "query": "cardiovascular drugs",
@@ -166,25 +148,23 @@ def test_pharmaceutical_filters():
                 "species_preference": "human",
                 "therapeutic_areas": ["cardiology"],
                 "study_types": ["clinical trial"],
-                "year_range": [2015, 2024]
+                "year_range": [2015, 2024],
             },
-            "k": 3
-        }
+            "k": 3,
+        },
     ]
 
     for filter_test in filter_combinations:
         try:
             results = rag_agent.similarity_search_with_pharmaceutical_filters(
-                query=filter_test["query"],
-                k=filter_test["k"],
-                filters=filter_test["filters"]
+                query=filter_test["query"], k=filter_test["k"], filters=filter_test["filters"]
             )
             print(f"   🎯 {filter_test['name']}: Found {len(results)} documents")
 
             if results:
                 # Show filter matches in first result
                 first_doc = results[0]
-                if hasattr(first_doc, 'metadata'):
+                if hasattr(first_doc, "metadata"):
                     metadata = first_doc.metadata
                     print(f"      Drug names: {metadata.get('drug_names', [])}")
                     print(f"      Species: {metadata.get('species', 'Unknown')}")
@@ -212,16 +192,10 @@ def test_pharmaceutical_filters():
     try:
         # This tests the internal _apply_pharmaceutical_filters method through similarity_search_with_pharmaceutical_filters
         results_with_filters = rag_agent.similarity_search_with_pharmaceutical_filters(
-            query="drug",
-            k=10,
-            filters={"min_ranking_score": 0.5}
+            query="drug", k=10, filters={"min_ranking_score": 0.5}
         )
 
-        results_no_filters = rag_agent.similarity_search_with_pharmaceutical_filters(
-            query="drug",
-            k=10,
-            filters=None
-        )
+        results_no_filters = rag_agent.similarity_search_with_pharmaceutical_filters(query="drug", k=10, filters=None)
 
         print(f"   With min_ranking_score filter: {len(results_with_filters)} documents")
         print(f"   Without filters: {len(results_no_filters)} documents")
@@ -237,18 +211,15 @@ def test_pharmaceutical_filters():
     print(f"\n🏷️  Test 7: Testing pharmaceutical metadata extraction...")
     try:
         # This tests the internal _extract_pharmaceutical_metadata method through search results
-        results = rag_agent.similarity_search_with_pharmaceutical_filters(
-            query="pharmacokinetics metabolism",
-            k=5
-        )
+        results = rag_agent.similarity_search_with_pharmaceutical_filters(query="pharmacokinetics metabolism", k=5)
 
         pharma_metadata_found = 0
         for i, doc in enumerate(results):
-            if hasattr(doc, 'metadata'):
+            if hasattr(doc, "metadata"):
                 metadata = doc.metadata
-                has_drug_info = bool(metadata.get('drug_names') or metadata.get('drug_annotations'))
-                has_cyp_info = bool(metadata.get('cyp_enzymes'))
-                has_pk_info = bool(metadata.get('pharmacokinetics'))
+                has_drug_info = bool(metadata.get("drug_names") or metadata.get("drug_annotations"))
+                has_cyp_info = bool(metadata.get("cyp_enzymes"))
+                has_pk_info = bool(metadata.get("pharmacokinetics"))
 
                 if has_drug_info or has_cyp_info or has_pk_info:
                     pharma_metadata_found += 1
@@ -272,6 +243,7 @@ def test_pharmaceutical_filters():
     print("=" * 80)
 
     return True
+
 
 if __name__ == "__main__":
     success = test_pharmaceutical_filters()

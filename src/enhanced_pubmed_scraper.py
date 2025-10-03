@@ -6,9 +6,9 @@ import os
 import threading
 from dataclasses import asdict
 from datetime import UTC, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from .cache_management import CacheLookupResult, NCBICacheManager
+from .cache_management import NCBICacheManager
 from .pubmed_scraper import PubMedScraper
 from .rate_limiting import NCBIRateLimiter, RateLimitStatus
 
@@ -26,11 +26,11 @@ class EnhancedPubMedScraper(PubMedScraper):
     def __init__(
         self,
         *args: Any,
-        cache_manager: Optional[NCBICacheManager] = None,
-        rate_limiter: Optional[NCBIRateLimiter] = None,
-        enable_rate_limiting: Optional[bool] = None,
-        enable_advanced_caching: Optional[bool] = None,
-        use_normalized_cache_keys: Optional[bool] = None,
+        cache_manager: NCBICacheManager | None = None,
+        rate_limiter: NCBIRateLimiter | None = None,
+        enable_rate_limiting: bool | None = None,
+        enable_advanced_caching: bool | None = None,
+        use_normalized_cache_keys: bool | None = None,
         **kwargs: Any,
     ) -> None:
         self._advanced_caching_requested = (
@@ -42,7 +42,7 @@ class EnhancedPubMedScraper(PubMedScraper):
                 else _env_flag("ENABLE_ADVANCED_CACHING", "true")
             )
         )
-        self._cache_manager: Optional[NCBICacheManager] = cache_manager if self._advanced_caching_requested else None
+        self._cache_manager: NCBICacheManager | None = cache_manager if self._advanced_caching_requested else None
         self._cache_context = threading.local()
         self._use_normalized_cache_keys = (
             use_normalized_cache_keys
@@ -83,14 +83,14 @@ class EnhancedPubMedScraper(PubMedScraper):
     def _advanced_cache_active(self) -> bool:
         return bool(self._cache_manager)
 
-    def _get_cache_context(self) -> Dict[str, Any]:
+    def _get_cache_context(self) -> dict[str, Any]:
         ctx = getattr(self._cache_context, "value", None)
         if not isinstance(ctx, dict):
             ctx = {}
             self._set_cache_context(ctx)
         return ctx
 
-    def _set_cache_context(self, ctx: Dict[str, Any]) -> None:
+    def _set_cache_context(self, ctx: dict[str, Any]) -> None:
         self._cache_context.value = ctx
 
     def _update_cache_context(self, **updates: Any) -> None:
@@ -209,7 +209,7 @@ class EnhancedPubMedScraper(PubMedScraper):
         if not lookup:
             logger.debug("Advanced cache miss for key %s", cache_key)
             legacy_key = legacy_cache_key or cache_key
-            legacy_results: Optional[List[Dict[str, Any]]] = None
+            legacy_results: list[dict[str, Any]] | None = None
             if legacy_key:
                 try:
                     legacy_results = super()._get_cached_results(legacy_key, apply_ranking)
@@ -224,8 +224,8 @@ class EnhancedPubMedScraper(PubMedScraper):
                     metadata = self._prepare_cache_metadata(len(legacy_results))
                     metadata["legacy_cache_key"] = legacy_key
                     metadata["migration_source"] = "legacy_file_cache"
-                    expires_override: Optional[datetime] = None
-                    grace_override: Optional[datetime] = None
+                    expires_override: datetime | None = None
+                    grace_override: datetime | None = None
                     legacy_path = self.cache_dir / f"{legacy_key}.json"
                     if legacy_path.exists():
                         try:
@@ -297,7 +297,7 @@ class EnhancedPubMedScraper(PubMedScraper):
 
         return results
 
-    def _cache_results(self, cache_key: str, results: List[Dict]) -> None:  # type: ignore[override]
+    def _cache_results(self, cache_key: str, results: list[dict]) -> None:  # type: ignore[override]
         if not self._advanced_cache_active():
             super()._cache_results(cache_key, results)
             return
@@ -341,7 +341,7 @@ class EnhancedPubMedScraper(PubMedScraper):
     # Cache integrations and monitoring
     # ------------------------------------------------------------------
 
-    def _prepare_cache_metadata(self, result_count: int) -> Dict[str, Any]:
+    def _prepare_cache_metadata(self, result_count: int) -> dict[str, Any]:
         context = self._get_cache_context()
         metadata = {
             "original_query": context.get("original_query", ""),
@@ -356,10 +356,10 @@ class EnhancedPubMedScraper(PubMedScraper):
             metadata["legacy_cache_key"] = context["legacy_cache_key"]
         return metadata
 
-    def get_cache_manager(self) -> Optional[NCBICacheManager]:
+    def get_cache_manager(self) -> NCBICacheManager | None:
         return self._cache_manager
 
-    def cache_status_report(self) -> Dict[str, Any]:
+    def cache_status_report(self) -> dict[str, Any]:
         if not self._advanced_cache_active():
             return {"enabled": False}
         manager = self._cache_manager  # keep local for mypy
@@ -372,12 +372,12 @@ class EnhancedPubMedScraper(PubMedScraper):
             "warm_queue_size": manager.warming_scheduler.pending_count() if manager.cache_warming_enabled else 0,
         }
 
-    def get_rate_limit_status(self) -> Optional[RateLimitStatus]:  # type: ignore[override]
+    def get_rate_limit_status(self) -> RateLimitStatus | None:  # type: ignore[override]
         status = super().get_rate_limit_status()
         return status
 
-    def combined_status_report(self) -> Dict[str, Any]:
-        report: Dict[str, Any] = {
+    def combined_status_report(self) -> dict[str, Any]:
+        report: dict[str, Any] = {
             "cache": self.cache_status_report(),
         }
         status = self.get_rate_limit_status()
@@ -387,7 +387,7 @@ class EnhancedPubMedScraper(PubMedScraper):
             report["rate_limit"] = None
         return report
 
-    def warm_cache_entries(self) -> Dict[str, Dict[str, Any]]:
+    def warm_cache_entries(self) -> dict[str, dict[str, Any]]:
         if not self._advanced_cache_active():
             return {}
         return self._cache_manager.warmable_entries()  # type: ignore[union-attr]

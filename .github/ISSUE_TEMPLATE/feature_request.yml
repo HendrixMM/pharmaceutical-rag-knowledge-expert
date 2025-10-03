@@ -1,0 +1,174 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[FEATURE]: "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! Please fill out the form below to help us understand your proposal.
+
+        **Before submitting**: Please check existing issues and the [Features documentation](../../docs/FEATURES.md) to avoid duplicates.
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: Problem Statement
+      description: What problem does this solve? What are the current limitations or pain points?
+      placeholder: |
+        I'm frustrated when...
+        Currently, I cannot...
+        The system doesn't support...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your proposed solution. How would it work? What would the user experience be?
+      placeholder: |
+        Describe your proposed solution:
+        - How would it work?
+        - What would the user interface/API look like?
+        - How would users interact with this feature?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives-considered
+    attributes:
+      label: Alternatives Considered
+      description: What alternatives have you considered? Why is your proposed solution better?
+      placeholder: |
+        Alternative 1: [describe alternative approach]
+        - Pros:
+        - Cons:
+
+        Alternative 2: [describe another alternative]
+        - Pros:
+        - Cons:
+
+        Why proposed solution is better:
+    validations:
+      required: true
+
+  - type: dropdown
+    id: use-case
+    attributes:
+      label: Use Case
+      description: What is the primary use case for this feature?
+      options:
+        - Pharmaceutical Research
+        - Clinical Documentation
+        - Drug Discovery
+        - Regulatory Compliance
+        - General RAG
+        - Academic Research
+        - Production Deployment
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component would this feature affect?
+      options:
+        - RAG Pipeline
+        - Embeddings
+        - Reranking
+        - Vector Database
+        - PubMed Integration
+        - Guardrails
+        - Web Interface
+        - CLI
+        - Documentation
+        - API
+        - Deployment
+        - Testing
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Critical (blocking my work)
+        - High (significant impact on workflow)
+        - Medium (nice to have)
+        - Low (minor improvement)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: pharmaceutical-domain
+    attributes:
+      label: Pharmaceutical Domain
+      description: Pharmaceutical/medical context (check all that apply)
+      options:
+        - label: This feature is specific to pharmaceutical/medical use cases
+          required: false
+        - label: This feature requires medical/regulatory expertise
+          required: false
+        - label: This feature impacts patient safety considerations
+          required: false
+
+  - type: textarea
+    id: implementation-ideas
+    attributes:
+      label: Implementation Ideas
+      description: Do you have ideas on how to implement this? (Optional but helpful)
+      placeholder: |
+        Technical approach suggestions:
+        - Libraries or tools to consider
+        - Code snippets or pseudocode
+        - Architecture considerations
+        - Performance implications
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other relevant information
+      placeholder: |
+        - Screenshots or mockups
+        - Links to related issues or discussions
+        - References to similar features in other projects
+        - Academic papers or documentation
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you willing to help implement this feature?
+      options:
+        - label: I am willing to contribute this feature
+          required: false
+        - label: I need help implementing this feature
+          required: false
+        - label: I am requesting this feature for someone else to implement
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        ### Additional Resources
+        - [Contributing Guidelines](../../CONTRIBUTING.md) - Learn how to contribute
+        - [Features Documentation](../../docs/FEATURES.md) - Existing features
+        - [Architecture](../../docs/ARCHITECTURE.md) - System architecture
+        - [Security Policy](../../SECURITY.md) - Security and vulnerability reporting
+
+        Thank you for helping improve this project!

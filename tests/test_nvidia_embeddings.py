@@ -12,11 +12,7 @@ def _embedding_instance():
 def test_extract_reason_detects_disabled_message():
     embeddings = _embedding_instance()
     response = Mock()
-    response.json.return_value = {
-        "error": {
-            "message": "This model has been disabled temporarily."
-        }
-    }
+    response.json.return_value = {"error": {"message": "This model has been disabled temporarily."}}
 
     reason = embeddings._extract_model_unavailable_reason(response)
     assert reason == "This model has been disabled temporarily."
@@ -25,11 +21,7 @@ def test_extract_reason_detects_disabled_message():
 def test_extract_reason_detects_access_denied_phrase():
     embeddings = _embedding_instance()
     response = Mock()
-    response.json.return_value = {
-        "error": {
-            "message": "Access denied for model due to entitlement."
-        }
-    }
+    response.json.return_value = {"error": {"message": "Access denied for model due to entitlement."}}
 
     reason = embeddings._extract_model_unavailable_reason(response)
     assert "access denied" in reason.lower()
@@ -38,12 +30,7 @@ def test_extract_reason_detects_access_denied_phrase():
 def test_extract_reason_uses_error_code_when_present():
     embeddings = _embedding_instance()
     response = Mock()
-    response.json.return_value = {
-        "error": {
-            "code": "MODEL_DISABLED",
-            "message": ""
-        }
-    }
+    response.json.return_value = {"error": {"code": "MODEL_DISABLED", "message": ""}}
 
     reason = embeddings._extract_model_unavailable_reason(response)
     assert reason == "MODEL_DISABLED"
@@ -52,12 +39,7 @@ def test_extract_reason_uses_error_code_when_present():
 def test_extract_reason_returns_none_without_indicators():
     embeddings = _embedding_instance()
     response = Mock()
-    response.json.return_value = {
-        "error": {
-            "message": "Rate limit exceeded.",
-            "code": "rate_limit"
-        }
-    }
+    response.json.return_value = {"error": {"message": "Rate limit exceeded.", "code": "rate_limit"}}
 
     reason = embeddings._extract_model_unavailable_reason(response)
     assert reason is None

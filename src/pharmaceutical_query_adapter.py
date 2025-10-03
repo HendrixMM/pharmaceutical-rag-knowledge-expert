@@ -6,12 +6,10 @@ Environment variables
 - PUBMED_EUTILS_API_KEY: optional API key for higher rate limits
 - QUERY_ENGINE_CACHE_DIR: optional override for the on-disk JSON cache directory.
 """
-
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .enhanced_config import EnhancedRAGConfig
 from .enhanced_pubmed_scraper import EnhancedPubMedScraper
@@ -23,8 +21,8 @@ from .ranking_filter import StudyRankingFilter
 
 def build_pharmaceutical_query_engine(
     *,
-    scraper: Optional[PubMedScraper] = None,
-    ranking_filter: Optional[StudyRankingFilter] = None,
+    scraper: PubMedScraper | None = None,
+    ranking_filter: StudyRankingFilter | None = None,
     **engine_kwargs: Any,
 ) -> EnhancedQueryEngine:
     """Return a configured `EnhancedQueryEngine` ready for pharmaceutical queries.
@@ -55,8 +53,8 @@ def build_pharmaceutical_query_engine(
 
 def build_enhanced_pharmaceutical_query_engine(
     *,
-    scraper: Optional[EnhancedPubMedScraper] = None,
-    config: Optional[EnhancedRAGConfig] = None,
+    scraper: EnhancedPubMedScraper | None = None,
+    config: EnhancedRAGConfig | None = None,
     **engine_kwargs: Any,
 ) -> EnhancedQueryEngine:
     """Build an enhanced query engine with pharmaceutical processing capabilities.
@@ -105,17 +103,17 @@ def build_enhanced_rag_agent(
     vector_db_path: str = "./vector_db",
     chunk_size: int = 1000,
     chunk_overlap: int = 200,
-    embedding_model_name: Optional[str] = None,
-    enable_preflight_embedding: Optional[bool] = None,
-    append_disclaimer_in_answer: Optional[bool] = None,
-    force_disclaimer_in_answer: Optional[bool] = None,
-    guardrails_config_path: Optional[str] = None,
+    embedding_model_name: str | None = None,
+    enable_preflight_embedding: bool | None = None,
+    append_disclaimer_in_answer: bool | None = None,
+    force_disclaimer_in_answer: bool | None = None,
+    guardrails_config_path: str | None = None,
     enable_synthesis: bool = False,
     enable_ddi_analysis: bool = False,
     safety_mode: str = "balanced",
-    config: Optional[EnhancedRAGConfig] = None,
-    pubmed_query_engine: Optional[EnhancedQueryEngine] = None,
-    pubmed_scraper: Optional[EnhancedPubMedScraper] = None,
+    config: EnhancedRAGConfig | None = None,
+    pubmed_query_engine: EnhancedQueryEngine | None = None,
+    pubmed_scraper: EnhancedPubMedScraper | None = None,
 ) -> EnhancedRAGAgent:
     """Build an enhanced RAG agent with PubMed integration capabilities.
 
@@ -211,13 +209,13 @@ def build_integrated_system(
     vector_db_path: str = "./vector_db",
     chunk_size: int = 1000,
     chunk_overlap: int = 200,
-    embedding_model_name: Optional[str] = None,
-    guardrails_config_path: Optional[str] = None,
+    embedding_model_name: str | None = None,
+    guardrails_config_path: str | None = None,
     enable_synthesis: bool = False,
     enable_ddi_analysis: bool = False,
     safety_mode: str = "balanced",
-    config: Optional[EnhancedRAGConfig] = None,
-) -> Dict[str, Any]:
+    config: EnhancedRAGConfig | None = None,
+) -> dict[str, Any]:
     """Build a complete integrated RAG + PubMed system.
 
     This factory creates all necessary components for a fully functional
@@ -260,13 +258,13 @@ def build_integrated_system(
     """
     config = config or EnhancedRAGConfig.from_env()
 
-    components: Dict[str, Any] = {
+    components: dict[str, Any] = {
         "config": config,
         "status": {
             "pubmed_enabled": config.should_enable_pubmed(),
             "hybrid_mode": config.should_use_hybrid_mode(),
             "components_ready": False,
-        }
+        },
     }
 
     # Build the RAG agent (this will create PubMed components if enabled)
@@ -294,9 +292,9 @@ def build_integrated_system(
         # Verify components are ready using public APIs
         components["status"]["components_ready"] = rag_agent.pubmed_available
         system_status = rag_agent.get_system_status()
-        components["status"]["pubmed_status"] = system_status.get(
-            "component_health", {}
-        ).get("pubmed_integration", {}).get("status", "unknown")
+        components["status"]["pubmed_status"] = (
+            system_status.get("component_health", {}).get("pubmed_integration", {}).get("status", "unknown")
+        )
 
     return components
 
@@ -323,10 +321,10 @@ class SystemHealthReport:
 
 
 def check_system_health(
-    rag_agent: Optional[EnhancedRAGAgent] = None,
-    pubmed_scraper: Optional[EnhancedPubMedScraper] = None,
-    query_engine: Optional[EnhancedQueryEngine] = None,
-    config: Optional[EnhancedRAGConfig] = None,
+    rag_agent: EnhancedRAGAgent | None = None,
+    pubmed_scraper: EnhancedPubMedScraper | None = None,
+    query_engine: EnhancedQueryEngine | None = None,
+    config: EnhancedRAGConfig | None = None,
 ) -> SystemHealthReport:
     """Check the health of an integrated RAG + PubMed system.
 

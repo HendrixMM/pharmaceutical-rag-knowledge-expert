@@ -14,14 +14,12 @@ This script helps identify:
 Usage:
   python scripts/api_key_diagnostics.py
 """
-
 import os
 import sys
-import json
-import time
-import requests
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List
+
+import requests
 
 # Ensure local src is importable
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,18 +29,15 @@ for p in (ROOT,):
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     print("Warning: python-dotenv not installed. Using environment variables directly.")
 
+
 def check_api_key_format(api_key: str) -> Dict[str, Any]:
     """Analyze API key format and structure."""
-    analysis = {
-        "format_valid": False,
-        "key_type": "unknown",
-        "estimated_service": "unknown",
-        "issues": []
-    }
+    analysis = {"format_valid": False, "key_type": "unknown", "estimated_service": "unknown", "issues": []}
 
     if not api_key:
         analysis["issues"].append("API key is empty")
@@ -63,13 +58,14 @@ def check_api_key_format(api_key: str) -> Dict[str, Any]:
 
     return analysis
 
+
 def test_basic_connectivity() -> Dict[str, Any]:
     """Test basic connectivity to NVIDIA services."""
     endpoints = [
         "https://api.nvidia.com",
         "https://ai.api.nvidia.com",
         "https://integrate.api.nvidia.com",
-        "https://build.nvidia.com"
+        "https://build.nvidia.com",
     ]
 
     results = {}
@@ -79,15 +75,13 @@ def test_basic_connectivity() -> Dict[str, Any]:
             results[endpoint] = {
                 "reachable": True,
                 "status_code": response.status_code,
-                "response_time_ms": response.elapsed.total_seconds() * 1000
+                "response_time_ms": response.elapsed.total_seconds() * 1000,
             }
         except Exception as e:
-            results[endpoint] = {
-                "reachable": False,
-                "error": str(e)
-            }
+            results[endpoint] = {"reachable": False, "error": str(e)}
 
     return results
+
 
 def test_authentication_endpoints(api_key: str) -> Dict[str, Any]:
     """Test authentication across different NVIDIA endpoints."""
@@ -97,7 +91,7 @@ def test_authentication_endpoints(api_key: str) -> Dict[str, Any]:
             "name": "NVIDIA Build Platform",
             "url": "https://integrate.api.nvidia.com/v1/models",
             "headers": {"Authorization": f"Bearer {api_key}"},
-            "expected_success_codes": [200, 401, 403]  # 401/403 tell us about auth, not connectivity
+            "expected_success_codes": [200, 401, 403],  # 401/403 tell us about auth, not connectivity
         },
         {
             "name": "NVIDIA AI Platform",
@@ -105,8 +99,8 @@ def test_authentication_endpoints(api_key: str) -> Dict[str, Any]:
             "headers": {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             "method": "POST",
             "data": {"input": ["test"], "model": "nvidia/nv-embedqa-e5-v5"},
-            "expected_success_codes": [200, 400, 401, 403, 404]
-        }
+            "expected_success_codes": [200, 400, 401, 403, 404],
+        },
     ]
 
     results = {}
@@ -114,12 +108,7 @@ def test_authentication_endpoints(api_key: str) -> Dict[str, Any]:
         try:
             method = config.get("method", "GET")
             if method == "POST":
-                response = requests.post(
-                    config["url"],
-                    headers=config["headers"],
-                    json=config.get("data"),
-                    timeout=15
-                )
+                response = requests.post(config["url"], headers=config["headers"], json=config.get("data"), timeout=15)
             else:
                 response = requests.get(config["url"], headers=config["headers"], timeout=15)
 
@@ -127,16 +116,13 @@ def test_authentication_endpoints(api_key: str) -> Dict[str, Any]:
                 "status_code": response.status_code,
                 "response_text": response.text[:500],  # First 500 chars
                 "auth_recognized": response.status_code in [200, 400, 403],  # vs 401 = not recognized
-                "likely_valid_endpoint": response.status_code != 404
+                "likely_valid_endpoint": response.status_code != 404,
             }
         except Exception as e:
-            results[config["name"]] = {
-                "error": str(e),
-                "auth_recognized": False,
-                "likely_valid_endpoint": False
-            }
+            results[config["name"]] = {"error": str(e), "auth_recognized": False, "likely_valid_endpoint": False}
 
     return results
+
 
 def analyze_error_patterns(auth_results: Dict[str, Any]) -> Dict[str, Any]:
     """Analyze error patterns to determine likely issues."""
@@ -146,7 +132,7 @@ def analyze_error_patterns(auth_results: Dict[str, Any]) -> Dict[str, Any]:
         "service_unavailable": False,
         "account_inactive": False,
         "regional_restriction": False,
-        "billing_required": False
+        "billing_required": False,
     }
 
     recommendations = []
@@ -185,10 +171,8 @@ def analyze_error_patterns(auth_results: Dict[str, Any]) -> Dict[str, Any]:
     if patterns["service_unavailable"]:
         recommendations.append("🔧 Service connectivity issues - check internet/firewall")
 
-    return {
-        "patterns": patterns,
-        "recommendations": recommendations
-    }
+    return {"patterns": patterns, "recommendations": recommendations}
+
 
 def get_account_info_suggestions() -> List[str]:
     """Provide suggestions for getting account information."""
@@ -197,8 +181,9 @@ def get_account_info_suggestions() -> List[str]:
         "🔍 Check developer.nvidia.com for API documentation",
         "📧 Contact NVIDIA support with your API key for account status",
         "💡 Try creating a new API key if current one is old",
-        "📋 Verify account email confirmation and setup completion"
+        "📋 Verify account email confirmation and setup completion",
     ]
+
 
 def main():
     print("NVIDIA API Key Comprehensive Diagnostics")
@@ -256,7 +241,7 @@ def main():
 
             # Show relevant response snippet
             if result.get("response_text"):
-                snippet = result["response_text"][:100].replace('\n', ' ')
+                snippet = result["response_text"][:100].replace("\n", " ")
                 print(f"   💬 Response: {snippet}...")
 
     # 4. Analyze error patterns
@@ -306,6 +291,7 @@ def main():
     print("\n💬 For support, share this output with NVIDIA support")
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

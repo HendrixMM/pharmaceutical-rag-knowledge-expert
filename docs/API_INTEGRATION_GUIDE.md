@@ -1,6 +1,7 @@
 # API Integration Guide
 
 <!-- TOC -->
+
 - [Overview](#overview)
 - [Table of Contents](#table-of-contents)
 - [Quick Start](#quick-start)

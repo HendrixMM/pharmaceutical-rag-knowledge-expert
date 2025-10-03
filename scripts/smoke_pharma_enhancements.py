@@ -8,34 +8,46 @@ It validates:
 - Pharma-aware request optimization and retry path
 - Cost metrics exposure
 """
-
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
-
 import sys
 import types as _types
+from typing import Any
 
 # Inject a minimal fake 'openai' module to avoid dependency during smoke test
 _fake_openai = _types.ModuleType("openai")
+
+
 class _FakeOpenAIError(Exception):
     pass
+
+
 _fake_exceptions = _types.ModuleType("openai._exceptions")
 _fake_exceptions.OpenAIError = _FakeOpenAIError
 _fake_types = _types.ModuleType("openai.types")
 _fake_chat = _types.ModuleType("openai.types.chat")
+
+
 class _FakeChatCompletion:  # placeholder to satisfy import
     pass
+
+
 _fake_chat.ChatCompletion = _FakeChatCompletion
+
+
 class _FakeCreateEmbeddingResponse:  # placeholder to satisfy import
     pass
+
+
 _fake_types.CreateEmbeddingResponse = _FakeCreateEmbeddingResponse
 _fake_types.chat = _fake_chat
+
 
 class _FakeOpenAI:
     def __init__(self, *args, **kwargs) -> None:
         pass
+
 
 _fake_openai.OpenAI = _FakeOpenAI
 sys.modules.setdefault("openai", _fake_openai)
@@ -44,21 +56,22 @@ sys.modules.setdefault("openai.types", _fake_types)
 sys.modules.setdefault("openai.types.chat", _fake_chat)
 
 try:
+    from src.clients.openai_wrapper import NVIDIABuildConfig, NVIDIABuildError, OpenAIWrapper
     from src.enhanced_config import EnhancedRAGConfig
-    from src.clients.openai_wrapper import OpenAIWrapper, NVIDIABuildConfig, NVIDIABuildError
 except ModuleNotFoundError:
     import os as _os
+
     _root = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
     sys.path.insert(0, _os.path.join(_root, "src"))
+    from clients.openai_wrapper import NVIDIABuildConfig, NVIDIABuildError, OpenAIWrapper  # type: ignore
     from enhanced_config import EnhancedRAGConfig  # type: ignore
-    from clients.openai_wrapper import OpenAIWrapper, NVIDIABuildConfig, NVIDIABuildError  # type: ignore
 
 
 class _FakeUsage:
     def __init__(self, total_tokens: int) -> None:
         self.total_tokens = total_tokens
 
-    def dict(self) -> Dict[str, Any]:
+    def dict(self) -> dict[str, Any]:
         return {"total_tokens": self.total_tokens}
 
 
@@ -73,7 +86,7 @@ class _FakeChoice:
 
 
 class _FakeResponse:
-    def __init__(self, model: str, content: str, tokens: int, params: Dict[str, Any]) -> None:
+    def __init__(self, model: str, content: str, tokens: int, params: dict[str, Any]) -> None:
         self.model = model
         self.choices = [_FakeChoice(content)]
         self.usage = _FakeUsage(tokens)
@@ -82,12 +95,20 @@ class _FakeResponse:
 
 
 class _FakeCompletions:
-    def __init__(self, owner: "_FakeChat", fail_once: bool = False) -> None:
+    def __init__(self, owner: _FakeChat, fail_once: bool = False) -> None:
         self._owner = owner
         self._fail_once = fail_once
         self._called = 0
 
-    def create(self, *, model: str, messages: List[Dict[str, str]], max_tokens: Optional[int], temperature: Optional[float], **kwargs):
+    def create(
+        self,
+        *,
+        model: str,
+        messages: list[dict[str, str]],
+        max_tokens: int | None,
+        temperature: float | None,
+        **kwargs,
+    ):
         self._called += 1
         # Simulate first-call failure for retry if enabled
         if self._fail_once and self._called == 1:
@@ -136,9 +157,7 @@ def main() -> None:
     classes = {k: wrapper.classify_pharma_query(v) for k, v in samples.items()}
 
     # Exercise create_chat_completion with retry (first call fails)
-    resp = wrapper.create_chat_completion([
-        {"role": "user", "content": samples["ddi"]}
-    ])
+    resp = wrapper.create_chat_completion([{"role": "user", "content": samples["ddi"]}])
 
     output = {
         "config": snapshot,

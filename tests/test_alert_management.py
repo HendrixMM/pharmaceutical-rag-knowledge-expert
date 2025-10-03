@@ -10,29 +10,28 @@ Comprehensive testing of the pharmaceutical alert management system with:
 
 Tests validate alert system for pharmaceutical research cost optimization.
 """
-
-import pytest
-import asyncio
 import os
-import json
+import tempfile
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
-from unittest.mock import Mock, patch, MagicMock
-import tempfile
+from unittest.mock import patch
+
+import pytest
 import yaml
 
 # Import modules under test
 try:
-    from src.monitoring.alert_manager import AlertManager, AlertType, AlertSeverity, Alert
-    from config.alerts import AlertConfig
+    pass
+
+    from src.monitoring.alert_manager import Alert, AlertManager, AlertSeverity, AlertType
     from src.monitoring.credit_tracker import CreditUsage
 except ImportError:
     import sys
     from pathlib import Path
+
     sys.path.append(str(Path(__file__).parent.parent))
-    from src.monitoring.alert_manager import AlertManager, AlertType, AlertSeverity, Alert
-    from config.alerts import AlertConfig
+
+    from src.monitoring.alert_manager import Alert, AlertManager, AlertSeverity, AlertType
     from src.monitoring.credit_tracker import CreditUsage
 
 
@@ -48,55 +47,41 @@ class TestAlertManager:
                 "daily_burn_rate": {
                     "warning_threshold": 0.8,
                     "critical_threshold": 0.9,
-                    "alert_channels": ["email", "console", "webhook"]
+                    "alert_channels": ["email", "console", "webhook"],
                 },
-                "weekly_trends": {
-                    "warning_threshold": 0.75,
-                    "critical_threshold": 0.85
-                },
-                "monthly_limits": {
-                    "free_tier_warning": 0.8,
-                    "free_tier_critical": 0.95
-                }
+                "weekly_trends": {"warning_threshold": 0.75, "critical_threshold": 0.85},
+                "monthly_limits": {"free_tier_warning": 0.8, "free_tier_critical": 0.95},
             },
             "pharmaceutical_alerts": {
-                "drug_safety_queries": {
-                    "priority": "high",
-                    "immediate_notification": True,
-                    "escalation_threshold": 10
-                },
+                "drug_safety_queries": {"priority": "high", "immediate_notification": True, "escalation_threshold": 10},
                 "drug_interactions": {
                     "priority": "critical",
                     "immediate_notification": True,
-                    "escalation_threshold": 5
+                    "escalation_threshold": 5,
                 },
-                "clinical_research": {
-                    "priority": "medium",
-                    "batch_notification": True,
-                    "batch_interval_minutes": 30
-                }
+                "clinical_research": {"priority": "medium", "batch_notification": True, "batch_interval_minutes": 30},
             },
             "notification_channels": {
                 "email": {
                     "enabled": True,
                     "recipients": ["pharma-team@research.org"],
-                    "severity_filter": ["warning", "critical"]
+                    "severity_filter": ["warning", "critical"],
                 },
                 "console": {
                     "enabled": True,
                     "format": "structured",
-                    "severity_filter": ["info", "warning", "critical"]
+                    "severity_filter": ["info", "warning", "critical"],
                 },
                 "webhook": {
                     "enabled": False,
                     "url": "https://api.slack.com/incoming/webhook",
-                    "severity_filter": ["critical"]
-                }
-            }
+                    "severity_filter": ["critical"],
+                },
+            },
         }
 
         # Write to temporary file
-        self.temp_config_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
+        self.temp_config_file = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
         yaml.dump(self.alert_config, self.temp_config_file)
         self.temp_config_file.close()
 
@@ -107,34 +92,28 @@ class TestAlertManager:
 
     def test_alert_manager_initialization(self):
         """Test alert manager initialization with pharmaceutical configuration."""
-        alert_manager = AlertManager(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        alert_manager = AlertManager(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         assert alert_manager is not None
-        assert hasattr(alert_manager, 'config')
-        assert hasattr(alert_manager, 'pharmaceutical_optimized')
+        assert hasattr(alert_manager, "config")
+        assert hasattr(alert_manager, "pharmaceutical_optimized")
         assert alert_manager.pharmaceutical_optimized == True
 
         # Should load pharmaceutical-specific alert rules
-        assert hasattr(alert_manager, 'pharmaceutical_rules')
+        assert hasattr(alert_manager, "pharmaceutical_rules")
         assert "drug_safety_queries" in alert_manager.pharmaceutical_rules
         assert "drug_interactions" in alert_manager.pharmaceutical_rules
 
     def test_alert_severity_classification(self):
         """Test alert severity classification for pharmaceutical queries."""
-        alert_manager = AlertManager(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        alert_manager = AlertManager(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Test drug safety query severity
         safety_alert = Alert(
             alert_type=AlertType.PHARMACEUTICAL_SAFETY,
             severity=AlertSeverity.HIGH,
             message="High-priority drug safety query detected",
-            metadata={"drug": "warfarin", "interaction_risk": "high"}
+            metadata={"drug": "warfarin", "interaction_risk": "high"},
         )
 
         severity = alert_manager.classify_severity(safety_alert)
@@ -145,7 +124,7 @@ class TestAlertManager:
             alert_type=AlertType.DRUG_INTERACTION,
             severity=AlertSeverity.CRITICAL,
             message="Critical drug interaction detected",
-            metadata={"drug_1": "warfarin", "drug_2": "aspirin", "risk_level": "major"}
+            metadata={"drug_1": "warfarin", "drug_2": "aspirin", "risk_level": "major"},
         )
 
         severity = alert_manager.classify_severity(interaction_alert)
@@ -156,7 +135,7 @@ class TestAlertManager:
             alert_type=AlertType.PHARMACEUTICAL_GENERAL,
             severity=AlertSeverity.MEDIUM,
             message="General pharmaceutical query processed",
-            metadata={"query_type": "mechanism_of_action"}
+            metadata={"query_type": "mechanism_of_action"},
         )
 
         severity = alert_manager.classify_severity(general_alert)
@@ -164,10 +143,7 @@ class TestAlertManager:
 
     def test_daily_burn_rate_alerts(self):
         """Test daily credit burn rate alert generation."""
-        alert_manager = AlertManager(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        alert_manager = AlertManager(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Test normal usage (no alert)
         normal_usage = 200  # 60% of 333 daily limit
@@ -191,10 +167,7 @@ class TestAlertManager:
 
     def test_pharmaceutical_priority_escalation(self):
         """Test pharmaceutical priority escalation system."""
-        alert_manager = AlertManager(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        alert_manager = AlertManager(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Track drug safety queries
         safety_queries = []
@@ -204,7 +177,7 @@ class TestAlertManager:
                 credits_used=15,
                 query_type="drug_safety_queries",
                 success=True,
-                metadata={"drug": f"drug_{i}", "safety_check": True}
+                metadata={"drug": f"drug_{i}", "safety_check": True},
             )
             safety_queries.append(query)
 
@@ -217,10 +190,7 @@ class TestAlertManager:
 
     def test_batch_notification_system(self):
         """Test batch notification system for non-urgent alerts."""
-        alert_manager = AlertManager(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        alert_manager = AlertManager(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Create multiple medium-priority alerts
         clinical_alerts = []
@@ -229,7 +199,7 @@ class TestAlertManager:
                 alert_type=AlertType.PHARMACEUTICAL_RESEARCH,
                 severity=AlertSeverity.MEDIUM,
                 message=f"Clinical research query {i} processed",
-                metadata={"study": f"study_{i}", "phase": "iii"}
+                metadata={"study": f"study_{i}", "phase": "iii"},
             )
             clinical_alerts.append(alert)
 
@@ -244,7 +214,7 @@ class TestAlertManager:
             alert_type=AlertType.DRUG_INTERACTION,
             severity=AlertSeverity.CRITICAL,
             message="Critical drug interaction detected",
-            metadata={"immediate": True}
+            metadata={"immediate": True},
         )
 
         batch_result = alert_manager.process_batch_alerts([critical_alert])
@@ -254,13 +224,10 @@ class TestAlertManager:
     @pytest.mark.asyncio
     async def test_real_time_alert_processing(self):
         """Test real-time alert processing and notification."""
-        alert_manager = AlertManager(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        alert_manager = AlertManager(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Mock notification channels
-        with patch.object(alert_manager, 'send_to_channels') as mock_send:
+        with patch.object(alert_manager, "send_to_channels") as mock_send:
             # Process high-priority drug safety alert
             safety_alert = Alert(
                 alert_type=AlertType.PHARMACEUTICAL_SAFETY,
@@ -270,8 +237,8 @@ class TestAlertManager:
                     "drug": "warfarin",
                     "interaction_drug": "aspirin",
                     "risk_score": 0.85,
-                    "timestamp": datetime.now().isoformat()
-                }
+                    "timestamp": datetime.now().isoformat(),
+                },
             )
 
             await alert_manager.process_alert_async(safety_alert)
@@ -284,17 +251,11 @@ class TestAlertManager:
 
     def test_alert_channel_routing(self):
         """Test alert routing to appropriate notification channels."""
-        alert_manager = AlertManager(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        alert_manager = AlertManager(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Test info-level alert routing
         info_alert = Alert(
-            alert_type=AlertType.SYSTEM_INFO,
-            severity=AlertSeverity.INFO,
-            message="System status update",
-            metadata={}
+            alert_type=AlertType.SYSTEM_INFO, severity=AlertSeverity.INFO, message="System status update", metadata={}
         )
 
         channels = alert_manager.determine_notification_channels(info_alert)
@@ -306,7 +267,7 @@ class TestAlertManager:
             alert_type=AlertType.DRUG_INTERACTION,
             severity=AlertSeverity.CRITICAL,
             message="Critical system alert",
-            metadata={}
+            metadata={},
         )
 
         channels = alert_manager.determine_notification_channels(critical_alert)
@@ -316,10 +277,7 @@ class TestAlertManager:
 
     def test_pharmaceutical_alert_aggregation(self):
         """Test pharmaceutical alert aggregation and summarization."""
-        alert_manager = AlertManager(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        alert_manager = AlertManager(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Create diverse pharmaceutical alerts over time period
         alerts = []
@@ -327,23 +285,27 @@ class TestAlertManager:
 
         # Drug safety alerts
         for i in range(8):
-            alerts.append(Alert(
-                alert_type=AlertType.PHARMACEUTICAL_SAFETY,
-                severity=AlertSeverity.HIGH,
-                message=f"Drug safety query {i}",
-                timestamp=base_time + timedelta(minutes=i * 5),
-                metadata={"drug": f"drug_{i % 3}", "safety_level": "high"}
-            ))
+            alerts.append(
+                Alert(
+                    alert_type=AlertType.PHARMACEUTICAL_SAFETY,
+                    severity=AlertSeverity.HIGH,
+                    message=f"Drug safety query {i}",
+                    timestamp=base_time + timedelta(minutes=i * 5),
+                    metadata={"drug": f"drug_{i % 3}", "safety_level": "high"},
+                )
+            )
 
         # Clinical research alerts
         for i in range(5):
-            alerts.append(Alert(
-                alert_type=AlertType.PHARMACEUTICAL_RESEARCH,
-                severity=AlertSeverity.MEDIUM,
-                message=f"Clinical research query {i}",
-                timestamp=base_time + timedelta(minutes=i * 10),
-                metadata={"study_type": "phase_iii", "indication": "diabetes"}
-            ))
+            alerts.append(
+                Alert(
+                    alert_type=AlertType.PHARMACEUTICAL_RESEARCH,
+                    severity=AlertSeverity.MEDIUM,
+                    message=f"Clinical research query {i}",
+                    timestamp=base_time + timedelta(minutes=i * 10),
+                    metadata={"study_type": "phase_iii", "indication": "diabetes"},
+                )
+            )
 
         # Generate aggregation report
         aggregation = alert_manager.aggregate_pharmaceutical_alerts(alerts, period="hourly")
@@ -368,17 +330,11 @@ class TestAlertManager:
 
     def test_cost_monitoring_alert_integration(self):
         """Test integration with cost monitoring alerts."""
-        alert_manager = AlertManager(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        alert_manager = AlertManager(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Test free tier warning alert
         free_tier_alert = alert_manager.create_cost_monitoring_alert(
-            alert_type="free_tier_warning",
-            current_usage=8000,
-            limit=10000,
-            period="monthly"
+            alert_type="free_tier_warning", current_usage=8000, limit=10000, period="monthly"
         )
 
         assert free_tier_alert is not None
@@ -388,10 +344,7 @@ class TestAlertManager:
 
         # Test daily limit critical alert
         daily_critical_alert = alert_manager.create_cost_monitoring_alert(
-            alert_type="daily_critical",
-            current_usage=310,
-            limit=333,
-            period="daily"
+            alert_type="daily_critical", current_usage=310, limit=333, period="daily"
         )
 
         assert daily_critical_alert is not None
@@ -400,24 +353,21 @@ class TestAlertManager:
 
     def test_alert_suppression_and_deduplication(self):
         """Test alert suppression and deduplication logic."""
-        alert_manager = AlertManager(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        alert_manager = AlertManager(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Create duplicate alerts
         original_alert = Alert(
             alert_type=AlertType.PHARMACEUTICAL_SAFETY,
             severity=AlertSeverity.HIGH,
             message="Repeated drug safety query",
-            metadata={"drug": "metformin", "query_hash": "abc123"}
+            metadata={"drug": "metformin", "query_hash": "abc123"},
         )
 
         duplicate_alert = Alert(
             alert_type=AlertType.PHARMACEUTICAL_SAFETY,
             severity=AlertSeverity.HIGH,
             message="Repeated drug safety query",
-            metadata={"drug": "metformin", "query_hash": "abc123"}
+            metadata={"drug": "metformin", "query_hash": "abc123"},
         )
 
         # Process original alert
@@ -437,10 +387,7 @@ class TestAlertManager:
 
     def test_pharmaceutical_alert_metrics(self):
         """Test pharmaceutical alert metrics and reporting."""
-        alert_manager = AlertManager(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        alert_manager = AlertManager(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Process various alerts to build metrics
         test_alerts = [
@@ -482,39 +429,29 @@ class TestIntegratedAlertWorkflows:
 
         # Create temporary config with all channels enabled
         alert_config = {
-            "pharmaceutical_alerts": {
-                "drug_safety_queries": {
-                    "priority": "high",
-                    "immediate_notification": True
-                }
-            },
+            "pharmaceutical_alerts": {"drug_safety_queries": {"priority": "high", "immediate_notification": True}},
             "notification_channels": {
                 "console": {"enabled": True, "severity_filter": ["high", "critical"]},
-                "email": {"enabled": True, "recipients": ["test@pharma.org"]}
-            }
+                "email": {"enabled": True, "recipients": ["test@pharma.org"]},
+            },
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as config_file:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as config_file:
             yaml.dump(alert_config, config_file)
             config_path = config_file.name
 
         try:
-            alert_manager = AlertManager(
-                config_path=config_path,
-                pharmaceutical_optimized=True
-            )
+            alert_manager = AlertManager(config_path=config_path, pharmaceutical_optimized=True)
 
             # Mock notification system
             notifications_sent = []
-            def mock_send_notification(channel, alert, recipients=None):
-                notifications_sent.append({
-                    "channel": channel,
-                    "alert": alert,
-                    "recipients": recipients,
-                    "timestamp": datetime.now()
-                })
 
-            with patch.object(alert_manager, 'send_notification', side_effect=mock_send_notification):
+            def mock_send_notification(channel, alert, recipients=None):
+                notifications_sent.append(
+                    {"channel": channel, "alert": alert, "recipients": recipients, "timestamp": datetime.now()}
+                )
+
+            with patch.object(alert_manager, "send_notification", side_effect=mock_send_notification):
                 # Simulate high-priority drug safety alert
                 safety_alert = Alert(
                     alert_type=AlertType.PHARMACEUTICAL_SAFETY,
@@ -525,8 +462,8 @@ class TestIntegratedAlertWorkflows:
                         "drug_secondary": "aspirin",
                         "interaction_severity": "major",
                         "patient_risk_factors": ["elderly", "kidney_disease"],
-                        "recommended_action": "immediate_review"
-                    }
+                        "recommended_action": "immediate_review",
+                    },
                 )
 
                 # Process alert through complete workflow
@@ -546,7 +483,7 @@ class TestIntegratedAlertWorkflows:
 
             print("✅ End-to-end pharmaceutical alert workflow successful")
             print(f"   Notifications sent: {len(notifications_sent)}")
-            print(f"   Channels used: {set(notif['channel'] for notif in notifications_sent)}")
+            print(f"   Channels used: {{notif['channel'] for notif in notifications_sent}}")
 
         finally:
             os.unlink(config_path)

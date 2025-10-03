@@ -58,6 +58,11 @@ help:
 	@echo ""
 	@echo "🚀 Benchmarks:"
 	@echo "  bench-ci         Run orchestrated preflight→run locally (CI-like)"
+	@echo "  preflight        Run AI engineering preflight checks and save logs/preflight.json"
+	@echo "  preflight-perf   Run orchestrated performance preflight and save outputs"
+	@echo "  smoke            Run AI engineering smoke test (offline/online)"
+	@echo "  env-template     Generate .env.local template with missing keys"
+	@echo "  preflight-strict Run strict preflight (fails on any fail)"
 	@echo "⚙️  Development Setup:"
 	@echo "  setup-dev        Complete development setup"
 	@echo "  pre-commit       Install pre-commit hooks"
@@ -218,6 +223,31 @@ clean:
 
 # Quick development cycle
 dev: format lint test-unit
+
+.PHONY: preflight
+preflight:
+	@echo "Running AI engineering preflight…" && \
+	python scripts/ai_preflight.py --pretty --output logs/preflight.json || true
+
+.PHONY: preflight-perf
+preflight-perf:
+	@echo "Running orchestrated performance preflight…" && \
+	python scripts/orchestrate_benchmarks.py --preset basic --preflight-sample-count 2 --preflight-min-concurrency 2 --fail-on-preflight || true
+
+.PHONY: smoke
+smoke:
+	@echo "Running AI engineering smoke test…" && \
+	python scripts/ai_smoke_test.py --output logs/smoke.json || true
+
+.PHONY: env-template
+env-template:
+	@echo "Writing .env.local template with missing keys…" && \
+	python scripts/ai_preflight.py --write-env-template .env.local --output logs/preflight.json --pretty || true
+
+.PHONY: preflight-strict
+preflight-strict:
+	@echo "Running strict preflight (will fail on any fail)…" && \
+	python scripts/ai_preflight.py --strict --output logs/preflight_strict.json --pretty
 	@echo "🎉 Development cycle complete!"
 
 # CI-like bench orchestration (requires NVIDIA_API_KEY)

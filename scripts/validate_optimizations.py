@@ -11,25 +11,25 @@ Comprehensive validation of pharmaceutical RAG system optimizations with:
 
 This script validates all optimization improvements implemented in the system.
 """
-
-import os
-import sys
 import asyncio
-import time
 import json
 import statistics
-from datetime import datetime, timedelta
+import sys
+import time
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, asdict
+from typing import Any, Dict, List
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
+
 @dataclass
 class OptimizationTestResult:
     """Result of optimization validation test."""
+
     test_name: str
     baseline_performance: float
     optimized_performance: float
@@ -37,6 +37,7 @@ class OptimizationTestResult:
     meets_target: bool
     target_threshold: float
     timestamp: datetime
+
 
 class PharmaceuticalOptimizationValidator:
     """Comprehensive optimization validation for pharmaceutical RAG system."""
@@ -47,26 +48,26 @@ class PharmaceuticalOptimizationValidator:
 
         # Performance targets for validation
         self.performance_targets = {
-            "query_response_time_ms": 2000,        # 2 second max response
-            "batch_processing_efficiency": 0.85,   # 85% efficiency minimum
-            "cost_per_query_credits": 2.0,         # 2 credits max per query
-            "safety_detection_accuracy": 0.95,     # 95% accuracy minimum
-            "memory_usage_optimization": 0.8,      # 20% reduction target
-            "api_call_reduction": 0.5,             # 50% reduction in API calls
-            "free_tier_utilization": 0.90,         # 90% free tier utilization
-            "pharmaceutical_accuracy": 0.92        # 92% pharmaceutical accuracy
+            "query_response_time_ms": 2000,  # 2 second max response
+            "batch_processing_efficiency": 0.85,  # 85% efficiency minimum
+            "cost_per_query_credits": 2.0,  # 2 credits max per query
+            "safety_detection_accuracy": 0.95,  # 95% accuracy minimum
+            "memory_usage_optimization": 0.8,  # 20% reduction target
+            "api_call_reduction": 0.5,  # 50% reduction in API calls
+            "free_tier_utilization": 0.90,  # 90% free tier utilization
+            "pharmaceutical_accuracy": 0.92,  # 92% pharmaceutical accuracy
         }
 
         # Baseline measurements (representing system before optimizations)
         self.baselines = {
-            "query_response_time_ms": 3500,        # Original response time
-            "batch_processing_efficiency": 0.65,   # Original batch efficiency
-            "cost_per_query_credits": 3.2,         # Original cost per query
-            "safety_detection_accuracy": 0.88,     # Original safety accuracy
-            "memory_usage_mb": 512,                # Original memory usage
-            "api_calls_per_query": 4,              # Original API calls per query
-            "free_tier_utilization": 0.60,         # Original utilization
-            "pharmaceutical_accuracy": 0.85        # Original accuracy
+            "query_response_time_ms": 3500,  # Original response time
+            "batch_processing_efficiency": 0.65,  # Original batch efficiency
+            "cost_per_query_credits": 3.2,  # Original cost per query
+            "safety_detection_accuracy": 0.88,  # Original safety accuracy
+            "memory_usage_mb": 512,  # Original memory usage
+            "api_calls_per_query": 4,  # Original API calls per query
+            "free_tier_utilization": 0.60,  # Original utilization
+            "pharmaceutical_accuracy": 0.85,  # Original accuracy
         }
 
     async def validate_query_response_optimization(self) -> OptimizationTestResult:
@@ -79,7 +80,7 @@ class PharmaceuticalOptimizationValidator:
             "warfarin drug interactions with NSAIDs",
             "ACE inhibitor mechanism of action",
             "diabetes medication cost comparison",
-            "statin adverse effects monitoring"
+            "statin adverse effects monitoring",
         ]
 
         response_times = []
@@ -107,7 +108,7 @@ class PharmaceuticalOptimizationValidator:
             improvement_percent=improvement,
             meets_target=avg_response_time <= self.performance_targets["query_response_time_ms"],
             target_threshold=self.performance_targets["query_response_time_ms"],
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         print(f"   Baseline: {baseline_time}ms → Optimized: {avg_response_time:.1f}ms")
@@ -151,7 +152,7 @@ class PharmaceuticalOptimizationValidator:
             improvement_percent=improvement,
             meets_target=avg_efficiency >= self.performance_targets["batch_processing_efficiency"],
             target_threshold=self.performance_targets["batch_processing_efficiency"],
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         print(f"   Baseline: {baseline_efficiency:.2f} → Optimized: {avg_efficiency:.2f}")
@@ -166,10 +167,10 @@ class PharmaceuticalOptimizationValidator:
 
         # Simulate cost-optimized pharmaceutical queries
         query_types = [
-            ("drug_safety", 1.5),      # High priority, higher cost
-            ("clinical_research", 1.2), # Medium priority, medium cost
-            ("general_pharma", 0.8),   # Low priority, lower cost
-            ("batch_processed", 0.6)   # Batch optimization, lowest cost
+            ("drug_safety", 1.5),  # High priority, higher cost
+            ("clinical_research", 1.2),  # Medium priority, medium cost
+            ("general_pharma", 0.8),  # Low priority, lower cost
+            ("batch_processed", 0.6),  # Batch optimization, lowest cost
         ]
 
         total_cost = 0
@@ -198,7 +199,7 @@ class PharmaceuticalOptimizationValidator:
             improvement_percent=improvement,
             meets_target=avg_cost_per_query <= self.performance_targets["cost_per_query_credits"],
             target_threshold=self.performance_targets["cost_per_query_credits"],
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         print(f"   Baseline: {baseline_cost:.2f} credits → Optimized: {avg_cost_per_query:.2f} credits")
@@ -217,7 +218,7 @@ class PharmaceuticalOptimizationValidator:
             {"query": "metformin kidney disease safety", "expected_accuracy": 0.95},
             {"query": "drug interaction ACE inhibitors potassium", "expected_accuracy": 0.96},
             {"query": "clinical trial diabetes SGLT2", "expected_accuracy": 0.90},
-            {"query": "statin muscle toxicity monitoring", "expected_accuracy": 0.94}
+            {"query": "statin muscle toxicity monitoring", "expected_accuracy": 0.94},
         ]
 
         accuracy_scores = []
@@ -244,7 +245,7 @@ class PharmaceuticalOptimizationValidator:
             improvement_percent=improvement,
             meets_target=avg_accuracy >= self.performance_targets["pharmaceutical_accuracy"],
             target_threshold=self.performance_targets["pharmaceutical_accuracy"],
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         print(f"   Baseline: {baseline_accuracy:.2f} → Optimized: {avg_accuracy:.3f}")
@@ -263,7 +264,7 @@ class PharmaceuticalOptimizationValidator:
             {"type": "contraindication", "severity": "absolute", "expected_detection": True},
             {"type": "adverse_reaction", "severity": "major", "expected_detection": True},
             {"type": "dosing_concern", "severity": "moderate", "expected_detection": True},
-            {"type": "monitoring_required", "severity": "minor", "expected_detection": True}
+            {"type": "monitoring_required", "severity": "minor", "expected_detection": True},
         ]
 
         detection_results = []
@@ -280,11 +281,9 @@ class PharmaceuticalOptimizationValidator:
             detection_time_ms = (time.time() - start_time) * 1000
             detected = detection_probability > 0.95
 
-            detection_results.append({
-                "detected": detected,
-                "probability": detection_probability,
-                "response_time_ms": detection_time_ms
-            })
+            detection_results.append(
+                {"detected": detected, "probability": detection_probability, "response_time_ms": detection_time_ms}
+            )
 
         detection_accuracy = sum(1 for r in detection_results if r["detected"]) / len(detection_results)
         baseline_accuracy = self.baselines["safety_detection_accuracy"]
@@ -297,7 +296,7 @@ class PharmaceuticalOptimizationValidator:
             improvement_percent=improvement,
             meets_target=detection_accuracy >= self.performance_targets["safety_detection_accuracy"],
             target_threshold=self.performance_targets["safety_detection_accuracy"],
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         avg_response_time = statistics.mean(r["response_time_ms"] for r in detection_results)
@@ -321,7 +320,7 @@ class PharmaceuticalOptimizationValidator:
             {"name": "intelligent_batching", "efficiency_gain": 0.15},
             {"name": "result_caching", "efficiency_gain": 0.20},
             {"name": "pharmaceutical_prioritization", "efficiency_gain": 0.10},
-            {"name": "off_peak_processing", "efficiency_gain": 0.08}
+            {"name": "off_peak_processing", "efficiency_gain": 0.08},
         ]
 
         total_efficiency_gain = sum(s["efficiency_gain"] for s in optimization_strategies)
@@ -337,7 +336,7 @@ class PharmaceuticalOptimizationValidator:
             improvement_percent=improvement,
             meets_target=optimized_utilization >= self.performance_targets["free_tier_utilization"],
             target_threshold=self.performance_targets["free_tier_utilization"],
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         print(f"   Baseline: {baseline_utilization:.2f} → Optimized: {optimized_utilization:.3f}")
@@ -362,7 +361,7 @@ class PharmaceuticalOptimizationValidator:
                 "total_tests": total_tests,
                 "tests_passed": passed_tests,
                 "pass_rate": (passed_tests / total_tests) * 100,
-                "average_improvement": avg_improvement
+                "average_improvement": avg_improvement,
             },
             "performance_improvements": {
                 result.test_name: {
@@ -370,13 +369,17 @@ class PharmaceuticalOptimizationValidator:
                     "optimized": result.optimized_performance,
                     "improvement_percent": result.improvement_percent,
                     "target_met": result.meets_target,
-                    "target_threshold": result.target_threshold
+                    "target_threshold": result.target_threshold,
                 }
                 for result in self.results
             },
             "key_achievements": self._identify_key_achievements(),
             "areas_for_improvement": self._identify_improvement_areas(),
-            "optimization_effectiveness": "excellent" if avg_improvement > 30 else "good" if avg_improvement > 15 else "moderate"
+            "optimization_effectiveness": "excellent"
+            if avg_improvement > 30
+            else "good"
+            if avg_improvement > 15
+            else "moderate",
         }
 
         return report
@@ -404,9 +407,13 @@ class PharmaceuticalOptimizationValidator:
 
         for result in self.results:
             if not result.meets_target:
-                improvement_areas.append(f"{result.test_name}: {result.optimized_performance} vs {result.target_threshold} target")
+                improvement_areas.append(
+                    f"{result.test_name}: {result.optimized_performance} vs {result.target_threshold} target"
+                )
             elif result.improvement_percent < 10:
-                improvement_areas.append(f"{result.test_name}: Only {result.improvement_percent:.1f}% improvement achieved")
+                improvement_areas.append(
+                    f"{result.test_name}: Only {result.improvement_percent:.1f}% improvement achieved"
+                )
 
         return improvement_areas if improvement_areas else ["All optimization targets achieved"]
 
@@ -424,7 +431,7 @@ class PharmaceuticalOptimizationValidator:
             await self.validate_cost_optimization(),
             await self.validate_pharmaceutical_accuracy_optimization(),
             await self.validate_safety_system_optimization(),
-            await self.validate_free_tier_optimization()
+            await self.validate_free_tier_optimization(),
         ]
 
         validation_duration = time.time() - validation_start_time
@@ -439,7 +446,9 @@ class PharmaceuticalOptimizationValidator:
         print("\n" + "=" * 80)
         print("🎉 OPTIMIZATION VALIDATION COMPLETE")
         print("=" * 80)
-        print(f"✅ Tests passed: {report['optimization_summary']['tests_passed']}/{report['optimization_summary']['total_tests']}")
+        print(
+            f"✅ Tests passed: {report['optimization_summary']['tests_passed']}/{report['optimization_summary']['total_tests']}"
+        )
         print(f"📈 Average improvement: {report['optimization_summary']['average_improvement']:.1f}%")
         print(f"⏱️  Validation duration: {validation_duration:.2f} seconds")
         print(f"🏆 Overall effectiveness: {report['optimization_effectiveness'].upper()}")
@@ -453,12 +462,12 @@ class PharmaceuticalOptimizationValidator:
 
         report_file = reports_dir / f"optimization_validation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-        with open(report_file, 'w') as f:
+        with open(report_file, "w") as f:
             json.dump(report, f, indent=2, default=str)
 
         # Also save as latest report
         latest_file = reports_dir / "latest_optimization_validation.json"
-        with open(latest_file, 'w') as f:
+        with open(latest_file, "w") as f:
             json.dump(report, f, indent=2, default=str)
 
         print(f"\n💾 Validation report saved to {report_file}")
@@ -471,13 +480,18 @@ async def main():
 
     # Display summary in JSON format for integration with CI/CD
     print("\n📊 VALIDATION SUMMARY:")
-    print(json.dumps({
-        "status": "success" if report["optimization_summary"]["pass_rate"] >= 80 else "failure",
-        "pass_rate": report["optimization_summary"]["pass_rate"],
-        "average_improvement": report["optimization_summary"]["average_improvement"],
-        "total_tests": report["optimization_summary"]["total_tests"],
-        "effectiveness": report["optimization_effectiveness"]
-    }, indent=2))
+    print(
+        json.dumps(
+            {
+                "status": "success" if report["optimization_summary"]["pass_rate"] >= 80 else "failure",
+                "pass_rate": report["optimization_summary"]["pass_rate"],
+                "average_improvement": report["optimization_summary"]["average_improvement"],
+                "total_tests": report["optimization_summary"]["total_tests"],
+                "effectiveness": report["optimization_effectiveness"],
+            },
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

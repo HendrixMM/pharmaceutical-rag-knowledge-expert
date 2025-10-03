@@ -4,13 +4,13 @@ Comprehensive test suite for the pharmaceutical benchmarking system, validating 
 
 ## 📊 Test Suite Overview
 
-| Metric | Value |
-|--------|-------|
-| **Total Tests** | 61 tests across 4 files |
-| **Test Files** | 4 test files + fixtures |
-| **Execution Time** | ~3.5 seconds (fast unit/integration/e2e tests) |
-| **Pass Rate** | 100% (all tests passing) |
-| **Code Coverage** | 76.08% (run_pharmaceutical_benchmarks.py)<br>32.73% (pharmaceutical_benchmark_report.py) |
+| Metric             | Value                                                                                    |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| **Total Tests**    | 61 tests across 4 files                                                                  |
+| **Test Files**     | 4 test files + fixtures                                                                  |
+| **Execution Time** | ~3.5 seconds (fast unit/integration/e2e tests)                                           |
+| **Pass Rate**      | 100% (all tests passing)                                                                 |
+| **Code Coverage**  | 76.08% (run_pharmaceutical_benchmarks.py)<br>32.73% (pharmaceutical_benchmark_report.py) |
 
 ## 🗂️ Test Organization
 
@@ -34,9 +34,11 @@ tests/
 ### Test Files by Verification Comment
 
 #### 1. test_baseline_metadata_validation.py (16 tests)
+
 **Validates**: Comment 3 - Baseline metadata in benchmark JSON files
 
 **Test Classes** (6):
+
 - `TestBaselineMetadataPresence` - Validates baselines exist
 - `TestCloudBaselineStructure` - Cloud baseline fields & types
 - `TestSelfHostedBaselineStructure` - Self-hosted baseline fields
@@ -45,6 +47,7 @@ tests/
 - `TestBaselineMetadataCompleteness` - Overall completeness
 
 **What It Tests**:
+
 - ✅ All 5 benchmark categories have baseline metadata
 - ✅ Cloud and self_hosted sections have required fields
 - ✅ Regression thresholds (5%, 20%, 50%) are correct
@@ -55,9 +58,11 @@ tests/
 **Markers**: `@pytest.mark.pharmaceutical`, `@pytest.mark.baseline_validation`, `@pytest.mark.unit`, `@pytest.mark.fast`
 
 #### 2. test_regression_detection.py (21 tests)
+
 **Validates**: Comment 2 - Regression detection math fix
 
 **Test Classes** (6):
+
 - `TestAccuracyRegressionDetection` - Accuracy threshold tests
 - `TestCostRegressionDetection` - Cost threshold tests
 - `TestLatencyRegressionDetection` - Latency threshold tests
@@ -66,6 +71,7 @@ tests/
 - `TestPercentageCalculationAccuracy` - Mathematical correctness
 
 **What It Tests**:
+
 - ✅ Fixed calculation: `((current - baseline) / baseline) * 100`
 - ✅ Original bug prevented: `cost_change / max(0.01, abs(cost_change - cost_change))`
 - ✅ 5% accuracy drop triggers regression
@@ -79,9 +85,11 @@ tests/
 **Coverage**: 24.09% of `scripts/pharmaceutical_benchmark_report.py`
 
 #### 3. test_benchmark_runner_integration.py (16 tests)
+
 **Validates**: Comment 1 - Real client integration
 
 **Test Classes** (7):
+
 - `TestRunnerInitialization` - Client initialization paths
 - `TestExecuteQueryFullPipeline` - Classify → execute → track pipeline
 - `TestResponseExtraction` - Response format parsing
@@ -91,6 +99,7 @@ tests/
 - `TestCLIArguments` - CLI argument handling
 
 **What It Tests**:
+
 - ✅ BenchmarkRunner uses real EnhancedNeMoClient
 - ✅ PharmaceuticalQueryClassifier integration
 - ✅ PharmaceuticalCostAnalyzer tracking
@@ -104,14 +113,17 @@ tests/
 **Coverage**: Contributes to 76.08% coverage of `scripts/run_pharmaceutical_benchmarks.py`
 
 #### 4. test_pharmaceutical_e2e.py (8 tests) **[NEW - Mini-Phase B]**
+
 **Validates**: End-to-end workflows across all verification comments
 
 **Test Classes** (3):
+
 - `TestBenchmarkExecutionE2E` - Complete benchmark execution workflow (lines 400-488)
 - `TestCLIExecutionE2E` - CLI interface testing (lines 506-586)
 - `TestRegressionDetectionWorkflowE2E` - Regression detection workflow (lines 186-231)
 
 **What It Tests**:
+
 - ✅ Full benchmark run: load → execute → evaluate → aggregate
 - ✅ Query failure handling and error recovery
 - ✅ CLI argument parsing and execution
@@ -130,6 +142,7 @@ tests/
 Tests are organized with pytest markers for selective execution:
 
 ### Verification Comment Markers
+
 ```bash
 # Comment 3: Baseline metadata validation
 pytest -m baseline_validation -v
@@ -142,6 +155,7 @@ pytest -m client_integration -v
 ```
 
 ### Standard Markers
+
 ```bash
 # All pharmaceutical benchmark tests
 pytest -m pharmaceutical -v
@@ -163,6 +177,7 @@ pytest -m cost_optimization -v
 ```
 
 ### Combined Markers
+
 ```bash
 # All new pharmaceutical tests
 pytest -m "baseline_validation or regression_detection or client_integration" -v
@@ -176,6 +191,7 @@ pytest -m "(baseline_validation or regression_detection) and unit" -v
 Comprehensive fixtures defined in `tests/conftest.py`:
 
 ### Mock Fixtures
+
 ```python
 mock_enhanced_nemo_client         # Mock EnhancedNeMoClient for API testing
 mock_pharmaceutical_classifier    # Mock PharmaceuticalQueryClassifier
@@ -183,6 +199,7 @@ mock_cost_analyzer               # Mock PharmaceuticalCostAnalyzer
 ```
 
 ### Data Fixtures
+
 ```python
 sample_benchmark_data            # Complete benchmark JSON structure
 sample_baseline_metadata         # Baseline metadata structure
@@ -191,12 +208,14 @@ sample_client_response_custom_format    # Custom response format
 ```
 
 ### Path Fixtures
+
 ```python
 benchmarks_directory            # Path to benchmarks/
 test_fixtures_directory         # Path to tests/fixtures/
 ```
 
 ### Fixture Usage Example
+
 ```python
 def test_example(mock_enhanced_nemo_client, sample_benchmark_data):
     """Example test using fixtures."""
@@ -208,6 +227,7 @@ def test_example(mock_enhanced_nemo_client, sample_benchmark_data):
 ## 🚀 Running Tests
 
 ### Quick Start
+
 ```bash
 # Run all pharmaceutical benchmark tests
 pytest tests/test_baseline_metadata_validation.py \
@@ -219,6 +239,7 @@ pytest -m pharmaceutical -v
 ```
 
 ### Coverage Analysis
+
 ```bash
 # Coverage for regression detection
 pytest tests/test_regression_detection.py \
@@ -235,6 +256,7 @@ open htmlcov/index.html
 ```
 
 ### Selective Execution
+
 ```bash
 # Only baseline validation tests (Comment 3)
 pytest -m baseline_validation -v
@@ -256,6 +278,7 @@ pytest tests/test_baseline_metadata_validation.py::TestCloudBaselineStructure::t
 ```
 
 ### CI/CD Integration
+
 ```bash
 # Fail fast on first error
 pytest -m pharmaceutical -x
@@ -272,15 +295,16 @@ pytest -m pharmaceutical -q --tb=line
 
 ## 📈 Coverage Targets
 
-| File | Current Coverage | Target | Status |
-|------|-----------------|--------|--------|
-| `scripts/run_pharmaceutical_benchmarks.py` | **76.08%** | 80%+ | 🟢 Nearly complete (+30.23% from Phase A/B) |
-| `scripts/pharmaceutical_benchmark_report.py` | **32.73%** | 80%+ | 🟡 Needs improvement (+8.64% from Phase A/B) |
-| `src/monitoring/pharmaceutical_benchmark_tracker.py` | 0% | 70%+ | 🔴 Not directly tested |
+| File                                                 | Current Coverage | Target | Status                                       |
+| ---------------------------------------------------- | ---------------- | ------ | -------------------------------------------- |
+| `scripts/run_pharmaceutical_benchmarks.py`           | **76.08%**       | 80%+   | 🟢 Nearly complete (+30.23% from Phase A/B)  |
+| `scripts/pharmaceutical_benchmark_report.py`         | **32.73%**       | 80%+   | 🟡 Needs improvement (+8.64% from Phase A/B) |
+| `src/monitoring/pharmaceutical_benchmark_tracker.py` | 0%               | 70%+   | 🔴 Not directly tested                       |
 
 ### Coverage Gaps
 
 **run_pharmaceutical_benchmarks.py** (Missing ~24%):
+
 - ✅ ~~Simulation mode execution paths (lines 300-488)~~ **NOW COVERED**
 - ✅ ~~CLI argument parsing and main() (lines 492-584)~~ **NOW COVERED**
 - Some initialization edge cases (lines 35-41, 61-62, 104-127)
@@ -288,6 +312,7 @@ pytest -m pharmaceutical -q --tb=line
 - Error handling edge cases in execution flow
 
 **pharmaceutical_benchmark_report.py** (Missing ~67%):
+
 - ✅ ~~Comparison report generation (lines 186-231)~~ **NOW COVERED**
 - Report generation methods (lines 41-176)
 - Markdown/HTML formatting (lines 183-231)
@@ -306,7 +331,9 @@ To reach 80%+ coverage targets:
 ## 🏗️ Test Design Patterns
 
 ### AAA Pattern
+
 All tests follow Arrange-Act-Assert:
+
 ```python
 def test_example(self):
     # Arrange: Setup test data
@@ -325,12 +352,14 @@ def test_example(self):
 ```
 
 ### Mocking Strategy
+
 - Mock at the module boundary (EnhancedNeMoClient, etc.)
 - Use `unittest.mock.Mock` for flexible mocks
 - Use `@patch` decorator for clean dependency injection
 - Mock responses are realistic (match production formats)
 
 ### Test Data Isolation
+
 - All test data in `tests/fixtures/` directory
 - No dependencies on production data
 - Fixtures provide consistent test data
@@ -338,33 +367,37 @@ def test_example(self):
 
 ## ⚡ Performance
 
-| Metric | Value |
-|--------|-------|
-| **Total Execution Time** | 1.49-3.06 seconds |
-| **Average per Test** | ~0.03-0.06 seconds |
-| **Slowest Test** | 0.15s (TestBaselineMetadataPresence setup) |
-| **Fastest Tests** | < 0.005s (most unit tests) |
+| Metric                   | Value                                      |
+| ------------------------ | ------------------------------------------ |
+| **Total Execution Time** | 1.49-3.06 seconds                          |
+| **Average per Test**     | ~0.03-0.06 seconds                         |
+| **Slowest Test**         | 0.15s (TestBaselineMetadataPresence setup) |
+| **Fastest Tests**        | < 0.005s (most unit tests)                 |
 
 All tests are marked `@pytest.mark.fast` as they complete in < 1 second.
 
 ## 🐛 Debugging Tests
 
 ### Run Single Test with Verbose Output
+
 ```bash
 pytest tests/test_regression_detection.py::TestAccuracyRegressionDetection::test_accuracy_regression_5_percent_drop -vv
 ```
 
 ### Show Print Statements
+
 ```bash
 pytest tests/test_baseline_metadata_validation.py -s
 ```
 
 ### Drop into Debugger on Failure
+
 ```bash
 pytest tests/test_regression_detection.py --pdb
 ```
 
 ### Show Locals on Failure
+
 ```bash
 pytest tests/test_benchmark_runner_integration.py -l
 ```
@@ -383,6 +416,7 @@ pytest tests/test_benchmark_runner_integration.py -l
 ## 📝 Adding New Tests
 
 ### Template for New Test Class
+
 ```python
 @pytest.mark.pharmaceutical
 @pytest.mark.your_marker
@@ -404,6 +438,7 @@ class TestYourFeature:
 ```
 
 ### Checklist for New Tests
+
 - [ ] Descriptive test class and method names
 - [ ] Appropriate pytest markers applied
 - [ ] Uses existing fixtures where possible
@@ -423,6 +458,7 @@ class TestYourFeature:
 ## 📞 Support
 
 For questions or issues with tests:
+
 1. Check test docstrings for expected behavior
 2. Run with `-vv` flag for verbose output
 3. Review fixture definitions in `conftest.py`
