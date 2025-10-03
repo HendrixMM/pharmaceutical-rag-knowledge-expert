@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+set -o pipefail
 
 # Setup GitHub MCP server for Claude Code CLI using project scope.
 # Does not store your token in Git. Requires GITHUB_PAT env var or .env with GITHUB_PAT.
@@ -26,13 +27,15 @@ fi
 
 echo "Adding GitHub MCP server at project scope…"
 claude mcp remove -s project github >/dev/null 2>&1 || true
+# Mask any Authorization tokens in CLI output
+MASK='s/(Bearer )[A-Za-z0-9_\-]+/\1REDACTED/g'
 claude mcp add -s project -t http \
   github \
   https://api.githubcopilot.com/mcp/ \
-  -H "Authorization: Bearer ${TOKEN}"
+  -H "Authorization: Bearer ${TOKEN}" | sed -E "$MASK"
 
 echo "Verifying configuration…"
-claude mcp get github || { echo "Failed to configure GitHub MCP server."; exit 3; }
+claude mcp get github | sed -E "$MASK" || { echo "Failed to configure GitHub MCP server."; exit 3; }
 
 echo "✅ GitHub MCP server configured for this project (.mcp.json created)."
 echo "   Note: .mcp.json is git-ignored to avoid committing secrets."

@@ -1,0 +1,174 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[BUG]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug! Please fill out the form below to help us understand and resolve the issue.
+
+        **Before submitting**: Please check existing issues to avoid duplicates and review the [Troubleshooting Guide](../../docs/TROUBLESHOOTING_GUIDE.md).
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the bug. What happened vs. what was expected?
+      placeholder: |
+        Describe the bug clearly:
+        - What happened?
+        - What did you expect to happen?
+        - When did this start occurring?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Provide detailed steps to reproduce the behavior
+      placeholder: |
+        1. Step one (be specific)
+        2. Step two
+        3. Step three
+        4. See error
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What should happen?
+      placeholder: Describe what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include error messages, stack traces, or unexpected output.
+      placeholder: |
+        Describe what actually happened. Include:
+        - Error messages (full stack trace if available)
+        - Unexpected output
+        - Screenshots if applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Provide details about your environment
+      placeholder: |
+        OS: [e.g., Ubuntu 22.04, macOS 13.0, Windows 11]
+        Python Version: [e.g., 3.10.12]
+        Package Versions: [run `pip freeze` and paste relevant packages]
+        NVIDIA Endpoint: [Build API / Self-hosted NIM]
+
+        Example pip freeze output (relevant packages):
+        langchain==0.1.0
+        faiss-cpu==1.7.4
+        streamlit==1.30.0
+      value: |
+        OS:
+        Python Version:
+        Package Versions:
+        ```
+        # Paste output of: pip freeze | grep -E "(langchain|faiss|streamlit|nemo)"
+
+        ```
+        NVIDIA Endpoint:
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component is affected?
+      options:
+        - RAG Pipeline
+        - Embeddings
+        - Reranking
+        - Vector Database
+        - PubMed Integration
+        - Guardrails
+        - Web Interface
+        - CLI
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: pharmaceutical-context
+    attributes:
+      label: Pharmaceutical Context
+      description: Is this bug specific to pharmaceutical/medical use cases?
+      options:
+        - Not Applicable
+        - Drug Interactions
+        - Clinical Filtering
+        - Safety Alerts
+        - Medical Disclaimers
+        - Regulatory Compliance
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs-screenshots
+    attributes:
+      label: Logs/Screenshots
+      description: Attach relevant logs, screenshots, or error output
+      placeholder: |
+        Paste logs here or drag and drop screenshots.
+
+        ⚠️ IMPORTANT: Redact all API keys and sensitive information!
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other relevant information
+      placeholder: |
+        - Related issues or PRs
+        - Workarounds you've tried
+        - Links to relevant documentation
+        - Any other context
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: security-concern
+    attributes:
+      label: Security Concern
+      description: Security-related confirmations
+      options:
+        - label: This bug involves a security vulnerability (if yes, please report via [SECURITY.md](../../SECURITY.md) instead)
+          required: false
+        - label: I have redacted all API keys and sensitive information from this report
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        ### Additional Resources
+        - [Contributing Guidelines](../../CONTRIBUTING.md)
+        - [Security Policy](../../SECURITY.md)
+        - [Troubleshooting Guide](../../docs/TROUBLESHOOTING_GUIDE.md)
+
+        Thank you for helping improve this project!

@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Enhanced `docs/ARCHITECTURE.md` from placeholder to comprehensive architecture documentation (Phase 2.1)
+- All GitHub templates reference existing `CONTRIBUTING.md` and `SECURITY.md`
+- Templates include pharmaceutical-specific fields and considerations
 - BREAKING: Refactored README.md from 1559 lines to <250 lines for improved discoverability
 - Reorganized documentation into specialized files:
   - Created `docs/API_REFERENCE.md` for comprehensive API and configuration reference
@@ -50,13 +53,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **GitHub Templates** (Phase 2.1):
+  - Created `.github/ISSUE_TEMPLATE/bug_report.yml` - Structured bug report template with pharmaceutical context
+  - Created `.github/ISSUE_TEMPLATE/feature_request.yml` - Feature request template with use case classification
+  - Created `.github/ISSUE_TEMPLATE/security_disclosure.yml` - Security vulnerability disclosure template
+  - Created `.github/ISSUE_TEMPLATE/config.yml` - Issue template configuration with contact links
+  - Created `.github/PULL_REQUEST_TEMPLATE.md` - Comprehensive PR template with security, docs, and data-protection checkboxes
+  - Created `.github/TEMPLATE_VALIDATION.md` - Template validation guide and testing procedures
+- **Code of Conduct**:
+  - Created `CODE_OF_CONDUCT.md` using Contributor Covenant v2.1
+  - Added pharmaceutical domain-specific standards
+  - Included enforcement guidelines and contact information
+- **Enhanced Architecture Documentation**:
+  - Added C4 Level 1 system context diagram (Mermaid) to `docs/ARCHITECTURE.md`
+  - Added detailed data flow visualization showing complete RAG pipeline
+  - Added comprehensive guardrail component tracing:
+    - Input rails validation flow
+    - Retrieval rails source validation
+    - Output rails safety checks and disclaimer injection
+    - Pharmaceutical safety modules documentation
+  - Documented all guardrails components with file references
+  - Added deployment architecture details
+  - Expanded technology stack and design principles
 - Documentation tooling and automation:
   - `scripts/docs_linkcheck.py` for validating documentation links
   - `scripts/docs_toc_generator.py` for automatic table of contents generation
   - `scripts/docs_metadata_validator.py` for metadata validation
   - Makefile targets: `docs`, `docs-linkcheck`, `docs-validate`, `docs-all`
   - Pre-commit hooks for documentation validation
-- Created `docs/ARCHITECTURE.md` (basic structure, to be expanded in Phase 2.1)
 
 ### Documentation
 

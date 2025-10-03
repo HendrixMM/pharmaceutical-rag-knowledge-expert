@@ -1,0 +1,78 @@
+name: Preflight
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  STRICT_PREFLIGHT: ${{ vars.STRICT_PREFLIGHT || 'false' }}
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+      - name: Run preflight (non-strict)
+        run: |
+          python scripts/ai_preflight.py --pretty --output logs/preflight.json
+
+      - name: Upload preflight report
+        uses: actions/upload-artifact@v4
+        with:
+          name: preflight-report
+          path: logs/preflight.json
+
+      - name: Run preflight (strict, optional)
+        if: env.STRICT_PREFLIGHT == 'true'
+        run: |
+          python scripts/ai_preflight.py --pretty --strict --output logs/preflight_strict.json
+
+      - name: Upload strict preflight report
+        if: env.STRICT_PREFLIGHT == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: preflight-report-strict
+          path: logs/preflight_strict.json
+
+  preflight_strict_main:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+      - name: Run strict preflight for main
+        run: |
+          python scripts/ai_preflight.py --strict --output logs/preflight_main.json --pretty
+
+      - name: Upload main preflight report
+        uses: actions/upload-artifact@v4
+        with:
+          name: preflight-report-main
+          path: logs/preflight_main.json

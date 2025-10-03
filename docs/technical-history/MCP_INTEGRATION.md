@@ -81,6 +81,7 @@ class NeMoMCPClient:
 ```
 
 **Key Features:**
+
 - Async-aware MCP integration
 - Fallback documentation when MCP servers are unavailable
 - Automatic session management
@@ -100,6 +101,7 @@ class MCPPromptGenerator:
 ```
 
 **Supported Migration Types:**
+
 - `nemo_retriever`: General NeMo Retriever migration
 - `langchain_faiss`: LangChain + FAISS to NeMo migration
 - `embedding_optimization`: Embedding performance optimization
@@ -203,7 +205,7 @@ debug_prompt = agent.debug_with_context(
 
 ### Client Configuration
 
-```python
+````python
 # Enable/disable fallback mode
 client = NeMoMCPClient(enable_fallback=True)
 
@@ -228,9 +230,10 @@ Setup (project-scoped; writes `.mcp.json`, which is git-ignored):
 make mcp-github-add
 # Verify
 make mcp-github-verify
-```
+````
 
 What this does:
+
 - Runs `claude mcp add -s project --transport http -H "Authorization: Bearer $GITHUB_PAT" github https://api.githubcopilot.com/mcp/`
 - Creates `.mcp.json` in the project directory (not committed)
 
@@ -244,8 +247,8 @@ make mcp-github-remove
 
 If Claude Desktop cannot use the remote server (OAuth limitations), run the containerized server locally.
 
-1) Ensure Docker is running and set `GITHUB_PAT` in your shell or `.env`.
-2) Claude Desktop: open Settings → Developer → Edit Config and merge the snippet below into your config file:
+1. Ensure Docker is running and set `GITHUB_PAT` in your shell or `.env`.
+2. Claude Desktop: open Settings → Developer → Edit Config and merge the snippet below into your config file:
 
 - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
@@ -282,19 +285,22 @@ claude mcp add github -e GITHUB_PERSONAL_ACCESS_TOKEN=$GITHUB_PAT -- \
 ```
 
 ### Token and Security Notes
+
 - Start with minimal scopes; add `repo` only if you need write operations (issues/PRs).
 - Store tokens in `.env` (already git-ignored). Rotate if ever exposed.
 - `.mcp.json` is now git-ignored to prevent committing headers.
 
 ### Troubleshooting
+
 - `claude mcp list` and `claude mcp get github` to inspect config.
 - Docker pull issues: `docker logout ghcr.io` then retry.
 - Claude Desktop logs (macOS): `~/Library/Logs/Claude/`.
 
-
 # Agent with custom MCP client
+
 agent = MCPEnhancedAgent(mcp_client=client, enable_auto_context=True)
-```
+
+````
 
 ## 🧪 Testing
 
@@ -302,9 +308,10 @@ Run the comprehensive test suite:
 
 ```bash
 python test_mcp_integration.py
-```
+````
 
 **Test Coverage:**
+
 - MCP client creation and initialization
 - Documentation querying (with fallback)
 - Context generation
@@ -470,11 +477,13 @@ class CustomPromptGenerator(MCPPromptGenerator):
 ### Common Issues
 
 1. **MCP Server Connection Failed**
+
    - Check network connectivity
    - Verify server URL and authentication
    - Review firewall settings
 
 2. **No Documentation Retrieved**
+
    - Verify query syntax
    - Check server response format
    - Review fallback configuration
