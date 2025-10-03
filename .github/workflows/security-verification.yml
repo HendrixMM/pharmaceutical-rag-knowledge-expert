@@ -35,6 +35,10 @@ jobs:
         run: |
           detect-secrets scan --baseline .secrets.baseline
 
+      - name: Validate BFG patterns
+        run: |
+          python scripts/validate_bfg_patterns.py
+
       - name: Upload verification report
         if: always()
         uses: actions/upload-artifact@v4

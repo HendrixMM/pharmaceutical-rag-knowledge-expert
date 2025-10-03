@@ -32,6 +32,7 @@ help:
 	@echo "  history-cleanup  Clean git history (requires confirmation)"
 	@echo "  verify-cleanup   Verify git history cleanup was successful"
 	@echo "  verify-cleanup-strict Verify using sensitive patterns file"
+	@echo "  security-sanity  Validate BFG patterns formatting/safety"
 	@echo "  rotate-keys      Display key rotation checklist"
 	@echo "  secrets-baseline Update detect-secrets baseline (manual review)"
 	@echo "🧪 Testing:"
@@ -339,9 +340,13 @@ docs-check-toc:
 .PHONY: secret-scan history-cleanup verify-cleanup rotate-keys
 
 secret-scan:
-	@echo "🔍 Scanning git history for exposed secrets..." && \
-	bash scripts/identify_secrets_in_history.sh --report backups/secret-scan-$(shell date +%Y%m%d-%H%M%S).txt || true && \
-	echo "✅ Secret scan complete. Review backups/secret-scan-*.txt"
+	@echo "🔍 Scanning git history for exposed secrets..." ; \
+	if bash scripts/identify_secrets_in_history.sh --report backups/secret-scan-$(shell date +%Y%m%d-%H%M%S).txt ; then \
+	  echo "✅ Secret scan passed. Review backups/secret-scan-*.txt" ; \
+	else \
+	  echo "❌ Secret scan detected potential secrets. Review backups/secret-scan-*.txt" ; \
+	  exit 1 ; \
+	fi
 
 history-cleanup:
 	@echo "⚠️  WARNING: This will rewrite git history (force-push required)" && \
@@ -364,6 +369,10 @@ verify-cleanup-strict:
 	@echo "✅ Verifying git history cleanup (strict patterns)..." && \
 	bash scripts/verify_history_cleanup.sh --use-sensitive-patterns --patterns-file scripts/sensitive-patterns.txt && \
 	echo "📊 Verification complete. Check backups/verification-report-*.txt"
+
+security-sanity:
+	@echo "🔎 Validating BFG patterns..." && \
+	python scripts/validate_bfg_patterns.py
 
 rotate-keys:
 	@echo "🔑 API Key Rotation Checklist" && \
