@@ -1,7 +1,6 @@
 # NVIDIA Model Access and Endpoint Configuration Guide
 
 <!-- TOC -->
-
 - [Overview](#overview)
 - [🚨 NGC API Deprecation Alert - March 2026](#-ngc-api-deprecation-alert---march-2026)
 - [NVIDIA API Endpoint Types](#nvidia-api-endpoint-types)

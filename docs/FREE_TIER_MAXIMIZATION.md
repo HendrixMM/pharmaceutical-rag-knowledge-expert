@@ -1,7 +1,6 @@
 # NVIDIA Build Free Tier Maximization Strategies
 
 <!-- TOC -->
-
 - [Overview](#overview)
 - [Table of Contents](#table-of-contents)
 - [Free Tier Fundamentals](#free-tier-fundamentals)

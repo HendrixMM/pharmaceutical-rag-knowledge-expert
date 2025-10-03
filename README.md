@@ -1,7 +1,6 @@
 # 🏛️ RAG Template for NVIDIA NeMoRetriever
 
 <!-- TOC -->
-
 - [Overview](#overview)
 - [Key Features](#key-features)
 - [Quick Start](#quick-start)

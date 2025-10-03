@@ -1,0 +1,11 @@
+documentation:
+  - 'docs/**'
+  - 'README.md'
+  - '**/*.md'
+
+ci:
+  - '.github/workflows/**'
+
+scripts:
+  - 'scripts/**'
+

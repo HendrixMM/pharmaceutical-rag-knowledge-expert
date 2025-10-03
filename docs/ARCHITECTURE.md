@@ -7,7 +7,6 @@ Review Cadence: Monthly
 # Architecture
 
 <!-- TOC -->
-
 - [Overview](#overview)
 - [Diagram Placeholder](#diagram-placeholder)
 - [Key Components](#key-components)

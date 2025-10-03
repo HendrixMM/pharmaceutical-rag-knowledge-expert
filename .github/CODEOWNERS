@@ -1,0 +1,19 @@
+# CODEOWNERS routes reviews automatically for higher signal, low friction.
+# Customize owners below to your actual GitHub users or teams.
+
+# Docs and examples
+docs/**              @HendrixMM
+README.md            @HendrixMM
+examples/**          @HendrixMM
+
+# Docs automation and CI
+.github/workflows/** @HendrixMM
+scripts/docs_*       @HendrixMM
+
+# Build/dev scripts and Makefile
+Makefile             @HendrixMM
+scripts/**           @HendrixMM
+
+# Default fallback (comment out if not desired)
+*                    @HendrixMM
+

@@ -1,7 +1,6 @@
 # NVIDIA NeMo Retriever Pipeline Guide
 
 <!-- TOC -->
-
 - [Overview](#overview)
 - [Quick Start](#quick-start)
   - [Prerequisites](#prerequisites)

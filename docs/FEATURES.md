@@ -7,7 +7,6 @@ Review Cadence: Monthly
 # Features
 
 <!-- TOC -->
-
 - [Overview](#overview)
 - [Core RAG Features](#core-rag-features)
 - [NeMo 2.0 Hybrid Architecture](#nemo-20-hybrid-architecture)

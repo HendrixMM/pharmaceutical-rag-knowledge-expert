@@ -1,7 +1,6 @@
 # NGC API Deprecation Immunity Documentation
 
 <!-- TOC -->
-
 - [Executive Summary](#executive-summary)
 - [Table of Contents](#table-of-contents)
 - [NGC Deprecation Timeline](#ngc-deprecation-timeline)

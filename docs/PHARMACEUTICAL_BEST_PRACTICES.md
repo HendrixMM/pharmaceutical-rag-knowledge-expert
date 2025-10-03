@@ -1,7 +1,6 @@
 # Pharmaceutical Research Best Practices Guide
 
 <!-- TOC -->
-
 - [Overview](#overview)
 - [Table of Contents](#table-of-contents)
 - [Safety-First Principles](#safety-first-principles)

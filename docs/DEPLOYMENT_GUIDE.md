@@ -7,7 +7,6 @@ Review Cadence: Monthly
 # Deprecated: See docs/DEPLOYMENT.md
 
 <!-- TOC -->
-
 - [Contents moved](#contents-moved)
 <!-- /TOC -->
 

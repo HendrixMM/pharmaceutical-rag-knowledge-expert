@@ -1,7 +1,6 @@
 # Troubleshooting and Maintenance Guide
 
 <!-- TOC -->
-
 - [Overview](#overview)
 - [Table of Contents](#table-of-contents)
 - [Quick Diagnostic Tools](#quick-diagnostic-tools)

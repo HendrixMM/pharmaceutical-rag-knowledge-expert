@@ -7,7 +7,6 @@ Review Cadence: Weekly
 # Examples
 
 <!-- TOC -->
-
 - [Quick Start Examples](#quick-start-examples)
 - [Basic Usage](#basic-usage)
 - [Pharmaceutical Examples](#pharmaceutical-examples)

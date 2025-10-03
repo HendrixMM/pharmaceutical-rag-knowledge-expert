@@ -8,7 +8,6 @@ Purpose: Canonical navigation structure for all project documentation
 # Documentation Navigation (Canonical TOC)
 
 <!-- TOC -->
-
 - [Getting Started](#getting-started)
 - [Core Documentation](#core-documentation)
 - [Specialized Guides](#specialized-guides)
