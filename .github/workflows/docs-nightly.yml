@@ -1,0 +1,28 @@
+name: Docs External Link Check
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # 03:00 UTC every Monday
+  workflow_dispatch: {}
+
+jobs:
+  external-links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Full link check (including external)
+        run: |
+          python scripts/docs_linkcheck.py --timeout 7 --format text

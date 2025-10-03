@@ -1,5 +1,52 @@
 # NGC API Deprecation Immunity Documentation
 
+<!-- TOC -->
+
+- [Executive Summary](#executive-summary)
+- [Table of Contents](#table-of-contents)
+- [NGC Deprecation Timeline](#ngc-deprecation-timeline)
+  - [Official NVIDIA Timeline](#official-nvidia-timeline)
+  - [Timeline Milestones](#timeline-milestones)
+- [NGC-Independent Architecture](#ngc-independent-architecture)
+  - [Core Design Principles](#core-design-principles)
+  - [Architecture Diagram](#architecture-diagram)
+- [NVIDIA Build Platform Integration](#nvidia-build-platform-integration)
+  - [Endpoint Configuration](#endpoint-configuration)
+  - [Integration Implementation](#integration-implementation)
+- [Immunity Validation](#immunity-validation)
+  - [Comprehensive Testing Suite](#comprehensive-testing-suite)
+  - [Validation Results](#validation-results)
+- [Migration Strategy](#migration-strategy)
+  - [Migration Status: ✅ **COMPLETED**](#migration-status--completed)
+  - [Pre-Migration vs Post-Migration](#pre-migration-vs-post-migration)
+- [Monitoring and Maintenance](#monitoring-and-maintenance)
+  - [Continuous Monitoring](#continuous-monitoring)
+  - [Maintenance Schedule](#maintenance-schedule)
+- [Risk Mitigation](#risk-mitigation)
+  - [Risk Assessment: **LOW RISK** ✅](#risk-assessment-low-risk-)
+  - [Contingency Plans](#contingency-plans)
+- [Implementation Verification](#implementation-verification)
+  - [Code Architecture Verification](#code-architecture-verification)
+  - [Test Results Summary](#test-results-summary)
+- [Migration Completion Certificate](#migration-completion-certificate)
+  - [Official Status: **NGC DEPRECATION IMMUNE** ✅](#official-status-ngc-deprecation-immune-)
+- [Conclusion](#conclusion)
+  - [Summary](#summary)
+  - [Pharmaceutical Research Continuity](#pharmaceutical-research-continuity)
+  - [Final Verification](#final-verification)
+- [Related Documentation](#related-documentation)
+  - [Docker Configuration (NGC‑Independent)](#docker-configuration-ngcindependent)
+  - [Automated Auditing (CI/CD)](#automated-auditing-cicd)
+  <!-- /TOC -->
+
+---
+
+Last Updated: 2025-10-03
+Owner: Architecture Team
+Review Cadence: Quarterly
+
+---
+
 **Comprehensive NGC-Independent Architecture Guide**
 
 ## Executive Summary
@@ -24,18 +71,19 @@ This document provides complete documentation of the RAG system's immunity to th
 ### Official NVIDIA Timeline
 
 **March 2026**: NGC API services will be deprecated and decommissioned
+
 - **Current Status**: NGC API remains operational (updated: ${CURRENT_DATE:-September 2025})
 - **Deprecation Window**: ~6 months remaining (from Sep 2025); adjust per current date
 - **Impact**: All NGC-dependent systems will lose functionality
 
 ### Timeline Milestones
 
-| Date | Milestone | Impact | Our Status |
-|------|-----------|--------|-----------|
-| **March 2025** | NGC deprecation announcement | Planning phase | ✅ Architecture redesigned |
-| **September 2025** | 6 months to deprecation | Critical implementation period | ✅ NGC-independent system deployed |
-| **December 2025** | 3 months to deprecation | Final testing and validation | 🎯 Continuous monitoring active |
-| **March 2026** | NGC API deprecated | Service disruption for dependent systems | ✅ **IMMUNE** - System unaffected |
+| Date               | Milestone                    | Impact                                   | Our Status                         |
+| ------------------ | ---------------------------- | ---------------------------------------- | ---------------------------------- |
+| **March 2025**     | NGC deprecation announcement | Planning phase                           | ✅ Architecture redesigned         |
+| **September 2025** | 6 months to deprecation      | Critical implementation period           | ✅ NGC-independent system deployed |
+| **December 2025**  | 3 months to deprecation      | Final testing and validation             | 🎯 Continuous monitoring active    |
+| **March 2026**     | NGC API deprecated           | Service disruption for dependent systems | ✅ **IMMUNE** - System unaffected  |
 
 ---
 
@@ -44,11 +92,13 @@ This document provides complete documentation of the RAG system's immunity to th
 ### Core Design Principles
 
 #### 1. Cloud-First Strategy
+
 - **Primary**: NVIDIA Build platform (integrate.api.nvidia.com)
 - **Fallback**: Self-hosted NeMo infrastructure
 - **Independence**: Zero reliance on NGC API endpoints
 
 #### 2. OpenAI SDK Wrapper Integration
+
 ```python
 # NGC-Independent client initialization
 from src.clients.openai_wrapper import OpenAIWrapper, NVIDIABuildConfig
@@ -62,6 +112,7 @@ client = OpenAIWrapper(config)
 ```
 
 #### 3. Composition Pattern Architecture
+
 - **Separation**: OpenAI SDK wrapper isolated from NeMo client
 - **Integration**: Enhanced NeMo client composes both approaches
 - **Flexibility**: Can operate with either endpoint independently
@@ -98,12 +149,14 @@ client = OpenAIWrapper(config)
 The system's Docker configuration is NGC-independent and provides optional self-hosted deployment:
 
 **docker-compose.yml Strategy**:
+
 - **Primary Strategy**: Cloud-first NVIDIA Build API (no Docker needed)
 - **Optional Services**: Self-hosted NIM containers for air-gapped or high-volume scenarios
 - **NGC Independence**: No hard-coded NGC registry (nvcr.io) dependencies
 - **Image Requirements**: Users must provide custom images via environment variables
 
 **Before/After Comparison**:
+
 ```yaml
 # ❌ OLD (NGC-dependent):
 services:
@@ -119,11 +172,13 @@ services:
 ```
 
 **Self-Hosted Deployment Options**:
+
 1. **NGC Registry (Optional)**: `export EMBED_IMAGE=nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest`
 2. **Custom Registry**: `export EMBED_IMAGE=your-registry.com/custom-embedder:v1`
 3. **Local Build**: Build and tag custom images locally
 
 **Key Benefits**:
+
 - ✅ No vendor lock-in to NGC registry
 - ✅ Cloud-first strategy remains primary (recommended)
 - ✅ Self-hosting truly optional, not required
@@ -138,6 +193,7 @@ See: [docker-compose.yml](../docker-compose.yml) header documentation for comple
 ### Endpoint Configuration
 
 #### Primary Endpoints (NGC-Independent)
+
 ```yaml
 # NVIDIA Build Platform Endpoints
 embedding_endpoint: "https://integrate.api.nvidia.com/v1/embeddings"
@@ -150,6 +206,7 @@ sdk: "OpenAI SDK v1.x (compatible)"
 ```
 
 #### Model Availability
+
 ```python
 # NGC-Independent Model Access
 NVIDIA_BUILD_MODELS = {
@@ -168,6 +225,7 @@ NVIDIA_BUILD_MODELS = {
 ### Integration Implementation
 
 #### OpenAI SDK Wrapper
+
 ```python
 # src/clients/openai_wrapper.py - Key components
 class OpenAIWrapper:
@@ -190,6 +248,7 @@ class OpenAIWrapper:
 ```
 
 #### Enhanced Client Integration
+
 ```python
 # src/clients/nemo_client_enhanced.py - Composition pattern
 class EnhancedNeMoClient:
@@ -219,6 +278,7 @@ class EnhancedNeMoClient:
 ### Comprehensive Testing Suite
 
 #### 1. Model Validator (`src/validation/model_validator.py`)
+
 ```python
 # Validates NGC-independent operation
 class NVIDIABuildModelValidator:
@@ -233,6 +293,7 @@ class NVIDIABuildModelValidator:
 ```
 
 #### 2. Endpoint Health Monitor (`src/monitoring/endpoint_health_monitor.py`)
+
 ```python
 # Continuous monitoring of NGC-independent endpoints
 class EndpointHealthMonitor:
@@ -246,6 +307,7 @@ class EndpointHealthMonitor:
 ```
 
 #### 3. Compatibility Test Suite (`tests/test_nvidia_build_compatibility.py`)
+
 ```python
 # Automated verification of NGC independence
 def test_ngc_independence_verification():
@@ -266,6 +328,7 @@ def test_ngc_independence_verification():
 ```
 
 #### 4. Automated NGC Dependency Audit (`scripts/audit_ngc_dependencies.sh`)
+
 ```bash
 # Comprehensive automated NGC dependency detection
 # Scans entire codebase for NGC patterns
@@ -286,6 +349,7 @@ bash scripts/audit_ngc_dependencies.sh
 ```
 
 **Audit Script Features**:
+
 - 🔍 Scans all file types (Python, YAML, shell scripts, docs)
 - 📋 Allowlist for educational/documentary NGC mentions
 - 🎯 Detects hard dependencies vs. optional references
@@ -293,6 +357,7 @@ bash scripts/audit_ngc_dependencies.sh
 - 📊 Detailed reporting with file paths and line numbers
 
 **Integration in CI/CD**:
+
 ```yaml
 # Example GitHub Actions integration
 - name: Verify NGC Independence
@@ -334,35 +399,39 @@ bash scripts/audit_ngc_dependencies.sh
 The system has already been fully migrated to NGC-independent architecture:
 
 #### Phase 1: Foundation (✅ Completed)
+
 - [x] OpenAI SDK integration with NVIDIA Build platform
 - [x] Enhanced configuration with cloud-first strategy
 - [x] Feature flags for environment-driven control
 
 #### Phase 2: Core Architecture (✅ Completed)
+
 - [x] Composition pattern implementation
 - [x] Cloud-first execution with intelligent fallback
 - [x] Pharmaceutical domain optimization preserved
 
 #### Phase 3: Validation (✅ Completed)
+
 - [x] Comprehensive model validation utilities
 - [x] Endpoint health monitoring system
 - [x] Automated compatibility testing
 
 #### Phase 4: Optimization (✅ Completed)
+
 - [x] Cost monitoring with free tier maximization
 - [x] Batch processing optimization
 - [x] Pharmaceutical workflow integration
 
 ### Pre-Migration vs Post-Migration
 
-| Component | Pre-Migration (NGC-Dependent) | Post-Migration (NGC-Independent) |
-|-----------|-------------------------------|----------------------------------|
-| **Primary Endpoint** | NGC API | ✅ NVIDIA Build Platform |
-| **SDK Integration** | Custom NGC client | ✅ OpenAI SDK (standardized) |
-| **Fallback Strategy** | NGC-only | ✅ Self-hosted NeMo |
-| **Model Access** | NGC catalog | ✅ NVIDIA Build models |
-| **API Compatibility** | NGC-specific | ✅ OpenAI standard |
-| **Deprecation Risk** | ❌ High (March 2026) | ✅ **IMMUNE** |
+| Component             | Pre-Migration (NGC-Dependent) | Post-Migration (NGC-Independent) |
+| --------------------- | ----------------------------- | -------------------------------- |
+| **Primary Endpoint**  | NGC API                       | ✅ NVIDIA Build Platform         |
+| **SDK Integration**   | Custom NGC client             | ✅ OpenAI SDK (standardized)     |
+| **Fallback Strategy** | NGC-only                      | ✅ Self-hosted NeMo              |
+| **Model Access**      | NGC catalog                   | ✅ NVIDIA Build models           |
+| **API Compatibility** | NGC-specific                  | ✅ OpenAI standard               |
+| **Deprecation Risk**  | ❌ High (March 2026)          | ✅ **IMMUNE**                    |
 
 ---
 
@@ -371,6 +440,7 @@ The system has already been fully migrated to NGC-independent architecture:
 ### Continuous Monitoring
 
 #### 1. Real-Time Health Monitoring
+
 ```python
 # Automatic endpoint health monitoring
 monitor = EndpointHealthMonitor(monitoring_interval_seconds=60)
@@ -382,6 +452,7 @@ assert health_status["ngc_independence"] == True
 ```
 
 #### 2. Daily Validation Reports
+
 ```python
 # Automated daily validation of NGC immunity
 validator = NVIDIABuildModelValidator()
@@ -393,6 +464,7 @@ if not daily_report["ngc_independent"]:
 ```
 
 #### 3. Cost Optimization Monitoring
+
 ```python
 # Track NVIDIA Build free tier utilization
 cost_analyzer = PharmaceuticalCostAnalyzer()
@@ -405,20 +477,21 @@ assert free_tier_utilization > 0.8  # Target 80%+ free tier usage
 
 ### Maintenance Schedule
 
-| Frequency | Task | Purpose |
-|-----------|------|---------|
-| **Real-time** | Endpoint health monitoring | Immediate issue detection |
-| **Automated (CI/CD)** | NGC dependency audit script | Continuous NGC independence verification |
-| **Daily** | Model validation | Confirm continued compatibility |
-| **Weekly** | Cost analysis | Optimize pharmaceutical research budget |
-| **Pre-deployment** | Manual audit script execution | Verify NGC independence before releases |
-| **Monthly** | Comprehensive validation | Full system health assessment |
-| **Monthly** | Docker configuration review | Verify optional self-hosting remains NGC-independent |
-| **Pre-March 2026** | NGC deprecation readiness check | Final immunity verification |
+| Frequency             | Task                            | Purpose                                              |
+| --------------------- | ------------------------------- | ---------------------------------------------------- |
+| **Real-time**         | Endpoint health monitoring      | Immediate issue detection                            |
+| **Automated (CI/CD)** | NGC dependency audit script     | Continuous NGC independence verification             |
+| **Daily**             | Model validation                | Confirm continued compatibility                      |
+| **Weekly**            | Cost analysis                   | Optimize pharmaceutical research budget              |
+| **Pre-deployment**    | Manual audit script execution   | Verify NGC independence before releases              |
+| **Monthly**           | Comprehensive validation        | Full system health assessment                        |
+| **Monthly**           | Docker configuration review     | Verify optional self-hosting remains NGC-independent |
+| **Pre-March 2026**    | NGC deprecation readiness check | Final immunity verification                          |
 
 #### Automated Monitoring & Auditing
 
 **NGC Dependency Audit** (`scripts/audit_ngc_dependencies.sh`):
+
 ```bash
 # Run automated audit
 bash scripts/audit_ngc_dependencies.sh
@@ -432,6 +505,7 @@ bash scripts/audit_ngc_dependencies.sh -v
 ```
 
 **CI/CD Integration**:
+
 - Runs automatically on every commit/PR
 - Fails build if NGC dependencies detected
 - Provides detailed file/line reports on failure
@@ -444,12 +518,15 @@ bash scripts/audit_ngc_dependencies.sh -v
 ### Risk Assessment: **LOW RISK** ✅
 
 #### Primary Risks (Mitigated)
+
 1. **NGC API Deprecation (March 2026)**
+
    - **Impact**: None - System is NGC-independent
    - **Mitigation**: ✅ Complete - NVIDIA Build platform primary
    - **Status**: **IMMUNE**
 
 2. **NVIDIA Build Platform Changes**
+
    - **Impact**: Low - OpenAI SDK standardization provides stability
    - **Mitigation**: Self-hosted NeMo fallback available
    - **Status**: **Protected**
@@ -460,7 +537,9 @@ bash scripts/audit_ngc_dependencies.sh -v
    - **Status**: **Managed**
 
 #### Secondary Risks (Monitored)
+
 1. **Cost Overruns**
+
    - **Mitigation**: Sophisticated cost monitoring and free tier maximization
    - **Status**: **Controlled**
 
@@ -471,16 +550,19 @@ bash scripts/audit_ngc_dependencies.sh -v
 ### Contingency Plans
 
 #### Plan A: Primary Operation (Current)
+
 - **NVIDIA Build Platform**: Primary endpoint
 - **Free Tier**: 10,000 requests/month optimization
 - **Fallback**: Self-hosted NeMo infrastructure
 
 #### Plan B: Fallback Operation
+
 - **Self-Hosted NeMo**: Primary endpoint
 - **Cost Model**: Infrastructure-based pricing
 - **Backup**: NVIDIA Build for cost-effective operations
 
 #### Plan C: Emergency Operation
+
 - **Local Models**: Fully offline pharmaceutical research
 - **Deployment**: Self-hosted with local model inference
 - **Activation**: Only if all cloud options unavailable
@@ -492,6 +574,7 @@ bash scripts/audit_ngc_dependencies.sh -v
 ### Code Architecture Verification
 
 #### 1. Automated NGC Independence Check
+
 ```bash
 # Primary verification method: Automated audit script
 bash scripts/audit_ngc_dependencies.sh
@@ -508,6 +591,7 @@ bash scripts/audit_ngc_dependencies.sh -v
 ```
 
 #### 2. Docker Configuration Verification
+
 ```bash
 # Verify docker-compose.yml has no hard NGC dependencies
 cat docker-compose.yml | grep "image:" | grep -v "EMBED_IMAGE\|RERANK_IMAGE\|EXTRACT_IMAGE"
@@ -519,6 +603,7 @@ grep "NGC_API_KEY" .env     # Should return no results ✅
 ```
 
 #### 3. Configuration Verification
+
 ```python
 # Verify cloud-first configuration
 config = EnhancedRAGConfig.from_env()
@@ -529,6 +614,7 @@ assert "integrate.api.nvidia.com" in config.nvidia_build_base_url
 ```
 
 #### 3. Model Validation
+
 ```python
 # Verify NGC-independent model access
 client = OpenAIWrapper(NVIDIABuildConfig())
@@ -578,18 +664,18 @@ assert any("nvidia/" in model["id"] for model in models)
 
 #### Key Implementation Files
 
-| Component | File Path | NGC Independence |
-|-----------|-----------|------------------|
-| **OpenAI Wrapper** | `src/clients/openai_wrapper.py` | ✅ Full |
-| **Enhanced Client** | `src/clients/nemo_client_enhanced.py` | ✅ Composition |
-| **Configuration** | `src/enhanced_config.py` | ✅ Cloud-first |
-| **Environment Config** | `.env` | ✅ NGC-independent (NVIDIA_API_KEY) |
-| **Docker Compose** | `docker-compose.yml` | ✅ NGC-independent (no defaults) |
-| **NGC Audit Script** | `scripts/audit_ngc_dependencies.sh` | ✅ Automated verification |
-| **Model Validator** | `src/validation/model_validator.py` | ✅ Verified |
-| **Health Monitor** | `src/monitoring/endpoint_health_monitor.py` | ✅ Continuous |
-| **Cost Analyzer** | `src/monitoring/pharmaceutical_cost_analyzer.py` | ✅ Optimized |
-| **Compatibility Tests** | `tests/test_nvidia_build_compatibility.py` | ✅ Automated |
+| Component               | File Path                                        | NGC Independence                    |
+| ----------------------- | ------------------------------------------------ | ----------------------------------- |
+| **OpenAI Wrapper**      | `src/clients/openai_wrapper.py`                  | ✅ Full                             |
+| **Enhanced Client**     | `src/clients/nemo_client_enhanced.py`            | ✅ Composition                      |
+| **Configuration**       | `src/enhanced_config.py`                         | ✅ Cloud-first                      |
+| **Environment Config**  | `.env`                                           | ✅ NGC-independent (NVIDIA_API_KEY) |
+| **Docker Compose**      | `docker-compose.yml`                             | ✅ NGC-independent (no defaults)    |
+| **NGC Audit Script**    | `scripts/audit_ngc_dependencies.sh`              | ✅ Automated verification           |
+| **Model Validator**     | `src/validation/model_validator.py`              | ✅ Verified                         |
+| **Health Monitor**      | `src/monitoring/endpoint_health_monitor.py`      | ✅ Continuous                       |
+| **Cost Analyzer**       | `src/monitoring/pharmaceutical_cost_analyzer.py` | ✅ Optimized                        |
+| **Compatibility Tests** | `tests/test_nvidia_build_compatibility.py`       | ✅ Automated                        |
 
 ---
 
@@ -626,6 +712,13 @@ system_status = {
 
 **The pharmaceutical RAG system is fully prepared for NGC API deprecation and will operate without interruption.**
 
+## Related Documentation
+
+- [Architecture](./ARCHITECTURE.md) — Overall system architecture
+- [Deployment](./DEPLOYMENT.md) — Cloud-first vs self-hosted strategies
+- [Features](./FEATURES.md) — High-level capability overview
+- [Self-Hosted NIM](./NVIDIA_BUILD_SELF_HOSTED_NIM.md) — Setup and operations
+
 ---
 
 **Document Version**: 1.0.0
@@ -633,19 +726,25 @@ system_status = {
 **Next Review**: December 2025
 **Maintained By**: Pharmaceutical RAG Team
 **Status**: ✅ **NGC DEPRECATION IMMUNE**
+
 ### Docker Configuration (NGC‑Independent)
 
 We removed NGC‑specific references from docker‑compose.yml:
+
 - Replaced NGC_API_KEY with NVIDIA_API_KEY
 - Removed hard dependency on `nvcr.io` by allowing custom `EXTRACT_IMAGE`
 - Health checks use NVIDIA_API_KEY bearer tokens
 
 This enables fully NGC‑independent self‑hosted deployments.
+
 - Run the automated audit:
+
 ```bash
 bash scripts/audit_ngc_dependencies.sh -v
 ```
+
 Expected: No matches for `NGC_API_KEY`, `nvcr.io`, or `ngc.nvidia.com` outside of documentation.
+
 ### Automated Auditing (CI/CD)
 
 - Integrate `scripts/audit_ngc_dependencies.sh` into your CI pipeline to block new NGC references.

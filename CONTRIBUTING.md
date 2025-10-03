@@ -1,5 +1,13 @@
 # Contributing to RAG Template for NVIDIA NemoRetriever
 
+---
+
+Last Updated: 2025-10-03
+Owner: Community Team
+Review Cadence: Monthly
+
+---
+
 Thank you for your interest in contributing! This document provides guidelines and instructions for contributing to this project.
 
 ## 🚀 Quick Start for Contributors
@@ -68,6 +76,7 @@ make type-check  # Type checking with mypy
 ### 2. Development Process
 
 1. **Create a feature branch**
+
    ```bash
    git checkout -b feature/your-feature-name
    # or
@@ -75,12 +84,14 @@ make type-check  # Type checking with mypy
    ```
 
 2. **Make your changes**
+
    - Write clean, readable code
    - Follow the existing code style
    - Add tests for new functionality
    - Update documentation as needed
 
 3. **Test thoroughly**
+
    ```bash
    # Run tests
    make test
@@ -112,6 +123,7 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -124,6 +136,7 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 - `security`: Security improvements
 
 **Examples:**
+
 ```bash
 feat(embeddings): add support for new NVIDIA embedding model
 fix(auth): resolve API key validation bug
@@ -134,17 +147,20 @@ security: implement placeholder detection in config validator
 ### 4. Pull Request Process
 
 1. **Push your branch**
+
    ```bash
    git push origin feature/your-feature-name
    ```
 
 2. **Create Pull Request**
+
    - Use a descriptive title
    - Fill out the PR template completely
    - Link related issues
    - Add screenshots/demos if applicable
 
 3. **Code Review**
+
    - Address reviewer feedback promptly
    - Keep discussions constructive
    - Update tests if requested
@@ -160,7 +176,7 @@ security: implement placeholder detection in config validator
 - **Pre-commit hooks** will block commits with API keys
 - Always use `.env` for local configuration (gitignored)
 - Use `.env.example` for templates (tracked, has placeholders)
-- See [README.md Security section](README.md#-security--api-key-management) for details
+- See [SECURITY.md](SECURITY.md) for details
 
 ### If You Accidentally Commit Secrets
 
@@ -178,6 +194,7 @@ security: implement placeholder detection in config validator
 - **Type hints** for public APIs
 
 **Example:**
+
 ```python
 def process_query(
     query: str,
@@ -265,9 +282,38 @@ class TestYourFeature:
 ### Documentation Locations
 
 - `README.md`: Overview and quick start
-- `docs/`: Detailed guides and architecture
+- `docs/DEVELOPMENT.md`: Development setup and guidelines
+- `docs/API_REFERENCE.md`: Configuration and API reference
+- `docs/EXAMPLES.md`: Usage examples and runnable snippets
+- `docs/_shared/toc.md`: Canonical documentation map
 - Code docstrings: API documentation
 - `CHANGELOG.md`: Version history (maintained by maintainers)
+
+### Documentation Standards
+
+- Include ownership metadata at the top of new docs:
+  ```
+  ---
+  Last Updated: YYYY-MM-DD
+  Owner: Team Name
+  Review Cadence: Weekly|Bi-weekly|Monthly|Quarterly|Annually
+  ---
+  ```
+- Run `make docs` to refresh tables of contents.
+- Run `make docs-linkcheck` to validate internal links.
+- See `docs/_shared/toc.md` for organization and placement guidance.
+
+### Documentation Maintenance
+
+- When changing headings in `README.md` or files under `docs/`, run `make docs` to refresh TOC blocks.
+- Pre-commit checks validate only changed files:
+  - `docs-metadata-check` enforces metadata on modified docs.
+  - `docs-linkcheck` validates internal links for modified `README.md` and `docs/` files (excludes `tests/` and `easyapi-*`).
+- CI on pull requests runs quick, non-network checks:
+  - TOC drift check (non-writing) to catch stale TOCs.
+  - Internal link validation and metadata validation.
+- External links are validated weekly in a scheduled workflow to avoid PR bottlenecks.
+- To verify locally without modifying files, run `make docs-check-toc`; for a full pass use `make docs-all`.
 
 ## 🐛 Bug Reports
 
@@ -290,6 +336,7 @@ class TestYourFeature:
 Brief description of the bug
 
 **To Reproduce**
+
 1. Step 1
 2. Step 2
 3. See error
@@ -301,6 +348,7 @@ What should happen
 What actually happens
 
 **Environment**
+
 - OS: macOS 13.0
 - Python: 3.9.7
 - Package versions: (paste pip freeze output)
@@ -373,6 +421,7 @@ By contributing, you agree that your contributions will be licensed under the sa
 ## Recognition
 
 Contributors will be recognized in:
+
 - `CONTRIBUTORS.md` file
 - Release notes
 - Project README

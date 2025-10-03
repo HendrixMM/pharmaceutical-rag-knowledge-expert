@@ -1,5 +1,59 @@
 # NVIDIA NeMo Retriever Pipeline Guide
 
+<!-- TOC -->
+
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+  - [Prerequisites](#prerequisites)
+  - [Basic Usage](#basic-usage)
+- [Pipeline Architecture](#pipeline-architecture)
+  - [Step 1: Document Extraction](#step-1-document-extraction)
+  - [Step 2: Text Embedding](#step-2-text-embedding)
+  - [Step 3: Passage Reranking](#step-3-passage-reranking)
+- [Complete Pipeline Integration](#complete-pipeline-integration)
+  - [End-to-End Example](#end-to-end-example)
+  - [Using the Automated Test Script](#using-the-automated-test-script)
+- [Pharmaceutical Domain Features](#pharmaceutical-domain-features)
+  - [Enhanced Metadata Extraction](#enhanced-metadata-extraction)
+  - [Regulatory Compliance](#regulatory-compliance)
+  - [Safety-First Processing](#safety-first-processing)
+- [Free Tier Optimization](#free-tier-optimization)
+  - [NVIDIA Build Credits Monitoring](#nvidia-build-credits-monitoring)
+  - [Free Tier Best Practices](#free-tier-best-practices)
+- [Environment Configuration](#environment-configuration)
+  - [Complete .env Example](#complete-env-example)
+- [Testing](#testing)
+  - [Running Unit Tests](#running-unit-tests)
+  - [Integration Testing](#integration-testing)
+- [Performance Optimization](#performance-optimization)
+  - [Embedding Optimization](#embedding-optimization)
+  - [Extraction Optimization](#extraction-optimization)
+  - [Reranking Optimization](#reranking-optimization)
+- [Troubleshooting](#troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Error Handling](#error-handling)
+- [Production Deployment](#production-deployment)
+  - [Environment Setup](#environment-setup)
+  - [Health Checks](#health-checks)
+  - [Scaling Considerations](#scaling-considerations)
+- [MCP-Enhanced Documentation Context](#mcp-enhanced-documentation-context)
+  - [MCP Configuration](#mcp-configuration)
+  - [Using MCP Context in Your Pipeline](#using-mcp-context-in-your-pipeline)
+  - [Live Documentation Benefits](#live-documentation-benefits)
+- [Support and Resources](#support-and-resources)
+  - [Documentation](#documentation)
+  - [Community](#community)
+  - [Enterprise Support](#enterprise-support)
+  <!-- /TOC -->
+
+---
+
+Last Updated: 2025-10-03
+Owner: Engineering Team
+Review Cadence: Monthly
+
+---
+
 ## Overview
 
 This guide covers the complete three-step NVIDIA NeMo Retriever pipeline implementation:
@@ -98,11 +152,11 @@ else:
 
 #### Available Models
 
-| Model | Dimensions | Best For | Use Case |
-|-------|------------|----------|----------|
-| `nv-embedqa-e5-v5` | 1024 | Q&A, Medical | Pharmaceutical search |
-| `nv-embedqa-mistral7b-v2` | 4096 | Multilingual, Complex | Global drug information |
-| `snowflake-arctic-embed-l` | 1024 | General text | Basic similarity |
+| Model                      | Dimensions | Best For              | Use Case                |
+| -------------------------- | ---------- | --------------------- | ----------------------- |
+| `nv-embedqa-e5-v5`         | 1024       | Q&A, Medical          | Pharmaceutical search   |
+| `nv-embedqa-mistral7b-v2`  | 4096       | Multilingual, Complex | Global drug information |
+| `snowflake-arctic-embed-l` | 1024       | General text          | Basic similarity        |
 
 #### Configuration
 
@@ -144,10 +198,10 @@ print(f"Generated {len(embeddings)} embeddings of {len(embeddings[0])} dimension
 
 #### Available Models
 
-| Model | Max Pairs | Best For | Use Case |
-|-------|-----------|----------|----------|
-| `nv-rerankqa-mistral4b-v3` | 1000 | General Q&A | Standard reranking |
-| `llama-3_2-nemoretriever-500m-rerank-v2` | 1000 | Latest NeMo | Optimal performance |
+| Model                                    | Max Pairs | Best For    | Use Case            |
+| ---------------------------------------- | --------- | ----------- | ------------------- |
+| `nv-rerankqa-mistral4b-v3`               | 1000      | General Q&A | Standard reranking  |
+| `llama-3_2-nemoretriever-500m-rerank-v2` | 1000      | Latest NeMo | Optimal performance |
 
 #### Configuration
 
@@ -405,6 +459,7 @@ PHARMA_DOMAIN_OVERLAY=true python scripts/nim_native_test.py
 ### Common Issues
 
 #### 1. API Key Issues
+
 ```bash
 # Check API key is set
 echo $NVIDIA_API_KEY
@@ -414,12 +469,14 @@ python -c "import os; from src.nemo_retriever_client import create_nemo_client; 
 ```
 
 #### 2. Model Availability
+
 ```bash
 # Check service health
 python scripts/nim_native_test.py
 ```
 
 #### 3. Extraction Failures
+
 ```bash
 # Enable fallback mode
 export NEMO_EXTRACTION_STRICT=false
@@ -427,6 +484,7 @@ export NEMO_EXTRACTION_STRATEGY=auto
 ```
 
 #### 4. Memory Issues
+
 ```bash
 # Reduce batch sizes
 export NEMO_BATCH_SIZE=50
@@ -499,8 +557,10 @@ The MCP system is configured in `mcp_config.json` with multiple documentation se
   },
   "contexts": {
     "pharmaceutical_nemo_optimization": [
-      "microsoft_learn", "nvidia_nemo_models",
-      "nvidia_embedding_models", "nvidia_llama_rerank"
+      "microsoft_learn",
+      "nvidia_nemo_models",
+      "nvidia_embedding_models",
+      "nvidia_llama_rerank"
     ]
   }
 }
@@ -531,6 +591,7 @@ print(f"Recommended reranking model: {recommendations['reranking_model']}")
 ## Support and Resources
 
 ### Documentation
+
 - [NVIDIA NIM Documentation](https://docs.nvidia.com/nim/)
 - [NeMo Retriever Guide](https://docs.nvidia.com/nemo/retriever/)
 - [API Reference](https://docs.api.nvidia.com/)
@@ -538,10 +599,12 @@ print(f"Recommended reranking model: {recommendations['reranking_model']}")
 - [Pipeline Configuration Guide](../mcp_config.json) - MCP server configuration
 
 ### Community
+
 - [NVIDIA Developer Forums](https://forums.developer.nvidia.com/)
 - [NeMo GitHub](https://github.com/NVIDIA/NeMo)
 
 ### Enterprise Support
+
 - Contact NVIDIA Enterprise Support for production deployments
 - Consider NVIDIA AI Enterprise for enhanced support and features
 

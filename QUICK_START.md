@@ -37,6 +37,7 @@ cp .env.example .env
 ```
 
 **Get your NVIDIA API key:**
+
 1. Visit [build.nvidia.com](https://build.nvidia.com)
 2. Sign in/create account
 3. Navigate to API Keys
@@ -142,7 +143,7 @@ ENABLE_RAG_PUBMED_INTEGRATION=true
 
 - [NGC Deprecation Immunity](docs/NGC_DEPRECATION_IMMUNITY.md)
 - [NVIDIA Model Access Guide](docs/NVIDIA_MODEL_ACCESS_GUIDE.md)
-- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
 - [Pharmaceutical Best Practices](docs/PHARMACEUTICAL_BEST_PRACTICES.md)
 
 ### 3. Development Setup
@@ -167,6 +168,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full development guide.
 ### Issue: "NVIDIA_API_KEY appears to be a placeholder"
 
 **Solution:**
+
 ```bash
 # Edit .env and replace placeholder
 vim .env  # Change your_nvidia_api_key_here to real key
@@ -176,6 +178,7 @@ python scripts/validate_env.py  # Verify
 ### Issue: "No module named 'streamlit'"
 
 **Solution:**
+
 ```bash
 # Install dependencies
 pip install -r requirements.txt
@@ -184,6 +187,7 @@ pip install -r requirements.txt
 ### Issue: "No documents found"
 
 **Solution:**
+
 ```bash
 # Check documents directory
 ls -la Data/Docs/
@@ -195,6 +199,7 @@ cp path/to/your/*.pdf Data/Docs/
 ### Issue: API Rate Limit
 
 **Solution:**
+
 ```bash
 # Enable rate limiting
 echo "NVIDIA_RATE_LIMIT_AWARE=true" >> .env
@@ -204,6 +209,7 @@ echo "MAX_REQUESTS_PER_SECOND=3" >> .env
 ### Issue: SSL Certificate Error
 
 **Solution:**
+
 ```bash
 # Usually due to corporate proxy
 export CURL_CA_BUNDLE=/path/to/ca-bundle.crt
@@ -271,6 +277,7 @@ After completing this guide, you should have:
 - [x] Explored web interface
 
 **What's Next?**
+
 - Explore [pharmaceutical features](docs/PHARMACEUTICAL_BEST_PRACTICES.md)
 - Set up [PubMed integration](docs/API_INTEGRATION_GUIDE.md)
 - Learn about [NGC deprecation immunity](docs/NGC_DEPRECATION_IMMUNITY.md)

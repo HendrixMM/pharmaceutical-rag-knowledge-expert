@@ -5,7 +5,8 @@
 .PHONY: lint format check security coverage quality fix pre-commit setup-dev
 .PHONY: test-rerank
 .PHONY: start-rerank stop-rerank down-all
-.PHONY: bench:ci
+.PHONY: bench-ci
+.PHONY: docs docs-serve docs-linkcheck docs-linkcheck-all docs-validate docs-all docs-check-toc
 
 # Default target
 help:
@@ -30,6 +31,14 @@ help:
 	@echo "  test-integration Run integration tests (requires API keys)"
 	@echo "  test-rerank      Run NVIDIA Build rerank test (requires NVIDIA_API_KEY)"
 	@echo "  pharma-bench     Run pharma capability checks (requires NVIDIA_API_KEY)"
+	@echo ""
+	@echo "📚 Documentation:"
+	@echo "  docs             Generate/update table of contents for all docs"
+	@echo "  docs-serve       Serve documentation locally (placeholder)"
+	@echo "  docs-linkcheck   Validate documentation links (internal only)"
+	@echo "  docs-validate    Validate documentation metadata"
+	@echo "  docs-check-toc   Check TOCs (no writes); fails if drift"
+	@echo "  docs-all         Run all documentation checks (toc, linkcheck, validate)"
 	@echo "  start-rerank     Start local reranker NIM with Docker Compose (8502)"
 	@echo "  start-embed      Start local embedder NIM with Docker Compose (8501)"
 	@echo "  start-extraction Start local extraction NIM with Docker Compose (8503)"
@@ -38,7 +47,7 @@ help:
 	@echo "  coverage         Run tests with coverage report"
 	@echo ""
 	@echo "🚀 Benchmarks:"
-	@echo "  bench:ci         Run orchestrated preflight→run locally (CI-like)"
+	@echo "  bench-ci         Run orchestrated preflight→run locally (CI-like)"
 	@echo "⚙️  Development Setup:"
 	@echo "  setup-dev        Complete development setup"
 	@echo "  pre-commit       Install pre-commit hooks"
@@ -176,7 +185,7 @@ dev: format lint test-unit
 	@echo "🎉 Development cycle complete!"
 
 # CI-like bench orchestration (requires NVIDIA_API_KEY)
-bench:ci:
+bench-ci:
 	@echo "Running orchestrated benchmarks (preflight→run)…" && \
 	python scripts/orchestrate_benchmarks.py \
 	  --mode $${MODE:-both} \
@@ -191,3 +200,40 @@ bench:ci:
 	  --min-cloud-score $${MIN_SCORE:-0.30} \
 	  --max-cloud-latency-ms $${MAX_P95_MS:-12000} \
 	  --max-queries $${MAX_Q:-1}
+
+# Documentation targets
+docs:
+	@echo "Generating table of contents for documentation..."
+	@python scripts/docs_toc_generator.py README.md --in-place || true
+	@find docs -name '*.md' -exec python scripts/docs_toc_generator.py {} --in-place \;
+	@echo "✅ Documentation TOCs updated"
+
+docs-serve:
+	@echo "Documentation serving not yet configured"
+	@echo "This target will be implemented in Week 3 with mkdocs"
+	@echo "For now, view markdown files directly or use a markdown preview tool"
+
+docs-linkcheck:
+	@echo "Checking documentation links..."
+	@python scripts/docs_linkcheck.py --skip-external --exclude tests/ --exclude easyapi-pubmed-optimization-guide.md --exclude easyapi-pubmed-integration.md
+	@echo "✅ Link check complete"
+
+docs-linkcheck-all:
+	@echo "Checking all documentation links (including external)..."
+	@python scripts/docs_linkcheck.py
+	@echo "✅ Full link check complete"
+
+docs-validate:
+	@echo "Validating documentation metadata..."
+	@python scripts/docs_metadata_validator.py --path docs/ --exclude docs/_shared/metadata_template.md
+	@echo "✅ Metadata validation complete"
+
+docs-all: docs docs-linkcheck docs-validate
+	@echo "✅ All documentation checks passed"
+
+# Non-writing TOC drift check (CI-friendly)
+docs-check-toc:
+	@echo "Checking TOC drift (non-writing)..."
+	@python scripts/docs_toc_generator.py README.md --check --quiet || exit 1
+	@find docs -name '*.md' -exec python scripts/docs_toc_generator.py {} --check --quiet \; || exit 1
+	@echo "✅ TOCs are up to date"

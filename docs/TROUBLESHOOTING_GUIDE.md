@@ -1,5 +1,53 @@
 # Troubleshooting and Maintenance Guide
 
+<!-- TOC -->
+
+- [Overview](#overview)
+- [Table of Contents](#table-of-contents)
+- [Quick Diagnostic Tools](#quick-diagnostic-tools)
+  - [System Health Check Script](#system-health-check-script)
+  - [Quick Diagnostic Commands](#quick-diagnostic-commands)
+- [Common Issues and Solutions](#common-issues-and-solutions)
+  - [Issue 1: "ModuleNotFoundError" when importing](#issue-1-modulenotfounderror-when-importing)
+  - [Issue 2: "NVIDIA API key not found"](#issue-2-nvidia-api-key-not-found)
+  - [Issue 3: "403 Forbidden" API Errors](#issue-3-403-forbidden-api-errors)
+  - [Issue 4: Slow Response Times](#issue-4-slow-response-times)
+- [API Connection Problems](#api-connection-problems)
+  - [NVIDIA Build API Connection Issues](#nvidia-build-api-connection-issues)
+- [Authentication and Authorization Issues](#authentication-and-authorization-issues)
+  - [API Key Problems](#api-key-problems)
+- [Performance Issues](#performance-issues)
+  - [Slow Response Times](#slow-response-times)
+- [Cost and Billing Problems](#cost-and-billing-problems)
+  - [Unexpected High Costs](#unexpected-high-costs)
+- [Safety Alert System Issues](#safety-alert-system-issues)
+  - [Alert Not Triggering](#alert-not-triggering)
+  - [Alert Delivery Issues](#alert-delivery-issues)
+- [Batch Processing Problems](#batch-processing-problems)
+  - [Batch Jobs Not Processing](#batch-jobs-not-processing)
+- [Configuration Issues](#configuration-issues)
+  - [Environment Variable Problems](#environment-variable-problems)
+- [Maintenance Procedures](#maintenance-procedures)
+  - [Daily Maintenance Tasks](#daily-maintenance-tasks)
+  - [Weekly Maintenance Tasks](#weekly-maintenance-tasks)
+  - [Monthly Maintenance Tasks](#monthly-maintenance-tasks)
+- [Recovery Procedures](#recovery-procedures)
+  - [System Recovery Checklist](#system-recovery-checklist)
+  - [Emergency Procedures](#emergency-procedures)
+  - [Data Recovery](#data-recovery)
+- [Support and Resources](#support-and-resources)
+  - [Log Files and Debugging](#log-files-and-debugging)
+  - [Getting Help](#getting-help)
+  <!-- /TOC -->
+
+---
+
+Last Updated: 2025-10-03
+Owner: Support Team
+Review Cadence: Bi-weekly
+
+---
+
 **Comprehensive Troubleshooting and Maintenance Documentation for Pharmaceutical RAG System**
 
 ## Overview
@@ -142,11 +190,13 @@ tail -n 20 logs/*.log 2>/dev/null || echo "No log files found"
 ### Issue 1: "ModuleNotFoundError" when importing
 
 **Symptoms:**
+
 ```
 ModuleNotFoundError: No module named 'src.clients'
 ```
 
 **Diagnosis:**
+
 ```bash
 # Check Python path
 python -c "import sys; print('\\n'.join(sys.path))"
@@ -158,11 +208,13 @@ ls -la src/
 **Solutions:**
 
 1. **Set Python Path:**
+
    ```bash
    export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
    ```
 
 2. **Permanent Solution (add to ~/.bashrc):**
+
    ```bash
    echo 'export PYTHONPATH="${PYTHONPATH}:/path/to/project/src"' >> ~/.bashrc
    source ~/.bashrc
@@ -177,11 +229,13 @@ ls -la src/
 ### Issue 2: "NVIDIA API key not found"
 
 **Symptoms:**
+
 ```
 NVIDIABuildError: NVIDIA API key required. Set NVIDIA_API_KEY environment variable
 ```
 
 **Diagnosis:**
+
 ```bash
 # Check if API key is set
 echo "API Key set: ${NVIDIA_API_KEY:+Yes}"
@@ -197,11 +251,13 @@ fi
 **Solutions:**
 
 1. **Set Environment Variable:**
+
    ```bash
    export NVIDIA_API_KEY="your_api_key_here"
    ```
 
 2. **Create/Update .env File:**
+
    ```bash
    echo "NVIDIA_API_KEY=your_api_key_here" >> .env
    ```
@@ -215,11 +271,13 @@ fi
 ### Issue 3: "403 Forbidden" API Errors
 
 **Symptoms:**
+
 ```
 OpenAIError: 403 Forbidden - You don't have access to this model
 ```
 
 **Diagnosis:**
+
 ```python
 # Check API access level
 from src.clients.openai_wrapper import create_nvidia_build_client
@@ -236,11 +294,13 @@ except Exception as e:
 **Solutions:**
 
 1. **Verify API Key:**
+
    - Log into NVIDIA Developer Portal
    - Check API key is valid and active
    - Verify account tier (Discovery vs. Full access)
 
 2. **Request Model Access:**
+
    - Contact NVIDIA support for model access
    - Upgrade account tier if needed
 
@@ -255,12 +315,14 @@ except Exception as e:
 ### Issue 4: Slow Response Times
 
 **Symptoms:**
+
 ```
 Response times consistently > 10 seconds
 Timeouts occurring frequently
 ```
 
 **Diagnosis:**
+
 ```python
 # Performance benchmark
 import time
@@ -281,12 +343,14 @@ print(f"Endpoint: {response.endpoint_type}")
 **Solutions:**
 
 1. **Check Network Connectivity:**
+
    ```bash
    # Test connectivity to NVIDIA endpoints
    curl -w "Time: %{time_total}s\n" -o /dev/null -s https://integrate.api.nvidia.com
    ```
 
 2. **Optimize Configuration:**
+
    ```python
    # Reduce timeout for faster failover
    config = NVIDIABuildConfig(
@@ -312,11 +376,13 @@ print(f"Endpoint: {response.endpoint_type}")
 #### Connection Timeout Problems
 
 **Symptoms:**
+
 - Requests timing out after 60 seconds
 - "Connection timeout" errors
 - Intermittent connectivity issues
 
 **Diagnostic Commands:**
+
 ```bash
 # Test direct API connectivity
 curl -H "Authorization: Bearer $NVIDIA_API_KEY" \
@@ -334,6 +400,7 @@ ping -c 5 integrate.api.nvidia.com
 **Solutions:**
 
 1. **Adjust Timeout Settings:**
+
    ```python
    config = NVIDIABuildConfig(
        timeout=120,  # Increase timeout
@@ -342,6 +409,7 @@ ping -c 5 integrate.api.nvidia.com
    ```
 
 2. **Implement Retry Logic:**
+
    ```python
    import time
    import asyncio
@@ -358,6 +426,7 @@ ping -c 5 integrate.api.nvidia.com
    ```
 
 3. **Use Connection Pooling:**
+
    ```python
    from src.pharmaceutical.model_optimization import PharmaceuticalClientPool
 
@@ -370,11 +439,13 @@ ping -c 5 integrate.api.nvidia.com
 #### Rate Limiting Issues
 
 **Symptoms:**
+
 - "429 Too Many Requests" errors
 - Requests being throttled
 - Inconsistent response times
 
 **Diagnostic Script:**
+
 ```python
 import time
 from collections import deque
@@ -412,6 +483,7 @@ def diagnose_rate_limiting():
 **Solutions:**
 
 1. **Implement Rate Limiting:**
+
    ```python
    import asyncio
    from datetime import datetime, timedelta
@@ -437,6 +509,7 @@ def diagnose_rate_limiting():
    ```
 
 2. **Use Batch Processing:**
+
    ```python
    # Batch multiple queries to reduce API calls
    queries = ["query1", "query2", "query3", "query4", "query5"]
@@ -454,11 +527,13 @@ def diagnose_rate_limiting():
 #### Invalid or Expired API Key
 
 **Symptoms:**
+
 - "401 Unauthorized" errors
 - "Invalid API key" messages
 - Authentication failures
 
 **Diagnostic Steps:**
+
 ```python
 def diagnose_api_key_issues():
     """Diagnose API key authentication issues."""
@@ -513,6 +588,7 @@ diagnose_api_key_issues()
 **Solutions:**
 
 1. **Regenerate API Key:**
+
    ```bash
    # Log into NVIDIA Developer Portal
    # Navigate to API Keys section
@@ -522,6 +598,7 @@ diagnose_api_key_issues()
    ```
 
 2. **Secure API Key Storage:**
+
    ```python
    from cryptography.fernet import Fernet
 
@@ -545,11 +622,13 @@ diagnose_api_key_issues()
 #### Permission and Access Level Issues
 
 **Symptoms:**
+
 - Access to some models but not others
 - "Insufficient permissions" errors
 - Limited functionality
 
 **Diagnostic Commands:**
+
 ```python
 def check_access_levels():
     """Check API access levels and permissions."""
@@ -609,6 +688,7 @@ check_access_levels()
 #### Network Latency Issues
 
 **Diagnostic Script:**
+
 ```python
 import time
 import statistics
@@ -665,6 +745,7 @@ diagnose_network_performance()
 #### Memory and CPU Issues
 
 **Diagnostic Commands:**
+
 ```bash
 # Check system resources
 echo "System Resource Usage:"
@@ -695,6 +776,7 @@ print(f'  CPU: {process.cpu_percent():.1f}%')
 **Solutions:**
 
 1. **Memory Optimization:**
+
    ```python
    # Implement memory-efficient processing
    def process_large_batch_efficiently(queries, batch_size=10):
@@ -718,6 +800,7 @@ print(f'  CPU: {process.cpu_percent():.1f}%')
    ```
 
 2. **CPU Optimization:**
+
    ```python
    # Use async processing for CPU-intensive tasks
    import asyncio
@@ -746,6 +829,7 @@ print(f'  CPU: {process.cpu_percent():.1f}%')
 #### Cost Tracking and Analysis
 
 **Diagnostic Script:**
+
 ```python
 from src.monitoring.pharmaceutical_cost_analyzer import create_pharmaceutical_cost_tracker
 
@@ -797,11 +881,13 @@ diagnose_cost_issues()
 #### Free Tier Exhaustion
 
 **Symptoms:**
+
 - Queries automatically falling back to infrastructure
 - High costs despite targeting free tier
 - "Free tier limit exceeded" messages
 
 **Diagnostic Commands:**
+
 ```python
 def check_free_tier_status():
     """Check free tier usage status."""
@@ -841,6 +927,7 @@ check_free_tier_status()
 **Solutions:**
 
 1. **Implement Conservation Mode:**
+
    ```python
    def activate_conservation_mode():
        """Activate conservation mode when approaching limits."""
@@ -863,6 +950,7 @@ check_free_tier_status()
    ```
 
 2. **Smart Query Scheduling:**
+
    ```python
    async def implement_smart_scheduling():
        """Implement smart query scheduling for free tier optimization."""
@@ -910,11 +998,13 @@ check_free_tier_status()
 ### Alert Not Triggering
 
 **Symptoms:**
+
 - Safety-critical queries not generating alerts
 - Missing drug interaction warnings
 - Silent failures in alert system
 
 **Diagnostic Script:**
+
 ```python
 def diagnose_alert_system():
     """Diagnose safety alert system issues."""
@@ -974,6 +1064,7 @@ asyncio.run(diagnose_alert_system())
 **Solutions:**
 
 1. **Fix Safety Keyword Detection:**
+
    ```python
    # Enhanced safety keyword detection
    ENHANCED_SAFETY_KEYWORDS = {
@@ -1008,6 +1099,7 @@ asyncio.run(diagnose_alert_system())
    ```
 
 2. **Alert System Validation:**
+
    ```python
    def validate_alert_system():
        """Validate alert system configuration."""
@@ -1045,11 +1137,13 @@ asyncio.run(diagnose_alert_system())
 ### Alert Delivery Issues
 
 **Symptoms:**
+
 - Alerts generated but not delivered
 - Email/Slack notifications not working
 - Alert acknowledgment issues
 
 **Diagnostic Commands:**
+
 ```bash
 # Check email configuration
 python -c "
@@ -1093,11 +1187,13 @@ except Exception as e:
 ### Batch Jobs Not Processing
 
 **Symptoms:**
+
 - Queries queued but not processed
 - Batch processing hanging
 - Inconsistent batch execution
 
 **Diagnostic Script:**
+
 ```python
 async def diagnose_batch_processing():
     """Diagnose batch processing issues."""
@@ -1175,6 +1271,7 @@ asyncio.run(diagnose_batch_processing())
 **Solutions:**
 
 1. **Fix Queue Management:**
+
    ```python
    def fix_queue_issues():
        """Fix common queue management issues."""
@@ -1197,6 +1294,7 @@ asyncio.run(diagnose_batch_processing())
    ```
 
 2. **Debug Auto-Processing:**
+
    ```python
    async def debug_auto_processing():
        """Debug automatic batch processing."""
@@ -1233,11 +1331,13 @@ asyncio.run(diagnose_batch_processing())
 ### Environment Variable Problems
 
 **Symptoms:**
+
 - Configuration not loading properly
 - Feature flags not working
 - Default values being used instead of configured values
 
 **Diagnostic Script:**
+
 ```python
 def diagnose_configuration():
     """Diagnose configuration issues."""
@@ -1300,6 +1400,7 @@ diagnose_configuration()
 **Solutions:**
 
 1. **Fix Environment Loading:**
+
    ```python
    # Ensure .env is loaded before imports
    from dotenv import load_dotenv
@@ -1322,6 +1423,7 @@ diagnose_configuration()
    ```
 
 2. **Configuration Validation:**
+
    ```python
    def validate_configuration():
        """Validate complete configuration setup."""
@@ -1656,12 +1758,14 @@ echo -e "\n✅ Monthly maintenance completed: $(date)"
 When the system is not functioning properly:
 
 1. **Immediate Assessment:**
+
    ```bash
    # Quick system health check
    ./scripts/system_health_check.sh
    ```
 
 2. **API Connectivity Recovery:**
+
    ```bash
    # Test and recover API connectivity
    python -c "
@@ -1679,12 +1783,14 @@ When the system is not functioning properly:
    ```
 
 3. **Configuration Recovery:**
+
    ```bash
    # Restore from backup if needed
    ./scripts/restore_config.sh latest_backup.tar.gz
    ```
 
 4. **Clear System State:**
+
    ```bash
    # Clear potentially corrupted cache/state
    rm -rf __pycache__/
@@ -1862,6 +1968,7 @@ if __name__ == "__main__":
 ### Log Files and Debugging
 
 **Important Log Locations:**
+
 - `logs/application.log` - General application logs
 - `logs/pharmaceutical_alerts.log` - Safety alert logs
 - `logs/cost_tracking.log` - Cost monitoring logs
@@ -1869,6 +1976,7 @@ if __name__ == "__main__":
 - `logs/compliance_audit.log` - Compliance audit trail
 
 **Debug Mode Activation:**
+
 ```bash
 # Enable debug logging
 export LOG_LEVEL=DEBUG
@@ -1888,18 +1996,21 @@ client = create_pharmaceutical_client()
 ### Getting Help
 
 **Internal Resources:**
+
 1. Check this troubleshooting guide
 2. Review logs for error patterns
 3. Run diagnostic scripts
 4. Check configuration validity
 
 **External Resources:**
+
 1. NVIDIA Developer Documentation
 2. OpenAI SDK Documentation
 3. Python/AsyncIO Documentation
 4. System-specific documentation
 
 **Escalation Path:**
+
 1. Run comprehensive diagnostics
 2. Collect relevant logs
 3. Document error reproduction steps

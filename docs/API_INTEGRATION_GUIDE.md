@@ -1,5 +1,62 @@
 # API Integration Guide
 
+<!-- TOC -->
+
+- [Overview](#overview)
+- [Table of Contents](#table-of-contents)
+- [Quick Start](#quick-start)
+  - [Basic Setup](#basic-setup)
+  - [Simple Usage](#simple-usage)
+- [Core API Components](#core-api-components)
+  - [Component Architecture](#component-architecture)
+  - [Primary Integration Points](#primary-integration-points)
+- [Authentication & Configuration](#authentication--configuration)
+  - [Environment Configuration](#environment-configuration)
+  - [Required Environment Variables](#required-environment-variables)
+  - [Configuration Validation](#configuration-validation)
+- [Enhanced NeMo Client Integration](#enhanced-nemo-client-integration)
+  - [Basic Client Usage](#basic-client-usage)
+  - [Embedding Generation](#embedding-generation)
+  - [Chat Completions](#chat-completions)
+  - [Performance Metrics](#performance-metrics)
+- [Pharmaceutical Features](#pharmaceutical-features)
+  - [Query Classification and Safety](#query-classification-and-safety)
+  - [Workflow Templates](#workflow-templates)
+  - [Model Optimization](#model-optimization)
+- [Cost Optimization APIs](#cost-optimization-apis)
+  - [Credit Tracking and Monitoring](#credit-tracking-and-monitoring)
+  - [Batch Processing Optimization](#batch-processing-optimization)
+- [Monitoring & Health APIs](#monitoring--health-apis)
+  - [Endpoint Health Monitoring](#endpoint-health-monitoring)
+  - [Model Validation](#model-validation)
+- [Batch Processing Integration](#batch-processing-integration)
+  - [Intelligent Batch Processing](#intelligent-batch-processing)
+  - [Queue Management](#queue-management)
+- [Error Handling](#error-handling)
+  - [Comprehensive Error Management](#comprehensive-error-management)
+  - [Rate Limiting and Retry Logic](#rate-limiting-and-retry-logic)
+- [Performance Optimization](#performance-optimization)
+  - [Caching and Memoization](#caching-and-memoization)
+  - [Connection Pooling and Resource Management](#connection-pooling-and-resource-management)
+- [Security Considerations](#security-considerations)
+  - [API Key Management](#api-key-management)
+  - [Data Privacy and Compliance](#data-privacy-and-compliance)
+- [Complete Integration Example](#complete-integration-example)
+  - [End-to-End Pharmaceutical Research Pipeline](#end-to-end-pharmaceutical-research-pipeline)
+- [Next Steps](#next-steps)
+  - [Advanced Integration Topics](#advanced-integration-topics)
+- [Related Documentation](#related-documentation)
+  - [Support and Community](#support-and-community)
+  <!-- /TOC -->
+
+---
+
+Last Updated: 2025-10-03
+Owner: API Team
+Review Cadence: Weekly
+
+---
+
 **Comprehensive Integration Documentation for Pharmaceutical RAG System**
 
 ## Overview
@@ -1323,13 +1380,15 @@ if __name__ == "__main__":
 4. **Real-Time Monitoring**: Set up continuous health monitoring
 5. **Compliance Integration**: Add regulatory compliance validation
 
-### Additional Resources
+## Related Documentation
 
-- [Deployment Guide](./DEPLOYMENT_GUIDE.md)
-- [Pharmaceutical Best Practices](./PHARMACEUTICAL_BEST_PRACTICES.md)
-- [Troubleshooting Guide](./TROUBLESHOOTING_GUIDE.md)
-- [NGC Deprecation Immunity](./NGC_DEPRECATION_IMMUNITY.md)
-- [Free Tier Maximization](./FREE_TIER_MAXIMIZATION.md)
+- [API Reference](./API_REFERENCE.md) — Configuration and environment variables
+- [Examples](./EXAMPLES.md) — Runnable examples and patterns
+- [Pharmaceutical Best Practices](./PHARMACEUTICAL_BEST_PRACTICES.md) — Domain guidance
+- [Troubleshooting Guide](./TROUBLESHOOTING_GUIDE.md) — Common issues and fixes
+- [Deployment Guide](./DEPLOYMENT.md) — Cloud-first and self-hosted deployment
+- [NGC Deprecation Immunity](./NGC_DEPRECATION_IMMUNITY.md) — Architecture rationale
+- [Free Tier Maximization](./FREE_TIER_MAXIMIZATION.md) — Cost optimization
 
 ### Support and Community
 

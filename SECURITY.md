@@ -1,5 +1,13 @@
 # Security Policy
 
+---
+
+Last Updated: 2025-10-03
+Owner: Security Team
+Review Cadence: Quarterly
+
+---
+
 ## 🔒 Reporting Security Vulnerabilities
 
 We take security seriously. If you discover a security vulnerability, please follow responsible disclosure practices.
@@ -13,6 +21,7 @@ Public disclosure of security vulnerabilities puts all users at risk. Instead:
 1. **Email security contact**: Send details to `security@yourorg.com`
 
 2. **Include in your report**:
+
    - Description of the vulnerability
    - Steps to reproduce
    - Potential impact
@@ -26,12 +35,12 @@ Public disclosure of security vulnerabilities puts all users at risk. Instead:
 
 ### Severity Levels
 
-| Severity | Description | Response Time | Examples |
-|----------|-------------|---------------|----------|
-| **Critical** | Immediate exploitation, data breach risk | 24-48 hours | Remote code execution, API key exposure |
-| **High** | Significant impact, requires user action | 1 week | Authentication bypass, privilege escalation |
-| **Medium** | Limited impact, specific conditions required | 2-4 weeks | XSS, CSRF with mitigation |
-| **Low** | Minimal impact, theoretical risk | Next release | Information disclosure, minor DoS |
+| Severity     | Description                                  | Response Time | Examples                                    |
+| ------------ | -------------------------------------------- | ------------- | ------------------------------------------- |
+| **Critical** | Immediate exploitation, data breach risk     | 24-48 hours   | Remote code execution, API key exposure     |
+| **High**     | Significant impact, requires user action     | 1 week        | Authentication bypass, privilege escalation |
+| **Medium**   | Limited impact, specific conditions required | 2-4 weeks     | XSS, CSRF with mitigation                   |
+| **Low**      | Minimal impact, theoretical risk             | Next release  | Information disclosure, minor DoS           |
 
 ## 🛡️ Security Best Practices
 
@@ -40,15 +49,18 @@ Public disclosure of security vulnerabilities puts all users at risk. Instead:
 #### API Key Management
 
 1. **Never commit API keys** to git
+
    - Use `.env` for local keys (gitignored)
    - Use `.env.example` for templates (tracked, placeholders only)
    - Use CI secrets for automation
 
 2. **Rotate keys regularly**
+
    - NVIDIA API keys: Every 90 days
    - After any suspected exposure: Immediately
 
 3. **Use environment variables**
+
    ```bash
    # Good
    export NVIDIA_API_KEY="nvapi-..."
@@ -65,10 +77,12 @@ Public disclosure of security vulnerabilities puts all users at risk. Instead:
 #### Network Security
 
 1. **Use HTTPS only**
+
    - All NVIDIA API calls use HTTPS
    - Verify SSL certificates (default: enabled)
 
 2. **Rate limiting**
+
    - Respect API rate limits
    - Implement backoff strategies
    - Monitor usage patterns
@@ -93,6 +107,7 @@ pre-commit run --all-files
 ```
 
 **Blocked patterns**:
+
 - API keys (nvapi-, Bearer tokens)
 - Hardcoded credentials
 - Environment variable assignments
@@ -101,6 +116,7 @@ pre-commit run --all-files
 #### Code Security
 
 1. **Input validation**
+
    ```python
    # Good
    def process_query(query: str) -> str:
@@ -115,6 +131,7 @@ pre-commit run --all-files
    ```
 
 2. **Dependency scanning**
+
    ```bash
    # Check for known vulnerabilities
    pip-audit
@@ -132,15 +149,18 @@ pre-commit run --all-files
 ### NVIDIA API Key Security
 
 1. **Storage**:
+
    - Environment variables (preferred)
    - Encrypted secrets management (production)
    - Never in source code
 
 2. **Transmission**:
+
    - HTTPS only
    - Authorization headers (not URL params)
 
 3. **Validation**:
+
    ```python
    from scripts.config_validator import validate_nvidia_api_key
 
@@ -152,6 +172,7 @@ pre-commit run --all-files
 ### PubMed E-utilities
 
 1. **API key** (optional but recommended):
+
    - Increases rate limits
    - Better performance
    - Tracked usage
@@ -166,16 +187,19 @@ pre-commit run --all-files
 ### If You Detect a Security Issue
 
 1. **Stop the bleeding**:
+
    - Disable affected features
    - Rotate compromised credentials
    - Isolate affected systems
 
 2. **Assess impact**:
+
    - What data was exposed?
    - How many users affected?
    - Duration of exposure?
 
 3. **Report immediately**:
+
    - Email: security@yourorg.com
    - Include timeline, impact, actions taken
 
@@ -189,12 +213,14 @@ pre-commit run --all-files
 #### Immediate Actions (Within 1 Hour)
 
 1. **Rotate NVIDIA API key**:
+
    - Visit https://build.nvidia.com
    - Go to API Keys → Revoke
    - Generate new key
    - Update your `.env`
 
 2. **Rotate PubMed API key** (if applicable):
+
    - Visit https://www.ncbi.nlm.nih.gov/account/
    - Manage API keys → Delete
    - Create new key
@@ -207,6 +233,7 @@ pre-commit run --all-files
 #### Follow-up Actions (Within 24 Hours)
 
 4. **Clean git history** (if committed):
+
    ```bash
    # Use BFG Repo-Cleaner (safer than filter-branch)
    bfg --replace-text passwords.txt
@@ -216,6 +243,7 @@ pre-commit run --all-files
    ```
 
 5. **Notify team**:
+
    - Alert collaborators
    - Update documentation
    - Review access controls
@@ -261,19 +289,20 @@ For PRs touching security-sensitive code:
 
 ## 📊 Supported Versions
 
-| Version | Supported | Security Updates |
-|---------|-----------|------------------|
-| 2.x.x   | ✅ Yes    | Active |
-| 1.x.x   | ⚠️ Limited | Critical only |
-| < 1.0   | ❌ No     | Not supported |
+| Version | Supported  | Security Updates |
+| ------- | ---------- | ---------------- |
+| 2.x.x   | ✅ Yes     | Active           |
+| 1.x.x   | ⚠️ Limited | Critical only    |
+| < 1.0   | ❌ No      | Not supported    |
 
 ## 🔗 Security Resources
 
 ### Internal
 
-- [API Key Management Guide](README.md#-security--api-key-management)
+- [Security Policy](SECURITY.md)
+- [API Reference (keys/config)](docs/API_REFERENCE.md)
 - [NGC Deprecation Immunity](docs/NGC_DEPRECATION_IMMUNITY.md)
-- [Deployment Security](docs/DEPLOYMENT_GUIDE.md#security)
+- [Deployment Security](docs/DEPLOYMENT.md)
 
 ### External
 
@@ -293,11 +322,11 @@ We recognize security researchers who responsibly disclose vulnerabilities:
 
 ### Hall of Fame
 
-*(Contributors who have reported security issues will be listed here)*
+_(Contributors who have reported security issues will be listed here)_
 
 ### Bounty Program
 
-*(Information about any security bounty program)*
+_(Information about any security bounty program)_
 
 ---
 

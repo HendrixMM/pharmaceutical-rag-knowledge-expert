@@ -1,5 +1,56 @@
 # NVIDIA Build Free Tier Maximization Strategies
 
+<!-- TOC -->
+
+- [Overview](#overview)
+- [Table of Contents](#table-of-contents)
+- [Free Tier Fundamentals](#free-tier-fundamentals)
+  - [Monthly Allocation](#monthly-allocation)
+  - [Daily Burn Rate Monitoring](#daily-burn-rate-monitoring)
+  - [Value Maximization Principles](#value-maximization-principles)
+- [Pharmaceutical Query Prioritization](#pharmaceutical-query-prioritization)
+  - [Query Classification System](#query-classification-system)
+  - [Priority Assignment Logic](#priority-assignment-logic)
+- [Batch Processing Optimization](#batch-processing-optimization)
+  - [Intelligent Batching Strategies](#intelligent-batching-strategies)
+  - [Batch Timing Optimization](#batch-timing-optimization)
+- [Cost-Aware Scheduling](#cost-aware-scheduling)
+  - [Budget-Driven Decision Making](#budget-driven-decision-making)
+  - [Pharmaceutical ROI Optimization](#pharmaceutical-roi-optimization)
+- [Query Efficiency Strategies](#query-efficiency-strategies)
+  - [Token Usage Optimization](#token-usage-optimization)
+  - [Response Quality Optimization](#response-quality-optimization)
+- [Monitoring and Alerting](#monitoring-and-alerting)
+  - [Real-Time Usage Tracking](#real-time-usage-tracking)
+  - [Proactive Optimization Alerts](#proactive-optimization-alerts)
+- [Project Budget Management](#project-budget-management)
+  - [Research Project Budgeting](#research-project-budgeting)
+  - [Multi-Project Optimization](#multi-project-optimization)
+- [Implementation Examples](#implementation-examples)
+  - [Complete Pharmaceutical Research Workflow](#complete-pharmaceutical-research-workflow)
+  - [Cost Analysis and Optimization](#cost-analysis-and-optimization)
+  - [Real-Time Monitoring Dashboard](#real-time-monitoring-dashboard)
+- [Best Practices Summary](#best-practices-summary)
+  - [✅ Do](#-do)
+  - [❌ Don't](#-dont)
+  - [🎯 Optimization Targets](#-optimization-targets)
+- [Advanced Strategies](#advanced-strategies)
+  - [Predictive Usage Modeling](#predictive-usage-modeling)
+  - [Dynamic Priority Adjustment](#dynamic-priority-adjustment)
+- [Troubleshooting](#troubleshooting)
+  - [Common Issues and Solutions](#common-issues-and-solutions)
+  - [Emergency Conservation Mode](#emergency-conservation-mode)
+- [Conclusion](#conclusion)
+<!-- /TOC -->
+
+---
+
+Last Updated: 2025-10-03
+Owner: Cost Optimization Team
+Review Cadence: Monthly
+
+---
+
 **Pharmaceutical Research Cost Optimization Guide**
 
 ## Overview
@@ -30,6 +81,7 @@ This document provides comprehensive strategies for maximizing the value of the 
 ### Daily Burn Rate Monitoring
 
 **Sustainable Daily Usage**:
+
 - **Target**: 333 requests/day (10,000 ÷ 30 days)
 - **Conservative**: 250-300 requests/day for buffer
 - **Alert Thresholds**:
@@ -53,6 +105,7 @@ This document provides comprehensive strategies for maximizing the value of the 
 The system automatically classifies pharmaceutical queries by research value:
 
 #### Critical Priority (Free Tier Preferred)
+
 - **Drug Safety**: Adverse reactions, contraindications, toxicity
 - **Drug Interactions**: Combination therapy risks, incompatibilities
 - **Clinical Emergencies**: Overdose information, immediate safety concerns
@@ -71,15 +124,18 @@ client.queue_chat_request(
 ```
 
 #### High Priority (Free Tier Strongly Preferred)
+
 - **Clinical Trials**: Efficacy data, treatment outcomes
 - **Pharmacokinetics**: Absorption, metabolism, clearance data
 - **Therapeutic Guidelines**: Evidence-based dosing recommendations
 
 #### Normal Priority (Free Tier Preferred)
+
 - **Mechanism of Action**: Drug pathways, molecular targets
 - **General Research**: Compound properties, basic pharmacology
 
 #### Batch Priority (Fallback Acceptable)
+
 - **Exploratory Queries**: Broad research, background information
 - **Bulk Operations**: Large-scale data processing
 
@@ -110,6 +166,7 @@ def assign_pharmaceutical_priority(query_text: str) -> RequestPriority:
 ### Intelligent Batching Strategies
 
 #### Embedding Batch Optimization
+
 - **Optimal Size**: 50-100 texts per batch
 - **Pharmaceutical Grouping**: Group related compound queries
 - **Token Management**: Monitor cumulative token usage
@@ -130,6 +187,7 @@ batch_client.queue_embedding_request(
 ```
 
 #### Chat Completion Batching
+
 - **Optimal Size**: 5-10 queries per batch (due to token limits)
 - **Context Preservation**: Maintain pharmaceutical domain context
 - **Response Quality**: Ensure individual query clarity
@@ -137,11 +195,13 @@ batch_client.queue_embedding_request(
 ### Batch Timing Optimization
 
 #### Peak Efficiency Windows
+
 - **Off-peak Hours**: Process large batches during low-usage periods
 - **Scheduled Processing**: Automatic batch execution every 20-30 seconds
 - **Rate Limiting**: Respect 60 requests/minute baseline
 
 #### Dynamic Scheduling
+
 ```python
 # Auto-processing pharmaceutical research session
 async with create_pharmaceutical_research_session(auto_process_seconds=20) as client:
@@ -160,12 +220,14 @@ async with create_pharmaceutical_research_session(auto_process_seconds=20) as cl
 ### Budget-Driven Decision Making
 
 #### Monthly Budget Allocation Strategy
+
 - **Critical Research**: 40% of monthly allocation (4,000 requests)
 - **High-Priority Research**: 35% of monthly allocation (3,500 requests)
 - **General Research**: 20% of monthly allocation (2,000 requests)
 - **Buffer/Exploration**: 5% of monthly allocation (500 requests)
 
 #### Daily Budget Management
+
 ```python
 # Daily allocation check before processing
 daily_budget_remaining = check_daily_free_tier_budget()
@@ -177,12 +239,14 @@ if daily_budget_remaining < 50:  # Conservative threshold
 ### Pharmaceutical ROI Optimization
 
 #### Query Value Assessment
+
 - **Drug Safety Queries**: Maximum free tier allocation (5.0x value)
 - **Clinical Research**: High free tier allocation (4.5x value)
 - **Mechanism Studies**: Standard allocation (3.5x value)
 - **Exploratory Research**: Lower allocation (1.0x value)
 
 #### Cost-Per-Insight Tracking
+
 ```python
 # Track pharmaceutical research value
 cost_analyzer.record_pharmaceutical_query(
@@ -201,6 +265,7 @@ cost_analyzer.record_pharmaceutical_query(
 ### Token Usage Optimization
 
 #### Pharmaceutical Query Templates
+
 Use standardized templates to optimize token efficiency:
 
 ```python
@@ -218,6 +283,7 @@ Format: bullet points, clinical focus.
 ```
 
 #### Context Window Management
+
 - **Focused Queries**: Target specific pharmaceutical domains
 - **Layered Questioning**: Build complex queries from simple foundations
 - **Reference Optimization**: Reuse pharmaceutical knowledge contexts
@@ -225,6 +291,7 @@ Format: bullet points, clinical focus.
 ### Response Quality Optimization
 
 #### Pharmaceutical Domain Prompting
+
 ```python
 pharmaceutical_context = {
     "domain": "clinical_pharmacology",
@@ -237,6 +304,7 @@ pharmaceutical_context = {
 ```
 
 #### Quality Scoring Integration
+
 - **Relevance Scoring**: Track pharmaceutical query satisfaction
 - **Clinical Accuracy**: Monitor response appropriateness
 - **Research Value**: Assess insight generation per query
@@ -248,35 +316,39 @@ pharmaceutical_context = {
 ### Real-Time Usage Tracking
 
 #### Dashboard Metrics
+
 - **Daily Burn Rate**: Current vs. sustainable usage
 - **Free Tier Utilization**: Percentage of queries on free tier
 - **Pharmaceutical Query Distribution**: By priority and domain
 - **Cost Per Research Insight**: ROI measurement
 
 #### Alert Configuration
+
 ```yaml
 # From config/alerts.yaml
 nvidia_build:
   usage_alerts:
-    daily_burn_rate: 0.05      # 5% daily usage alert
-    weekly_burn_rate: 0.20     # 20% weekly usage alert
+    daily_burn_rate: 0.05 # 5% daily usage alert
+    weekly_burn_rate: 0.20 # 20% weekly usage alert
     monthly_usage_warning: 0.80 # 80% monthly usage alert
     monthly_usage_critical: 0.95 # 95% monthly usage alert
 
 pharmaceutical:
   query_performance:
-    min_free_tier_usage_percentage: 80  # Target 80% free tier usage
-    batch_optimization_trigger: 50      # Trigger batching after 50 queries/hour
+    min_free_tier_usage_percentage: 80 # Target 80% free tier usage
+    batch_optimization_trigger: 50 # Trigger batching after 50 queries/hour
 ```
 
 ### Proactive Optimization Alerts
 
 #### Budget Burn Rate Warnings
+
 - **Daily Overage**: Automatic batch processing delay
 - **Weekly Trending**: Adjust pharmaceutical query priorities
 - **Monthly Critical**: Emergency conservation mode
 
 #### Research Efficiency Alerts
+
 - **Low Free Tier Usage**: < 70% free tier utilization
 - **Suboptimal Batching**: Insufficient request consolidation
 - **High Infrastructure Usage**: > 30% fallback usage indicates issues
@@ -288,6 +360,7 @@ pharmaceutical:
 ### Research Project Budgeting
 
 #### Project-Based Allocation
+
 ```python
 # Create pharmaceutical research project with budget
 cost_analyzer.create_research_project(
@@ -299,6 +372,7 @@ cost_analyzer.create_research_project(
 ```
 
 #### Budget Tracking and Projections
+
 - **Monthly Budget**: Per-project allocation management
 - **Usage Tracking**: Query costs by project
 - **Projection Modeling**: Remaining budget vs. research goals
@@ -306,12 +380,14 @@ cost_analyzer.create_research_project(
 ### Multi-Project Optimization
 
 #### Priority-Based Resource Allocation
+
 1. **Critical Drug Safety**: Unlimited free tier access
 2. **Active Clinical Research**: 60% of available allocation
 3. **Mechanism Studies**: 30% of available allocation
 4. **Exploratory Research**: 10% of available allocation
 
 #### Cross-Project Efficiency
+
 - **Shared Contexts**: Reuse pharmaceutical knowledge across projects
 - **Batch Consolidation**: Combine queries from multiple projects
 - **Resource Pooling**: Dynamically allocate free tier quota
@@ -523,16 +599,19 @@ def dynamic_priority_adjustment(base_priority: RequestPriority,
 ### Common Issues and Solutions
 
 #### High Infrastructure Usage (> 30% fallback)
+
 - **Cause**: Free tier exhausted or rate limiting
 - **Solution**: Increase batch intervals, reduce daily burn rate
 - **Prevention**: Monitor alerts, adjust query priorities
 
 #### Low Research Value Score (< 3.0)
+
 - **Cause**: Too many exploratory queries on free tier
 - **Solution**: Prioritize clinical and safety queries
 - **Prevention**: Implement pharmaceutical query classification
 
 #### Budget Overrun Projections
+
 - **Cause**: Unsustainable daily burn rate
 - **Solution**: Activate conservation mode, defer low-priority queries
 - **Prevention**: Set stricter daily limits, improve batching

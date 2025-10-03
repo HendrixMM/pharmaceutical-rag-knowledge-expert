@@ -1,5 +1,53 @@
 # Pharmaceutical Research Best Practices Guide
 
+<!-- TOC -->
+
+- [Overview](#overview)
+- [Table of Contents](#table-of-contents)
+- [Safety-First Principles](#safety-first-principles)
+  - [1. Priority-Based Query Classification](#1-priority-based-query-classification)
+  - [2. Medical Disclaimer Integration](#2-medical-disclaimer-integration)
+- [Query Design and Classification](#query-design-and-classification)
+  - [1. Optimal Query Structure](#1-optimal-query-structure)
+  - [2. Query Classification Best Practices](#2-query-classification-best-practices)
+- [Cost Optimization Strategies](#cost-optimization-strategies)
+  - [1. Free Tier Maximization](#1-free-tier-maximization)
+  - [2. Query Prioritization for Cost Efficiency](#2-query-prioritization-for-cost-efficiency)
+- [Research Workflow Optimization](#research-workflow-optimization)
+  - [1. Structured Research Protocols](#1-structured-research-protocols)
+  - [2. Collaborative Research Workflows](#2-collaborative-research-workflows)
+- [Data Privacy and Compliance](#data-privacy-and-compliance)
+  - [1. PII Sanitization Protocols](#1-pii-sanitization-protocols)
+  - [2. Regulatory Compliance Framework](#2-regulatory-compliance-framework)
+- [Model Selection and Optimization](#model-selection-and-optimization)
+  - [1. Pharmaceutical Model Configuration](#1-pharmaceutical-model-configuration)
+- [Alert Management](#alert-management)
+  - [1. Safety Alert Response Protocols](#1-safety-alert-response-protocols)
+- [Performance Best Practices](#performance-best-practices)
+  - [1. Response Time Optimization](#1-response-time-optimization)
+  - [2. Caching Strategies](#2-caching-strategies)
+- [Regulatory Considerations](#regulatory-considerations)
+  - [1. FDA 21 CFR Part 11 Compliance](#1-fda-21-cfr-part-11-compliance)
+  - [2. ICH Guidelines Compliance](#2-ich-guidelines-compliance)
+- [Related Documentation](#related-documentation)
+- [Quality Assurance](#quality-assurance)
+  - [1. Research Quality Metrics](#1-research-quality-metrics)
+  - [2. Continuous Quality Improvement](#2-continuous-quality-improvement)
+- [Implementation Checklist](#implementation-checklist)
+  - [Research Quality Checklist](#research-quality-checklist)
+  - [Quality Validation Checklist](#quality-validation-checklist)
+  - [Continuous Improvement Checklist](#continuous-improvement-checklist)
+- [Conclusion](#conclusion)
+<!-- /TOC -->
+
+---
+
+Last Updated: 2025-10-03
+Owner: Pharmaceutical Domain Team
+Review Cadence: Monthly
+
+---
+
 **Comprehensive Best Practices for Pharmaceutical RAG System Usage**
 
 ## Overview
@@ -26,6 +74,7 @@ This guide provides comprehensive best practices for conducting pharmaceutical r
 ### 1. Priority-Based Query Classification
 
 #### Critical Safety Queries
+
 Always prioritize drug safety queries using the highest priority levels:
 
 ```python
@@ -51,6 +100,7 @@ await batch_client.queue_chat_request(
 ```
 
 #### Safety Alert Response Protocol
+
 1. **Acknowledge all safety alerts immediately**
 2. **Review drug interaction warnings carefully**
 3. **Validate contraindications against patient populations**
@@ -83,6 +133,7 @@ for alert in alerts:
 ### 2. Medical Disclaimer Integration
 
 #### Always Include Medical Disclaimers
+
 ```python
 PHARMACEUTICAL_DISCLAIMER = """
 IMPORTANT MEDICAL DISCLAIMER:
@@ -100,6 +151,7 @@ def format_pharmaceutical_response(response_content: str) -> str:
 ```
 
 #### Regulatory Compliance Statements
+
 ```python
 def add_regulatory_compliance_note(response: str, regulatory_context: str) -> str:
     """Add appropriate regulatory compliance statements."""
@@ -122,6 +174,7 @@ def add_regulatory_compliance_note(response: str, regulatory_context: str) -> st
 ### 1. Optimal Query Structure
 
 #### Pharmaceutical Query Templates
+
 Use structured templates for consistent, high-quality queries:
 
 ```python
@@ -206,6 +259,7 @@ enhanced_query = enhance_pharmaceutical_query(
 ### 2. Query Classification Best Practices
 
 #### Domain-Specific Classification
+
 ```python
 def classify_and_route_pharmaceutical_query(query: str) -> Dict[str, Any]:
     """Best practice query classification and routing."""
@@ -258,6 +312,7 @@ def _generate_query_recommendations(context) -> List[str]:
 ### 1. Free Tier Maximization
 
 #### Strategic Query Batching
+
 ```python
 from src.optimization.batch_integration import create_pharmaceutical_research_session
 
@@ -302,6 +357,7 @@ async def optimize_pharmaceutical_research_session():
 ```
 
 #### Daily Budget Management
+
 ```python
 from src.monitoring.pharmaceutical_cost_analyzer import create_pharmaceutical_cost_tracker
 
@@ -335,6 +391,7 @@ def implement_daily_budget_management():
 ### 2. Query Prioritization for Cost Efficiency
 
 #### Value-Based Query Scheduling
+
 ```python
 def calculate_query_value_score(query: str, context) -> float:
     """Calculate value score for cost-benefit analysis."""
@@ -391,6 +448,7 @@ async def value_based_query_execution(queries_with_context: List[Tuple[str, dict
 ### 1. Structured Research Protocols
 
 #### Systematic Drug Research Protocol
+
 ```python
 from src.pharmaceutical.workflow_templates import PharmaceuticalWorkflowExecutor
 
@@ -454,6 +512,7 @@ async def comprehensive_drug_research_protocol(drug_name: str) -> Dict[str, Any]
 ```
 
 #### Research Quality Metrics
+
 ```python
 def assess_research_quality(workflow_results: Dict[str, Any]) -> Dict[str, Any]:
     """Assess quality of pharmaceutical research results."""
@@ -497,6 +556,7 @@ def assess_research_quality(workflow_results: Dict[str, Any]) -> Dict[str, Any]:
 ### 2. Collaborative Research Workflows
 
 #### Multi-Researcher Coordination
+
 ```python
 class CollaborativeResearchSession:
     """Coordinate pharmaceutical research across multiple researchers."""
@@ -568,6 +628,7 @@ class CollaborativeResearchSession:
 ### 1. PII Sanitization Protocols
 
 #### Automated PII Detection and Removal
+
 ```python
 from src.pharmaceutical.model_optimization import PharmaceuticalDataSanitizer
 
@@ -609,6 +670,7 @@ def log_compliance_action(audit_entry: Dict[str, Any]):
 ```
 
 #### HIPAA Compliance Considerations
+
 ```python
 HIPAA_COMPLIANCE_CHECKLIST = {
     "pii_sanitization": "Remove all patient identifiers before query processing",
@@ -643,6 +705,7 @@ def validate_hipaa_compliance(query: str, context: Dict[str, Any]) -> bool:
 ### 2. Regulatory Compliance Framework
 
 #### FDA Compliance Guidelines
+
 ```python
 def ensure_fda_compliance(query_context: Dict[str, Any]) -> Dict[str, Any]:
     """Ensure FDA compliance for pharmaceutical research queries."""
@@ -677,6 +740,7 @@ def ensure_fda_compliance(query_context: Dict[str, Any]) -> Dict[str, Any]:
 ### 1. Pharmaceutical Model Configuration
 
 #### Domain-Specific Model Selection
+
 ```python
 from src.pharmaceutical.model_optimization import create_pharmaceutical_model_optimizer
 
@@ -731,6 +795,7 @@ def configure_pharmaceutical_model(domain: str, query_context: Dict[str, Any]) -
 ```
 
 #### Prompt Optimization
+
 ```python
 def create_pharmaceutical_prompt_optimization() -> Dict[str, str]:
     """Create optimized prompts for pharmaceutical domains."""
@@ -772,6 +837,7 @@ Prioritize clinically significant interactions with clear management guidance.""
 ### 1. Safety Alert Response Protocols
 
 #### Critical Alert Response
+
 ```python
 async def handle_critical_pharmaceutical_alert(alert: DrugSafetyAlert):
     """Handle critical pharmaceutical safety alerts with immediate response protocol."""
@@ -821,6 +887,7 @@ def log_critical_alert(alert_data: Dict[str, Any]):
 ```
 
 #### Alert Escalation Matrix
+
 ```python
 ALERT_ESCALATION_MATRIX = {
     "IMMEDIATE": {
@@ -852,6 +919,7 @@ def determine_alert_escalation(alert_urgency: str) -> Dict[str, Any]:
 ### 1. Response Time Optimization
 
 #### Performance Targets
+
 ```python
 PHARMACEUTICAL_PERFORMANCE_TARGETS = {
     "critical_safety_queries": {
@@ -900,6 +968,7 @@ async def validate_performance_targets(metrics: Dict[str, Any]) -> Dict[str, boo
 ### 2. Caching Strategies
 
 #### Intelligent Pharmaceutical Caching
+
 ```python
 class PharmaceuticalIntelligentCache:
     """Intelligent caching system for pharmaceutical queries."""
@@ -950,6 +1019,7 @@ class PharmaceuticalIntelligentCache:
 ### 1. FDA 21 CFR Part 11 Compliance
 
 #### Electronic Records and Signatures
+
 ```python
 def implement_cfr_part_11_compliance():
     """Implement 21 CFR Part 11 compliance for pharmaceutical research."""
@@ -999,7 +1069,17 @@ def generate_electronic_signature(user_id: str, action: str) -> str:
 
 ### 2. ICH Guidelines Compliance
 
+---
+
+## Related Documentation
+
+- [Features](./FEATURES.md) — Pharmaceutical features overview
+- [API Reference](./API_REFERENCE.md) — Pharma configuration options
+- [Examples](./EXAMPLES.md) — Pharmaceutical usage examples
+- [API Integration Guide](./API_INTEGRATION_GUIDE.md) — Integration patterns
+
 #### ICH E6 Good Clinical Practice
+
 ```python
 ICH_E6_COMPLIANCE_FRAMEWORK = {
     "data_quality": {
@@ -1041,6 +1121,7 @@ def validate_ich_e6_compliance(research_data: Dict[str, Any]) -> Dict[str, bool]
 ### 1. Research Quality Metrics
 
 #### Quality Scoring Framework
+
 ```python
 def calculate_pharmaceutical_research_quality_score(research_results: Dict[str, Any]) -> Dict[str, float]:
     """Calculate comprehensive quality score for pharmaceutical research."""
@@ -1100,6 +1181,7 @@ def calculate_pharmaceutical_research_quality_score(research_results: Dict[str, 
 ### 2. Continuous Quality Improvement
 
 #### Quality Monitoring Dashboard
+
 ```python
 def generate_quality_monitoring_report() -> Dict[str, Any]:
     """Generate comprehensive quality monitoring report."""
