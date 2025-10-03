@@ -1,5 +1,5 @@
 # Sensitive Patterns for BFG Repo-Cleaner
-# Generated: 2025-10-02 23:31:25
+# Generated: 2025-10-02 23:34:18
 # Mapping format ensures full leaked credentials are removed.
 # Only include concrete leaked fingerprints; no generic patterns.
 # Patterns below are automatically generated from .env history diffs.
@@ -10,3 +10,6 @@ NVIDIA_API_KEY=nvapi-FfK4\\S*==>NVIDIA_API_KEY=***REMOVED***
 NVIDIA_API_KEY=nvapi-VcxY\\S*==>NVIDIA_API_KEY=***REMOVED***
 # Emails discovered in .env history (PII)
 hendrixmoreau123@gmail.com==>redacted@example.com
+# Email assignments discovered in .env history (PII)
+OPENALEX_EMAIL=hendrixmoreau123@gmail.com==>OPENALEX_EMAIL=redacted@example.com
+PUBMED_EMAIL=hendrixmoreau123@gmail.com==>PUBMED_EMAIL=redacted@example.com

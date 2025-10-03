@@ -91,6 +91,7 @@ nv_keys=$(echo "$candidate_lines" | grep -E '^NVIDIA_API_KEY=' | sed 's/NVIDIA_A
 pb_keys=$(echo "$candidate_lines" | grep -E '^PUBMED_EUTILS_API_KEY=' | sed 's/PUBMED_EUTILS_API_KEY=//' | cut -c1-10 | sort -u || true)
 ap_keys=$(echo "$candidate_lines" | grep -E '^APIFY_TOKEN=' | sed 's/APIFY_TOKEN=//' | cut -c1-10 | sort -u || true)
 emails=$(echo "$candidate_lines" | grep -E '^(PUBMED_EMAIL=|OPENALEX_EMAIL=)' | sed 's/^[A-Z_]*=//' | sort -u || true)
+email_assignments=$(echo "$candidate_lines" | grep -E '^(PUBMED_EMAIL=|OPENALEX_EMAIL=)' | sort -u || true)
 
 # Filter out known placeholders and examples to avoid no-op replacements
 filter_placeholders() {
@@ -104,6 +105,10 @@ nv_keys=$(echo "$nv_keys" | filter_placeholders || true)
 pb_keys=$(echo "$pb_keys" | filter_placeholders || true)
 ap_keys=$(echo "$ap_keys" | filter_placeholders || true)
 emails=$(echo "$emails" | filter_placeholders || true)
+filter_assignments() {
+  grep -E -v 'example\.com|example\.org|example\.net|^PUBMED_EMAIL=\s*$|^OPENALEX_EMAIL=\s*$|your_|test|dummy|placeholder|noreply@'
+}
+email_assignments=$(echo "$email_assignments" | filter_assignments || true)
 
 {
   echo "# Sensitive Patterns for BFG Repo-Cleaner"
@@ -158,6 +163,17 @@ emails=$(echo "$emails" | filter_placeholders || true)
       [[ -n "$v" ]] || continue
       emit_map "$v" "redacted@example.com"
     done <<< "$emails"
+  fi
+
+  # Email assignments discovered (replace full assignment)
+  if [[ -n "$email_assignments" ]]; then
+    echo "# Email assignments discovered in .env history (PII)"
+    while read -r line; do
+      [[ -n "$line" ]] || continue
+      # Normalize to PUBMED_EMAIL= or OPENALEX_EMAIL=
+      key=$(echo "$line" | awk -F= '{print $1}')
+      emit_map "$line" "$key=redacted@example.com"
+    done <<< "$email_assignments"
   fi
 } > "${out_file}.tmp"
 
