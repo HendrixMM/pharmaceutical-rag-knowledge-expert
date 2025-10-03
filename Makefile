@@ -31,6 +31,7 @@ help:
 	@echo "  history-cleanup  Clean git history (requires confirmation)"
 	@echo "  verify-cleanup   Verify git history cleanup was successful"
 	@echo "  rotate-keys      Display key rotation checklist"
+	@echo "  secrets-baseline Update detect-secrets baseline (manual review)"
 	@echo "🧪 Testing:"
 	@echo "  test             Run all tests"
 	@echo "  test-unit        Run unit tests only"
