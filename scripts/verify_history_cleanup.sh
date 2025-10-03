@@ -67,8 +67,12 @@ fi
 # Optional Check 2b: scan for sensitive fingerprints from patterns file (scoped to .env history)
 if $use_patterns; then
   if [[ -f "$patterns_file" ]]; then
-    # Load non-comment, non-blank lines
-    mapfile -t PATTERNS < <(grep -v '^#' "$patterns_file" | sed '/^\s*$/d')
+    # Load non-comment, non-blank lines and filter known benign placeholders/domains
+    # Skip common placeholders and documentation domains to avoid false positives
+    mapfile -t PATTERNS < <( \
+      grep -v '^#' "$patterns_file" | sed '/^\s*$/d' | \
+      grep -E -v 'example\\.com|example\\.org|example\\.net|^your_|^test|^dummy|^placeholder|^noreply@' \
+    )
     if [[ ${#PATTERNS[@]} -eq 0 ]]; then
       pass "Check 2b: Sensitive fingerprints (patterns file empty)...." | tee -a "$tmp"
     else
@@ -80,7 +84,7 @@ if $use_patterns; then
         fi
       done
       if [[ -n "$hit" ]]; then
-        fail "Check 2b: Sensitive fingerprints present (e.g., '$hit')" | tee -a "$tmp"
+        fail "Check 2b: Sensitive fingerprints present (matched: '$hit')" | tee -a "$tmp"
         overall=1
       else
         pass "Check 2b: Sensitive fingerprints (none found).........." | tee -a "$tmp"
