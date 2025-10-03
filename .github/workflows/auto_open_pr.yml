@@ -22,17 +22,17 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const branchRef = context.ref.replace('refs/heads/', '');
+            core.info(`Branch: ${branchRef}`);
 
             // Determine base branch dynamically
             const { data: repoData } = await github.rest.repos.get({ owner, repo });
             const base = repoData.default_branch || 'main';
+            core.info(`Base: ${base}`);
 
-            // Check if an open PR from this branch already exists
-            const { data: existing } = await github.rest.pulls.list({
-              owner, repo, state: 'open', head: `${owner}:${branchRef}`, base
-            });
-            if (existing.length) {
-              core.info(`PR already exists: #${existing[0].number}`);
+            // If an open PR from this branch exists (any base), skip
+            const { data: existingAnyBase } = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branchRef}` });
+            if (existingAnyBase.length) {
+              core.info(`PR already exists: #${existingAnyBase[0].number}`);
               return;
             }
 
@@ -55,15 +55,21 @@ jobs:
               labels = ['chore'];
             }
 
-            // Create the pull request
-            const { data: pr } = await github.rest.pulls.create({
-              owner, repo, head: branchRef, base, title, body,
-            });
-            core.info(`Created PR #${pr.number}`);
-
-            // Apply labels (best-effort)
             try {
-              await github.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels });
+              const { data: pr } = await github.rest.pulls.create({ owner, repo, head: branchRef, base, title, body });
+              core.info(`Created PR #${pr.number}`);
+              try {
+                await github.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels });
+              } catch (e) {
+                core.warning(`Failed to add labels: ${e.message}`);
+              }
             } catch (e) {
-              core.warning(`Failed to add labels: ${e.message}`);
+              core.warning(`PR creation error: ${e.message}`);
+              // If PR already exists (race), find it and exit successfully
+              const { data: anyPRs } = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branchRef}` });
+              if (anyPRs.length) {
+                core.info(`PR already exists after error: #${anyPRs[0].number}`);
+                return;
+              }
+              core.setFailed(`Failed to create PR for ${branchRef}: ${e.message}`);
             }
