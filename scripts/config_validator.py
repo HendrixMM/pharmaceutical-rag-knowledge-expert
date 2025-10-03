@@ -42,6 +42,26 @@ def validate_nvidia_api_key(api_key: Optional[str]) -> ConfigValidationResult:
     if not api_key:
         errors.append("NVIDIA_API_KEY is missing. Set it in your environment or .env file.")
         return ConfigValidationResult(False, errors, warnings)
+
+    # Check for placeholder values
+    placeholder_patterns = [
+        r'your[_\-].*key',
+        r'your[_\-].*api',
+        r'example',
+        r'placeholder',
+        r'replace[_\-]?this',
+        r'changeme',
+        r'xxx+',
+    ]
+    api_key_lower = api_key.lower()
+    for pattern in placeholder_patterns:
+        if re.search(pattern, api_key_lower):
+            errors.append(
+                f"NVIDIA_API_KEY appears to be a placeholder value: '{api_key}'. "
+                f"Please replace it with a real API key from https://build.nvidia.com"
+            )
+            return ConfigValidationResult(False, errors, warnings)
+
     if len(api_key.strip()) < 20:
         errors.append("NVIDIA_API_KEY appears too short (must be at least 20 characters).")
     if not re.match(r"^[A-Za-z0-9-_.]+$", api_key):

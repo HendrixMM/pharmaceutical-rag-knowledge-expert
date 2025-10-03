@@ -81,12 +81,13 @@ repos:
         exclude: ^(tests|examples|scripts|tmptest|tmptest2|pubmed_cache)/
 
   # Dependency vulnerability scanning
-  - repo: https://github.com/pyupio/safety
-    rev: 2.3.5
-    hooks:
-      - id: safety
-        args: ['--ignore=51668']  # Ignore specific CVEs if needed
-        files: requirements.*\.txt$
+  # Temporarily disabled due to manifest error - use pip-audit instead
+  # - repo: https://github.com/pyupio/safety
+  #   rev: 2.3.5
+  #   hooks:
+  #     - id: safety
+  #       args: ['--ignore=51668']  # Ignore specific CVEs if needed
+  #       files: requirements.*\.txt$
 
   # Requirements.txt sorting
   - repo: https://github.com/asottile/reorder_python_imports
@@ -133,7 +134,7 @@ repos:
         entry: bash scripts/pre-commit-audit.sh
         language: system
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]
 
   # YAML formatting
   - repo: https://github.com/pre-commit/mirrors-prettier
@@ -153,7 +154,7 @@ repos:
 
 # Global configuration
 default_language_version:
-  python: python3.8
+  python: python3
 
 # Exclude patterns
 exclude: |
