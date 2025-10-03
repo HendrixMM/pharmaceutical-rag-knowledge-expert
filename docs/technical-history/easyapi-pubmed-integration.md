@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # EasyAPI PubMed Scraper Integration Guide
 
 ## **Migration from Storm_Scraper to EasyAPI for Enhanced Pharmaceutical Research**
@@ -617,3 +623,11 @@ expected_features = [
 **Last Updated**: September 16, 2025
 **Migration Target**: EasyAPI PubMed Search Scraper
 **Status**: Ready for Implementation
+
+---
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

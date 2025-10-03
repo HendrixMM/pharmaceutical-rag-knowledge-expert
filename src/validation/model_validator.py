@@ -13,42 +13,51 @@ Features:
 
 This ensures the system operates independently of NGC API deprecation.
 """
-
-import logging
 import asyncio
-import time
 import json
-from typing import Dict, List, Any, Optional, Tuple, NamedTuple
-from dataclasses import dataclass, field
+import logging
+import time
+from dataclasses import dataclass
+from dataclasses import field
+from datetime import datetime
 from enum import Enum
-from datetime import datetime, timedelta
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 try:
-    from ..clients.openai_wrapper import OpenAIWrapper, NVIDIABuildConfig, NVIDIABuildError
+    from ..clients.openai_wrapper import NVIDIABuildConfig, OpenAIWrapper
     from ..enhanced_config import EnhancedRAGConfig
 except ImportError:
-    from src.clients.openai_wrapper import OpenAIWrapper, NVIDIABuildConfig, NVIDIABuildError
+    from src.clients.openai_wrapper import NVIDIABuildConfig, OpenAIWrapper
     from src.enhanced_config import EnhancedRAGConfig
 
 logger = logging.getLogger(__name__)
 
+
 class ModelType(Enum):
     """Model types for validation."""
+
     EMBEDDING = "embedding"
     CHAT_COMPLETION = "chat_completion"
     COMPLETION = "completion"
 
+
 class ValidationSeverity(Enum):
     """Validation result severity levels."""
+
     CRITICAL = "critical"
     ERROR = "error"
     WARNING = "warning"
     INFO = "info"
     SUCCESS = "success"
 
+
 @dataclass
 class ModelValidationResult:
     """Result of model validation testing."""
+
     model_id: str
     model_type: ModelType
     available: bool
@@ -59,9 +68,11 @@ class ModelValidationResult:
     performance_score: Optional[float] = None
     pharmaceutical_score: Optional[float] = None
 
+
 @dataclass
 class EndpointHealthResult:
     """Result of endpoint health checking."""
+
     endpoint_url: str
     healthy: bool
     response_time_ms: int
@@ -69,6 +80,7 @@ class EndpointHealthResult:
     error_message: Optional[str] = None
     ngc_independent: bool = True
     last_checked: datetime = field(default_factory=datetime.now)
+
 
 class NVIDIABuildModelValidator:
     """
@@ -78,9 +90,7 @@ class NVIDIABuildModelValidator:
     across all endpoints, ensuring NGC-independent operation.
     """
 
-    def __init__(self,
-                 config: Optional[EnhancedRAGConfig] = None,
-                 enable_pharmaceutical_testing: bool = True):
+    def __init__(self, config: Optional[EnhancedRAGConfig] = None, enable_pharmaceutical_testing: bool = True):
         """
         Initialize model validator.
 
@@ -101,18 +111,18 @@ class NVIDIABuildModelValidator:
                 "metformin mechanism of action in type 2 diabetes treatment",
                 "drug interactions between warfarin and NSAIDs",
                 "pharmacokinetics of ACE inhibitors in elderly patients",
-                "contraindications for beta-blockers in asthma patients"
+                "contraindications for beta-blockers in asthma patients",
             ],
             "chat_tests": [
                 {
                     "messages": [{"role": "user", "content": "Explain the mechanism of action of metformin."}],
-                    "expected_keywords": ["glucose", "metabolism", "insulin", "diabetes"]
+                    "expected_keywords": ["glucose", "metabolism", "insulin", "diabetes"],
                 },
                 {
                     "messages": [{"role": "user", "content": "What are the main drug interactions with warfarin?"}],
-                    "expected_keywords": ["bleeding", "INR", "interaction", "monitoring"]
-                }
-            ]
+                    "expected_keywords": ["bleeding", "INR", "interaction", "monitoring"],
+                },
+            ],
         }
 
         # Validation metrics tracking
@@ -124,9 +134,7 @@ class NVIDIABuildModelValidator:
         """Initialize test clients for validation."""
         try:
             # Initialize NVIDIA Build client
-            nvidia_config = NVIDIABuildConfig(
-                pharmaceutical_optimized=self.enable_pharmaceutical_testing
-            )
+            nvidia_config = NVIDIABuildConfig(pharmaceutical_optimized=self.enable_pharmaceutical_testing)
             self.nvidia_build_client = OpenAIWrapper(nvidia_config)
             logger.info("Test clients initialized successfully")
 
@@ -150,7 +158,7 @@ class NVIDIABuildModelValidator:
             "model_validation": {},
             "pharmaceutical_analysis": {},
             "overall_status": "unknown",
-            "recommendations": []
+            "recommendations": [],
         }
 
         # Validate endpoint health
@@ -178,11 +186,13 @@ class NVIDIABuildModelValidator:
         validation_results["validation_time_ms"] = validation_time
 
         # Store in history
-        self.validation_history.append({
-            "timestamp": datetime.now().isoformat(),
-            "results": validation_results,
-            "validation_time_ms": validation_time
-        })
+        self.validation_history.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "results": validation_results,
+                "validation_time_ms": validation_time,
+            }
+        )
 
         logger.info(f"Model validation completed in {validation_time}ms")
         return validation_results
@@ -198,7 +208,7 @@ class NVIDIABuildModelValidator:
                 response_time_ms=health_check.get("response_time_ms", 0),
                 available_models=health_check.get("available_models", 0),
                 error_message=health_check.get("error"),
-                ngc_independent=True  # NVIDIA Build is NGC-independent
+                ngc_independent=True,  # NVIDIA Build is NGC-independent
             )
 
         except Exception as e:
@@ -208,7 +218,7 @@ class NVIDIABuildModelValidator:
                 response_time_ms=0,
                 available_models=0,
                 error_message=str(e),
-                ngc_independent=True
+                ngc_independent=True,
             )
 
     async def _validate_models(self) -> Dict[str, ModelValidationResult]:
@@ -220,40 +230,24 @@ class NVIDIABuildModelValidator:
             return model_results
 
         # Test embedding models
-        embedding_models = [
-            "nvidia/nv-embedqa-e5-v5",
-            "nvidia/nv-embed-v1"
-        ]
+        embedding_models = ["nvidia/nv-embedqa-e5-v5", "nvidia/nv-embed-v1"]
 
         for model_id in embedding_models:
-            result = await self._validate_single_model(
-                self.nvidia_build_client,
-                model_id,
-                ModelType.EMBEDDING
-            )
+            result = await self._validate_single_model(self.nvidia_build_client, model_id, ModelType.EMBEDDING)
             model_results[model_id] = result
 
         # Test chat models
-        chat_models = [
-            "meta/llama-3.1-8b-instruct",
-            "mistralai/mistral-7b-instruct-v0.3",
-            "google/gemma-2-9b-it"
-        ]
+        chat_models = ["meta/llama-3.1-8b-instruct", "mistralai/mistral-7b-instruct-v0.3", "google/gemma-2-9b-it"]
 
         for model_id in chat_models:
-            result = await self._validate_single_model(
-                self.nvidia_build_client,
-                model_id,
-                ModelType.CHAT_COMPLETION
-            )
+            result = await self._validate_single_model(self.nvidia_build_client, model_id, ModelType.CHAT_COMPLETION)
             model_results[model_id] = result
 
         return model_results
 
-    async def _validate_single_model(self,
-                                   client: OpenAIWrapper,
-                                   model_id: str,
-                                   model_type: ModelType) -> ModelValidationResult:
+    async def _validate_single_model(
+        self, client: OpenAIWrapper, model_id: str, model_type: ModelType
+    ) -> ModelValidationResult:
         """Validate a single model's availability and compatibility."""
         start_time = time.time()
 
@@ -265,38 +259,28 @@ class NVIDIABuildModelValidator:
 
                 # Validate response structure
                 compatible = (
-                    hasattr(response, 'data') and
-                    len(response.data) > 0 and
-                    hasattr(response.data[0], 'embedding') and
-                    len(response.data[0].embedding) > 0
+                    hasattr(response, "data")
+                    and len(response.data) > 0
+                    and hasattr(response.data[0], "embedding")
+                    and len(response.data[0].embedding) > 0
                 )
 
-                pharmaceutical_score = self._calculate_pharmaceutical_embedding_score(
-                    response, test_texts
-                )
+                pharmaceutical_score = self._calculate_pharmaceutical_embedding_score(response, test_texts)
 
             elif model_type == ModelType.CHAT_COMPLETION:
                 # Test with pharmaceutical chat
-                test_messages = [
-                    {"role": "user", "content": "Explain metformin's mechanism of action."}
-                ]
-                response = client.create_chat_completion(
-                    test_messages,
-                    model=model_id,
-                    max_tokens=150
-                )
+                test_messages = [{"role": "user", "content": "Explain metformin's mechanism of action."}]
+                response = client.create_chat_completion(test_messages, model=model_id, max_tokens=150)
 
                 # Validate response structure
                 compatible = (
-                    hasattr(response, 'choices') and
-                    len(response.choices) > 0 and
-                    hasattr(response.choices[0].message, 'content') and
-                    len(response.choices[0].message.content) > 0
+                    hasattr(response, "choices")
+                    and len(response.choices) > 0
+                    and hasattr(response.choices[0].message, "content")
+                    and len(response.choices[0].message.content) > 0
                 )
 
-                pharmaceutical_score = self._calculate_pharmaceutical_chat_score(
-                    response, test_messages
-                )
+                pharmaceutical_score = self._calculate_pharmaceutical_chat_score(response, test_messages)
 
             else:
                 compatible = False
@@ -311,7 +295,7 @@ class NVIDIABuildModelValidator:
                 compatible=compatible,
                 pharmaceutical_optimized=self.enable_pharmaceutical_testing,
                 response_time_ms=response_time,
-                pharmaceutical_score=pharmaceutical_score
+                pharmaceutical_score=pharmaceutical_score,
             )
 
         except Exception as e:
@@ -327,14 +311,12 @@ class NVIDIABuildModelValidator:
                 compatible=False,
                 pharmaceutical_optimized=self.enable_pharmaceutical_testing,
                 response_time_ms=response_time,
-                error_message=str(e)
+                error_message=str(e),
             )
 
-    def _calculate_pharmaceutical_embedding_score(self,
-                                               response: Any,
-                                               test_texts: List[str]) -> float:
+    def _calculate_pharmaceutical_embedding_score(self, response: Any, test_texts: List[str]) -> float:
         """Calculate pharmaceutical relevance score for embedding responses."""
-        if not hasattr(response, 'data') or len(response.data) == 0:
+        if not hasattr(response, "data") or len(response.data) == 0:
             return 0.0
 
         # Basic score based on embedding dimensions and availability
@@ -353,11 +335,9 @@ class NVIDIABuildModelValidator:
 
         return min(10.0, base_score)
 
-    def _calculate_pharmaceutical_chat_score(self,
-                                          response: Any,
-                                          test_messages: List[Dict[str, str]]) -> float:
+    def _calculate_pharmaceutical_chat_score(self, response: Any, test_messages: List[Dict[str, str]]) -> float:
         """Calculate pharmaceutical relevance score for chat responses."""
-        if not hasattr(response, 'choices') or len(response.choices) == 0:
+        if not hasattr(response, "choices") or len(response.choices) == 0:
             return 0.0
 
         content = response.choices[0].message.content.lower()
@@ -365,8 +345,16 @@ class NVIDIABuildModelValidator:
 
         # Check for pharmaceutical keywords
         pharmaceutical_keywords = [
-            "mechanism", "action", "glucose", "insulin", "diabetes",
-            "medication", "treatment", "therapy", "patient", "clinical"
+            "mechanism",
+            "action",
+            "glucose",
+            "insulin",
+            "diabetes",
+            "medication",
+            "treatment",
+            "therapy",
+            "patient",
+            "clinical",
         ]
 
         keyword_matches = sum(1 for keyword in pharmaceutical_keywords if keyword in content)
@@ -391,7 +379,7 @@ class NVIDIABuildModelValidator:
             "enabled": True,
             "embedding_pharmaceutical_test": {},
             "chat_pharmaceutical_test": {},
-            "overall_pharmaceutical_score": 0.0
+            "overall_pharmaceutical_score": 0.0,
         }
 
         # Test pharmaceutical embeddings
@@ -404,28 +392,19 @@ class NVIDIABuildModelValidator:
                 "success": True,
                 "embeddings_generated": len(embedding_response.data),
                 "pharmaceutical_texts": len(self.pharmaceutical_test_cases["embedding_tests"]),
-                "model_used": getattr(embedding_response, 'model', 'unknown')
+                "model_used": getattr(embedding_response, "model", "unknown"),
             }
 
         except Exception as e:
-            pharmaceutical_results["embedding_pharmaceutical_test"] = {
-                "success": False,
-                "error": str(e)
-            }
+            pharmaceutical_results["embedding_pharmaceutical_test"] = {"success": False, "error": str(e)}
 
         # Test pharmaceutical chat
         try:
             for i, test_case in enumerate(self.pharmaceutical_test_cases["chat_tests"][:1]):  # Test first case
-                chat_response = self.nvidia_build_client.create_chat_completion(
-                    test_case["messages"],
-                    max_tokens=200
-                )
+                chat_response = self.nvidia_build_client.create_chat_completion(test_case["messages"], max_tokens=200)
 
                 response_content = chat_response.choices[0].message.content.lower()
-                keyword_matches = sum(
-                    1 for keyword in test_case["expected_keywords"]
-                    if keyword in response_content
-                )
+                keyword_matches = sum(1 for keyword in test_case["expected_keywords"] if keyword in response_content)
 
                 pharmaceutical_results["chat_pharmaceutical_test"] = {
                     "success": True,
@@ -433,15 +412,12 @@ class NVIDIABuildModelValidator:
                     "expected_keywords_found": keyword_matches,
                     "total_expected_keywords": len(test_case["expected_keywords"]),
                     "keyword_match_ratio": keyword_matches / len(test_case["expected_keywords"]),
-                    "model_used": getattr(chat_response, 'model', 'unknown')
+                    "model_used": getattr(chat_response, "model", "unknown"),
                 }
                 break
 
         except Exception as e:
-            pharmaceutical_results["chat_pharmaceutical_test"] = {
-                "success": False,
-                "error": str(e)
-            }
+            pharmaceutical_results["chat_pharmaceutical_test"] = {"success": False, "error": str(e)}
 
         # Calculate overall pharmaceutical score
         embedding_success = pharmaceutical_results["embedding_pharmaceutical_test"].get("success", False)
@@ -468,8 +444,7 @@ class NVIDIABuildModelValidator:
 
         # Check model compatibility
         compatible_models = sum(
-            1 for result in model_validation.values()
-            if isinstance(result, ModelValidationResult) and result.compatible
+            1 for result in model_validation.values() if isinstance(result, ModelValidationResult) and result.compatible
         )
         total_models = len(model_validation)
 
@@ -489,28 +464,34 @@ class NVIDIABuildModelValidator:
         overall_status = validation_results.get("overall_status", "unknown")
 
         if overall_status == "endpoint_unavailable":
-            recommendations.append({
-                "severity": "critical",
-                "title": "NVIDIA Build Endpoint Unavailable",
-                "description": "Primary cloud endpoint is not accessible",
-                "action": "Verify API key configuration and network connectivity"
-            })
+            recommendations.append(
+                {
+                    "severity": "critical",
+                    "title": "NVIDIA Build Endpoint Unavailable",
+                    "description": "Primary cloud endpoint is not accessible",
+                    "action": "Verify API key configuration and network connectivity",
+                }
+            )
 
         elif overall_status == "no_compatible_models":
-            recommendations.append({
-                "severity": "error",
-                "title": "No Compatible Models Found",
-                "description": "None of the tested models are compatible",
-                "action": "Check API access tier and model availability"
-            })
+            recommendations.append(
+                {
+                    "severity": "error",
+                    "title": "No Compatible Models Found",
+                    "description": "None of the tested models are compatible",
+                    "action": "Check API access tier and model availability",
+                }
+            )
 
         elif overall_status == "limited_compatibility":
-            recommendations.append({
-                "severity": "warning",
-                "title": "Limited Model Compatibility",
-                "description": "Less than 50% of models are compatible",
-                "action": "Review API access permissions and model selection"
-            })
+            recommendations.append(
+                {
+                    "severity": "warning",
+                    "title": "Limited Model Compatibility",
+                    "description": "Less than 50% of models are compatible",
+                    "action": "Review API access permissions and model selection",
+                }
+            )
 
         # Pharmaceutical-specific recommendations
         pharmaceutical_analysis = validation_results.get("pharmaceutical_analysis", {})
@@ -518,20 +499,24 @@ class NVIDIABuildModelValidator:
             pharma_score = pharmaceutical_analysis.get("overall_pharmaceutical_score", 0)
 
             if pharma_score < 5.0:
-                recommendations.append({
-                    "severity": "warning",
-                    "title": "Pharmaceutical Optimization Suboptimal",
-                    "description": f"Pharmaceutical score: {pharma_score}/10",
-                    "action": "Review pharmaceutical query patterns and model selection"
-                })
+                recommendations.append(
+                    {
+                        "severity": "warning",
+                        "title": "Pharmaceutical Optimization Suboptimal",
+                        "description": f"Pharmaceutical score: {pharma_score}/10",
+                        "action": "Review pharmaceutical query patterns and model selection",
+                    }
+                )
 
         # NGC independence validation
-        recommendations.append({
-            "severity": "info",
-            "title": "NGC Independence Verified",
-            "description": "System operates independently of NGC API deprecation",
-            "action": "Continue monitoring NVIDIA Build platform compatibility"
-        })
+        recommendations.append(
+            {
+                "severity": "info",
+                "title": "NGC Independence Verified",
+                "description": "System operates independently of NGC API deprecation",
+                "action": "Continue monitoring NVIDIA Build platform compatibility",
+            }
+        )
 
         return recommendations
 
@@ -548,15 +533,13 @@ class NVIDIABuildModelValidator:
             "ngc_independent": latest["results"]["ngc_independent"],
             "pharmaceutical_optimized": latest["results"]["pharmaceutical_optimized"],
             "validation_count": len(self.validation_history),
-            "average_validation_time_ms": sum(
-                v["validation_time_ms"] for v in self.validation_history
-            ) // len(self.validation_history)
+            "average_validation_time_ms": sum(v["validation_time_ms"] for v in self.validation_history)
+            // len(self.validation_history),
         }
 
+
 # Convenience functions for quick validation
-async def validate_nvidia_build_compatibility(
-    pharmaceutical_optimized: bool = True
-) -> Dict[str, Any]:
+async def validate_nvidia_build_compatibility(pharmaceutical_optimized: bool = True) -> Dict[str, Any]:
     """
     Quick validation of NVIDIA Build platform compatibility.
 
@@ -566,11 +549,10 @@ async def validate_nvidia_build_compatibility(
     Returns:
         Validation results with recommendations
     """
-    validator = NVIDIABuildModelValidator(
-        enable_pharmaceutical_testing=pharmaceutical_optimized
-    )
+    validator = NVIDIABuildModelValidator(enable_pharmaceutical_testing=pharmaceutical_optimized)
 
     return await validator.validate_all_models()
+
 
 def create_model_validator(pharmaceutical_focused: bool = True) -> NVIDIABuildModelValidator:
     """
@@ -584,10 +566,8 @@ def create_model_validator(pharmaceutical_focused: bool = True) -> NVIDIABuildMo
     """
     config = EnhancedRAGConfig.from_env()
 
-    return NVIDIABuildModelValidator(
-        config=config,
-        enable_pharmaceutical_testing=pharmaceutical_focused
-    )
+    return NVIDIABuildModelValidator(config=config, enable_pharmaceutical_testing=pharmaceutical_focused)
+
 
 if __name__ == "__main__":
     # Run comprehensive validation

@@ -53,10 +53,7 @@ def test_bundled_and_env_lexicons_merge(tmp_path):
     custom_brand.write_text("custom_brand_drug\n")
 
     # Initialize processor with custom lexicons
-    processor = PharmaceuticalProcessor(
-        generic_lexicon_path=str(custom_generic),
-        brand_lexicon_path=str(custom_brand)
-    )
+    processor = PharmaceuticalProcessor(generic_lexicon_path=str(custom_generic), brand_lexicon_path=str(custom_brand))
 
     # Should have both built-in and custom drugs
     assert "acetaminophen" in processor.generic_drug_names  # Built-in
@@ -85,7 +82,7 @@ def test_comprehensive_lexicons_increase_detection_coverage():
     # When comprehensive lexicons are available, detection should be more comprehensive
     # The bundled files should contain more drugs than the minimal built-in set
     assert minimal_generics_count >= 10  # Sanity check for built-in drugs
-    assert minimal_brands_count >= 5     # Sanity check for built-in brands
+    assert minimal_brands_count >= 5  # Sanity check for built-in brands
 
     # Test should detect common drugs even with minimal lexicons
     assert len(minimal_detected) > 0, "Should detect at least some drugs from test text"

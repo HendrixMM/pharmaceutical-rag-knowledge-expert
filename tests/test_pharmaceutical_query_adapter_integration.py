@@ -1,25 +1,25 @@
 """Tests for pharmaceutical query adapter integration features."""
+import sys
+import tempfile
+from pathlib import Path
+from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
-import os
-import tempfile
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
 
 # Add src to path
-import sys
+
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
+from src.enhanced_config import EnhancedRAGConfig
+from src.enhanced_pubmed_scraper import EnhancedPubMedScraper
 from src.pharmaceutical_query_adapter import (
+    SystemHealthReport,
     build_enhanced_pharmaceutical_query_engine,
     build_enhanced_rag_agent,
     build_integrated_system,
     check_system_health,
-    SystemHealthReport
 )
-from src.enhanced_config import EnhancedRAGConfig
-from src.enhanced_pubmed_scraper import EnhancedPubMedScraper
-from src.enhanced_rag_agent import EnhancedRAGAgent
 from src.query_engine import EnhancedQueryEngine
 
 
@@ -45,23 +45,20 @@ class TestBuildEnhancedPharmaceuticalQueryEngine:
 
     def test_build_with_scraper_provided(self, mock_scraper, mock_config):
         """Test building with pre-configured scraper."""
-        with patch('src.query_engine.EnhancedQueryEngine') as mock_engine_class:
-            engine = build_enhanced_pharmaceutical_query_engine(
-                scraper=mock_scraper,
-                config=mock_config
-            )
+        with patch("src.query_engine.EnhancedQueryEngine") as mock_engine_class:
+            engine = build_enhanced_pharmaceutical_query_engine(scraper=mock_scraper, config=mock_config)
 
             mock_engine_class.assert_called_once_with(
                 mock_scraper,
                 enable_query_enhancement=mock_config.enable_query_enhancement,
-                cache_filtered_results=mock_config.pubmed_cache_integration
+                cache_filtered_results=mock_config.pubmed_cache_integration,
             )
 
     def test_build_creates_scraper(self, mock_config):
         """Test building creates scraper when not provided."""
-        with patch('src.enhanced_pubmed_scraper.EnhancedPubMedScraper') as mock_scraper_class, \
-             patch('src.query_engine.EnhancedQueryEngine') as mock_engine_class:
-
+        with patch("src.enhanced_pubmed_scraper.EnhancedPubMedScraper") as mock_scraper_class, patch(
+            "src.query_engine.EnhancedQueryEngine"
+        ) as mock_engine_class:
             mock_scraper = Mock()
             mock_scraper_class.return_value = mock_scraper
 
@@ -71,16 +68,16 @@ class TestBuildEnhancedPharmaceuticalQueryEngine:
             mock_scraper_class.assert_called_once_with(
                 enable_rate_limiting=mock_config.enable_rate_limiting,
                 enable_advanced_caching=mock_config.enable_advanced_caching,
-                use_normalized_cache_keys=mock_config.use_normalized_cache_keys
+                use_normalized_cache_keys=mock_config.use_normalized_cache_keys,
             )
 
     def test_build_disables_advanced_features_when_flag_false(self, mock_config):
         """Test that advanced features are disabled when flag is false."""
         mock_config.enable_enhanced_pubmed_scraper = False
 
-        with patch('src.enhanced_pubmed_scraper.EnhancedPubMedScraper') as mock_scraper_class, \
-             patch('src.query_engine.EnhancedQueryEngine') as mock_engine_class:
-
+        with patch("src.enhanced_pubmed_scraper.EnhancedPubMedScraper") as mock_scraper_class, patch(
+            "src.query_engine.EnhancedQueryEngine"
+        ) as mock_engine_class:
             build_enhanced_pharmaceutical_query_engine(config=mock_config)
 
             # Should disable advanced caching
@@ -90,10 +87,9 @@ class TestBuildEnhancedPharmaceuticalQueryEngine:
 
     def test_build_with_default_config(self):
         """Test building with default configuration."""
-        with patch('src.enhanced_config.EnhancedRAGConfig') as mock_config_class, \
-             patch('src.enhanced_pubmed_scraper.EnhancedPubMedScraper') as mock_scraper_class, \
-             patch('src.query_engine.EnhancedQueryEngine') as mock_engine_class:
-
+        with patch("src.enhanced_config.EnhancedRAGConfig") as mock_config_class, patch(
+            "src.enhanced_pubmed_scraper.EnhancedPubMedScraper"
+        ) as mock_scraper_class, patch("src.query_engine.EnhancedQueryEngine") as mock_engine_class:
             mock_config = Mock()
             mock_config.enable_rate_limiting = True
             mock_config.enable_advanced_caching = True
@@ -135,15 +131,10 @@ class TestBuildEnhancedRAGAgent:
 
     def test_build_with_pubmed_integration(self, temp_docs_folder, mock_config):
         """Test building RAG agent with PubMed integration."""
-        with patch('src.pharmaceutical_query_adapter.EnhancedRAGAgent') as mock_agent_class, \
-             patch('src.pharmaceutical_query_adapter.EnhancedPubMedScraper') as mock_scraper_class, \
-             patch('src.pharmaceutical_query_adapter.EnhancedQueryEngine') as mock_engine_class:
-
-            agent = build_enhanced_rag_agent(
-                docs_folder=temp_docs_folder,
-                api_key="test_key",
-                config=mock_config
-            )
+        with patch("src.pharmaceutical_query_adapter.EnhancedRAGAgent") as mock_agent_class, patch(
+            "src.pharmaceutical_query_adapter.EnhancedPubMedScraper"
+        ) as mock_scraper_class, patch("src.pharmaceutical_query_adapter.EnhancedQueryEngine") as mock_engine_class:
+            agent = build_enhanced_rag_agent(docs_folder=temp_docs_folder, api_key="test_key", config=mock_config)
 
             # Should create PubMed components
             mock_scraper_class.assert_called_once()
@@ -159,15 +150,10 @@ class TestBuildEnhancedRAGAgent:
         """Test building RAG agent without PubMed integration."""
         mock_config.should_enable_pubmed.return_value = False
 
-        with patch('src.pharmaceutical_query_adapter.EnhancedRAGAgent') as mock_agent_class, \
-             patch('src.pharmaceutical_query_adapter.EnhancedPubMedScraper') as mock_scraper_class, \
-             patch('src.pharmaceutical_query_adapter.EnhancedQueryEngine') as mock_engine_class:
-
-            agent = build_enhanced_rag_agent(
-                docs_folder=temp_docs_folder,
-                api_key="test_key",
-                config=mock_config
-            )
+        with patch("src.pharmaceutical_query_adapter.EnhancedRAGAgent") as mock_agent_class, patch(
+            "src.pharmaceutical_query_adapter.EnhancedPubMedScraper"
+        ) as mock_scraper_class, patch("src.pharmaceutical_query_adapter.EnhancedQueryEngine") as mock_engine_class:
+            agent = build_enhanced_rag_agent(docs_folder=temp_docs_folder, api_key="test_key", config=mock_config)
 
             # Should not create PubMed components
             mock_scraper_class.assert_not_called()
@@ -183,14 +169,13 @@ class TestBuildEnhancedRAGAgent:
         mock_scraper = Mock(spec=EnhancedPubMedScraper)
         mock_engine = Mock(spec=EnhancedQueryEngine)
 
-        with patch('src.pharmaceutical_query_adapter.EnhancedRAGAgent') as mock_agent_class:
-
+        with patch("src.pharmaceutical_query_adapter.EnhancedRAGAgent") as mock_agent_class:
             agent = build_enhanced_rag_agent(
                 docs_folder=temp_docs_folder,
                 api_key="test_key",
                 config=mock_config,
                 pubmed_scraper=mock_scraper,
-                pubmed_query_engine=mock_engine
+                pubmed_query_engine=mock_engine,
             )
 
             # Should use provided components
@@ -201,8 +186,7 @@ class TestBuildEnhancedRAGAgent:
 
     def test_build_passes_all_parameters(self, temp_docs_folder, mock_config):
         """Test that all parameters are passed through correctly."""
-        with patch('src.pharmaceutical_query_adapter.EnhancedRAGAgent') as mock_agent_class:
-
+        with patch("src.pharmaceutical_query_adapter.EnhancedRAGAgent") as mock_agent_class:
             build_enhanced_rag_agent(
                 docs_folder=temp_docs_folder,
                 api_key="test_key",
@@ -217,7 +201,7 @@ class TestBuildEnhancedRAGAgent:
                 enable_synthesis=True,
                 enable_ddi_analysis=True,
                 safety_mode="strict",
-                config=mock_config
+                config=mock_config,
             )
 
             # Verify all parameters passed
@@ -259,7 +243,7 @@ class TestBuildIntegratedSystem:
 
     def test_build_returns_all_components(self, temp_docs_folder, mock_config):
         """Test that build returns all expected components."""
-        with patch('src.pharmaceutical_query_adapter.build_enhanced_rag_agent') as mock_build:
+        with patch("src.pharmaceutical_query_adapter.build_enhanced_rag_agent") as mock_build:
             # Create mock agent with PubMed components
             mock_agent = Mock()
             mock_scraper = Mock()
@@ -267,16 +251,10 @@ class TestBuildIntegratedSystem:
             mock_agent._pubmed_scraper = mock_scraper
             mock_agent._pubmed_query_engine = mock_engine
             mock_agent._pubmed_available.return_value = True
-            mock_agent.component_health = {
-                "pubmed_integration": {"status": "ready"}
-            }
+            mock_agent.component_health = {"pubmed_integration": {"status": "ready"}}
             mock_build.return_value = mock_agent
 
-            system = build_integrated_system(
-                docs_folder=temp_docs_folder,
-                api_key="test_key",
-                config=mock_config
-            )
+            system = build_integrated_system(docs_folder=temp_docs_folder, api_key="test_key", config=mock_config)
 
             # Should return all components
             assert "rag_agent" in system
@@ -298,16 +276,12 @@ class TestBuildIntegratedSystem:
         """Test building system without PubMed integration."""
         mock_config.should_enable_pubmed.return_value = False
 
-        with patch('src.pharmaceutical_query_adapter.build_enhanced_rag_agent') as mock_build:
+        with patch("src.pharmaceutical_query_adapter.build_enhanced_rag_agent") as mock_build:
             mock_agent = Mock()
             mock_agent._pubmed_available.return_value = False
             mock_build.return_value = mock_agent
 
-            system = build_integrated_system(
-                docs_folder=temp_docs_folder,
-                api_key="test_key",
-                config=mock_config
-            )
+            system = build_integrated_system(docs_folder=temp_docs_folder, api_key="test_key", config=mock_config)
 
             # Should not include PubMed components
             assert "pubmed_scraper" not in system
@@ -317,8 +291,7 @@ class TestBuildIntegratedSystem:
 
     def test_build_passes_parameters(self, temp_docs_folder, mock_config):
         """Test that all parameters are passed correctly."""
-        with patch('src.pharmaceutical_query_adapter.build_enhanced_rag_agent') as mock_build:
-
+        with patch("src.pharmaceutical_query_adapter.build_enhanced_rag_agent") as mock_build:
             build_integrated_system(
                 docs_folder=temp_docs_folder,
                 api_key="test_key",
@@ -330,7 +303,7 @@ class TestBuildIntegratedSystem:
                 enable_synthesis=True,
                 enable_ddi_analysis=True,
                 safety_mode="strict",
-                config=mock_config
+                config=mock_config,
             )
 
             # Verify parameters passed to build_enhanced_rag_agent
@@ -369,22 +342,19 @@ class TestCheckSystemHealth:
             "pubmed_integration": {"status": "ready"},
             "medical_guardrails": {"status": "ready"},
             "synthesis_engine": {"status": "ready"},
-            "ddi_pk_processor": {"status": "ready"}
+            "ddi_pk_processor": {"status": "ready"},
         }
 
         mock_scraper = Mock()
         mock_scraper.combined_status_report.return_value = {
             "cache": {"status": "ready"},
-            "rate_limit": {"status": "ready"}
+            "rate_limit": {"status": "ready"},
         }
 
         mock_engine = Mock()
 
         report = check_system_health(
-            rag_agent=mock_agent,
-            pubmed_scraper=mock_scraper,
-            query_engine=mock_engine,
-            config=mock_config
+            rag_agent=mock_agent, pubmed_scraper=mock_scraper, query_engine=mock_engine, config=mock_config
         )
 
         assert isinstance(report, SystemHealthReport)
@@ -399,12 +369,7 @@ class TestCheckSystemHealth:
 
     def test_missing_components(self, mock_config):
         """Test health check with missing components."""
-        report = check_system_health(
-            rag_agent=None,
-            pubmed_scraper=None,
-            query_engine=None,
-            config=mock_config
-        )
+        report = check_system_health(rag_agent=None, pubmed_scraper=None, query_engine=None, config=mock_config)
 
         assert report.rag_agent_ready == False
         assert report.pubmed_integration_ready == False
@@ -420,17 +385,13 @@ class TestCheckSystemHealth:
         mock_agent._ensure_components_initialized.side_effect = Exception("Init failed")
         mock_agent.component_health = {
             "pubmed_integration": {"status": "error"},
-            "medical_guardrails": {"status": "not_ready"}
+            "medical_guardrails": {"status": "not_ready"},
         }
 
         mock_scraper = Mock()
         mock_scraper.combined_status_report.side_effect = Exception("Scraper error")
 
-        report = check_system_health(
-            rag_agent=mock_agent,
-            pubmed_scraper=mock_scraper,
-            config=mock_config
-        )
+        report = check_system_health(rag_agent=mock_agent, pubmed_scraper=mock_scraper, config=mock_config)
 
         assert report.rag_agent_ready == False
         assert report.pubmed_integration_ready == False
@@ -442,18 +403,13 @@ class TestCheckSystemHealth:
         mock_config.should_enable_pubmed.return_value = False
 
         mock_agent = Mock()
-        mock_agent.component_health = {
-            "pubmed_integration": {"status": "ready"}
-        }
+        mock_agent.component_health = {"pubmed_integration": {"status": "ready"}}
 
         mock_scraper = Mock()
         mock_engine = Mock()
 
         report = check_system_health(
-            rag_agent=mock_agent,
-            pubmed_scraper=mock_scraper,
-            query_engine=mock_engine,
-            config=mock_config
+            rag_agent=mock_agent, pubmed_scraper=mock_scraper, query_engine=mock_engine, config=mock_config
         )
 
         # Components should be considered ready even if disabled
@@ -481,10 +437,7 @@ class TestSystemHealthReport:
     def test_custom_initialization(self):
         """Test custom initialization of health report."""
         report = SystemHealthReport(
-            rag_agent_ready=True,
-            pubmed_integration_ready=True,
-            warnings=["Test warning"],
-            errors=["Test error"]
+            rag_agent_ready=True, pubmed_integration_ready=True, warnings=["Test warning"], errors=["Test error"]
         )
 
         assert report.rag_agent_ready == True

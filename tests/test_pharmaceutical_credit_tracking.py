@@ -10,30 +10,27 @@ Comprehensive testing of the pharmaceutical credit tracking system with:
 
 Tests validate cost-effective cloud-first strategy for pharmaceutical research.
 """
+import os
+import tempfile
+from datetime import datetime
+from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
-import asyncio
-import os
-import json
-import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
-from unittest.mock import Mock, patch, MagicMock
-import tempfile
 import yaml
 
 # Import modules under test
 try:
-    from src.monitoring.credit_tracker import PharmaceuticalCreditTracker, CreditUsage, AlertLevel
-    from src.monitoring.alert_manager import AlertManager, AlertType, AlertSeverity
-    from config.alerts import AlertConfig
+    pass
+
+    from src.monitoring.credit_tracker import AlertLevel, CreditUsage, PharmaceuticalCreditTracker
 except ImportError:
     import sys
     from pathlib import Path
+
     sys.path.append(str(Path(__file__).parent.parent))
-    from src.monitoring.credit_tracker import PharmaceuticalCreditTracker, CreditUsage, AlertLevel
-    from src.monitoring.alert_manager import AlertManager, AlertType, AlertSeverity
-    from config.alerts import AlertConfig
+
+    from src.monitoring.credit_tracker import AlertLevel, CreditUsage, PharmaceuticalCreditTracker
 
 
 class TestPharmaceuticalCreditTracking:
@@ -47,28 +44,24 @@ class TestPharmaceuticalCreditTracking:
             "weekly_warning_threshold": 0.8,
             "monthly_critical_threshold": 0.9,
             "pharmaceutical_priority_boost": 1.2,
-            "safety_alert_priority": 2.0
+            "safety_alert_priority": 2.0,
         }
 
         # Create temporary alert configuration
-        self.temp_alert_config = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
+        self.temp_alert_config = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
         alert_config = {
             "credit_monitoring": {
                 "daily_burn_rate": {
                     "warning_threshold": 0.8,
                     "critical_threshold": 0.9,
-                    "alert_channels": ["email", "console"]
+                    "alert_channels": ["email", "console"],
                 },
-                "free_tier_limits": {
-                    "monthly_requests": 10000,
-                    "daily_average": 333,
-                    "burst_limit": 500
-                },
+                "free_tier_limits": {"monthly_requests": 10000, "daily_average": 333, "burst_limit": 500},
                 "pharmaceutical_metrics": {
                     "drug_safety_queries": {"priority": "high", "cost_multiplier": 1.5},
                     "clinical_research": {"priority": "medium", "cost_multiplier": 1.2},
-                    "general_pharma": {"priority": "normal", "cost_multiplier": 1.0}
-                }
+                    "general_pharma": {"priority": "normal", "cost_multiplier": 1.0},
+                },
             }
         }
         yaml.dump(alert_config, self.temp_alert_config)
@@ -81,24 +74,20 @@ class TestPharmaceuticalCreditTracking:
 
     def test_pharmaceutical_credit_tracker_initialization(self):
         """Test pharmaceutical credit tracker initialization."""
-        tracker = PharmaceuticalCreditTracker(
-            alert_config_path=self.temp_alert_config.name
-        )
+        tracker = PharmaceuticalCreditTracker(alert_config_path=self.temp_alert_config.name)
 
         assert tracker is not None
-        assert hasattr(tracker, 'base_monitor')
-        assert hasattr(tracker, 'pharmaceutical_metrics')
+        assert hasattr(tracker, "base_monitor")
+        assert hasattr(tracker, "pharmaceutical_metrics")
         assert tracker.pharmaceutical_optimized == True
 
         # Should load pharmaceutical-specific thresholds
-        assert hasattr(tracker, 'daily_limit')
-        assert hasattr(tracker, 'monthly_limit')
+        assert hasattr(tracker, "daily_limit")
+        assert hasattr(tracker, "monthly_limit")
 
     def test_free_tier_calculation(self):
         """Test free tier limit calculations and optimization."""
-        tracker = PharmaceuticalCreditTracker(
-            alert_config_path=self.temp_alert_config.name
-        )
+        tracker = PharmaceuticalCreditTracker(alert_config_path=self.temp_alert_config.name)
 
         # Test daily allocation from 10K monthly limit
         daily_allocation = tracker.calculate_daily_allocation(10000, 30)
@@ -114,34 +103,21 @@ class TestPharmaceuticalCreditTracking:
 
     def test_pharmaceutical_priority_weighting(self):
         """Test pharmaceutical query priority weighting system."""
-        tracker = PharmaceuticalCreditTracker(
-            alert_config_path=self.temp_alert_config.name
-        )
+        tracker = PharmaceuticalCreditTracker(alert_config_path=self.temp_alert_config.name)
 
         # Test different pharmaceutical query types
-        drug_safety_cost = tracker.calculate_weighted_cost(
-            base_cost=1.0,
-            query_type="drug_safety_queries"
-        )
+        drug_safety_cost = tracker.calculate_weighted_cost(base_cost=1.0, query_type="drug_safety_queries")
         assert drug_safety_cost == 1.5  # High priority multiplier
 
-        clinical_research_cost = tracker.calculate_weighted_cost(
-            base_cost=1.0,
-            query_type="clinical_research"
-        )
+        clinical_research_cost = tracker.calculate_weighted_cost(base_cost=1.0, query_type="clinical_research")
         assert clinical_research_cost == 1.2  # Medium priority multiplier
 
-        general_cost = tracker.calculate_weighted_cost(
-            base_cost=1.0,
-            query_type="general_pharma"
-        )
+        general_cost = tracker.calculate_weighted_cost(base_cost=1.0, query_type="general_pharma")
         assert general_cost == 1.0  # Normal priority
 
     def test_daily_burn_rate_monitoring(self):
         """Test daily credit burn rate monitoring and alerts."""
-        tracker = PharmaceuticalCreditTracker(
-            alert_config_path=self.temp_alert_config.name
-        )
+        tracker = PharmaceuticalCreditTracker(alert_config_path=self.temp_alert_config.name)
 
         # Mock current usage
         current_time = datetime.now()
@@ -151,7 +127,7 @@ class TestPharmaceuticalCreditTracking:
             timestamp=current_time,
             credits_used=166,  # 50% of 333 daily limit
             query_type="general_pharma",
-            success=True
+            success=True,
         )
 
         alert_level = tracker.assess_daily_burn_rate([normal_usage])
@@ -162,7 +138,7 @@ class TestPharmaceuticalCreditTracking:
             timestamp=current_time,
             credits_used=266,  # 80% of 333 daily limit
             query_type="clinical_research",
-            success=True
+            success=True,
         )
 
         alert_level = tracker.assess_daily_burn_rate([warning_usage])
@@ -173,7 +149,7 @@ class TestPharmaceuticalCreditTracking:
             timestamp=current_time,
             credits_used=316,  # 95% of 333 daily limit
             query_type="drug_safety_queries",
-            success=True
+            success=True,
         )
 
         alert_level = tracker.assess_daily_burn_rate([critical_usage])
@@ -181,9 +157,7 @@ class TestPharmaceuticalCreditTracking:
 
     def test_pharmaceutical_usage_analytics(self):
         """Test pharmaceutical-specific usage analytics."""
-        tracker = PharmaceuticalCreditTracker(
-            alert_config_path=self.temp_alert_config.name
-        )
+        tracker = PharmaceuticalCreditTracker(alert_config_path=self.temp_alert_config.name)
 
         # Create diverse pharmaceutical usage data
         usage_data = [
@@ -192,22 +166,22 @@ class TestPharmaceuticalCreditTracking:
                 credits_used=50,
                 query_type="drug_safety_queries",
                 success=True,
-                metadata={"drug": "metformin", "safety_level": "high"}
+                metadata={"drug": "metformin", "safety_level": "high"},
             ),
             CreditUsage(
                 timestamp=datetime.now() - timedelta(hours=2),
                 credits_used=30,
                 query_type="clinical_research",
                 success=True,
-                metadata={"study_type": "phase_iii", "indication": "diabetes"}
+                metadata={"study_type": "phase_iii", "indication": "diabetes"},
             ),
             CreditUsage(
                 timestamp=datetime.now() - timedelta(hours=3),
                 credits_used=20,
                 query_type="general_pharma",
                 success=True,
-                metadata={"category": "mechanism_of_action"}
-            )
+                metadata={"category": "mechanism_of_action"},
+            ),
         ]
 
         analytics = tracker.analyze_pharmaceutical_usage(usage_data)
@@ -226,18 +200,12 @@ class TestPharmaceuticalCreditTracking:
 
     def test_cost_optimization_recommendations(self):
         """Test cost optimization recommendations for pharmaceutical research."""
-        tracker = PharmaceuticalCreditTracker(
-            alert_config_path=self.temp_alert_config.name
-        )
+        tracker = PharmaceuticalCreditTracker(alert_config_path=self.temp_alert_config.name)
 
         # Test high-cost usage pattern
         high_cost_usage = [
-            CreditUsage(
-                timestamp=datetime.now(),
-                credits_used=100,
-                query_type="drug_safety_queries",
-                success=True
-            ) for _ in range(5)  # 500 credits in safety queries
+            CreditUsage(timestamp=datetime.now(), credits_used=100, query_type="drug_safety_queries", success=True)
+            for _ in range(5)  # 500 credits in safety queries
         ]
 
         recommendations = tracker.generate_cost_optimization_recommendations(high_cost_usage)
@@ -255,36 +223,29 @@ class TestPharmaceuticalCreditTracking:
     @pytest.mark.asyncio
     async def test_real_time_monitoring_integration(self):
         """Test real-time credit monitoring integration."""
-        tracker = PharmaceuticalCreditTracker(
-            alert_config_path=self.temp_alert_config.name
-        )
+        tracker = PharmaceuticalCreditTracker(alert_config_path=self.temp_alert_config.name)
 
         # Mock alert manager
-        with patch.object(tracker, 'alert_manager') as mock_alert_manager:
+        with patch.object(tracker, "alert_manager") as mock_alert_manager:
             # Simulate real-time credit usage
             await tracker.record_usage_async(
                 credits_used=50,
                 query_type="drug_safety_queries",
-                metadata={"drug": "warfarin", "interaction_check": True}
+                metadata={"drug": "warfarin", "interaction_check": True},
             )
 
             # Should record usage
             assert tracker.current_daily_usage >= 50
 
             # Test threshold breach detection
-            await tracker.record_usage_async(
-                credits_used=300,  # Push over daily limit
-                query_type="clinical_research"
-            )
+            await tracker.record_usage_async(credits_used=300, query_type="clinical_research")  # Push over daily limit
 
             # Should trigger alert
             mock_alert_manager.send_alert.assert_called()
 
     def test_pharmaceutical_cost_analysis_report(self):
         """Test pharmaceutical cost analysis reporting."""
-        tracker = PharmaceuticalCreditTracker(
-            alert_config_path=self.temp_alert_config.name
-        )
+        tracker = PharmaceuticalCreditTracker(alert_config_path=self.temp_alert_config.name)
 
         # Create comprehensive usage data
         usage_data = []
@@ -294,13 +255,15 @@ class TestPharmaceuticalCreditTracking:
             day_time = start_time + timedelta(days=day)
             # Different patterns each day
             for hour in range(8):  # 8 queries per day
-                usage_data.append(CreditUsage(
-                    timestamp=day_time + timedelta(hours=hour),
-                    credits_used=10 + (day * 5),  # Increasing usage over week
-                    query_type=["drug_safety_queries", "clinical_research", "general_pharma"][hour % 3],
-                    success=True,
-                    metadata={"day": day, "hour": hour}
-                ))
+                usage_data.append(
+                    CreditUsage(
+                        timestamp=day_time + timedelta(hours=hour),
+                        credits_used=10 + (day * 5),  # Increasing usage over week
+                        query_type=["drug_safety_queries", "clinical_research", "general_pharma"][hour % 3],
+                        success=True,
+                        metadata={"day": day, "hour": hour},
+                    )
+                )
 
         report = tracker.generate_pharmaceutical_cost_report(usage_data, period="weekly")
 
@@ -322,18 +285,12 @@ class TestPharmaceuticalCreditTracking:
 
     def test_free_tier_maximization_strategies(self):
         """Test free tier maximization strategies."""
-        tracker = PharmaceuticalCreditTracker(
-            alert_config_path=self.temp_alert_config.name
-        )
+        tracker = PharmaceuticalCreditTracker(alert_config_path=self.temp_alert_config.name)
 
         # Test monthly planning
         monthly_plan = tracker.generate_monthly_optimization_plan(
             target_queries=9500,  # Stay under 10K limit
-            pharmaceutical_mix={
-                "drug_safety_queries": 0.3,
-                "clinical_research": 0.5,
-                "general_pharma": 0.2
-            }
+            pharmaceutical_mix={"drug_safety_queries": 0.3, "clinical_research": 0.5, "general_pharma": 0.2},
         )
 
         assert "daily_allocation" in monthly_plan
@@ -352,9 +309,7 @@ class TestPharmaceuticalCreditTracking:
 
     def test_burst_capacity_management(self):
         """Test burst capacity management for urgent pharmaceutical queries."""
-        tracker = PharmaceuticalCreditTracker(
-            alert_config_path=self.temp_alert_config.name
-        )
+        tracker = PharmaceuticalCreditTracker(alert_config_path=self.temp_alert_config.name)
 
         # Test burst capacity calculation
         daily_limit = 333
@@ -369,7 +324,7 @@ class TestPharmaceuticalCreditTracking:
             credits_used=450,  # Over daily limit but within burst
             query_type="drug_safety_queries",
             success=True,
-            metadata={"urgent": True, "safety_level": "critical"}
+            metadata={"urgent": True, "safety_level": "critical"},
         )
 
         burst_status = tracker.assess_burst_usage([urgent_usage])
@@ -404,7 +359,7 @@ class TestIntegratedCostMonitoring:
             await tracker.record_usage_async(
                 credits_used=query["credits"],
                 query_type=query["type"],
-                metadata={k: v for k, v in query.items() if k not in ["type", "credits"]}
+                metadata={k: v for k, v in query.items() if k not in ["type", "credits"]},
             )
             total_credits += query["credits"]
 

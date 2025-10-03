@@ -13,12 +13,12 @@ Even with 403 errors, this test measures:
 Usage:
   python scripts/rate_limit_baseline_test.py
 """
-
 import os
 import sys
 import time
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any
+from typing import Dict
 
 # Ensure local src is importable
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +31,7 @@ try:
 except ImportError as e:
     print(f"❌ Error importing NVIDIA Build client: {e}")
     sys.exit(1)
+
 
 def test_rate_limiting_baseline() -> Dict[str, Any]:
     """Test rate limiting behavior with current access level."""
@@ -45,7 +46,7 @@ def test_rate_limiting_baseline() -> Dict[str, Any]:
         "response_times_ms": [],
         "error_patterns": {},
         "rate_limit_detected": False,
-        "optimal_request_spacing_ms": None
+        "optimal_request_spacing_ms": None,
     }
 
     # Test with conservative spacing (1 request per second)
@@ -58,10 +59,7 @@ def test_rate_limiting_baseline() -> Dict[str, Any]:
         start_time = time.time()
         try:
             # Use lightweight embedding test
-            response = client.create_embeddings(
-                texts=["Rate limit test query"],
-                model="nvidia/nv-embed-v1"
-            )
+            response = client.create_embeddings(texts=["Rate limit test query"], model="nvidia/nv-embed-v1")
             results["successful_requests"] += 1
             print("✅ SUCCESS")
 
@@ -105,6 +103,7 @@ def test_rate_limiting_baseline() -> Dict[str, Any]:
         results["optimal_request_spacing_ms"] = 1000  # 1 second baseline
 
     return results
+
 
 def analyze_baseline_results(results: Dict[str, Any]) -> None:
     """Analyze and report baseline test results."""
@@ -156,6 +155,7 @@ def analyze_baseline_results(results: Dict[str, Any]) -> None:
         print(f"   • Complete NVIDIA Build account activation for inference access")
         print(f"   • Contact NVIDIA support if activation doesn't resolve 403 errors")
 
+
 def main():
     print("NVIDIA Build API Rate Limiting Baseline Test")
     print("=" * 60)
@@ -182,6 +182,7 @@ def main():
     except Exception as e:
         print(f"❌ Baseline test failed: {str(e)}")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

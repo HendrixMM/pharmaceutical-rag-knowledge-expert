@@ -2,13 +2,16 @@ import asyncio
 import json
 import threading
 import types
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
+from datetime import timedelta
+from datetime import UTC
 
 import pytest
 
-from src.cache_management import CacheLookupResult, NCBICacheManager
-from src.utils.cache_utils import CacheKeyNormalizer, WarmingDecision
-from src.rate_limiting import NCBIRateLimiter, RateLimitStatus
+from src.cache_management import CacheLookupResult
+from src.cache_management import NCBICacheManager
+from src.rate_limiting import RateLimitStatus
+from src.utils.cache_utils import CacheKeyNormalizer
 
 
 @pytest.fixture
@@ -224,6 +227,7 @@ def test_cache_write_on_access_enabled_updates_file_mtime(tmp_path):
 
     # Small delay to ensure mtime would be different if file is modified
     import time
+
     time.sleep(0.1)
 
     # Read from cache - this should modify the file
@@ -310,8 +314,7 @@ def test_cleanup_scheduler_run_on_start_disabled(tmp_path):
     )
 
     # Verify that cleanup should not run initially
-    assert not cache_manager.cleanup_scheduler.should_run(), \
-        "Cleanup should not run on start when run_on_start=False"
+    assert not cache_manager.cleanup_scheduler.should_run(), "Cleanup should not run on start when run_on_start=False"
 
 
 def test_cleanup_scheduler_run_on_start_enabled(tmp_path):
@@ -322,8 +325,7 @@ def test_cleanup_scheduler_run_on_start_enabled(tmp_path):
     )
 
     # Verify that cleanup should run initially
-    assert cache_manager.cleanup_scheduler.should_run(), \
-        "Cleanup should run on start when run_on_start=True"
+    assert cache_manager.cleanup_scheduler.should_run(), "Cleanup should run on start when run_on_start=True"
 
 
 def test_eviction_logic_max_entries_limit(tmp_path, frozen_datetime):
@@ -344,7 +346,7 @@ def test_eviction_logic_max_entries_limit(tmp_path, frozen_datetime):
     ]
 
     for i, (name, timestamp) in enumerate(entries_data):
-        frozen_datetime._now = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+        frozen_datetime._now = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
         cache_manager.set(f"key-{name}", [{"title": f"entry-{name}"}])
 
     # Verify all 3 entries exist
@@ -434,14 +436,13 @@ def test_cache_warming_with_rate_limiter_optimal_timing(tmp_path, frozen_datetim
         cache_dir=tmp_path,
         cache_warming_enabled=True,
         rate_limiter=mock_rate_limiter,
-        default_ttl_hours=1/60,  # 1 minute TTL
-        grace_period_hours=1,     # 1 hour grace
+        default_ttl_hours=1 / 60,  # 1 minute TTL
+        grace_period_hours=1,  # 1 hour grace
     )
 
     # Schedule a pharmaceutical entry (high priority)
     cache_manager.warming_scheduler.schedule(
-        "pharma-key",
-        {"pharmaceutical_focus": True, "result_count": 20, "last_accessed_at": "2024-01-01T12:00:00Z"}
+        "pharma-key", {"pharmaceutical_focus": True, "result_count": 20, "last_accessed_at": "2024-01-01T12:00:00Z"}
     )
 
     # Should be marked as due due to optimal timing
@@ -465,7 +466,7 @@ def test_cache_warming_with_rate_limiter_optimal_timing(tmp_path, frozen_datetim
     # Schedule a low priority entry
     cache_manager.warming_scheduler.schedule(
         "low-priority-key",
-        {"pharmaceutical_focus": False, "result_count": 5, "last_accessed_at": "2024-01-01T10:00:00Z"}
+        {"pharmaceutical_focus": False, "result_count": 5, "last_accessed_at": "2024-01-01T10:00:00Z"},
     )
 
     # Should be deferred (not returned)
@@ -473,9 +474,9 @@ def test_cache_warming_with_rate_limiter_optimal_timing(tmp_path, frozen_datetim
     assert "low-priority-key" not in warm_entries
 
     # Check decision summary
-    if hasattr(cache_manager.warming_scheduler, 'get_decision_summary'):
+    if hasattr(cache_manager.warming_scheduler, "get_decision_summary"):
         summary = cache_manager.warming_scheduler.get_decision_summary()
-        assert summary.get('defer', 0) > 0
+        assert summary.get("defer", 0) > 0
 
 
 def test_cache_warming_rate_limit_defer_long_wait(tmp_path, frozen_datetime):
@@ -500,10 +501,7 @@ def test_cache_warming_rate_limit_defer_long_wait(tmp_path, frozen_datetime):
     )
 
     # Schedule high priority entry
-    cache_manager.warming_scheduler.schedule(
-        "high-priority-key",
-        {"pharmaceutical_focus": True, "result_count": 50}
-    )
+    cache_manager.warming_scheduler.schedule("high-priority-key", {"pharmaceutical_focus": True, "result_count": 50})
 
     # Should be deferred due to long wait time
     warm_entries = cache_manager.warmable_entries()
@@ -529,13 +527,41 @@ def test_cache_warming_priority_calculation(tmp_path):
     # Test different priority levels
     entries = [
         # Low priority
-        ("low", {"pharmaceutical_focus": False, "result_count": 5, "last_accessed_at": (now - timedelta(hours=48)).isoformat()}),
+        (
+            "low",
+            {
+                "pharmaceutical_focus": False,
+                "result_count": 5,
+                "last_accessed_at": (now - timedelta(hours=48)).isoformat(),
+            },
+        ),
         # Medium priority (recent access)
-        ("medium", {"pharmaceutical_focus": False, "result_count": 5, "last_accessed_at": (now - timedelta(hours=12)).isoformat()}),
+        (
+            "medium",
+            {
+                "pharmaceutical_focus": False,
+                "result_count": 5,
+                "last_accessed_at": (now - timedelta(hours=12)).isoformat(),
+            },
+        ),
         # High priority (pharmaceutical)
-        ("high", {"pharmaceutical_focus": True, "result_count": 5, "last_accessed_at": (now - timedelta(hours=48)).isoformat()}),
+        (
+            "high",
+            {
+                "pharmaceutical_focus": True,
+                "result_count": 5,
+                "last_accessed_at": (now - timedelta(hours=48)).isoformat(),
+            },
+        ),
         # Highest priority (pharma + many results + recent)
-        ("highest", {"pharmaceutical_focus": True, "result_count": 50, "last_accessed_at": (now - timedelta(hours=12)).isoformat()}),
+        (
+            "highest",
+            {
+                "pharmaceutical_focus": True,
+                "result_count": 50,
+                "last_accessed_at": (now - timedelta(hours=12)).isoformat(),
+            },
+        ),
     ]
 
     for key, metadata in entries:
@@ -552,7 +578,7 @@ def test_cache_warming_priority_calculation(tmp_path):
     assert decisions[2].cache_key == "medium"
     assert decisions[2].priority == 30  # 25 (recent) + 5 (results)
     assert decisions[3].cache_key == "low"
-    assert decisions[3].priority == 5   # 5 (results)
+    assert decisions[3].priority == 5  # 5 (results)
 
 
 def test_cache_warming_optimal_timing_bonus(tmp_path):
@@ -577,10 +603,7 @@ def test_cache_warming_optimal_timing_bonus(tmp_path):
     )
 
     # Schedule entry with base priority 50
-    cache_manager.warming_scheduler.schedule(
-        "timing-test",
-        {"pharmaceutical_focus": False, "result_count": 50}
-    )
+    cache_manager.warming_scheduler.schedule("timing-test", {"pharmaceutical_focus": False, "result_count": 50})
 
     decisions = cache_manager.warming_scheduler.get_warming_decisions()
     decision = decisions[0]
@@ -613,9 +636,7 @@ def test_cache_warming_compute_optimal_timing_with_rate_limiter(tmp_path):
 
     # Test high priority entry
     metadata = {"pharmaceutical_focus": True, "result_count": 30}
-    timing = cache_manager.warming_scheduler.compute_optimal_warming_timing(
-        "test-key", metadata
-    )
+    timing = cache_manager.warming_scheduler.compute_optimal_warming_timing("test-key", metadata)
 
     assert timing["due_now"] is True
     assert timing["defer_until"] is None
@@ -646,9 +667,7 @@ def test_cache_warming_compute_optimal_timing_deferred(tmp_path):
 
     # Test medium priority entry
     metadata = {"pharmaceutical_focus": False, "result_count": 40}
-    timing = cache_manager.warming_scheduler.compute_optimal_warming_timing(
-        "test-key", metadata
-    )
+    timing = cache_manager.warming_scheduler.compute_optimal_warming_timing("test-key", metadata)
 
     assert timing["due_now"] is False
     assert timing["defer_until"] is not None
@@ -716,10 +735,7 @@ def test_cache_warming_schedule_with_defer_times(tmp_path):
     )
 
     # Schedule entry that would be deferred
-    cache_manager.warming_scheduler.schedule(
-        "defer-test",
-        {"pharmaceutical_focus": False, "result_count": 20}
-    )
+    cache_manager.warming_scheduler.schedule("defer-test", {"pharmaceutical_focus": False, "result_count": 20})
 
     schedule = cache_manager.warming_scheduler.get_warming_schedule()
     entry_info = schedule["defer-test"]
@@ -742,20 +758,12 @@ def test_cache_expiry_override_behavior(tmp_path, frozen_datetime):
 
     # Create entry with explicit expiry (3 hours from now)
     explicit_expiry = frozen_datetime._now + timedelta(hours=3)
-    cache_manager.set(
-        "explicit",
-        {"data": "test"},
-        explicit_expiry=explicit_expiry
-    )
+    cache_manager.set("explicit", {"data": "test"}, explicit_expiry=explicit_expiry)
 
     # Create entry with preserve_expiry
     cache_manager.set("preserve", {"data": "test"})
     frozen_datetime.advance(minutes=30)
-    cache_manager.set(
-        "preserve",
-        {"data": "updated"},
-        preserve_expiry=True
-    )
+    cache_manager.set("preserve", {"data": "updated"}, preserve_expiry=True)
 
     # Advance time past standard TTL but within grace period and before explicit expiry
     frozen_datetime.advance(hours=1, minutes=30)
@@ -784,11 +792,7 @@ def test_cache_expiry_grace_period_override(tmp_path, frozen_datetime):
     # Create entry with explicit grace expiry (2 hours from now)
     now = frozen_datetime._now
     explicit_grace_expiry = now + timedelta(hours=2)
-    cache_manager.set(
-        "grace-test",
-        {"data": "test"},
-        explicit_grace_expiry=explicit_grace_expiry
-    )
+    cache_manager.set("grace-test", {"data": "test"}, explicit_grace_expiry=explicit_grace_expiry)
 
     # Advance past TTL but within explicit grace period
     frozen_datetime.advance(hours=1, minutes=30)
@@ -814,14 +818,8 @@ def test_cache_warming_with_new_timing_methods(tmp_path):
     )
 
     # Schedule entries with different priorities
-    cache_manager.warming_scheduler.schedule(
-        "high-priority",
-        {"pharmaceutical_focus": True, "result_count": 50}
-    )
-    cache_manager.warming_scheduler.schedule(
-        "low-priority",
-        {"pharmaceutical_focus": False, "result_count": 10}
-    )
+    cache_manager.warming_scheduler.schedule("high-priority", {"pharmaceutical_focus": True, "result_count": 50})
+    cache_manager.warming_scheduler.schedule("low-priority", {"pharmaceutical_focus": False, "result_count": 10})
 
     # Get warmable entries - should use new timing method
     warm_entries = cache_manager.warmable_entries()
@@ -871,7 +869,7 @@ def test_import_cache_skips_invalid_entries(cache_manager, tmp_path):
         "hit_count": 0,
         "payload": "eyJ0aXRsZSI6InZhbGlkIn0=",  # base64 encoded {"title":"valid"}
         "payload_encoding": "plain",
-        "metadata": {"original_query": "test"}
+        "metadata": {"original_query": "test"},
     }
     (import_dir / "valid.json").write_text(json.dumps(valid_entry))
 
@@ -931,15 +929,13 @@ def test_stale_entry_disallowed_schedules_warming(tmp_path, frozen_datetime):
     cache_manager = NCBICacheManager(
         cache_dir=tmp_path,
         default_ttl_hours=1 / 60,  # 1 minute TTL
-        grace_period_hours=1,     # 1 hour grace period
+        grace_period_hours=1,  # 1 hour grace period
         cache_warming_enabled=True,  # Enable warming
     )
 
     # Create a cache entry with pharmaceutical focus to ensure high priority
     cache_manager.set(
-        "warming-test",
-        [{"title": "to-warm"}],
-        metadata={"pharmaceutical_focus": True, "result_count": 50}
+        "warming-test", [{"title": "to-warm"}], metadata={"pharmaceutical_focus": True, "result_count": 50}
     )
 
     # Make entry stale but within grace period
@@ -970,7 +966,7 @@ def test_stale_entry_disallowed_no_warming_when_disabled(tmp_path, frozen_dateti
     cache_manager = NCBICacheManager(
         cache_dir=tmp_path,
         default_ttl_hours=1 / 60,  # 1 minute TTL
-        grace_period_hours=1,     # 1 hour grace period
+        grace_period_hours=1,  # 1 hour grace period
         cache_warming_enabled=False,  # Disable warming
     )
 

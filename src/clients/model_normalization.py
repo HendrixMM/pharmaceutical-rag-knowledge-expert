@@ -6,23 +6,21 @@ handles common aliasing (e.g., underscore variants).
 """
 from __future__ import annotations
 
-from typing import Optional, Dict
-
 # Known short -> full mappings
-EMBEDDING_MODEL_MAP: Dict[str, str] = {
+EMBEDDING_MODEL_MAP: dict[str, str] = {
     "nv-embedqa-e5-v5": "nvidia/nv-embedqa-e5-v5",
     "nv-embedqa-mistral7b-v2": "nvidia/nv-embedqa-mistral7b-v2",
     "snowflake-arctic-embed-l": "Snowflake/snowflake-arctic-embed-l",
 }
 
-RERANK_MODEL_MAP: Dict[str, str] = {
+RERANK_MODEL_MAP: dict[str, str] = {
     "nv-rerankqa-mistral4b-v3": "nvidia/nv-rerankqa-mistral4b-v3",
     # Accept underscore variant and map to full meta name
     "llama-3_2-nemoretriever-500m-rerank-v2": "meta/llama-3_2-nemoretriever-500m-rerank-v2",
 }
 
 
-def normalize_model(model: Optional[str], prefer_full_name: bool = True) -> Optional[str]:
+def normalize_model(model: str | None, prefer_full_name: bool = True) -> str | None:
     """Normalize model names across embedding and rerank families.
 
     - prefer_full_name=True maps known short names to their fully qualified names.
@@ -60,4 +58,3 @@ def normalize_model(model: Optional[str], prefer_full_name: bool = True) -> Opti
         if "/" in model:
             return model.split("/")[-1]
         return model
-

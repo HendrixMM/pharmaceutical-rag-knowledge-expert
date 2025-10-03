@@ -17,32 +17,35 @@ Key Features:
 
 Based on latest NVIDIA NeMo Retriever documentation patterns.
 """
-
 import asyncio
 import base64
-import io
 import logging
 import mimetypes
 import os
-import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
-import json
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Union
 
 import aiofiles
-from unstructured.partition.auto import partition
-from unstructured.chunking.title import chunk_by_title
 from langchain_core.documents import Document
+from unstructured.chunking.title import chunk_by_title
+from unstructured.partition.auto import partition
 
-from .nemo_retriever_client import NeMoRetrieverClient, NeMoAPIResponse
+from .nemo_retriever_client import NeMoAPIResponse
+from .nemo_retriever_client import NeMoRetrieverClient
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class ExtractionResult:
     """Result from document extraction processing."""
+
     success: bool
     documents: List[Document] = None
     metadata: Dict[str, Any] = None
@@ -53,9 +56,11 @@ class ExtractionResult:
     processing_time_ms: float = 0.0
     extraction_method: str = "unknown"
 
+
 @dataclass
 class PharmaceuticalMetadata:
     """Pharmaceutical-specific metadata extracted from documents."""
+
     drug_names: List[str] = None
     dosages: List[str] = None
     indications: List[str] = None
@@ -66,6 +71,7 @@ class PharmaceuticalMetadata:
     approval_dates: List[str] = None
     chemical_formulas: List[str] = None
     molecular_weights: List[str] = None
+
 
 class NeMoExtractionService:
     """
@@ -89,31 +95,28 @@ class NeMoExtractionService:
         ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         ".txt": "text/plain",
         ".html": "text/html",
-        ".rtf": "application/rtf"
+        ".rtf": "application/rtf",
     }
 
     # Pharmaceutical document patterns for enhanced extraction
     PHARMA_PATTERNS = {
         "drug_names": [
             r"\b[A-Z][a-z]+(?:mab|nib|zumab|cept|tinib|prazole|statin|cillin|mycin|oxin)\b",
-            r"\b(?:compound|drug|medication|pharmaceutical)\s+[A-Z0-9-]+\b"
+            r"\b(?:compound|drug|medication|pharmaceutical)\s+[A-Z0-9-]+\b",
         ],
         "dosages": [
             r"\b\d+(?:\.\d+)?\s*(?:mg|g|mcg|μg|ml|L|units?|IU|mmol|mEq)(?:/\w+)?\b",
-            r"\b\d+(?:\.\d+)?\s*(?:milligrams?|grams?|micrograms?|milliliters?|liters?)\b"
+            r"\b\d+(?:\.\d+)?\s*(?:milligrams?|grams?|micrograms?|milliliters?|liters?)\b",
         ],
-        "clinical_trials": [
-            r"\b(?:NCT|ISRCTN|EudraCT)\d+\b",
-            r"\b(?:Phase|Study)\s+(?:I{1,3}|[1-4]|[IV]{1,4})\b"
-        ],
+        "clinical_trials": [r"\b(?:NCT|ISRCTN|EudraCT)\d+\b", r"\b(?:Phase|Study)\s+(?:I{1,3}|[1-4]|[IV]{1,4})\b"],
         "regulatory": [
             r"\b(?:FDA|EMA|PMDA|TGA|Health Canada|MHRA)\b",
-            r"\b(?:NDA|BLA|ANDA|510\(k\)|PMA|IDE)\s*\#?\s*\d+\b"
+            r"\b(?:NDA|BLA|ANDA|510\(k\)|PMA|IDE)\s*\#?\s*\d+\b",
         ],
         "chemical_formulas": [
             r"\b[A-Z][a-z]?(?:\d+[A-Z][a-z]?\d*)*\b",  # Basic chemical formula
-            r"\b(?:C|H|O|N|S|P|Cl|Br|F|I)\d*(?:[A-Z][a-z]?\d*)*\b"  # More specific
-        ]
+            r"\b(?:C|H|O|N|S|P|Cl|Br|F|I)\d*(?:[A-Z][a-z]?\d*)*\b",  # More specific
+        ],
     }
 
     def __init__(self, nemo_client: Optional[NeMoRetrieverClient] = None):
@@ -128,23 +131,26 @@ class NeMoExtractionService:
             "total_documents": 0,
             "successful_extractions": 0,
             "failed_extractions": 0,
-            "total_processing_time_ms": 0.0
+            "total_processing_time_ms": 0.0,
         }
 
     async def _ensure_nemo_client(self) -> NeMoRetrieverClient:
         """Ensure NeMo client is available."""
         if not self.nemo_client:
             from .nemo_retriever_client import create_nemo_client
+
             self.nemo_client = await create_nemo_client()
         return self.nemo_client
 
-    async def extract_document(self,
-                             file_path: Union[str, Path],
-                             extraction_strategy: str = "auto",
-                             enable_pharmaceutical_analysis: bool = True,
-                             chunk_strategy: str = "semantic",
-                             preserve_tables: bool = True,
-                             extract_images: bool = True) -> ExtractionResult:
+    async def extract_document(
+        self,
+        file_path: Union[str, Path],
+        extraction_strategy: str = "auto",
+        enable_pharmaceutical_analysis: bool = True,
+        chunk_strategy: str = "semantic",
+        preserve_tables: bool = True,
+        extract_images: bool = True,
+    ) -> ExtractionResult:
         """
         Extract content from a document using NeMo Retriever capabilities.
 
@@ -166,17 +172,13 @@ class NeMoExtractionService:
             # Validate file
             if not file_path.exists():
                 return ExtractionResult(
-                    success=False,
-                    error=f"File not found: {file_path}",
-                    extraction_method="validation_failed"
+                    success=False, error=f"File not found: {file_path}", extraction_method="validation_failed"
                 )
 
             file_ext = file_path.suffix.lower()
             if file_ext not in self.SUPPORTED_FORMATS:
                 return ExtractionResult(
-                    success=False,
-                    error=f"Unsupported file format: {file_ext}",
-                    extraction_method="unsupported_format"
+                    success=False, error=f"Unsupported file format: {file_ext}", extraction_method="unsupported_format"
                 )
 
             # Choose extraction method based on strategy
@@ -195,9 +197,7 @@ class NeMoExtractionService:
 
             # Apply chunking strategy
             if result.success and result.documents:
-                result.documents = await self._apply_chunking_strategy(
-                    result.documents, chunk_strategy
-                )
+                result.documents = await self._apply_chunking_strategy(result.documents, chunk_strategy)
 
             # Update statistics
             processing_time = (time.time() - start_time) * 1000
@@ -222,10 +222,7 @@ class NeMoExtractionService:
             self.extraction_stats["total_processing_time_ms"] += processing_time
 
             return ExtractionResult(
-                success=False,
-                error=str(e),
-                processing_time_ms=processing_time,
-                extraction_method="error"
+                success=False, error=str(e), processing_time_ms=processing_time, extraction_method="error"
             )
 
     def _choose_extraction_strategy(self, file_path: Path) -> str:
@@ -243,12 +240,11 @@ class NeMoExtractionService:
         # Use lightweight path for plain text or unknowns
         return "unstructured"
 
-    async def _extract_with_nemo(self,
-                                file_path: Path,
-                                preserve_tables: bool,
-                                extract_images: bool) -> ExtractionResult:
+    async def _extract_with_nemo(
+        self, file_path: Path, preserve_tables: bool, extract_images: bool
+    ) -> ExtractionResult:
         """Extract document using NeMo Retriever Extraction NIM."""
-        
+
         def _strict_mode_enabled() -> bool:
             env_flag = os.getenv("NEMO_EXTRACTION_STRICT", "")
             strict = env_flag.strip().lower() in ("true", "1", "yes", "on")
@@ -256,31 +252,28 @@ class NeMoExtractionService:
             if prod_env in ("production", "prod"):
                 return True
             return strict
+
         try:
-            client = await self._ensure_nemo_client()
+            await self._ensure_nemo_client()
 
             # Read and encode file
-            async with aiofiles.open(file_path, 'rb') as f:
+            async with aiofiles.open(file_path, "rb") as f:
                 file_content = await f.read()
 
-            file_b64 = base64.b64encode(file_content).decode('utf-8')
+            file_b64 = base64.b64encode(file_content).decode("utf-8")
             mime_type = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
 
             # Prepare NeMo extraction payload
             extraction_payload = {
-                "file": {
-                    "content": file_b64,
-                    "mime_type": mime_type,
-                    "filename": file_path.name
-                },
+                "file": {"content": file_b64, "mime_type": mime_type, "filename": file_path.name},
                 "options": {
                     "preserve_tables": preserve_tables,
                     "extract_images": extract_images,
                     "ocr_method": "vlm",  # Use VLM-based OCR
                     "structure_analysis": True,
                     "semantic_chunking": True,
-                    "language": "en"  # Can be enhanced to detect language
-                }
+                    "language": "en",  # Can be enhanced to detect language
+                },
             }
 
             # Call NeMo extraction service
@@ -296,7 +289,7 @@ class NeMoExtractionService:
                     return ExtractionResult(
                         success=False,
                         error="NeMo extraction failed and strict mode is enabled (no non-NVIDIA fallback)",
-                        extraction_method="nemo_failed_strict"
+                        extraction_method="nemo_failed_strict",
                     )
                 logger.warning(f"NeMo extraction failed for {file_path}, falling back to unstructured")
                 return await self._extract_with_unstructured(file_path, preserve_tables)
@@ -308,7 +301,7 @@ class NeMoExtractionService:
                 return ExtractionResult(
                     success=False,
                     error=f"NeMo extraction error and strict mode enabled: {e}",
-                    extraction_method="nemo_error_strict"
+                    extraction_method="nemo_error_strict",
                 )
             return await self._extract_with_unstructured(file_path, preserve_tables)
 
@@ -324,39 +317,22 @@ class NeMoExtractionService:
             config = client.services["extraction"]
 
             import aiohttp
-            async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=config.timeout_seconds)
-            ) as session:
-                async with session.post(
-                    config.endpoint,
-                    headers=config.headers,
-                    json=payload
-                ) as response:
+
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=config.timeout_seconds)) as session:
+                async with session.post(config.endpoint, headers=config.headers, json=payload) as response:
                     if response.status == 200:
                         result = await response.json()
-                        return NeMoAPIResponse(
-                            success=True,
-                            data=result,
-                            service="extraction"
-                        )
+                        return NeMoAPIResponse(success=True, data=result, service="extraction")
                     else:
                         error_text = await response.text()
                         return NeMoAPIResponse(
-                            success=False,
-                            error=f"API error {response.status}: {error_text}",
-                            service="extraction"
+                            success=False, error=f"API error {response.status}: {error_text}", service="extraction"
                         )
 
         except Exception as e:
-            return NeMoAPIResponse(
-                success=False,
-                error=str(e),
-                service="extraction"
-            )
+            return NeMoAPIResponse(success=False, error=str(e), service="extraction")
 
-    async def _process_nemo_extraction_response(self,
-                                              nemo_data: Dict[str, Any],
-                                              file_path: Path) -> ExtractionResult:
+    async def _process_nemo_extraction_response(self, nemo_data: Dict[str, Any], file_path: Path) -> ExtractionResult:
         """Process response from NeMo Extraction API."""
         try:
             documents = []
@@ -377,8 +353,8 @@ class NeMoExtractionService:
                                 "page": block.get("page", 1),
                                 "block_type": "text",
                                 "confidence": block.get("confidence", 1.0),
-                                "extraction_method": "nemo_vlm"
-                            }
+                                "extraction_method": "nemo_vlm",
+                            },
                         )
                         documents.append(doc)
 
@@ -388,7 +364,7 @@ class NeMoExtractionService:
                             "content": block.get("table_data", {}),
                             "markdown": block.get("markdown", ""),
                             "page": block.get("page", 1),
-                            "confidence": block.get("confidence", 1.0)
+                            "confidence": block.get("confidence", 1.0),
                         }
                         tables.append(table_data)
 
@@ -401,8 +377,8 @@ class NeMoExtractionService:
                                 "page": block.get("page", 1),
                                 "block_type": "table",
                                 "confidence": block.get("confidence", 1.0),
-                                "extraction_method": "nemo_vlm"
-                            }
+                                "extraction_method": "nemo_vlm",
+                            },
                         )
                         documents.append(doc)
 
@@ -412,7 +388,7 @@ class NeMoExtractionService:
                             "ocr_text": block.get("ocr_text", ""),
                             "page": block.get("page", 1),
                             "confidence": block.get("confidence", 1.0),
-                            "image_type": block.get("image_type", "unknown")
+                            "image_type": block.get("image_type", "unknown"),
                         }
                         charts.append(chart_data)
 
@@ -426,8 +402,8 @@ class NeMoExtractionService:
                                     "page": block.get("page", 1),
                                     "block_type": "image",
                                     "confidence": block.get("confidence", 1.0),
-                                    "extraction_method": "nemo_vlm"
-                                }
+                                    "extraction_method": "nemo_vlm",
+                                },
                             )
                             documents.append(doc)
 
@@ -437,7 +413,7 @@ class NeMoExtractionService:
                 "extraction_method": "nemo_vlm",
                 "total_pages": nemo_data.get("metadata", {}).get("pages", 1),
                 "language": nemo_data.get("metadata", {}).get("language", "unknown"),
-                "confidence_avg": nemo_data.get("metadata", {}).get("avg_confidence", 1.0)
+                "confidence_avg": nemo_data.get("metadata", {}).get("avg_confidence", 1.0),
             }
 
             return ExtractionResult(
@@ -446,27 +422,19 @@ class NeMoExtractionService:
                 metadata=metadata,
                 tables=tables,
                 charts=charts,
-                extraction_method="nemo_vlm"
+                extraction_method="nemo_vlm",
             )
 
         except Exception as e:
             logger.error(f"Failed to process NeMo extraction response: {e}")
-            return ExtractionResult(
-                success=False,
-                error=str(e),
-                extraction_method="nemo_processing_failed"
-            )
+            return ExtractionResult(success=False, error=str(e), extraction_method="nemo_processing_failed")
 
-    async def _extract_with_unstructured(self,
-                                       file_path: Path,
-                                       preserve_tables: bool) -> ExtractionResult:
+    async def _extract_with_unstructured(self, file_path: Path, preserve_tables: bool) -> ExtractionResult:
         """Extract document using unstructured library as fallback."""
         try:
             # Use unstructured for document parsing
             elements = partition(
-                filename=str(file_path),
-                strategy="hi_res" if preserve_tables else "fast",
-                include_page_breaks=True
+                filename=str(file_path), strategy="hi_res" if preserve_tables else "fast", include_page_breaks=True
             )
 
             documents = []
@@ -475,7 +443,7 @@ class NeMoExtractionService:
             current_page = 1
             for element in elements:
                 # Determine page number
-                if hasattr(element, 'metadata') and element.metadata.page_number:
+                if hasattr(element, "metadata") and element.metadata.page_number:
                     current_page = element.metadata.page_number
 
                 # Create document
@@ -484,18 +452,18 @@ class NeMoExtractionService:
                     metadata={
                         "source": str(file_path),
                         "page": current_page,
-                        "element_type": element.category if hasattr(element, 'category') else "unknown",
-                        "extraction_method": "unstructured"
-                    }
+                        "element_type": element.category if hasattr(element, "category") else "unknown",
+                        "extraction_method": "unstructured",
+                    },
                 )
                 documents.append(doc)
 
                 # Handle tables specially
-                if hasattr(element, 'category') and element.category == "Table":
+                if hasattr(element, "category") and element.category == "Table":
                     table_data = {
                         "content": str(element),
                         "page": current_page,
-                        "confidence": 1.0  # Unstructured doesn't provide confidence
+                        "confidence": 1.0,  # Unstructured doesn't provide confidence
                     }
                     tables.append(table_data)
 
@@ -503,24 +471,16 @@ class NeMoExtractionService:
                 "source": str(file_path),
                 "extraction_method": "unstructured",
                 "total_pages": current_page,
-                "total_elements": len(elements)
+                "total_elements": len(elements),
             }
 
             return ExtractionResult(
-                success=True,
-                documents=documents,
-                metadata=metadata,
-                tables=tables,
-                extraction_method="unstructured"
+                success=True, documents=documents, metadata=metadata, tables=tables, extraction_method="unstructured"
             )
 
         except Exception as e:
             logger.error(f"Unstructured extraction failed for {file_path}: {e}")
-            return ExtractionResult(
-                success=False,
-                error=str(e),
-                extraction_method="unstructured_failed"
-            )
+            return ExtractionResult(success=False, error=str(e), extraction_method="unstructured_failed")
 
     async def _enhance_with_pharmaceutical_analysis(self, result: ExtractionResult) -> ExtractionResult:
         """Enhance extraction result with pharmaceutical-specific analysis."""
@@ -621,9 +581,7 @@ class NeMoExtractionService:
 
         return tags
 
-    async def _apply_chunking_strategy(self,
-                                     documents: List[Document],
-                                     strategy: str) -> List[Document]:
+    async def _apply_chunking_strategy(self, documents: List[Document], strategy: str) -> List[Document]:
         """Apply chunking strategy to documents."""
         if strategy == "semantic":
             return await self._semantic_chunking(documents)
@@ -645,7 +603,7 @@ class NeMoExtractionService:
             # Simple implementation: split long documents into smaller chunks
             if len(doc.page_content) > 2000:
                 # Split by sentences while preserving metadata
-                sentences = doc.page_content.split('. ')
+                sentences = doc.page_content.split(". ")
                 current_chunk = ""
 
                 for sentence in sentences:
@@ -654,8 +612,7 @@ class NeMoExtractionService:
                     else:
                         if current_chunk:
                             chunk_doc = Document(
-                                page_content=current_chunk.strip(),
-                                metadata={**doc.metadata, "chunk_type": "semantic"}
+                                page_content=current_chunk.strip(), metadata={**doc.metadata, "chunk_type": "semantic"}
                             )
                             chunked_docs.append(chunk_doc)
                         current_chunk = sentence + ". "
@@ -663,8 +620,7 @@ class NeMoExtractionService:
                 # Add final chunk
                 if current_chunk:
                     chunk_doc = Document(
-                        page_content=current_chunk.strip(),
-                        metadata={**doc.metadata, "chunk_type": "semantic"}
+                        page_content=current_chunk.strip(), metadata={**doc.metadata, "chunk_type": "semantic"}
                     )
                     chunked_docs.append(chunk_doc)
             else:
@@ -686,11 +642,7 @@ class NeMoExtractionService:
                 for i, chunk in enumerate(chunks):
                     chunk_doc = Document(
                         page_content=str(chunk),
-                        metadata={
-                            **doc.metadata,
-                            "chunk_type": "title_based",
-                            "chunk_index": i
-                        }
+                        metadata={**doc.metadata, "chunk_type": "title_based", "chunk_index": i},
                     )
                     chunked_docs.append(chunk_doc)
 
@@ -706,19 +658,16 @@ class NeMoExtractionService:
 
         if stats["total_documents"] > 0:
             stats["success_rate"] = stats["successful_extractions"] / stats["total_documents"]
-            stats["avg_processing_time_ms"] = (
-                stats["total_processing_time_ms"] / stats["total_documents"]
-            )
+            stats["avg_processing_time_ms"] = stats["total_processing_time_ms"] / stats["total_documents"]
         else:
             stats["success_rate"] = 0.0
             stats["avg_processing_time_ms"] = 0.0
 
         return stats
 
-    async def batch_extract_documents(self,
-                                    file_paths: List[Union[str, Path]],
-                                    max_concurrent: int = 3,
-                                    **extraction_kwargs) -> List[ExtractionResult]:
+    async def batch_extract_documents(
+        self, file_paths: List[Union[str, Path]], max_concurrent: int = 3, **extraction_kwargs
+    ) -> List[ExtractionResult]:
         """
         Extract multiple documents concurrently.
 
@@ -743,11 +692,9 @@ class NeMoExtractionService:
         processed_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                processed_results.append(ExtractionResult(
-                    success=False,
-                    error=str(result),
-                    extraction_method="batch_error"
-                ))
+                processed_results.append(
+                    ExtractionResult(success=False, error=str(result), extraction_method="batch_error")
+                )
             else:
                 processed_results.append(result)
 
@@ -755,9 +702,9 @@ class NeMoExtractionService:
 
 
 # Convenience functions
-async def extract_pharmaceutical_document(file_path: Union[str, Path],
-                                        nemo_client: Optional[NeMoRetrieverClient] = None,
-                                        **kwargs) -> ExtractionResult:
+async def extract_pharmaceutical_document(
+    file_path: Union[str, Path], nemo_client: Optional[NeMoRetrieverClient] = None, **kwargs
+) -> ExtractionResult:
     """
     Quick function to extract a pharmaceutical document with optimized settings.
 
@@ -778,7 +725,7 @@ async def extract_pharmaceutical_document(file_path: Union[str, Path],
         "chunk_strategy": "semantic",
         "preserve_tables": True,
         "extract_images": True,
-        **kwargs
+        **kwargs,
     }
 
     return await service.extract_document(file_path, **extraction_kwargs)
@@ -796,10 +743,7 @@ if __name__ == "__main__":
         test_file = "test_document.pdf"
 
         if Path(test_file).exists():
-            result = await service.extract_document(
-                test_file,
-                enable_pharmaceutical_analysis=True
-            )
+            result = await service.extract_document(test_file, enable_pharmaceutical_analysis=True)
 
             if result.success:
                 print(f"Extraction successful: {len(result.documents)} documents")

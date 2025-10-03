@@ -5,14 +5,13 @@ Minimal CLI to run pharmaceutical capability checks via EnhancedNeMoClient.
 Prints a JSON report including endpoint usage and overall status. Exits with
 code 0 on success/partial, 1 on failure or unexpected errors.
 """
-
 from __future__ import annotations
 
 import argparse
 import json
 import os
 import sys
-from typing import Any, Dict
+from typing import Any
 
 
 def _bool(s: str) -> bool:
@@ -27,19 +26,19 @@ def main(argv: list[str] | None = None) -> int:
         dest="fallback",
         default=None,
         help="Enable/disable fallback (true/false). Defaults to config behavior.",
-        )
+    )
     parser.add_argument(
         "--pretty",
         dest="pretty",
         action="store_true",
         help="Pretty-print JSON output",
-        )
+    )
     args = parser.parse_args(argv)
 
     # Lazy import to avoid startup cost when running other tools
     try:
-        from src.enhanced_config import EnhancedRAGConfig
         from src.clients.nemo_client_enhanced import EnhancedNeMoClient
+        from src.enhanced_config import EnhancedRAGConfig
     except Exception as e:  # pragma: no cover
         sys.stderr.write(f"Failed to import components: {e}\n")
         return 1
@@ -55,8 +54,8 @@ def main(argv: list[str] | None = None) -> int:
             enable_fallback=enable_fallback,
             pharmaceutical_optimized=True,
             api_key=api_key,
-            )
-        report: Dict[str, Any] = client.test_pharmaceutical_capabilities()
+        )
+        report: dict[str, Any] = client.test_pharmaceutical_capabilities()
         if args.pretty:
             print(json.dumps(report, indent=2, sort_keys=True))
         else:

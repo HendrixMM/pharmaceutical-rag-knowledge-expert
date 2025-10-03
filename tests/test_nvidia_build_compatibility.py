@@ -13,27 +13,24 @@ Test Coverage:
 
 This test suite validates the system's readiness for NGC API deprecation.
 """
+import os
 
 import pytest
-import asyncio
-import os
-import json
-import time
-from typing import Dict, List, Any, Optional
-from unittest.mock import Mock, patch, MagicMock
 
 # Import modules under test
 try:
-    from src.clients.openai_wrapper import OpenAIWrapper, NVIDIABuildConfig, NVIDIABuildError
-    from src.clients.nemo_client_enhanced import EnhancedNeMoClient, ClientResponse, EndpointType
+    from src.clients.nemo_client_enhanced import ClientResponse, EndpointType, EnhancedNeMoClient
+    from src.clients.openai_wrapper import NVIDIABuildConfig, NVIDIABuildError, OpenAIWrapper
     from src.enhanced_config import EnhancedRAGConfig
 except ImportError:
     import sys
     from pathlib import Path
+
     sys.path.append(str(Path(__file__).parent.parent))
-    from src.clients.openai_wrapper import OpenAIWrapper, NVIDIABuildConfig, NVIDIABuildError
-    from src.clients.nemo_client_enhanced import EnhancedNeMoClient, ClientResponse, EndpointType
+    from src.clients.nemo_client_enhanced import ClientResponse, EndpointType, EnhancedNeMoClient
+    from src.clients.openai_wrapper import NVIDIABuildConfig, NVIDIABuildError, OpenAIWrapper
     from src.enhanced_config import EnhancedRAGConfig
+
 
 class TestNVIDIABuildCompatibility:
     """Test suite for NVIDIA Build platform compatibility via OpenAI SDK."""
@@ -47,22 +44,17 @@ class TestNVIDIABuildCompatibility:
 
         # Create test configuration
         self.config = NVIDIABuildConfig(
-            api_key=self.test_api_key,
-            base_url=self.test_base_url,
-            pharmaceutical_optimized=True
+            api_key=self.test_api_key, base_url=self.test_base_url, pharmaceutical_optimized=True
         )
 
         yield
 
         # Cleanup if needed
-        pass
 
     def test_nvidia_build_config_initialization(self):
         """Test NVIDIA Build configuration initialization."""
         config = NVIDIABuildConfig(
-            api_key="test_key",
-            base_url="https://integrate.api.nvidia.com/v1",
-            pharmaceutical_optimized=True
+            api_key="test_key", base_url="https://integrate.api.nvidia.com/v1", pharmaceutical_optimized=True
         )
 
         assert config.api_key == "test_key"
@@ -120,7 +112,7 @@ class TestNVIDIABuildCompatibility:
         test_texts = [
             "metformin mechanism of action in type 2 diabetes",
             "ACE inhibitor drug interactions with potassium supplements",
-            "pharmacokinetics of warfarin in elderly patients"
+            "pharmacokinetics of warfarin in elderly patients",
         ]
 
         try:
@@ -128,12 +120,12 @@ class TestNVIDIABuildCompatibility:
             response = wrapper.create_embeddings(test_texts)
 
             assert response is not None
-            assert hasattr(response, 'data')
+            assert hasattr(response, "data")
             assert len(response.data) == len(test_texts)
 
             # Validate embedding dimensions
             for embedding_data in response.data:
-                assert hasattr(embedding_data, 'embedding')
+                assert hasattr(embedding_data, "embedding")
                 assert isinstance(embedding_data.embedding, list)
                 assert len(embedding_data.embedding) > 0
 
@@ -161,16 +153,12 @@ class TestNVIDIABuildCompatibility:
         ]
 
         try:
-            response = wrapper.create_chat_completion(
-                messages=messages,
-                max_tokens=150,
-                temperature=0.3
-            )
+            response = wrapper.create_chat_completion(messages=messages, max_tokens=150, temperature=0.3)
 
             assert response is not None
-            assert hasattr(response, 'choices')
+            assert hasattr(response, "choices")
             assert len(response.choices) > 0
-            assert hasattr(response.choices[0].message, 'content')
+            assert hasattr(response.choices[0].message, "content")
             assert len(response.choices[0].message.content) > 0
 
             print(f"✅ Chat model compatibility verified")
@@ -216,9 +204,7 @@ class TestNVIDIABuildCompatibility:
 
         # Test invalid API key handling
         invalid_config = NVIDIABuildConfig(
-            api_key="invalid_key_test",
-            base_url=self.config.base_url,
-            pharmaceutical_optimized=True
+            api_key="invalid_key_test", base_url=self.config.base_url, pharmaceutical_optimized=True
         )
 
         wrapper = OpenAIWrapper(invalid_config)
@@ -242,10 +228,7 @@ class TestNVIDIABuildCompatibility:
         """Test enhanced NeMo client integration with NVIDIA Build."""
 
         # Create enhanced client with cloud-first configuration
-        enhanced_client = EnhancedNeMoClient(
-            pharmaceutical_optimized=True,
-            enable_fallback=True
-        )
+        enhanced_client = EnhancedNeMoClient(pharmaceutical_optimized=True, enable_fallback=True)
 
         # Verify initialization
         assert enhanced_client.cloud_client is not None or enhanced_client.nemo_client is not None
@@ -266,10 +249,7 @@ class TestNVIDIABuildCompatibility:
     async def test_cloud_first_execution_flow(self):
         """Test cloud-first execution flow with fallback."""
 
-        enhanced_client = EnhancedNeMoClient(
-            pharmaceutical_optimized=True,
-            enable_fallback=True
-        )
+        enhanced_client = EnhancedNeMoClient(pharmaceutical_optimized=True, enable_fallback=True)
 
         # Test embedding request through enhanced client
         test_texts = ["metformin pharmacokinetics in kidney disease patients"]
@@ -300,8 +280,8 @@ class TestNVIDIABuildCompatibility:
         wrapper = OpenAIWrapper(self.config)
 
         # Test rate limiting configuration exists
-        assert hasattr(wrapper.config, 'timeout')
-        assert hasattr(wrapper.config, 'max_retries')
+        assert hasattr(wrapper.config, "timeout")
+        assert hasattr(wrapper.config, "max_retries")
 
         # Should have conservative defaults
         assert wrapper.config.timeout <= 60  # Conservative timeout
@@ -323,10 +303,7 @@ class TestNVIDIABuildCompatibility:
     async def test_pharmaceutical_capability_integration(self):
         """Test integrated pharmaceutical capability testing."""
 
-        enhanced_client = EnhancedNeMoClient(
-            pharmaceutical_optimized=True,
-            enable_fallback=True
-        )
+        enhanced_client = EnhancedNeMoClient(pharmaceutical_optimized=True, enable_fallback=True)
 
         # Run pharmaceutical capability test
         try:
@@ -409,6 +386,7 @@ class TestNVIDIABuildCompatibility:
 
         print(f"✅ Health monitoring readiness verified")
 
+
 class TestIntegrationCompatibility:
     """Integration tests for full system compatibility."""
 
@@ -425,17 +403,13 @@ class TestIntegrationCompatibility:
             pytest.skip("Cloud-first not enabled for testing")
 
         # Create enhanced client
-        client = EnhancedNeMoClient(
-            config=config,
-            pharmaceutical_optimized=True,
-            enable_fallback=True
-        )
+        client = EnhancedNeMoClient(config=config, pharmaceutical_optimized=True, enable_fallback=True)
 
         # Test pharmaceutical embedding workflow
         pharmaceutical_queries = [
             "metformin contraindications in chronic kidney disease",
             "drug interactions between warfarin and NSAIDs",
-            "pharmacokinetics of ACE inhibitors in elderly patients"
+            "pharmacokinetics of ACE inhibitors in elderly patients",
         ]
 
         try:
@@ -446,7 +420,9 @@ class TestIntegrationCompatibility:
             # Should use cloud endpoint preferentially
             if embedding_response.success:
                 print(f"✅ End-to-end embedding successful")
-                print(f"   Endpoint: {embedding_response.endpoint_type.value if embedding_response.endpoint_type else 'unknown'}")
+                print(
+                    f"   Endpoint: {embedding_response.endpoint_type.value if embedding_response.endpoint_type else 'unknown'}"
+                )
                 print(f"   Cost tier: {embedding_response.cost_tier}")
 
         except Exception as e:
@@ -454,9 +430,9 @@ class TestIntegrationCompatibility:
 
         # Test pharmaceutical chat workflow
         try:
-            chat_response = client.create_chat_completion([
-                {"role": "user", "content": "What are the key drug interactions to monitor with metformin therapy?"}
-            ])
+            chat_response = client.create_chat_completion(
+                [{"role": "user", "content": "What are the key drug interactions to monitor with metformin therapy?"}]
+            )
 
             assert isinstance(chat_response, ClientResponse)
 
@@ -474,8 +450,8 @@ class TestIntegrationCompatibility:
         config = EnhancedRAGConfig.from_env()
 
         # Should have cloud-first capabilities
-        assert hasattr(config, 'nvidia_build_base_url')
-        assert hasattr(config, 'enable_nvidia_build_fallback')
+        assert hasattr(config, "nvidia_build_base_url")
+        assert hasattr(config, "enable_nvidia_build_fallback")
 
         # Should support feature flags for migration
         feature_flags = config.get_feature_flags()
@@ -489,12 +465,15 @@ class TestIntegrationCompatibility:
         print(f"   Feature flags available: {len(feature_flags)}")
         print(f"   OpenAI SDK compatible: {compatibility.get('compatible')}")
 
+
 if __name__ == "__main__":
     # Run tests with comprehensive output
-    pytest.main([
-        __file__,
-        "-v",  # Verbose output
-        "-s",  # Show print statements
-        "--tb=short",  # Short traceback format
-        "--disable-warnings"  # Clean output
-    ])
+    pytest.main(
+        [
+            __file__,
+            "-v",  # Verbose output
+            "-s",  # Show print statements
+            "--tb=short",  # Short traceback format
+            "--disable-warnings",  # Clean output
+        ]
+    )

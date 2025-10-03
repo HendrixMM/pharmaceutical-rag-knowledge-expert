@@ -8,16 +8,17 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass
-from datetime import datetime, timedelta, time as dtime
-from typing import Deque, Dict, Optional, Tuple
+from datetime import datetime
+from datetime import time as dtime
+from datetime import timedelta
+from typing import Deque
 
 import pytz
-
 
 logger = logging.getLogger(__name__)
 
 
-_default_process_limiter: Optional["NCBIRateLimiter"] = None
+_default_process_limiter: NCBIRateLimiter | None = None
 _process_lock = threading.Lock()
 
 
@@ -49,8 +50,8 @@ class RateLimitStatus:
     seconds_until_daily_reset: float
     seconds_until_next_request: float
     daily_count: int
-    daily_limit: Optional[int]
-    remaining_daily_requests: Optional[int]
+    daily_limit: int | None
+    remaining_daily_requests: int | None
     rate_limited: bool
     optimal_timing: bool
 
@@ -65,12 +66,12 @@ class NCBIRateLimiter:
     def __init__(
         self,
         max_requests_per_second: int = 3,
-        daily_request_limit: Optional[int] = 500,
+        daily_request_limit: int | None = 500,
         enable_optimal_timing_detection: bool = True,
         timezone: str = "US/Eastern",
         log_level: str = "DEBUG",
         raise_on_daily_limit: bool = False,
-        max_daily_wait_seconds: Optional[int] = None,
+        max_daily_wait_seconds: int | None = None,
         weekend_optimal: bool = True,
     ) -> None:
         if max_requests_per_second <= 0:
@@ -95,7 +96,7 @@ class NCBIRateLimiter:
         self.weekend_optimal = weekend_optimal
 
     @classmethod
-    def from_env(cls) -> "NCBIRateLimiter":
+    def from_env(cls) -> NCBIRateLimiter:
         """Create limiter from environment variables.
 
         By default, the limiter enforces NCBI's 3 req/sec guidance and caps waiting
@@ -103,7 +104,7 @@ class NCBIRateLimiter:
         Override the behaviour by setting the associated environment variables.
         """
         daily_limit_env = os.getenv("DAILY_REQUEST_LIMIT")
-        daily_limit: Optional[int]
+        daily_limit: int | None
         if daily_limit_env is None:
             daily_limit = 500
         else:
@@ -125,13 +126,9 @@ class NCBIRateLimiter:
             try:
                 max_wait = int(max_wait_env)
             except ValueError as exc:
-                raise ValueError(
-                    "Environment variable RATE_LIMIT_MAX_DAILY_WAIT_SECONDS must be an integer"
-                ) from exc
+                raise ValueError("Environment variable RATE_LIMIT_MAX_DAILY_WAIT_SECONDS must be an integer") from exc
             if max_wait < 0:
-                raise ValueError(
-                    "Environment variable RATE_LIMIT_MAX_DAILY_WAIT_SECONDS must be non-negative"
-                )
+                raise ValueError("Environment variable RATE_LIMIT_MAX_DAILY_WAIT_SECONDS must be non-negative")
 
         weekend_optimal = _env_flag("RATE_LIMIT_WEEKEND_OPTIMAL", "true")
 
@@ -190,7 +187,7 @@ class NCBIRateLimiter:
         hour = tz_now.hour
         return hour >= 21 or hour < 5
 
-    def check_rate_limit(self) -> Tuple[bool, float]:
+    def check_rate_limit(self) -> tuple[bool, float]:
         now_monotonic = _now_monotonic()
         tz_now = datetime.now(self.tz)
         with self._lock:
@@ -218,8 +215,8 @@ class NCBIRateLimiter:
 
     def acquire(
         self,
-        raise_on_daily_limit: Optional[bool] = None,
-        max_wait_seconds: Optional[int] = None,
+        raise_on_daily_limit: bool | None = None,
+        max_wait_seconds: int | None = None,
     ) -> None:
         if raise_on_daily_limit is None:
             raise_on_daily_limit = self.raise_on_daily_limit
@@ -235,12 +232,8 @@ class NCBIRateLimiter:
 
                 if self.daily_request_limit is not None and self._daily_count >= self.daily_request_limit:
                     wait = self._seconds_until_daily_reset(tz_now)
-                    if raise_on_daily_limit or (
-                        max_wait_seconds is not None and wait > max_wait_seconds
-                    ):
-                        raise DailyQuotaExceeded(
-                            "Daily limit reached; waiting {:.0f}s exceeds policy".format(wait)
-                        )
+                    if raise_on_daily_limit or (max_wait_seconds is not None and wait > max_wait_seconds):
+                        raise DailyQuotaExceeded(f"Daily limit reached; waiting {wait:.0f}s exceeds policy")
                     reason = "daily"
                 else:
                     wait = self._seconds_until_slot(now_monotonic)
@@ -259,8 +252,8 @@ class NCBIRateLimiter:
 
     async def acquire_async(
         self,
-        raise_on_daily_limit: Optional[bool] = None,
-        max_wait_seconds: Optional[int] = None,
+        raise_on_daily_limit: bool | None = None,
+        max_wait_seconds: int | None = None,
     ) -> None:
         if raise_on_daily_limit is None:
             raise_on_daily_limit = self.raise_on_daily_limit
@@ -276,12 +269,8 @@ class NCBIRateLimiter:
 
                 if self.daily_request_limit is not None and self._daily_count >= self.daily_request_limit:
                     wait = self._seconds_until_daily_reset(tz_now)
-                    if raise_on_daily_limit or (
-                        max_wait_seconds is not None and wait > max_wait_seconds
-                    ):
-                        raise DailyQuotaExceeded(
-                            "Daily limit reached; waiting {:.0f}s exceeds policy".format(wait)
-                        )
+                    if raise_on_daily_limit or (max_wait_seconds is not None and wait > max_wait_seconds):
+                        raise DailyQuotaExceeded(f"Daily limit reached; waiting {wait:.0f}s exceeds policy")
                     reason = "daily"
                 else:
                     wait = self._seconds_until_slot(now_monotonic)
@@ -300,8 +289,8 @@ class NCBIRateLimiter:
 
     def wait_until_ready(
         self,
-        raise_on_daily_limit: Optional[bool] = None,
-        max_wait_seconds: Optional[int] = None,
+        raise_on_daily_limit: bool | None = None,
+        max_wait_seconds: int | None = None,
     ) -> None:
         if raise_on_daily_limit is None:
             raise_on_daily_limit = self.raise_on_daily_limit
@@ -313,22 +302,16 @@ class NCBIRateLimiter:
             if allowed:
                 return
             if self.daily_request_limit is not None:
-                if raise_on_daily_limit or (
-                    max_wait_seconds is not None and wait_time > max_wait_seconds
-                ):
-                    raise DailyQuotaExceeded(
-                        "Daily limit reached; waiting {:.0f}s exceeds policy".format(wait_time)
-                    )
+                if raise_on_daily_limit or (max_wait_seconds is not None and wait_time > max_wait_seconds):
+                    raise DailyQuotaExceeded(f"Daily limit reached; waiting {wait_time:.0f}s exceeds policy")
                 if wait_time > 60:
-                    logger.error(
-                        "Daily quota exceeded, waiting %.0f seconds until reset", wait_time
-                    )
+                    logger.error("Daily quota exceeded, waiting %.0f seconds until reset", wait_time)
             time.sleep(min(wait_time, 60))
 
     async def wait_until_ready_async(
         self,
-        raise_on_daily_limit: Optional[bool] = None,
-        max_wait_seconds: Optional[int] = None,
+        raise_on_daily_limit: bool | None = None,
+        max_wait_seconds: int | None = None,
     ) -> None:
         if raise_on_daily_limit is None:
             raise_on_daily_limit = self.raise_on_daily_limit
@@ -340,12 +323,8 @@ class NCBIRateLimiter:
             if allowed:
                 return
             if self.daily_request_limit is not None:
-                if raise_on_daily_limit or (
-                    max_wait_seconds is not None and wait_time > max_wait_seconds
-                ):
-                    raise DailyQuotaExceeded(
-                        "Daily limit reached; waiting {:.0f}s exceeds policy".format(wait_time)
-                    )
+                if raise_on_daily_limit or (max_wait_seconds is not None and wait_time > max_wait_seconds):
+                    raise DailyQuotaExceeded(f"Daily limit reached; waiting {wait_time:.0f}s exceeds policy")
             await asyncio.sleep(min(wait_time, 60))
 
     def get_status(self) -> RateLimitStatus:
@@ -356,19 +335,13 @@ class NCBIRateLimiter:
             self._prune_old_requests(now_monotonic)
             seconds_until_reset = self._seconds_until_daily_reset(tz_now)
             requests_last_second = len(self._timestamps)
-            daily_exhausted = (
-                self.daily_request_limit is not None and self._daily_count >= self.daily_request_limit
-            )
+            daily_exhausted = self.daily_request_limit is not None and self._daily_count >= self.daily_request_limit
             rate_limited = requests_last_second >= self.max_requests_per_second or daily_exhausted
             next_request_wait = (
-                self._seconds_until_daily_reset(tz_now)
-                if daily_exhausted
-                else self._seconds_until_slot(now_monotonic)
+                self._seconds_until_daily_reset(tz_now) if daily_exhausted else self._seconds_until_slot(now_monotonic)
             )
             remaining = (
-                None
-                if self.daily_request_limit is None
-                else max(self.daily_request_limit - self._daily_count, 0)
+                None if self.daily_request_limit is None else max(self.daily_request_limit - self._daily_count, 0)
             )
         return RateLimitStatus(
             requests_last_second=requests_last_second,
@@ -381,7 +354,7 @@ class NCBIRateLimiter:
             optimal_timing=self._is_optimal_timing(tz_now),
         )
 
-    def get_compliance_report(self) -> Dict[str, object]:
+    def get_compliance_report(self) -> dict[str, object]:
         status = self.get_status()
         return {
             "requests_last_second": status.requests_last_second,
@@ -397,7 +370,7 @@ class NCBIRateLimiter:
         tz_now = datetime.now(self.tz)
         return self._is_optimal_timing(tz_now)
 
-    def remaining_daily_requests(self) -> Optional[int]:
+    def remaining_daily_requests(self) -> int | None:
         with self._lock:
             if self.daily_request_limit is None:
                 return None

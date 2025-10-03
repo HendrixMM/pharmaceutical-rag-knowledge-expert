@@ -1,9 +1,13 @@
 """Unit tests for DDI/PK processor module."""
-
 import re
+from unittest.mock import Mock
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import Mock, patch
-from src.ddi_pk_processor import DDIPKProcessor, PKParameter, DrugInteraction
+
+from src.ddi_pk_processor import DDIPKProcessor
+from src.ddi_pk_processor import DrugInteraction
+from src.ddi_pk_processor import PKParameter
 
 
 class TestDDIPKProcessor:
@@ -25,8 +29,8 @@ class TestDDIPKProcessor:
                     "pmid": "12345678",
                     "title": "Warfarin-Fluconazole DDI Study",
                     "journal": "Clinical Pharmacology",
-                    "year": "2023"
-                }
+                    "year": "2023",
+                },
             },
             {
                 "id": "paper_2",
@@ -35,17 +39,17 @@ class TestDDIPKProcessor:
                     "pmid": "87654321",
                     "title": "Warfarin-Amiodarone Interaction",
                     "journal": "Drug Interactions",
-                    "year": "2022"
-                }
-            }
+                    "year": "2022",
+                },
+            },
         ]
 
     def test_initialization(self, processor):
         """Test DDIPKProcessor initialization."""
         assert processor is not None
-        assert hasattr(processor, 'cyp_patterns')
-        assert hasattr(processor, 'severity_keywords')
-        assert hasattr(processor, 'pk_parameter_patterns')
+        assert hasattr(processor, "cyp_patterns")
+        assert hasattr(processor, "severity_keywords")
+        assert hasattr(processor, "pk_parameter_patterns")
 
     def test_analyze_drug_interactions_success(self, processor, sample_papers):
         """Test successful drug interaction analysis."""
@@ -92,11 +96,7 @@ class TestDDIPKProcessor:
 
     def test_calculate_interaction_severity(self, processor, sample_papers):
         """Test interaction severity calculation."""
-        interaction_data = {
-            "primary_drug": "warfarin",
-            "secondary_drug": "fluconazole",
-            "papers": sample_papers
-        }
+        interaction_data = {"primary_drug": "warfarin", "secondary_drug": "fluconazole", "papers": sample_papers}
 
         severity = processor._calculate_interaction_severity(interaction_data)
         assert severity in ["contraindicated", "major", "moderate", "minor", "unknown"]
@@ -141,7 +141,7 @@ class TestDDIPKProcessor:
             "cyp_interactions": {"enzymes_identified": ["CYP2C9"]},
             "auc_cmax_changes": [{"parameter": "auc", "change_value": 85, "unit": "%", "direction": "increase"}],
             "clinical_recommendations": [{"text": "Monitor INR closely", "action": "monitor"}],
-            "interaction_severities": {"fluconazole": "major"}
+            "interaction_severities": {"fluconazole": "major"},
         }
 
         report = processor._format_interaction_report(analysis_results)
@@ -172,23 +172,18 @@ class TestDDIPKProcessor:
         strength = processor._determine_interaction_strength(unknown_content, "drug1", "cyp2c9")
         assert strength == "unknown"
 
-    @patch('src.ddi_pk_processor.PharmaceuticalProcessor')
+    @patch("src.ddi_pk_processor.PharmaceuticalProcessor")
     def test_with_pharmaceutical_processor(self, mock_processor_class):
         """Test DDIPKProcessor with PharmaceuticalProcessor."""
         mock_processor = Mock()
         mock_processor.extract_cyp_enzymes.return_value = ["CYP2C9", "CYP3A4"]
-        mock_processor.extract_dosage_information.return_value = [
-            {"amount": 5, "unit": "mg"}
-        ]
+        mock_processor.extract_dosage_information.return_value = [{"amount": 5, "unit": "mg"}]
 
         processor = DDIPKProcessor(pharma_processor=mock_processor)
 
-        papers = [{
-            "page_content": "warfarin metabolism study",
-            "metadata": {"pmid": "12345"}
-        }]
+        papers = [{"page_content": "warfarin metabolism study", "metadata": {"pmid": "12345"}}]
 
-        cyp_analysis = processor._analyze_cyp_interactions(papers, "warfarin")
+        processor._analyze_cyp_interactions(papers, "warfarin")
 
         # Should have called the pharmaceutical processor
         mock_processor.extract_cyp_enzymes.assert_called()
@@ -299,7 +294,7 @@ class TestPKParameter:
             unit="ng⋅h/mL",
             confidence_interval=(100.0, 151.0),
             p_value=0.03,
-            study_id="12345678"
+            study_id="12345678",
         )
 
         assert pk_param.parameter == "auc"
@@ -312,12 +307,7 @@ class TestPKParameter:
     def test_pk_parameter_with_none_values(self):
         """Test PKParameter with None values."""
         pk_param = PKParameter(
-            parameter="cmax",
-            value=None,
-            unit="ng/mL",
-            confidence_interval=None,
-            p_value=None,
-            study_id="87654321"
+            parameter="cmax", value=None, unit="ng/mL", confidence_interval=None, p_value=None, study_id="87654321"
         )
 
         assert pk_param.parameter == "cmax"
@@ -339,7 +329,7 @@ class TestDrugInteraction:
             mechanism="CYP2C9 inhibition",
             clinical_effect="Increased anticoagulation",
             evidence_level="Level 2",
-            study_id="12345678"
+            study_id="12345678",
         )
 
         assert interaction.primary_drug == "warfarin"

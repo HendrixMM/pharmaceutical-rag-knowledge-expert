@@ -142,18 +142,18 @@ repos:
     hooks:
       - id: detect-secrets
         args:
-          - '--baseline'
-          - '.secrets.baseline'
-          - '--exclude-files'
+          - "--baseline"
+          - ".secrets.baseline"
+          - "--exclude-files"
           - '\\.env\\.example'
-          - '--exclude-files'
-          - 'tests/fixtures/.*'
-          - '--exclude-files'
-          - 'pubmed_cache/.*'
-          - '--exclude-files'
-          - 'query_cache/.*'
-          - '--exclude-files'
-          - 'backups/.*'
+          - "--exclude-files"
+          - "tests/fixtures/.*"
+          - "--exclude-files"
+          - "pubmed_cache/.*"
+          - "--exclude-files"
+          - "query_cache/.*"
+          - "--exclude-files"
+          - "backups/.*"
         exclude: |
           (?x)^(
               \.secrets\.baseline|

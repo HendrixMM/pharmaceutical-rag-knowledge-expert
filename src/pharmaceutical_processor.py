@@ -1,20 +1,20 @@
 """Utility helpers for extracting pharmaceutical signals from biomedical text."""
-
 from __future__ import annotations
 
 import csv
 import logging
 import os
 import re
-from datetime import datetime
 from collections import defaultdict
 from copy import deepcopy
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any
+from typing import Iterable
 
 logger = logging.getLogger(__name__)
 
-_GENERIC_DRUG_NAMES: Set[str] = {
+_GENERIC_DRUG_NAMES: set[str] = {
     "acetaminophen",
     "atorvastatin",
     "clopidogrel",
@@ -32,7 +32,7 @@ _GENERIC_DRUG_NAMES: Set[str] = {
     "warfarin",
 }
 
-_BRAND_DRUG_NAMES: Set[str] = {
+_BRAND_DRUG_NAMES: set[str] = {
     "coumadin",
     "lipitor",
     "nexium",
@@ -142,7 +142,7 @@ _DRUG_HEURISTIC_SUFFIXES = (
     "xaban",
 )
 
-_DRUG_SUFFIX_STOPWORDS: Set[str] = {
+_DRUG_SUFFIX_STOPWORDS: set[str] = {
     "baseline",
     "guideline",
     "discipline",
@@ -165,10 +165,10 @@ class PharmaceuticalProcessor:
     def __init__(
         self,
         *,
-        generic_lexicon_path: Optional[str] = None,
-        brand_lexicon_path: Optional[str] = None,
+        generic_lexicon_path: str | None = None,
+        brand_lexicon_path: str | None = None,
         auto_fetch: bool = False,
-        enable_remote_fetch: Optional[bool] = None,
+        enable_remote_fetch: bool | None = None,
     ) -> None:
         """Seed instance lexicons and optionally extend them from custom files.
 
@@ -186,31 +186,29 @@ class PharmaceuticalProcessor:
         effective_auto_fetch = auto_fetch
         if enable_remote_fetch is not None:
             effective_auto_fetch = enable_remote_fetch
-            logger.info("Remote fetch explicitly %s via enable_remote_fetch parameter",
-                       "enabled" if enable_remote_fetch else "disabled")
+            logger.info(
+                "Remote fetch explicitly %s via enable_remote_fetch parameter",
+                "enabled" if enable_remote_fetch else "disabled",
+            )
 
-        self.generic_drug_names: Set[str] = set(_GENERIC_DRUG_NAMES)
-        self.brand_drug_names: Set[str] = set(_BRAND_DRUG_NAMES)
+        self.generic_drug_names: set[str] = set(_GENERIC_DRUG_NAMES)
+        self.brand_drug_names: set[str] = set(_BRAND_DRUG_NAMES)
         # Pre-compile word boundary patterns for efficient matching
-        self.generic_drug_patterns: Dict[re.Pattern, str] = {
-            re.compile(r'\b' + re.escape(name) + r'\b', re.IGNORECASE): name
-            for name in self.generic_drug_names
+        self.generic_drug_patterns: dict[re.Pattern, str] = {
+            re.compile(r"\b" + re.escape(name) + r"\b", re.IGNORECASE): name for name in self.generic_drug_names
         }
-        self.brand_drug_patterns: Dict[re.Pattern, str] = {
-            re.compile(r'\b' + re.escape(name) + r'\b', re.IGNORECASE): name
-            for name in self.brand_drug_names
+        self.brand_drug_patterns: dict[re.Pattern, str] = {
+            re.compile(r"\b" + re.escape(name) + r"\b", re.IGNORECASE): name for name in self.brand_drug_names
         }
-        self.cyp_roles: Dict[str, Dict[str, Set[str]]] = {}
-        self.mesh_to_therapeutic_area: Dict[str, str] = dict(_MESH_TO_THERAPEUTIC_AREA)
+        self.cyp_roles: dict[str, dict[str, set[str]]] = {}
+        self.mesh_to_therapeutic_area: dict[str, str] = dict(_MESH_TO_THERAPEUTIC_AREA)
 
         bundled_dir = Path(__file__).resolve().parent.parent / "data"
         if bundled_dir.exists():
             bundled_generic = bundled_dir / "drugs_generic.txt"
             if bundled_generic.exists():
                 try:
-                    self.generic_drug_names.update(
-                        self._load_lexicon_file(str(bundled_generic))
-                    )
+                    self.generic_drug_names.update(self._load_lexicon_file(str(bundled_generic)))
                     self._update_drug_patterns()
                     logger.info("Loaded comprehensive generic drug lexicon from %s", bundled_generic)
                 except ValueError as exc:
@@ -221,20 +219,20 @@ class PharmaceuticalProcessor:
                     "Drug detection coverage will be limited to built-in vocabulary. "
                     "For comprehensive coverage, provide DRUG_GENERIC_LEXICON environment variable "
                     "or see README for setup instructions.",
-                    bundled_generic
+                    bundled_generic,
                 )
                 if effective_auto_fetch:
                     logger.info("Auto-fetch enabled: creating comprehensive generic drug lexicon at %s", bundled_dir)
                     self._auto_fetch_lexicons(bundled_dir)
                 else:
-                    logger.info("Auto-fetch disabled: skip creating comprehensive generic drug lexicon. Set auto_fetch=True or AUTO_FETCH_DRUG_LEXICONS=true to enable.")
+                    logger.info(
+                        "Auto-fetch disabled: skip creating comprehensive generic drug lexicon. Set auto_fetch=True or AUTO_FETCH_DRUG_LEXICONS=true to enable."
+                    )
 
             bundled_brand = bundled_dir / "drugs_brand.txt"
             if bundled_brand.exists():
                 try:
-                    self.brand_drug_names.update(
-                        self._load_lexicon_file(str(bundled_brand))
-                    )
+                    self.brand_drug_names.update(self._load_lexicon_file(str(bundled_brand)))
                     self._update_drug_patterns()
                     logger.info("Loaded comprehensive brand drug lexicon from %s", bundled_brand)
                 except ValueError as exc:
@@ -245,13 +243,15 @@ class PharmaceuticalProcessor:
                     "Brand drug detection coverage will be limited to built-in vocabulary. "
                     "For comprehensive coverage, provide DRUG_BRAND_LEXICON environment variable "
                     "or see README for setup instructions.",
-                    bundled_brand
+                    bundled_brand,
                 )
                 if effective_auto_fetch:
                     logger.info("Auto-fetch enabled: creating comprehensive brand drug lexicon at %s", bundled_dir)
                     self._auto_fetch_lexicons(bundled_dir)
                 else:
-                    logger.info("Auto-fetch disabled: skip creating comprehensive brand drug lexicon. Set auto_fetch=True or AUTO_FETCH_DRUG_LEXICONS=true to enable.")
+                    logger.info(
+                        "Auto-fetch disabled: skip creating comprehensive brand drug lexicon. Set auto_fetch=True or AUTO_FETCH_DRUG_LEXICONS=true to enable."
+                    )
         else:
             logger.warning("Data directory not found - using minimal drug vocabularies")
 
@@ -284,13 +284,16 @@ class PharmaceuticalProcessor:
                 logger.info("Auto-fetch enabled: creating comprehensive CYP roles file at %s", bundled_dir)
                 self._auto_fetch_lexicons(bundled_dir)
             else:
-                logger.info("Auto-fetch disabled: skip creating comprehensive CYP roles file. Set auto_fetch=True or AUTO_FETCH_DRUG_LEXICONS=true to enable.")
+                logger.info(
+                    "Auto-fetch disabled: skip creating comprehensive CYP roles file. Set auto_fetch=True or AUTO_FETCH_DRUG_LEXICONS=true to enable."
+                )
 
         # Load external therapeutic area mapping
         mesh_areas_path = bundled_dir / "mesh_therapeutic_areas.json"
         if mesh_areas_path.exists():
             try:
                 import json
+
                 with mesh_areas_path.open("r", encoding="utf-8") as f:
                     external_mapping = json.load(f)
                 # Merge with defaults, external mapping takes precedence
@@ -316,9 +319,9 @@ class PharmaceuticalProcessor:
         self._enable_evidence_level: bool = _env_true("PHARMA_ENABLE_EVIDENCE_LEVEL", True)
 
         # Optional synonym maps and regulatory status store
-        self._synonym_canonical: Dict[str, str] = {}
-        self._synonym_groups: Dict[str, Set[str]] = {}
-        self._regulatory_status: Dict[str, List[Dict[str, Any]]] = {}
+        self._synonym_canonical: dict[str, str] = {}
+        self._synonym_groups: dict[str, set[str]] = {}
+        self._regulatory_status: dict[str, list[dict[str, Any]]] = {}
 
         try:
             self._load_drug_synonyms_from_env()
@@ -333,21 +336,19 @@ class PharmaceuticalProcessor:
         logger.info(
             "Drug lexicon loaded: %d generic drugs, %d brand drugs",
             len(self.generic_drug_names),
-            len(self.brand_drug_names)
+            len(self.brand_drug_names),
         )
 
     def _update_drug_patterns(self) -> None:
         """Update pre-compiled regex patterns when drug name sets change."""
         self.generic_drug_patterns = {
-            re.compile(r'\b' + re.escape(name) + r'\b', re.IGNORECASE): name
-            for name in self.generic_drug_names
+            re.compile(r"\b" + re.escape(name) + r"\b", re.IGNORECASE): name for name in self.generic_drug_names
         }
         self.brand_drug_patterns = {
-            re.compile(r'\b' + re.escape(name) + r'\b', re.IGNORECASE): name
-            for name in self.brand_drug_names
+            re.compile(r"\b" + re.escape(name) + r"\b", re.IGNORECASE): name for name in self.brand_drug_names
         }
 
-    def extract_drug_names(self, text: Optional[str]) -> List[Dict[str, Any]]:
+    def extract_drug_names(self, text: str | None) -> list[dict[str, Any]]:
         """Extract drug names from text with metadata.
 
         Returns a List[Dict[str, Any]] where each dictionary contains:
@@ -360,7 +361,7 @@ class PharmaceuticalProcessor:
         if not text:
             return []
 
-        candidates: Dict[str, Dict[str, Any]] = {}
+        candidates: dict[str, dict[str, Any]] = {}
 
         # Use word-boundary patterns for exact matching
         for pattern, name in self.generic_drug_patterns.items():
@@ -395,7 +396,7 @@ class PharmaceuticalProcessor:
 
         return sorted(candidates.values(), key=lambda item: (-item["confidence"], item["name"].lower()))
 
-    def extract_drug_name_strings(self, text: Optional[str]) -> List[str]:
+    def extract_drug_name_strings(self, text: str | None) -> list[str]:
         """Extract drug names as simple strings for basic consumers.
 
         Returns just the drug name strings without metadata.
@@ -403,16 +404,13 @@ class PharmaceuticalProcessor:
         """
         return [item["name"] for item in self.extract_drug_names(text)]
 
-    def extract_cyp_enzymes(self, text: Optional[str]) -> List[str]:
+    def extract_cyp_enzymes(self, text: str | None) -> list[str]:
         if not text:
             return []
-        matches = {
-            self._normalise_enzyme(match)
-            for match in _CYP_PATTERN.findall(text)
-        }
+        matches = {self._normalise_enzyme(match) for match in _CYP_PATTERN.findall(text)}
         return sorted(matches)
 
-    def annotate_cyp_roles(self, text: Optional[str]) -> Dict[str, Dict[str, List[str]]]:
+    def annotate_cyp_roles(self, text: str | None) -> dict[str, dict[str, list[str]]]:
         """Annotate CYP enzymes with their roles (substrates, inhibitors, inducers).
 
         Returns a dictionary mapping CYP enzymes to their roles and associated drugs:
@@ -428,15 +426,13 @@ class PharmaceuticalProcessor:
         if not detected_cyps:
             return {}
 
-        result: Dict[str, Dict[str, List[str]]] = {}
+        result: dict[str, dict[str, list[str]]] = {}
 
         # Use structured cyp_roles data if available
         if self.cyp_roles:
             for cyp in detected_cyps:
                 if cyp in self.cyp_roles:
-                    result[cyp] = {
-                        role: list(drugs) for role, drugs in self.cyp_roles[cyp].items()
-                    }
+                    result[cyp] = {role: list(drugs) for role, drugs in self.cyp_roles[cyp].items()}
                 else:
                     # Initialize empty roles for detected CYPs not in our database
                     result[cyp] = {"substrates": [], "inhibitors": [], "inducers": []}
@@ -448,7 +444,7 @@ class PharmaceuticalProcessor:
             detected_drugs = [item["name"] for item in self.extract_drug_names(text)]
 
             for cyp in detected_cyps:
-                roles: Dict[str, List[str]] = {"substrates": [], "inhibitors": [], "inducers": []}
+                roles: dict[str, list[str]] = {"substrates": [], "inhibitors": [], "inducers": []}
 
                 # Look for CYP mentions near role keywords
                 cyp_lower = cyp.lower()
@@ -461,7 +457,9 @@ class PharmaceuticalProcessor:
                         if any(keyword in lower_text for keyword in ["inhibit", "inhibitor", "inhibition"]):
                             if any(drug.lower() in lower_text for drug in detected_drugs):
                                 # If we have drug names, use those, otherwise mark as unknown
-                                roles["inhibitors"].extend(drug for drug in detected_drugs if drug.lower() in lower_text)
+                                roles["inhibitors"].extend(
+                                    drug for drug in detected_drugs if drug.lower() in lower_text
+                                )
                             else:
                                 roles["inhibitors"].append("unknown")
 
@@ -475,7 +473,9 @@ class PharmaceuticalProcessor:
                         # Find substrate patterns
                         if any(keyword in lower_text for keyword in ["substrate", "metabolize", "metabolism"]):
                             if any(drug.lower() in lower_text for drug in detected_drugs):
-                                roles["substrates"].extend(drug for drug in detected_drugs if drug.lower() in lower_text)
+                                roles["substrates"].extend(
+                                    drug for drug in detected_drugs if drug.lower() in lower_text
+                                )
                             else:
                                 roles["substrates"].append("unknown")
 
@@ -487,12 +487,12 @@ class PharmaceuticalProcessor:
 
         return result
 
-    def extract_pharmacokinetic_parameters(self, text: Optional[str]) -> Dict[str, Any]:
+    def extract_pharmacokinetic_parameters(self, text: str | None) -> dict[str, Any]:
         if not text:
             return {}
 
-        keyword_hits: Dict[str, Set[str]] = {key: set() for key in _PK_PATTERNS}
-        value_hits: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        keyword_hits: dict[str, set[str]] = {key: set() for key in _PK_PATTERNS}
+        value_hits: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
         for parameter, patterns in _PK_PATTERNS.items():
             for pattern in patterns:
@@ -521,22 +521,15 @@ class PharmaceuticalProcessor:
                 value_hits[parameter].append(entry)
                 keyword_hits.setdefault(parameter, set()).add(entry["text"])
 
-        output: Dict[str, Any] = {
-            key: sorted(values)
-            for key, values in keyword_hits.items()
-            if values
-        }
+        output: dict[str, Any] = {key: sorted(values) for key, values in keyword_hits.items() if values}
         if value_hits:
-            output["pharmacokinetic_values"] = {
-                key: value_hits[key]
-                for key in value_hits
-            }
+            output["pharmacokinetic_values"] = {key: value_hits[key] for key in value_hits}
         return output
 
-    def extract_dosage_information(self, text: Optional[str]) -> List[Dict[str, Any]]:
+    def extract_dosage_information(self, text: str | None) -> list[dict[str, Any]]:
         if not text:
             return []
-        entries: List[Dict[str, Any]] = []
+        entries: list[dict[str, Any]] = []
         for match in _DOSAGE_PATTERN.finditer(text):
             entry = {
                 "text": match.group(0),
@@ -546,7 +539,7 @@ class PharmaceuticalProcessor:
                 "frequency": (match.group("frequency") or "").lower() or None,
                 "confidence": 0.8,
             }
-            window = text[match.end(): match.end() + 40]
+            window = text[match.end() : match.end() + 40]
             duration_match = _DOSAGE_DURATION_PATTERN.search(window)
             if duration_match:
                 try:
@@ -561,17 +554,13 @@ class PharmaceuticalProcessor:
             entries.append(entry)
         return self._deduplicate_dicts(entries, key_fields=("text",))
 
-    def normalize_mesh_terms(self, mesh_terms: Optional[Iterable[str]]) -> List[str]:
+    def normalize_mesh_terms(self, mesh_terms: Iterable[str] | None) -> list[str]:
         if not mesh_terms:
             return []
-        normalized = {
-            re.sub(r"\s+", " ", str(term).strip()).lower()
-            for term in mesh_terms
-            if term
-        }
+        normalized = {re.sub(r"\s+", " ", str(term).strip()).lower() for term in mesh_terms if term}
         return sorted(normalized)
 
-    def normalize_species(self, species_data: Any) -> List[str]:
+    def normalize_species(self, species_data: Any) -> list[str]:
         """Normalize species data to consistent format.
 
         Handles various input formats (string, list, dict) and normalizes to
@@ -618,7 +607,7 @@ class PharmaceuticalProcessor:
             normalized = str(value).lower().strip()
 
             # Handle 'non-human' -> 'nonhuman'
-            normalized = normalized.replace('non-human', 'nonhuman')
+            normalized = normalized.replace("non-human", "nonhuman")
 
             # Map to standard vocabulary
             mapped = None
@@ -635,7 +624,7 @@ class PharmaceuticalProcessor:
 
         return sorted(normalized_set)
 
-    def normalize_study_types(self, study_type_data: Any) -> List[str]:
+    def normalize_study_types(self, study_type_data: Any) -> list[str]:
         """Normalize study type data to controlled vocabulary.
 
         Handles both single study_type and multiple study_types, normalizing
@@ -705,7 +694,7 @@ class PharmaceuticalProcessor:
 
         return sorted(normalized_set)
 
-    def normalize_publication_year(self, year_data: Any) -> Optional[int]:
+    def normalize_publication_year(self, year_data: Any) -> int | None:
         """Normalize publication year to consistent integer format.
 
         Handles various year formats and validates ranges.
@@ -725,12 +714,12 @@ class PharmaceuticalProcessor:
             year_str = str(int(year_data))
         elif isinstance(year_data, str):
             # Extract digits from string
-            year_match = re.search(r'\b(19|20)\d{2}\b', year_data)
+            year_match = re.search(r"\b(19|20)\d{2}\b", year_data)
             if year_match:
                 year_str = year_match.group()
         elif isinstance(year_data, dict):
             # Check both 'publication_year' and 'year' keys
-            year_str = str(year_data.get('publication_year', year_data.get('year', '')))
+            year_str = str(year_data.get("publication_year", year_data.get("year", "")))
 
         if not year_str:
             return None
@@ -746,7 +735,7 @@ class PharmaceuticalProcessor:
 
         return None
 
-    def normalize_pharmacokinetic_data(self, pk_data: Any) -> Dict[str, Any]:
+    def normalize_pharmacokinetic_data(self, pk_data: Any) -> dict[str, Any]:
         """Normalize pharmacokinetic data to consistent structure.
 
         Merges data from 'pharmacokinetics' and 'pharmacokinetic_values' fields
@@ -769,8 +758,8 @@ class PharmaceuticalProcessor:
 
         if isinstance(pk_data, dict):
             # Separate main PK data from values
-            pk_dict = {k: v for k, v in pk_data.items() if k != 'pharmacokinetic_values'}
-            pk_values_dict = pk_data.get('pharmacokinetic_values', {})
+            pk_dict = {k: v for k, v in pk_data.items() if k != "pharmacokinetic_values"}
+            pk_values_dict = pk_data.get("pharmacokinetic_values", {})
         elif isinstance(pk_data, (list, tuple)):
             # If it's a list, try to extract PK parameters
             for item in pk_data:
@@ -779,14 +768,14 @@ class PharmaceuticalProcessor:
 
         # Standard parameter name mapping
         param_mapping = {
-            'half_life': ['half-life', 't1/2', 't_half', 'elimination_half_life'],
-            'clearance': ['cl', 'cl/f', 'clearance', 'plasma_clearance'],
-            'auc': ['auc', 'area_under_curve', 'area_under_the_curve'],
-            'cmax': ['cmax', 'peak_concentration'],
-            'tmax': ['tmax', 'time_to_peak'],
-            'vd': ['vd', 'volume_distribution', 'volume_of_distribution', 'v_d'],
-            'bioavailability': ['f', 'bioavailability', 'absolute_bioavailability'],
-            'protein_binding': ['protein_binding', 'plasma_protein_binding'],
+            "half_life": ["half-life", "t1/2", "t_half", "elimination_half_life"],
+            "clearance": ["cl", "cl/f", "clearance", "plasma_clearance"],
+            "auc": ["auc", "area_under_curve", "area_under_the_curve"],
+            "cmax": ["cmax", "peak_concentration"],
+            "tmax": ["tmax", "time_to_peak"],
+            "vd": ["vd", "volume_distribution", "volume_of_distribution", "v_d"],
+            "bioavailability": ["f", "bioavailability", "absolute_bioavailability"],
+            "protein_binding": ["protein_binding", "plasma_protein_binding"],
         }
 
         # Process all PK data
@@ -801,7 +790,7 @@ class PharmaceuticalProcessor:
                         normalized_pk[standard_param] = value
                     elif isinstance(value, str):
                         # Try to extract numeric value
-                        num_match = re.search(r'(\d+(?:\.\d+)?)', value)
+                        num_match = re.search(r"(\d+(?:\.\d+)?)", value)
                         if num_match:
                             try:
                                 normalized_pk[standard_param] = float(num_match.group(1))
@@ -811,28 +800,28 @@ class PharmaceuticalProcessor:
 
         return normalized_pk
 
-    def identify_therapeutic_areas(self, mesh_terms: Optional[Iterable[str]]) -> List[str]:
+    def identify_therapeutic_areas(self, mesh_terms: Iterable[str] | None) -> list[str]:
         if not mesh_terms:
             return []
         normalized = self.normalize_mesh_terms(mesh_terms)
-        matched: Set[str] = set()
+        matched: set[str] = set()
         for term in normalized:
             for mesh_term, area in self.mesh_to_therapeutic_area.items():
                 if mesh_term in term:
                     matched.add(area)
         return sorted(matched)
 
-    def classify_drug_interaction_type(self, text: Optional[str]) -> List[str]:
+    def classify_drug_interaction_type(self, text: str | None) -> list[str]:
         if not text:
             return []
         lowered = text.lower()
-        matched: Set[str] = set()
+        matched: set[str] = set()
         for label, keywords in _INTERACTION_KEYWORDS.items():
             if any(keyword in lowered for keyword in keywords):
                 matched.add(label)
         return sorted(matched)
 
-    def normalize_species(self, species_data: Any) -> List[str]:
+    def normalize_species(self, species_data: Any) -> list[str]:
         """Normalize species data to consistent format.
 
         Args:
@@ -892,7 +881,7 @@ class PharmaceuticalProcessor:
 
         return sorted(normalized_set)
 
-    def normalize_study_types(self, study_type_data: Any) -> List[str]:
+    def normalize_study_types(self, study_type_data: Any) -> list[str]:
         """Normalize study type data to consistent format.
 
         Args:
@@ -960,7 +949,7 @@ class PharmaceuticalProcessor:
 
         return sorted(normalized_set)
 
-    def normalize_publication_year(self, year_data: Any) -> Optional[int]:
+    def normalize_publication_year(self, year_data: Any) -> int | None:
         """Normalize publication year to consistent integer format.
 
         Args:
@@ -990,7 +979,8 @@ class PharmaceuticalProcessor:
 
         # Extract year from string
         import re
-        year_match = re.search(r'\b(19|20)\d{2}\b', year_str)
+
+        year_match = re.search(r"\b(19|20)\d{2}\b", year_str)
 
         if not year_match:
             return None
@@ -1004,7 +994,7 @@ class PharmaceuticalProcessor:
 
         return year
 
-    def normalize_pharmacokinetic_data(self, pk_data: Any) -> Dict[str, float]:
+    def normalize_pharmacokinetic_data(self, pk_data: Any) -> dict[str, float]:
         """Normalize pharmacokinetic data to consistent format.
 
         Args:
@@ -1065,11 +1055,12 @@ class PharmaceuticalProcessor:
 
             # Extract numeric value
             import re
+
             if isinstance(param_value, (int, float)):
                 numeric_value = float(param_value)
             else:
                 # Extract from string
-                value_match = re.search(r'(\d+\.?\d*)', str(param_value))
+                value_match = re.search(r"(\d+\.?\d*)", str(param_value))
                 if value_match:
                     numeric_value = float(value_match.group(1))
                 else:
@@ -1079,7 +1070,7 @@ class PharmaceuticalProcessor:
 
         return normalized
 
-    def enhance_document_metadata(self, document: Dict[str, Any]) -> Dict[str, Any]:
+    def enhance_document_metadata(self, document: dict[str, Any]) -> dict[str, Any]:
         """Attach extraction results to the supplied document metadata."""
         enhanced = dict(document)
         metadata = dict(enhanced.get("metadata") or {})
@@ -1123,8 +1114,8 @@ class PharmaceuticalProcessor:
             try:
                 names = metadata.get("drug_names") or []
                 if names:
-                    name_map: Dict[str, str] = {}
-                    canon_names: Set[str] = set()
+                    name_map: dict[str, str] = {}
+                    canon_names: set[str] = set()
                     for n in names:
                         canon = self._canonicalize_drug_name(str(n))
                         if canon:
@@ -1135,7 +1126,7 @@ class PharmaceuticalProcessor:
                     if canon_names:
                         metadata["drug_canonical_names"] = sorted(canon_names)
                         # Equivalence groups per canonical
-                        eq_groups: Dict[str, List[str]] = {}
+                        eq_groups: dict[str, list[str]] = {}
                         for c in metadata["drug_canonical_names"]:
                             group = sorted(list(self._synonym_groups.get(c.lower(), set())))
                             if group:
@@ -1191,7 +1182,21 @@ class PharmaceuticalProcessor:
             # 6) PK signals summary (metadata-only)
             try:
                 pk = metadata.get("pharmacokinetics") or {}
-                signals = [k for k in ("auc", "cmax", "tmax", "half_life", "clearance", "vd", "volume_distribution", "bioavailability", "protein_binding") if k in pk and pk.get(k) is not None]
+                signals = [
+                    k
+                    for k in (
+                        "auc",
+                        "cmax",
+                        "tmax",
+                        "half_life",
+                        "clearance",
+                        "vd",
+                        "volume_distribution",
+                        "bioavailability",
+                        "protein_binding",
+                    )
+                    if k in pk and pk.get(k) is not None
+                ]
                 if signals:
                     metadata["pk_signals_present"] = sorted(list(set(signals)))
                     score = len(set(signals)) + (1 if metadata.get("pharmacokinetic_values") else 0)
@@ -1223,12 +1228,12 @@ class PharmaceuticalProcessor:
 
     def _deduplicate_dicts(
         self,
-        items: Iterable[Dict[str, Any]],
+        items: Iterable[dict[str, Any]],
         *,
         key_fields: Iterable[str],
-    ) -> List[Dict[str, Any]]:
-        seen: Set[tuple] = set()
-        results: List[Dict[str, Any]] = []
+    ) -> list[dict[str, Any]]:
+        seen: set[tuple] = set()
+        results: list[dict[str, Any]] = []
         fields = tuple(key_fields)
         for item in items:
             key = tuple(item.get(field) for field in fields)
@@ -1238,7 +1243,7 @@ class PharmaceuticalProcessor:
             results.append(item)
         return results
 
-    def _load_lexicon_file(self, path: str) -> Set[str]:
+    def _load_lexicon_file(self, path: str) -> set[str]:
         """Load lowercase drug names from a lexicon (one drug per line)."""
         file_path = Path(path)
         try:
@@ -1246,7 +1251,7 @@ class PharmaceuticalProcessor:
         except OSError as exc:
             raise ValueError(f"Unable to read lexicon file '{path}': {exc}") from exc
 
-        entries: Set[str] = set()
+        entries: set[str] = set()
         for line in text.splitlines():
             term = line.strip()
             if not term or term.startswith("#"):
@@ -1288,6 +1293,7 @@ class PharmaceuticalProcessor:
 
     def _ingest_synonyms_json(self, path: str) -> int:
         import json
+
         count = 0
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         if isinstance(data, list):
@@ -1300,8 +1306,8 @@ class PharmaceuticalProcessor:
                     count += 1
         return count
 
-    def _extract_synonym_names(self, row: Dict[str, Any]) -> Set[str]:
-        names: Set[str] = set()
+    def _extract_synonym_names(self, row: dict[str, Any]) -> set[str]:
+        names: set[str] = set()
         for key in ("brand", "generic", "iupac"):
             val = row.get(key)
             if val:
@@ -1313,12 +1319,14 @@ class PharmaceuticalProcessor:
         names = {n for n in names if n}
         return names
 
-    def _merge_synonym_group(self, names: Set[str]) -> None:
+    def _merge_synonym_group(self, names: set[str]) -> None:
         if not names:
             return
         # Prefer canonical as a known generic, else first lexeme
         generic_candidates = [n for n in names if n.lower() in self.generic_drug_names]
-        canonical = (generic_candidates[0] if generic_candidates else sorted(names, key=lambda s: (s.isupper(), len(s)))[0]).strip()
+        canonical = (
+            generic_candidates[0] if generic_candidates else sorted(names, key=lambda s: (s.isupper(), len(s)))[0]
+        ).strip()
         canon_key = canonical.lower()
 
         group = self._synonym_groups.get(canon_key, set())
@@ -1327,7 +1335,7 @@ class PharmaceuticalProcessor:
         for n in group:
             self._synonym_canonical[n.lower()] = canonical
 
-    def _canonicalize_drug_name(self, name: str) -> Optional[str]:
+    def _canonicalize_drug_name(self, name: str) -> str | None:
         if not name:
             return None
         key = name.strip().lower()
@@ -1371,10 +1379,10 @@ class PharmaceuticalProcessor:
         if count:
             logger.info("Loaded %d regulatory status entries", count)
 
-    def annotate_regulatory_status(self, canonical_drug_names: Iterable[str]) -> Dict[str, Any]:
-        entries: List[Dict[str, Any]] = []
-        tags: Set[str] = set()
-        agencies: Set[str] = set()
+    def annotate_regulatory_status(self, canonical_drug_names: Iterable[str]) -> dict[str, Any]:
+        entries: list[dict[str, Any]] = []
+        tags: set[str] = set()
+        agencies: set[str] = set()
         for n in canonical_drug_names:
             key = (n or "").strip().lower()
             for rec in self._regulatory_status.get(key, []):
@@ -1392,7 +1400,7 @@ class PharmaceuticalProcessor:
                         tags.add(f"approved:{ag}" if ag else "approved")
         return {"entries": entries, "tags": sorted(tags), "agencies": agencies}
 
-    def _compute_cyp_risk(self, text: Optional[str]) -> Tuple[int, str]:
+    def _compute_cyp_risk(self, text: str | None) -> tuple[int, str]:
         if not text:
             return 0, "none"
         annotations = self.annotate_cyp_roles(text)
@@ -1435,11 +1443,18 @@ class PharmaceuticalProcessor:
             label = "high"
         return score, label
 
-    def _derive_evidence_level(self, study_types: Iterable[str]) -> Optional[str]:
+    def _derive_evidence_level(self, study_types: Iterable[str]) -> str | None:
         tiers = {
             "very_high": {"systematic review", "meta-analysis", "meta analysis"},
             "high": {"randomized controlled trial", "rct", "phase iii", "phase 3"},
-            "moderate": {"phase ii", "phase 2", "observational study", "cohort study", "case-control study", "case-control studies"},
+            "moderate": {
+                "phase ii",
+                "phase 2",
+                "observational study",
+                "cohort study",
+                "case-control study",
+                "case-control studies",
+            },
             "low": {"case report", "preclinical study", "animal study", "in vitro", "in vitro study"},
         }
         normalized = {str(s or "").strip().lower() for s in study_types if s}
@@ -1450,7 +1465,7 @@ class PharmaceuticalProcessor:
                 return level
         return None
 
-    def _infer_species_from_text(self, text: Optional[str]) -> List[str]:
+    def _infer_species_from_text(self, text: str | None) -> list[str]:
         if not text:
             return []
         mapping = {
@@ -1462,7 +1477,7 @@ class PharmaceuticalProcessor:
             "in vitro": ["in vitro", "cell culture", "cultured cells", "tissue culture"],
         }
         lowered = text.lower()
-        detected: Set[str] = set()
+        detected: set[str] = set()
         for canonical, terms in mapping.items():
             if any(term in lowered for term in terms):
                 detected.add(canonical)
@@ -1513,96 +1528,358 @@ class PharmaceuticalProcessor:
         # Add additional comprehensive list targeting top 1000+ drugs
         additional_generics = {
             # Cardiovascular drugs
-            "amlodipine", "lisinopril", "metoprolol", "hydrochlorothiazide", "atenolol",
-            "carvedilol", "furosemide", "spironolactone", "valsartan", "losartan",
-            "enalapril", "captopril", "propranolol", "diltiazem", "verapamil",
-            "nifedipine", "felodipine", "isradipine", "nicardipine", "clevidipine",
-            "bisoprolol", "nebivolol", "labetalol", "nadolol", "timolol",
-            "chlorthalidone", "indapamide", "amiloride", "triamterene", "torsemide",
-            "bumetanide", "ethacrynic", "acetazolamide", "mannitol",
+            "amlodipine",
+            "lisinopril",
+            "metoprolol",
+            "hydrochlorothiazide",
+            "atenolol",
+            "carvedilol",
+            "furosemide",
+            "spironolactone",
+            "valsartan",
+            "losartan",
+            "enalapril",
+            "captopril",
+            "propranolol",
+            "diltiazem",
+            "verapamil",
+            "nifedipine",
+            "felodipine",
+            "isradipine",
+            "nicardipine",
+            "clevidipine",
+            "bisoprolol",
+            "nebivolol",
+            "labetalol",
+            "nadolol",
+            "timolol",
+            "chlorthalidone",
+            "indapamide",
+            "amiloride",
+            "triamterene",
+            "torsemide",
+            "bumetanide",
+            "ethacrynic",
+            "acetazolamide",
+            "mannitol",
             # Statins and lipid drugs
-            "atorvastatin", "simvastatin", "rosuvastatin", "pravastatin", "lovastatin",
-            "fluvastatin", "pitavastatin", "ezetimibe", "fenofibrate", "gemfibrozil",
-            "niacin", "cholestyramine", "colesevelam", "colestipol",
+            "atorvastatin",
+            "simvastatin",
+            "rosuvastatin",
+            "pravastatin",
+            "lovastatin",
+            "fluvastatin",
+            "pitavastatin",
+            "ezetimibe",
+            "fenofibrate",
+            "gemfibrozil",
+            "niacin",
+            "cholestyramine",
+            "colesevelam",
+            "colestipol",
             # Anticoagulants and antiplatelets
-            "warfarin", "heparin", "enoxaparin", "fondaparinux", "rivaroxaban",
-            "apixaban", "dabigatran", "edoxaban", "clopidogrel", "prasugrel",
-            "ticagrelor", "aspirin", "dipyridamole", "cilostazol", "pentoxifylline",
+            "warfarin",
+            "heparin",
+            "enoxaparin",
+            "fondaparinux",
+            "rivaroxaban",
+            "apixaban",
+            "dabigatran",
+            "edoxaban",
+            "clopidogrel",
+            "prasugrel",
+            "ticagrelor",
+            "aspirin",
+            "dipyridamole",
+            "cilostazol",
+            "pentoxifylline",
             # Diabetes medications
-            "metformin", "glyburide", "glipizide", "glimepiride", "pioglitazone",
-            "rosiglitazone", "sitagliptin", "saxagliptin", "linagliptin", "alogliptin",
-            "exenatide", "liraglutide", "dulaglutide", "semaglutide", "lixisenatide",
-            "insulin", "glargine", "detemir", "aspart", "lispro", "degludec",
-            "canagliflozin", "dapagliflozin", "empagliflozin", "ertugliflozin",
-            "acarbose", "miglitol", "nateglinide", "repaglinide",
+            "metformin",
+            "glyburide",
+            "glipizide",
+            "glimepiride",
+            "pioglitazone",
+            "rosiglitazone",
+            "sitagliptin",
+            "saxagliptin",
+            "linagliptin",
+            "alogliptin",
+            "exenatide",
+            "liraglutide",
+            "dulaglutide",
+            "semaglutide",
+            "lixisenatide",
+            "insulin",
+            "glargine",
+            "detemir",
+            "aspart",
+            "lispro",
+            "degludec",
+            "canagliflozin",
+            "dapagliflozin",
+            "empagliflozin",
+            "ertugliflozin",
+            "acarbose",
+            "miglitol",
+            "nateglinide",
+            "repaglinide",
             # Antibiotics
-            "amoxicillin", "ampicillin", "penicillin", "cephalexin", "cefazolin",
-            "ceftriaxone", "cefuroxime", "cefepime", "ceftaroline", "azithromycin",
-            "clarithromycin", "erythromycin", "doxycycline", "tetracycline", "minocycline",
-            "ciprofloxacin", "levofloxacin", "moxifloxacin", "ofloxacin", "norfloxacin",
-            "clindamycin", "metronidazole", "vancomycin", "linezolid", "daptomycin",
-            "trimethoprim", "sulfamethoxazole", "nitrofurantoin", "fosfomycin",
+            "amoxicillin",
+            "ampicillin",
+            "penicillin",
+            "cephalexin",
+            "cefazolin",
+            "ceftriaxone",
+            "cefuroxime",
+            "cefepime",
+            "ceftaroline",
+            "azithromycin",
+            "clarithromycin",
+            "erythromycin",
+            "doxycycline",
+            "tetracycline",
+            "minocycline",
+            "ciprofloxacin",
+            "levofloxacin",
+            "moxifloxacin",
+            "ofloxacin",
+            "norfloxacin",
+            "clindamycin",
+            "metronidazole",
+            "vancomycin",
+            "linezolid",
+            "daptomycin",
+            "trimethoprim",
+            "sulfamethoxazole",
+            "nitrofurantoin",
+            "fosfomycin",
             # Antifungals
-            "fluconazole", "itraconazole", "ketoconazole", "voriconazole", "posaconazole",
-            "amphotericin", "caspofungin", "micafungin", "anidulafungin", "terbinafine",
-            "nystatin", "clotrimazole", "miconazole", "econazole", "terconazole",
+            "fluconazole",
+            "itraconazole",
+            "ketoconazole",
+            "voriconazole",
+            "posaconazole",
+            "amphotericin",
+            "caspofungin",
+            "micafungin",
+            "anidulafungin",
+            "terbinafine",
+            "nystatin",
+            "clotrimazole",
+            "miconazole",
+            "econazole",
+            "terconazole",
             # Pain and inflammation
-            "ibuprofen", "naproxen", "diclofenac", "celecoxib", "meloxicam",
-            "indomethacin", "piroxicam", "sulindac", "ketoprofen", "ketorolac",
-            "acetaminophen", "tramadol", "morphine", "oxycodone", "hydrocodone",
-            "codeine", "fentanyl", "gabapentin", "pregabalin", "duloxetine",
+            "ibuprofen",
+            "naproxen",
+            "diclofenac",
+            "celecoxib",
+            "meloxicam",
+            "indomethacin",
+            "piroxicam",
+            "sulindac",
+            "ketoprofen",
+            "ketorolac",
+            "acetaminophen",
+            "tramadol",
+            "morphine",
+            "oxycodone",
+            "hydrocodone",
+            "codeine",
+            "fentanyl",
+            "gabapentin",
+            "pregabalin",
+            "duloxetine",
             # CNS medications
-            "sertraline", "fluoxetine", "paroxetine", "citalopram", "escitalopram",
-            "venlafaxine", "desvenlafaxine", "bupropion", "mirtazapine", "trazodone",
-            "amitriptyline", "nortriptyline", "imipramine", "desipramine", "clomipramine",
-            "lorazepam", "diazepam", "alprazolam", "clonazepam", "temazepam",
-            "zolpidem", "eszopiclone", "zaleplon", "ramelteon", "suvorexant",
+            "sertraline",
+            "fluoxetine",
+            "paroxetine",
+            "citalopram",
+            "escitalopram",
+            "venlafaxine",
+            "desvenlafaxine",
+            "bupropion",
+            "mirtazapine",
+            "trazodone",
+            "amitriptyline",
+            "nortriptyline",
+            "imipramine",
+            "desipramine",
+            "clomipramine",
+            "lorazepam",
+            "diazepam",
+            "alprazolam",
+            "clonazepam",
+            "temazepam",
+            "zolpidem",
+            "eszopiclone",
+            "zaleplon",
+            "ramelteon",
+            "suvorexant",
             # Antipsychotics
-            "risperidone", "olanzapine", "quetiapine", "aripiprazole", "ziprasidone",
-            "paliperidone", "asenapine", "lurasidone", "cariprazine", "brexpiprazole",
-            "haloperidol", "chlorpromazine", "fluphenazine", "perphenazine", "trifluoperazine",
+            "risperidone",
+            "olanzapine",
+            "quetiapine",
+            "aripiprazole",
+            "ziprasidone",
+            "paliperidone",
+            "asenapine",
+            "lurasidone",
+            "cariprazine",
+            "brexpiprazole",
+            "haloperidol",
+            "chlorpromazine",
+            "fluphenazine",
+            "perphenazine",
+            "trifluoperazine",
             # Anticonvulsants
-            "phenytoin", "carbamazepine", "valproic", "lamotrigine", "levetiracetam",
-            "topiramate", "oxcarbazepine", "lacosamide", "zonisamide", "eslicarbazepine",
-            "vigabatrin", "tiagabine", "gabapentin", "pregabalin",
+            "phenytoin",
+            "carbamazepine",
+            "valproic",
+            "lamotrigine",
+            "levetiracetam",
+            "topiramate",
+            "oxcarbazepine",
+            "lacosamide",
+            "zonisamide",
+            "eslicarbazepine",
+            "vigabatrin",
+            "tiagabine",
+            "gabapentin",
+            "pregabalin",
             # Respiratory medications
-            "albuterol", "ipratropium", "tiotropium", "formoterol", "salmeterol",
-            "budesonide", "fluticasone", "beclomethasone", "mometasone", "ciclesonide",
-            "montelukast", "zafirlukast", "zileuton", "theophylline", "aminophylline",
+            "albuterol",
+            "ipratropium",
+            "tiotropium",
+            "formoterol",
+            "salmeterol",
+            "budesonide",
+            "fluticasone",
+            "beclomethasone",
+            "mometasone",
+            "ciclesonide",
+            "montelukast",
+            "zafirlukast",
+            "zileuton",
+            "theophylline",
+            "aminophylline",
             # Gastrointestinal
-            "omeprazole", "lansoprazole", "esomeprazole", "pantoprazole", "rabeprazole",
-            "dexlansoprazole", "ranitidine", "famotidine", "cimetidine", "nizatidine",
-            "metoclopramide", "ondansetron", "granisetron", "dolasetron", "palonosetron",
-            "simethicone", "loperamide", "bismuth", "sucralfate", "misoprostol",
+            "omeprazole",
+            "lansoprazole",
+            "esomeprazole",
+            "pantoprazole",
+            "rabeprazole",
+            "dexlansoprazole",
+            "ranitidine",
+            "famotidine",
+            "cimetidine",
+            "nizatidine",
+            "metoclopramide",
+            "ondansetron",
+            "granisetron",
+            "dolasetron",
+            "palonosetron",
+            "simethicone",
+            "loperamide",
+            "bismuth",
+            "sucralfate",
+            "misoprostol",
             # Thyroid medications
-            "levothyroxine", "liothyronine", "methimazole", "propylthiouracil", "radioiodine",
+            "levothyroxine",
+            "liothyronine",
+            "methimazole",
+            "propylthiouracil",
+            "radioiodine",
             # Osteoporosis
-            "alendronate", "risedronate", "ibandronate", "zoledronic", "denosumab",
-            "raloxifene", "calcitonin", "teriparatide", "abaloparatide",
+            "alendronate",
+            "risedronate",
+            "ibandronate",
+            "zoledronic",
+            "denosumab",
+            "raloxifene",
+            "calcitonin",
+            "teriparatide",
+            "abaloparatide",
             # Immunosuppressants
-            "cyclosporine", "tacrolimus", "sirolimus", "everolimus", "mycophenolate",
-            "azathioprine", "methotrexate", "leflunomide", "hydroxychloroquine", "sulfasalazine",
+            "cyclosporine",
+            "tacrolimus",
+            "sirolimus",
+            "everolimus",
+            "mycophenolate",
+            "azathioprine",
+            "methotrexate",
+            "leflunomide",
+            "hydroxychloroquine",
+            "sulfasalazine",
             # Cancer chemotherapy
-            "doxorubicin", "cyclophosphamide", "methotrexate", "fluorouracil", "carboplatin",
-            "cisplatin", "oxaliplatin", "paclitaxel", "docetaxel", "gemcitabine",
-            "irinotecan", "topotecan", "etoposide", "bleomycin", "vincristine",
-            "vinblastine", "vinorelbine", "capecitabine", "temozolomide", "dacarbazine",
+            "doxorubicin",
+            "cyclophosphamide",
+            "methotrexate",
+            "fluorouracil",
+            "carboplatin",
+            "cisplatin",
+            "oxaliplatin",
+            "paclitaxel",
+            "docetaxel",
+            "gemcitabine",
+            "irinotecan",
+            "topotecan",
+            "etoposide",
+            "bleomycin",
+            "vincristine",
+            "vinblastine",
+            "vinorelbine",
+            "capecitabine",
+            "temozolomide",
+            "dacarbazine",
             # Targeted cancer therapy
-            "imatinib", "dasatinib", "nilotinib", "bosutinib", "ponatinib",
-            "erlotinib", "gefitinib", "afatinib", "osimertinib", "sorafenib",
-            "sunitinib", "pazopanib", "regorafenib", "cabozantinib", "lenvatinib",
-            "bevacizumab", "trastuzumab", "rituximab", "cetuximab", "panitumumab",
+            "imatinib",
+            "dasatinib",
+            "nilotinib",
+            "bosutinib",
+            "ponatinib",
+            "erlotinib",
+            "gefitinib",
+            "afatinib",
+            "osimertinib",
+            "sorafenib",
+            "sunitinib",
+            "pazopanib",
+            "regorafenib",
+            "cabozantinib",
+            "lenvatinib",
+            "bevacizumab",
+            "trastuzumab",
+            "rituximab",
+            "cetuximab",
+            "panitumumab",
             # Vitamins and supplements
-            "vitamin", "folic", "cyanocobalamin", "thiamine", "riboflavin",
-            "niacin", "pyridoxine", "biotin", "pantothenic", "ascorbic",
-            "ergocalciferol", "cholecalciferol", "phytonadione", "tocopherol",
-            "calcium", "magnesium", "iron", "zinc", "selenium", "potassium"
+            "vitamin",
+            "folic",
+            "cyanocobalamin",
+            "thiamine",
+            "riboflavin",
+            "niacin",
+            "pyridoxine",
+            "biotin",
+            "pantothenic",
+            "ascorbic",
+            "ergocalciferol",
+            "cholecalciferol",
+            "phytonadione",
+            "tocopherol",
+            "calcium",
+            "magnesium",
+            "iron",
+            "zinc",
+            "selenium",
+            "potassium",
         }
 
         comprehensive_generics.update(additional_generics)
 
         # Write to file
-        with file_path.open('w', encoding='utf-8') as f:
+        with file_path.open("w", encoding="utf-8") as f:
             f.write("# Comprehensive generic drug names for pharmaceutical processing\n")
             f.write("# One drug name per line, case insensitive\n")
             f.write("# Comments start with #\n\n")
@@ -1617,84 +1894,339 @@ class PharmaceuticalProcessor:
         # Add additional comprehensive list of brand names
         additional_brands = {
             # Cardiovascular brands
-            "norvasc", "prinivil", "zestril", "lopressor", "toprol", "tenormin",
-            "coreg", "lasix", "aldactone", "diovan", "cozaar", "vasotec",
-            "capoten", "inderal", "cardizem", "calan", "isoptin", "adalat",
-            "procardia", "plendil", "dynacirc", "cardene", "cleviprex", "bystolic",
-            "normodyne", "trandate", "corgard", "timoptic", "hygroton", "lozol",
-            "midamor", "dyrenium", "demadex", "bumex", "diamox", "osmitrol",
+            "norvasc",
+            "prinivil",
+            "zestril",
+            "lopressor",
+            "toprol",
+            "tenormin",
+            "coreg",
+            "lasix",
+            "aldactone",
+            "diovan",
+            "cozaar",
+            "vasotec",
+            "capoten",
+            "inderal",
+            "cardizem",
+            "calan",
+            "isoptin",
+            "adalat",
+            "procardia",
+            "plendil",
+            "dynacirc",
+            "cardene",
+            "cleviprex",
+            "bystolic",
+            "normodyne",
+            "trandate",
+            "corgard",
+            "timoptic",
+            "hygroton",
+            "lozol",
+            "midamor",
+            "dyrenium",
+            "demadex",
+            "bumex",
+            "diamox",
+            "osmitrol",
             # Statin brands
-            "lipitor", "zocor", "crestor", "pravachol", "mevacor", "lescol",
-            "livalo", "zetia", "tricor", "lopid", "niaspan", "questran",
-            "welchol", "colestid",
+            "lipitor",
+            "zocor",
+            "crestor",
+            "pravachol",
+            "mevacor",
+            "lescol",
+            "livalo",
+            "zetia",
+            "tricor",
+            "lopid",
+            "niaspan",
+            "questran",
+            "welchol",
+            "colestid",
             # Anticoagulant brands
-            "coumadin", "lovenox", "arixtra", "xarelto", "eliquis", "pradaxa",
-            "savaysa", "plavix", "effient", "brilinta", "pletal", "pentoxil",
+            "coumadin",
+            "lovenox",
+            "arixtra",
+            "xarelto",
+            "eliquis",
+            "pradaxa",
+            "savaysa",
+            "plavix",
+            "effient",
+            "brilinta",
+            "pletal",
+            "pentoxil",
             # Diabetes brands
-            "glucophage", "diabeta", "micronase", "glucotrol", "amaryl", "actos",
-            "avandia", "januvia", "onglyza", "tradjenta", "nesina", "byetta",
-            "victoza", "trulicity", "ozempic", "adlyxin", "lantus", "levemir",
-            "novolog", "humalog", "tresiba", "invokana", "farxiga", "jardiance",
-            "steglatro", "precose", "glyset", "starlix", "prandin",
+            "glucophage",
+            "diabeta",
+            "micronase",
+            "glucotrol",
+            "amaryl",
+            "actos",
+            "avandia",
+            "januvia",
+            "onglyza",
+            "tradjenta",
+            "nesina",
+            "byetta",
+            "victoza",
+            "trulicity",
+            "ozempic",
+            "adlyxin",
+            "lantus",
+            "levemir",
+            "novolog",
+            "humalog",
+            "tresiba",
+            "invokana",
+            "farxiga",
+            "jardiance",
+            "steglatro",
+            "precose",
+            "glyset",
+            "starlix",
+            "prandin",
             # Antibiotic brands
-            "amoxil", "ampicillin", "penicillin", "keflex", "ancef", "rocephin",
-            "ceftin", "maxipime", "teflaro", "zithromax", "biaxin", "ery-tab",
-            "erythrocin", "vibramycin", "sumycin", "minocin", "cipro", "levaquin",
-            "avelox", "floxin", "noroxin", "cleocin", "flagyl", "vancocin",
-            "zyvox", "cubicin", "bactrim", "septra", "macrobid", "monurol",
+            "amoxil",
+            "ampicillin",
+            "penicillin",
+            "keflex",
+            "ancef",
+            "rocephin",
+            "ceftin",
+            "maxipime",
+            "teflaro",
+            "zithromax",
+            "biaxin",
+            "ery-tab",
+            "erythrocin",
+            "vibramycin",
+            "sumycin",
+            "minocin",
+            "cipro",
+            "levaquin",
+            "avelox",
+            "floxin",
+            "noroxin",
+            "cleocin",
+            "flagyl",
+            "vancocin",
+            "zyvox",
+            "cubicin",
+            "bactrim",
+            "septra",
+            "macrobid",
+            "monurol",
             # Antifungal brands
-            "diflucan", "sporanox", "nizoral", "vfend", "noxafil", "fungizone",
-            "cancidas", "eraxis", "ecalta", "lamisil", "mycostatin", "lotrimin",
-            "monistat", "spectazole", "terazol",
+            "diflucan",
+            "sporanox",
+            "nizoral",
+            "vfend",
+            "noxafil",
+            "fungizone",
+            "cancidas",
+            "eraxis",
+            "ecalta",
+            "lamisil",
+            "mycostatin",
+            "lotrimin",
+            "monistat",
+            "spectazole",
+            "terazol",
             # Pain/inflammation brands
-            "advil", "motrin", "aleve", "naprosyn", "voltaren", "celebrex",
-            "mobic", "indocin", "feldene", "clinoril", "orudis", "toradol",
-            "tylenol", "ultram", "ms contin", "oxycontin", "vicodin", "norco",
-            "percocet", "duragesic", "neurontin", "lyrica", "cymbalta",
+            "advil",
+            "motrin",
+            "aleve",
+            "naprosyn",
+            "voltaren",
+            "celebrex",
+            "mobic",
+            "indocin",
+            "feldene",
+            "clinoril",
+            "orudis",
+            "toradol",
+            "tylenol",
+            "ultram",
+            "ms contin",
+            "oxycontin",
+            "vicodin",
+            "norco",
+            "percocet",
+            "duragesic",
+            "neurontin",
+            "lyrica",
+            "cymbalta",
             # CNS brands
-            "zoloft", "prozac", "paxil", "celexa", "lexapro", "effexor",
-            "pristiq", "wellbutrin", "zyban", "remeron", "desyrel", "elavil",
-            "pamelor", "tofranil", "norpramin", "anafranil", "ativan", "valium",
-            "xanax", "klonopin", "restoril", "ambien", "lunesta", "sonata",
-            "rozerem", "belsomra",
+            "zoloft",
+            "prozac",
+            "paxil",
+            "celexa",
+            "lexapro",
+            "effexor",
+            "pristiq",
+            "wellbutrin",
+            "zyban",
+            "remeron",
+            "desyrel",
+            "elavil",
+            "pamelor",
+            "tofranil",
+            "norpramin",
+            "anafranil",
+            "ativan",
+            "valium",
+            "xanax",
+            "klonopin",
+            "restoril",
+            "ambien",
+            "lunesta",
+            "sonata",
+            "rozerem",
+            "belsomra",
             # Antipsychotic brands
-            "risperdal", "zyprexa", "seroquel", "abilify", "geodon", "invega",
-            "saphris", "latuda", "vraylar", "rexulti", "haldol", "thorazine",
-            "prolixin", "trilafon", "stelazine",
+            "risperdal",
+            "zyprexa",
+            "seroquel",
+            "abilify",
+            "geodon",
+            "invega",
+            "saphris",
+            "latuda",
+            "vraylar",
+            "rexulti",
+            "haldol",
+            "thorazine",
+            "prolixin",
+            "trilafon",
+            "stelazine",
             # Anticonvulsant brands
-            "dilantin", "tegretol", "depakote", "lamictal", "keppra", "topamax",
-            "trileptal", "vimpat", "zonegran", "aptiom", "sabril", "gabitril",
+            "dilantin",
+            "tegretol",
+            "depakote",
+            "lamictal",
+            "keppra",
+            "topamax",
+            "trileptal",
+            "vimpat",
+            "zonegran",
+            "aptiom",
+            "sabril",
+            "gabitril",
             # Respiratory brands
-            "proventil", "ventolin", "atrovent", "spiriva", "foradil", "serevent",
-            "pulmicort", "flovent", "vanceril", "qvar", "asmanex", "alvesco",
-            "singulair", "accolate", "zyflo", "theo-dur", "phyllocontin",
+            "proventil",
+            "ventolin",
+            "atrovent",
+            "spiriva",
+            "foradil",
+            "serevent",
+            "pulmicort",
+            "flovent",
+            "vanceril",
+            "qvar",
+            "asmanex",
+            "alvesco",
+            "singulair",
+            "accolate",
+            "zyflo",
+            "theo-dur",
+            "phyllocontin",
             # GI brands
-            "prilosec", "prevacid", "nexium", "protonix", "aciphex", "dexilant",
-            "zantac", "pepcid", "tagamet", "axid", "reglan", "zofran", "kytril",
-            "anzemet", "aloxi", "gas-x", "imodium", "pepto-bismol", "carafate",
+            "prilosec",
+            "prevacid",
+            "nexium",
+            "protonix",
+            "aciphex",
+            "dexilant",
+            "zantac",
+            "pepcid",
+            "tagamet",
+            "axid",
+            "reglan",
+            "zofran",
+            "kytril",
+            "anzemet",
+            "aloxi",
+            "gas-x",
+            "imodium",
+            "pepto-bismol",
+            "carafate",
             "cytotec",
             # Thyroid brands
-            "synthroid", "cytomel", "tapazole", "ptu",
+            "synthroid",
+            "cytomel",
+            "tapazole",
+            "ptu",
             # Osteoporosis brands
-            "fosamax", "actonel", "boniva", "reclast", "prolia", "evista",
-            "miacalcin", "forteo", "tymlos",
+            "fosamax",
+            "actonel",
+            "boniva",
+            "reclast",
+            "prolia",
+            "evista",
+            "miacalcin",
+            "forteo",
+            "tymlos",
             # Immunosuppressant brands
-            "sandimmune", "neoral", "prograf", "rapamune", "zortress", "cellcept",
-            "imuran", "rheumatrex", "arava", "plaquenil", "azulfidine",
+            "sandimmune",
+            "neoral",
+            "prograf",
+            "rapamune",
+            "zortress",
+            "cellcept",
+            "imuran",
+            "rheumatrex",
+            "arava",
+            "plaquenil",
+            "azulfidine",
             # Cancer brands
-            "adriamycin", "cytoxan", "adrucil", "paraplatin", "platinol", "eloxatin",
-            "taxol", "taxotere", "gemzar", "camptosar", "hycamtin", "toposar",
-            "blenoxane", "oncovin", "velban", "navelbine", "xeloda", "temodar",
-            "dtic-dome", "gleevec", "sprycel", "tasigna", "bosulif", "iclusig",
-            "tarceva", "iressa", "gilotrif", "tagrisso", "nexavar", "sutent",
-            "votrient", "stivarga", "cometriq", "lenvima", "avastin", "herceptin",
-            "rituxan", "erbitux", "vectibix"
+            "adriamycin",
+            "cytoxan",
+            "adrucil",
+            "paraplatin",
+            "platinol",
+            "eloxatin",
+            "taxol",
+            "taxotere",
+            "gemzar",
+            "camptosar",
+            "hycamtin",
+            "toposar",
+            "blenoxane",
+            "oncovin",
+            "velban",
+            "navelbine",
+            "xeloda",
+            "temodar",
+            "dtic-dome",
+            "gleevec",
+            "sprycel",
+            "tasigna",
+            "bosulif",
+            "iclusig",
+            "tarceva",
+            "iressa",
+            "gilotrif",
+            "tagrisso",
+            "nexavar",
+            "sutent",
+            "votrient",
+            "stivarga",
+            "cometriq",
+            "lenvima",
+            "avastin",
+            "herceptin",
+            "rituxan",
+            "erbitux",
+            "vectibix",
         }
 
         comprehensive_brands.update(additional_brands)
 
         # Write to file
-        with file_path.open('w', encoding='utf-8') as f:
+        with file_path.open("w", encoding="utf-8") as f:
             f.write("# Comprehensive brand drug names for pharmaceutical processing\n")
             f.write("# One drug name per line, case insensitive\n")
             f.write("# Comments start with #\n\n")
@@ -1732,13 +2264,13 @@ class PharmaceuticalProcessor:
             ("CYP3A4", "inducer", "carbamazepine"),
         ]
 
-        with file_path.open('w', encoding='utf-8', newline='') as f:
+        with file_path.open("w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             for row in cyp_data:
                 writer.writerow(row)
 
-    def _load_cyp_roles_file(self, path: str) -> Dict[str, Dict[str, Set[str]]]:
-        roles: Dict[str, Dict[str, Set[str]]] = {}
+    def _load_cyp_roles_file(self, path: str) -> dict[str, dict[str, set[str]]]:
+        roles: dict[str, dict[str, set[str]]] = {}
         file_path = Path(path)
         try:
             with file_path.open("r", encoding="utf-8", newline="") as handle:
@@ -1764,7 +2296,7 @@ class PharmaceuticalProcessor:
         return roles
 
     @staticmethod
-    def _normalise_role(role: str) -> Optional[str]:
+    def _normalise_role(role: str) -> str | None:
         lowered = role.lower()
         if lowered.startswith("substrate"):
             return "substrates"
@@ -1775,7 +2307,7 @@ class PharmaceuticalProcessor:
         return None
 
     @staticmethod
-    def extract_pk_terms(text: str) -> List[str]:
+    def extract_pk_terms(text: str) -> list[str]:
         """Extract pharmacokinetic terms from text.
 
         Args:
@@ -1796,7 +2328,7 @@ class PharmaceuticalProcessor:
         return sorted(found_terms)
 
     @staticmethod
-    def extract_cyp_enzyme_strings(text: str) -> List[str]:
+    def extract_cyp_enzyme_strings(text: str) -> list[str]:
         """Extract CYP enzyme strings from text.
 
         Args:
@@ -1820,13 +2352,13 @@ class PharmaceuticalProcessor:
             normalized = f"CYP{normalized}"
         return normalized
 
-    def get_cyp_roles(self) -> Dict[str, Dict[str, Set[str]]]:
+    def get_cyp_roles(self) -> dict[str, dict[str, set[str]]]:
         return deepcopy(self.cyp_roles)
 
-    def annotate_cyp_roles(self, text: Optional[str]) -> List[Dict[str, Any]]:
+    def annotate_cyp_roles(self, text: str | None) -> list[dict[str, Any]]:
         if not text or not self.cyp_roles:
             return []
-        annotations: List[Dict[str, Any]] = []
+        annotations: list[dict[str, Any]] = []
         for enzyme in self.extract_cyp_enzymes(text):
             role_map = self.cyp_roles.get(enzyme)
             if not role_map:
@@ -1834,9 +2366,9 @@ class PharmaceuticalProcessor:
             roles = [role for role, drugs in role_map.items() if drugs]
             evidence = {role: sorted(drugs) for role, drugs in role_map.items() if drugs}
             if roles:
-                evidence_str = "; ".join(
-                    f"{role}: {', '.join(drugs)}" for role, drugs in evidence.items()
-                ) if evidence else ""
+                evidence_str = (
+                    "; ".join(f"{role}: {', '.join(drugs)}" for role, drugs in evidence.items()) if evidence else ""
+                )
                 annotations.append(
                     {
                         "enzyme": enzyme,
@@ -1850,7 +2382,6 @@ class PharmaceuticalProcessor:
         pattern = re.compile(rf"\b{re.escape(term)}\b", re.IGNORECASE)
         match = pattern.search(text)
         return match.group(0) if match else term
-
 
     @staticmethod
     def download_default_lexicons(target_dir: str = "./data") -> bool:

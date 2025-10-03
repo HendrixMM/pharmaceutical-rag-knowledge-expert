@@ -13,13 +13,18 @@ Design Principles:
 - Clean error handling: Structured exceptions and logging
 - NGC-independent: Future-proof against March 2026 deprecation
 """
-
-import os
 import logging
+import os
 import time
-import re
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TYPE_CHECKING
+from typing import Union
+
 import requests
-from typing import List, Dict, Any, Optional, Union, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     # Import for type hints only to avoid circular dependencies
@@ -27,14 +32,15 @@ if TYPE_CHECKING:
         from openai.types.chat import ChatCompletion
     except ImportError:
         ChatCompletion = Any
-from dataclasses import dataclass
 from contextlib import contextmanager
+from dataclasses import dataclass
 
 # Deferred OpenAI imports for self-hosted compatibility
 # OpenAI SDK is only required when cloud functionality is actually used
 OPENAI_AVAILABLE = False
 _OPENAI_IMPORT_ERROR = None
 _OPENAI_MODULES = None
+
 
 def _import_openai_modules():
     """Import OpenAI modules with deferred loading for self-hosted compatibility."""
@@ -44,25 +50,19 @@ def _import_openai_modules():
         return _OPENAI_MODULES
 
     try:
-        from openai import (
-            OpenAI,
-            APIError,
-            APIStatusError,
-            RateLimitError,
-            APIConnectionError,
-        )
+        from openai import APIConnectionError, APIError, APIStatusError, OpenAI, RateLimitError
         from openai.types import CreateEmbeddingResponse
         from openai.types.chat import ChatCompletion
 
         _OPENAI_MODULES = {
-            'OpenAI': OpenAI,
-            'APIError': APIError,
-            'APIStatusError': APIStatusError,
-            'RateLimitError': RateLimitError,
-            'APIConnectionError': APIConnectionError,
-            'CreateEmbeddingResponse': CreateEmbeddingResponse,
-            'ChatCompletion': ChatCompletion,
-            'OPENAI_EXCEPTIONS': (APIError, APIStatusError, RateLimitError, APIConnectionError)
+            "OpenAI": OpenAI,
+            "APIError": APIError,
+            "APIStatusError": APIStatusError,
+            "RateLimitError": RateLimitError,
+            "APIConnectionError": APIConnectionError,
+            "CreateEmbeddingResponse": CreateEmbeddingResponse,
+            "ChatCompletion": ChatCompletion,
+            "OPENAI_EXCEPTIONS": (APIError, APIStatusError, RateLimitError, APIConnectionError),
         }
 
         OPENAI_AVAILABLE = True
@@ -75,6 +75,7 @@ def _import_openai_modules():
             f"OpenAI SDK not available for cloud operations: {str(e)}. "
             "Install with: pip install 'openai>=1.0.0,<2.0.0' or use self-hosted endpoints only."
         )
+
 
 logger = logging.getLogger(__name__)
 
@@ -104,9 +105,11 @@ def _extract_user_text(messages: List[Dict[str, str]]) -> str:
             return str(m.get("content", ""))
     return ""
 
+
 @dataclass
 class NVIDIABuildConfig:
     """Configuration for NVIDIA Build platform access."""
+
     base_url: str = "https://integrate.api.nvidia.com/v1"
     api_key: Optional[str] = None
     timeout: int = 60
@@ -145,12 +148,15 @@ class NVIDIABuildConfig:
     enable_rerank_model_mapping: bool = False
     nemo_reranking_endpoint: Optional[str] = None
 
+
 class NVIDIABuildError(Exception):
     """Custom exception for NVIDIA Build API errors."""
+
     def __init__(self, message: str, status_code: Optional[int] = None, response_data: Optional[Dict] = None):
         super().__init__(message)
         self.status_code = status_code
         self.response_data = response_data
+
 
 class PharmaceuticalConfigError(NVIDIABuildError):
     """
@@ -160,7 +166,7 @@ class PharmaceuticalConfigError(NVIDIABuildError):
     with regulatory requirements. These errors require immediate attention
     in pharmaceutical environments to ensure compliance.
     """
-    pass
+
 
 class PharmaceuticalQueryError(NVIDIABuildError):
     """
@@ -170,7 +176,7 @@ class PharmaceuticalQueryError(NVIDIABuildError):
     encounter errors that could compromise medical research accuracy or safety.
     These errors are logged with high priority for pharmaceutical audit trails.
     """
-    pass
+
 
 class PharmaceuticalResponseError(NVIDIABuildError):
     """
@@ -180,7 +186,7 @@ class PharmaceuticalResponseError(NVIDIABuildError):
     pharmaceutical queries. Ensures medical research queries receive proper
     error handling and fallback responses for regulatory compliance.
     """
-    pass
+
 
 class OpenAIWrapper:
     """
@@ -194,14 +200,14 @@ class OpenAIWrapper:
     PHARMA_MODELS = {
         "embedding": {
             "preferred": "nvidia/nv-embedqa-e5-v5",  # Q&A optimized for medical
-            "fallback": "nvidia/nv-embed-v1",        # General purpose
-            "dimensions": {"nvidia/nv-embedqa-e5-v5": 1024, "nvidia/nv-embed-v1": 4096}
+            "fallback": "nvidia/nv-embed-v1",  # General purpose
+            "dimensions": {"nvidia/nv-embedqa-e5-v5": 1024, "nvidia/nv-embed-v1": 4096},
         },
         "chat": {
             "preferred": "meta/llama-3.1-8b-instruct",  # Advanced reasoning
             "temperature_pharma": 0.1,  # Conservative for medical accuracy
-            "max_tokens_pharma": 1000   # Balanced response length
-        }
+            "max_tokens_pharma": 1000,  # Balanced response length
+        },
     }
 
     def __init__(self, config: Optional[NVIDIABuildConfig] = None):
@@ -228,7 +234,7 @@ class OpenAIWrapper:
             self._initialization_params = {
                 "timeout": self.config.timeout,
                 "max_retries": self.config.max_retries,
-                "base_url": self.config.base_url
+                "base_url": self.config.base_url,
             }
             logger.info("OpenAI wrapper initialized in lazy mode (no API key provided)")
         else:
@@ -252,8 +258,8 @@ class OpenAIWrapper:
                 else _safe_float(os.getenv("PHARMA_BUDGET_LIMIT_USD"))
             ),
             "enable_cost_tracking": self.config.enable_cost_per_query_tracking
-                if self.config.enable_cost_per_query_tracking is not None
-                else _safe_bool(os.getenv("PHARMA_COST_PER_QUERY_TRACKING"), True),
+            if self.config.enable_cost_per_query_tracking is not None
+            else _safe_bool(os.getenv("PHARMA_COST_PER_QUERY_TRACKING"), True),
             "total_requests": 0,
             "total_tokens": 0,
             "query_types": {"drug_interaction": 0, "pharmacokinetics": 0, "clinical_trial": 0, "general": 0},
@@ -271,7 +277,7 @@ class OpenAIWrapper:
         try:
             # Import OpenAI modules when actually needed
             openai_modules = _import_openai_modules()
-            OpenAI = openai_modules['OpenAI']
+            OpenAI = openai_modules["OpenAI"]
 
             # Try with timeout and max_retries parameters
             client_kwargs = {
@@ -291,11 +297,7 @@ class OpenAIWrapper:
 
             # Check if OpenAI client supports timeout and max_retries parameters
             try:
-                self.client = OpenAI(
-                    timeout=timeout,
-                    max_retries=max_retries,
-                    **client_kwargs
-                )
+                self.client = OpenAI(timeout=timeout, max_retries=max_retries, **client_kwargs)
             except TypeError as te:
                 # Fall back to defaults if parameters not supported
                 logger.warning(
@@ -349,31 +351,31 @@ class OpenAIWrapper:
             # Check if this is an OpenAI exception (only if OpenAI is available)
             is_openai_exception = False
             if OPENAI_AVAILABLE and _OPENAI_MODULES:
-                openai_exceptions = _OPENAI_MODULES.get('OPENAI_EXCEPTIONS', ())
+                openai_exceptions = _OPENAI_MODULES.get("OPENAI_EXCEPTIONS", ())
                 is_openai_exception = isinstance(e, openai_exceptions)
 
             if is_openai_exception:
                 logger.error(f"{operation} failed after {response_time}ms: {str(e)}")
                 # Extract status code from OpenAI error
-                status_code = getattr(e, 'status_code', None)
-                response_data = getattr(e, 'response', None)
+                status_code = getattr(e, "status_code", None)
+                response_data = getattr(e, "response", None)
 
                 raise NVIDIABuildError(
-                    f"{operation} failed: {str(e)}",
-                    status_code=status_code,
-                    response_data=response_data
+                    f"{operation} failed: {str(e)}", status_code=status_code, response_data=response_data
                 )
             else:
                 logger.error(f"{operation} failed after {response_time}ms: {str(e)}")
                 raise NVIDIABuildError(f"{operation} failed: {str(e)}")
 
-    def create_embeddings(self,
-                         texts: List[str],
-                         model: Optional[str] = None,
-                         encoding_format: str = "float",
-                         input_type: Optional[str] = None,
-                         is_query: Optional[bool] = None,
-                         **kwargs):
+    def create_embeddings(
+        self,
+        texts: List[str],
+        model: Optional[str] = None,
+        encoding_format: str = "float",
+        input_type: Optional[str] = None,
+        is_query: Optional[bool] = None,
+        **kwargs,
+    ):
         """
         Create embeddings with pharmaceutical optimization.
 
@@ -394,15 +396,20 @@ class OpenAIWrapper:
             # Return a typed CreateEmbeddingResponse for empty inputs
             mdl = model
             if mdl is None:
-                mdl = (self.PHARMA_MODELS["embedding"]["preferred"] if self.pharma_optimized else self.PHARMA_MODELS["embedding"]["fallback"])  # noqa: E501
+                mdl = (
+                    self.PHARMA_MODELS["embedding"]["preferred"]
+                    if self.pharma_optimized
+                    else self.PHARMA_MODELS["embedding"]["fallback"]
+                )  # noqa: E501
             return self._empty_embedding_response(mdl)
 
         # Auto-select pharmaceutical-optimized model
         if model is None:
-            model = (
-                self.config.prefer_embedding_model
-                or (self.PHARMA_MODELS["embedding"]["preferred"] if self.pharma_optimized else self.PHARMA_MODELS["embedding"]["fallback"])  # noqa: E501
-            )
+            model = self.config.prefer_embedding_model or (
+                self.PHARMA_MODELS["embedding"]["preferred"]
+                if self.pharma_optimized
+                else self.PHARMA_MODELS["embedding"]["fallback"]
+            )  # noqa: E501
             logger.debug(f"Auto-selected embedding model: {model}")
 
         with self._error_handler("Embedding creation"):
@@ -411,6 +418,7 @@ class OpenAIWrapper:
 
             # Inject input_type for asymmetric models via extra_body if configured or auto-detected
             effective_kwargs = dict(kwargs)
+
             def _ensure_extra_body(d: Dict[str, Any]) -> Dict[str, Any]:
                 eb = d.get("extra_body")
                 if not isinstance(eb, dict):
@@ -435,7 +443,10 @@ class OpenAIWrapper:
             if input_type_value:
                 extra_body = _ensure_extra_body(effective_kwargs)
                 if "input_type" in extra_body:
-                    logger.debug("Embedding input_type already provided in extra_body; not overriding (%s)", extra_body.get("input_type"))
+                    logger.debug(
+                        "Embedding input_type already provided in extra_body; not overriding (%s)",
+                        extra_body.get("input_type"),
+                    )
                 else:
                     logger.debug("Injecting embedding input_type=%s via config/env toggle", input_type_value)
                     extra_body["input_type"] = input_type_value
@@ -453,11 +464,8 @@ class OpenAIWrapper:
 
             response = self.client.embeddings.create(**call_kwargs)
 
-            dims = len(response.data[0].embedding) if getattr(response, 'data', None) and response.data else 0
-            logger.info(
-                f"Embeddings created: {len(texts)} texts, model: {model}, "
-                f"dimensions: {dims}"
-            )
+            dims = len(response.data[0].embedding) if getattr(response, "data", None) and response.data else 0
+            logger.info(f"Embeddings created: {len(texts)} texts, model: {model}, " f"dimensions: {dims}")
             # Update cost metrics (token usage not exposed for embeddings; track by count)
             self._record_cost_event("embedding", tokens=None, query_type="general", count=len(texts))
             return response
@@ -466,7 +474,7 @@ class OpenAIWrapper:
         """Create a typed empty embedding response that is SDK-compatible."""
         # Import OpenAI types when needed
         openai_modules = _import_openai_modules()
-        CreateEmbeddingResponse = openai_modules['CreateEmbeddingResponse']
+        CreateEmbeddingResponse = openai_modules["CreateEmbeddingResponse"]
 
         payload = {
             "data": [],
@@ -526,12 +534,14 @@ class OpenAIWrapper:
             # Final fallback: return messages in original format
             return {"input": messages}
 
-    def create_chat_completion(self,
-                              messages: List[Dict[str, str]],
-                              model: Optional[str] = None,
-                              max_tokens: Optional[int] = None,
-                              temperature: Optional[float] = None,
-                              **kwargs):
+    def create_chat_completion(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        **kwargs,
+    ):
         """
         Create chat completion with pharmaceutical optimization.
 
@@ -605,10 +615,12 @@ class OpenAIWrapper:
                                 **kwargs,
                             )
 
-                        logger.debug(f"Successfully used responses.create API path (schema_mapping={self.config.enable_responses_schema_mapping})")
+                        logger.debug(
+                            f"Successfully used responses.create API path (schema_mapping={self.config.enable_responses_schema_mapping})"
+                        )
 
                         # Normalize responses API response to ChatCompletion format for downstream compatibility
-                        if not hasattr(response, 'choices') or not response.choices:
+                        if not hasattr(response, "choices") or not response.choices:
                             logger.debug("Normalizing responses API response to ChatCompletion format")
                             return self._normalize_responses_to_chat_format(response)
 
@@ -616,7 +628,9 @@ class OpenAIWrapper:
                     except (AttributeError, TypeError) as e:
                         logger.debug(f"responses.create not available ({e}), falling back to chat.completions.create")
                     except Exception as e:
-                        logger.warning(f"responses.create failed with schema mapping ({e}), falling back to chat.completions.create")
+                        logger.warning(
+                            f"responses.create failed with schema mapping ({e}), falling back to chat.completions.create"
+                        )
 
                 # Fallback to standard chat completions API
                 response = self.client.chat.completions.create(
@@ -636,9 +650,7 @@ class OpenAIWrapper:
         token_count = response.usage.total_tokens if getattr(response, "usage", None) else 0
         self._record_cost_event("chat_completion", tokens=token_count, query_type=query_type)
 
-        logger.info(
-            f"Chat completion successful: model: {model}, tokens: {token_count}, type: {query_type}"
-        )
+        logger.info(f"Chat completion successful: model: {model}, tokens: {token_count}, type: {query_type}")
         return response
 
     def list_models(self) -> List[str]:
@@ -743,19 +755,19 @@ class OpenAIWrapper:
             content = ""
 
             # Try common responses API formats
-            if hasattr(responses_obj, 'output_text'):
+            if hasattr(responses_obj, "output_text"):
                 content = str(responses_obj.output_text)
-            elif hasattr(responses_obj, 'output') and responses_obj.output:
+            elif hasattr(responses_obj, "output") and responses_obj.output:
                 if isinstance(responses_obj.output, list) and responses_obj.output:
                     # Handle output array format
                     first_output = responses_obj.output[0]
-                    if hasattr(first_output, 'content'):
+                    if hasattr(first_output, "content"):
                         content = str(first_output.content)
                     else:
                         content = str(first_output)
                 else:
                     content = str(responses_obj.output)
-            elif hasattr(responses_obj, 'content'):
+            elif hasattr(responses_obj, "content"):
                 content = str(responses_obj.content)
             else:
                 # Last resort: convert entire response to string
@@ -792,32 +804,25 @@ class OpenAIWrapper:
         try:
             # Try to import ChatCompletion for proper type
             modules = _import_openai_modules()
-            ChatCompletion = modules['ChatCompletion']
+            ChatCompletion = modules["ChatCompletion"]
 
             # Extract or synthesize metadata
-            model = getattr(original_response, 'model', 'unknown')
-            usage = getattr(original_response, 'usage', None)
+            model = getattr(original_response, "model", "unknown")
+            usage = getattr(original_response, "usage", None)
 
             # Create normalized choice object using simple dict structure
-            message = {
-                "role": "assistant",
-                "content": content
-            }
+            message = {"role": "assistant", "content": content}
 
-            choice = {
-                "index": 0,
-                "message": message,
-                "finish_reason": "stop"
-            }
+            choice = {"index": 0, "message": message, "finish_reason": "stop"}
 
             # Create normalized response dict that mimics ChatCompletion
             normalized_data = {
-                "id": getattr(original_response, 'id', 'normalized-response'),
+                "id": getattr(original_response, "id", "normalized-response"),
                 "choices": [choice],
-                "created": getattr(original_response, 'created', int(time.time())),
+                "created": getattr(original_response, "created", int(time.time())),
                 "model": model,
                 "object": "chat.completion",
-                "usage": usage
+                "usage": usage,
             }
 
             # Try to create proper ChatCompletion object, fall back to dict
@@ -833,12 +838,13 @@ class OpenAIWrapper:
 
     def _create_simple_normalized_response(self, content: str, original_response: Any) -> Any:
         """Create a simple normalized response object as fallback."""
+
         class NormalizedResponse:
             def __init__(self, content: str, original: Any):
                 self.choices = [SimpleChoice(content)]
-                self.model = getattr(original, 'model', 'unknown')
-                self.usage = getattr(original, 'usage', None)
-                self.id = getattr(original, 'id', 'normalized-response')
+                self.model = getattr(original, "model", "unknown")
+                self.usage = getattr(original, "usage", None)
+                self.id = getattr(original, "id", "normalized-response")
 
         class SimpleChoice:
             def __init__(self, content: str):
@@ -858,17 +864,19 @@ class OpenAIWrapper:
         """Delegate to shared pharma classifier."""
         try:
             from ..utils.pharma import classify_query  # type: ignore
+
             return classify_query(text)
         except ImportError:
             try:
                 from src.utils.pharma import classify_query  # type: ignore
+
                 return classify_query(text)
             except ImportError:
                 # Log warning once and default to general classification
-                if not hasattr(self, '_pharma_import_warned'):
+                if not hasattr(self, "_pharma_import_warned"):
                     logger.warning("Pharma query classification utilities unavailable, defaulting to 'general'")
                     self._pharma_import_warned = True
-                return 'general'
+                return "general"
 
     def _optimize_request_params(
         self,
@@ -932,9 +940,7 @@ class OpenAIWrapper:
                 if self.pharma_optimized and preferred and model != preferred:
                     enforce = _safe_bool(os.getenv("PHARMA_ENFORCE_PREFERRED_MODELS"), False)
                     if enforce:
-                        raise NVIDIABuildError(
-                            f"Non-preferred embedding model '{model}'; preferred: {preferred}"
-                        )
+                        raise NVIDIABuildError(f"Non-preferred embedding model '{model}'; preferred: {preferred}")
                     else:
                         logger.warning(
                             "Non-preferred embedding model '%s' used; preferred: %s",
@@ -956,7 +962,7 @@ class OpenAIWrapper:
                 last_err = e
                 if attempt == retries:
                     raise
-                delay = base_delay * (2 ** attempt)
+                delay = base_delay * (2**attempt)
                 logger.warning("Retrying after error (%s). attempt=%d delay=%.2fs", str(e), attempt + 1, delay)
                 time.sleep(delay)
                 attempt += 1
@@ -1005,18 +1011,18 @@ class OpenAIWrapper:
         Returns a list of dictionaries: {"embedding": [...], "index": i}
         """
         if model is None:
-            model = (self.PHARMA_MODELS["embedding"]["preferred"]
-                     if self.pharma_optimized
-                     else self.PHARMA_MODELS["embedding"]["fallback"])
+            model = (
+                self.PHARMA_MODELS["embedding"]["preferred"]
+                if self.pharma_optimized
+                else self.PHARMA_MODELS["embedding"]["fallback"]
+            )
 
         # Determine batch size
-        effective_batch = (
-            batch_size if batch_size is not None else int(self.config.batch_max_size or 16)
-        )
+        effective_batch = batch_size if batch_size is not None else int(self.config.batch_max_size or 16)
 
         results: List[Dict[str, Any]] = []
         for start in range(0, len(texts), max(1, effective_batch)):
-            chunk = texts[start:start + effective_batch]
+            chunk = texts[start : start + effective_batch]
             resp = self.create_embeddings(chunk, model=model, encoding_format=encoding_format, **kwargs)
             for i, d in enumerate(resp.data):
                 results.append({"embedding": d.embedding, "index": start + i})
@@ -1039,7 +1045,7 @@ class OpenAIWrapper:
             "model_type": model_type,
             "pharmaceutical_optimized": self.pharma_optimized,
             "recommended_models": self.PHARMA_MODELS[model_type],
-            "endpoint": self.config.base_url
+            "endpoint": self.config.base_url,
         }
 
     def _to_dict(self, obj: Any) -> Optional[Dict[str, Any]]:
@@ -1064,14 +1070,16 @@ class OpenAIWrapper:
         """Expose lightweight cost metrics for research budgeting dashboards."""
         return dict(self._cost_metrics)
 
-    def rerank(self,
-               query: str,
-               candidates: List[str],
-               top_n: Optional[int] = None,
-               model: str = "meta/llama-3_2-nemoretriever-500m-rerank-v2",
-               max_retries: Optional[int] = None,
-               backoff_base: Optional[float] = None,
-               backoff_jitter: Optional[float] = None) -> List[Dict[str, Any]]:
+    def rerank(
+        self,
+        query: str,
+        candidates: List[str],
+        top_n: Optional[int] = None,
+        model: str = "meta/llama-3_2-nemoretriever-500m-rerank-v2",
+        max_retries: Optional[int] = None,
+        backoff_base: Optional[float] = None,
+        backoff_jitter: Optional[float] = None,
+    ) -> List[Dict[str, Any]]:
         """Re-rank passages/documents with a unified normalized output.
 
         Normalized schema: [{"text": str, "score": float, "index": int}]
@@ -1110,11 +1118,7 @@ class OpenAIWrapper:
             out: List[Dict[str, Any]] = []
             for i, item in enumerate(rankings or []):
                 idx = item.get("index", i)
-                score = (
-                    item.get("score")
-                    or item.get("relevance")
-                    or item.get("relevance_score")
-                )
+                score = item.get("score") or item.get("relevance") or item.get("relevance_score")
                 text = (
                     item.get("text")
                     or item.get("passage")
@@ -1125,7 +1129,9 @@ class OpenAIWrapper:
                 out.append({"text": text or "", "score": float(score) if score is not None else 0.0, "index": int(idx)})
             return out
 
-        def _call_with_retries(url: str, body: Dict[str, Any], max_retries: int, backoff_base: float, backoff_jitter: float) -> Tuple[int, Any, str]:
+        def _call_with_retries(
+            url: str, body: Dict[str, Any], max_retries: int, backoff_base: float, backoff_jitter: float
+        ) -> Tuple[int, Any, str]:
             attempt = 0
             last_exception = None
 
@@ -1141,11 +1147,14 @@ class OpenAIWrapper:
                     # Retry on specific HTTP status codes
                     if resp.status_code in [429] or 500 <= resp.status_code <= 599:
                         if attempt < max_retries:
-                            delay = backoff_base * (2 ** attempt)
+                            delay = backoff_base * (2**attempt)
                             if backoff_jitter:
                                 import random
+
                                 delay += random.uniform(0, backoff_jitter)
-                            logger.warning(f"Retrying rerank request to {url} after HTTP {resp.status_code}. attempt={attempt + 1} delay={delay:.2f}s")
+                            logger.warning(
+                                f"Retrying rerank request to {url} after HTTP {resp.status_code}. attempt={attempt + 1} delay={delay:.2f}s"
+                            )
                             time.sleep(delay)
                             attempt += 1
                             continue
@@ -1155,11 +1164,14 @@ class OpenAIWrapper:
                 except requests.RequestException as e:
                     last_exception = e
                     if attempt < max_retries:
-                        delay = backoff_base * (2 ** attempt)
+                        delay = backoff_base * (2**attempt)
                         if backoff_jitter:
                             import random
+
                             delay += random.uniform(0, backoff_jitter)
-                        logger.warning(f"Retrying rerank request to {url} after {type(e).__name__}: {e}. attempt={attempt + 1} delay={delay:.2f}s")
+                        logger.warning(
+                            f"Retrying rerank request to {url} after {type(e).__name__}: {e}. attempt={attempt + 1} delay={delay:.2f}s"
+                        )
                         time.sleep(delay)
                         attempt += 1
                     else:
@@ -1186,7 +1198,9 @@ class OpenAIWrapper:
             # Maintain legacy env override behavior if config not provided
             cloud_first_rerank = _safe_bool(os.getenv("ENABLE_CLOUD_FIRST_RERANK"), True)
             build_first_override = os.getenv("ENABLE_BUILD_FIRST_RERANK")
-            build_first = _safe_bool(build_first_override, False) if build_first_override is not None else cloud_first_rerank
+            build_first = (
+                _safe_bool(build_first_override, False) if build_first_override is not None else cloud_first_rerank
+            )
 
         # Enable/disable NVIDIA Build rerank service
         cfg_build_rerank = getattr(self.config, "build_rerank_enabled", None)
@@ -1218,7 +1232,6 @@ class OpenAIWrapper:
             else:
                 if not _safe_bool(os.getenv("ENABLE_RERANK_MODEL_MAPPING"), False):
                     return original_model
-                
 
             # NVB_Rerank service model mappings
             if service_name == "NVB_Rerank":
@@ -1285,16 +1298,31 @@ class OpenAIWrapper:
                         errors.append(f"{name}:{payload_key}:{vname}=404")
                         continue
                     if status != 200:
-                        logger.warning("Rerank failed at %s: HTTP %s - %s (payload=%s variant=%s)", base, status, (text_raw or "")[:160], payload_key, vname)
+                        logger.warning(
+                            "Rerank failed at %s: HTTP %s - %s (payload=%s variant=%s)",
+                            base,
+                            status,
+                            (text_raw or "")[:160],
+                            payload_key,
+                            vname,
+                        )
                         errors.append(f"{name}:{payload_key}:{vname}={status}")
                         continue
                     rankings = data.get("rankings", []) if isinstance(data, dict) else []
                     if rankings:
                         normalized = _normalize(rankings)
-                        logger.info("Rerank via %s succeeded with %d items (payload=%s variant=%s)", name, len(normalized), payload_key, vname)
+                        logger.info(
+                            "Rerank via %s succeeded with %d items (payload=%s variant=%s)",
+                            name,
+                            len(normalized),
+                            payload_key,
+                            vname,
+                        )
                         return normalized
                     else:
-                        logger.warning("Rerank via %s returned empty rankings (payload=%s variant=%s)", name, payload_key, vname)
+                        logger.warning(
+                            "Rerank via %s returned empty rankings (payload=%s variant=%s)", name, payload_key, vname
+                        )
                         errors.append(f"{name}:{payload_key}:{vname}=empty")
 
         raise NVIDIABuildError("Rerank failed across services: " + ", ".join(errors))
@@ -1317,7 +1345,12 @@ class OpenAIWrapper:
             model: Optional model id (defaults follow `rerank`)
             **kwargs: Ignored; maintained for compatibility
         """
-        return self.rerank(query=query, candidates=documents, top_n=top_n, model=(model or "meta/llama-3_2-nemoretriever-500m-rerank-v2"))
+        return self.rerank(
+            query=query,
+            candidates=documents,
+            top_n=top_n,
+            model=(model or "meta/llama-3_2-nemoretriever-500m-rerank-v2"),
+        )
 
     def validate_pharmaceutical_setup(self) -> Dict[str, Any]:
         """
@@ -1332,7 +1365,7 @@ class OpenAIWrapper:
             "connection_test": None,
             "embedding_test": None,
             "chat_test": None,
-            "overall_status": "unknown"
+            "overall_status": "unknown",
         }
 
         # Test connection (skip model listing for safety)
@@ -1345,38 +1378,28 @@ class OpenAIWrapper:
 
         # Test embedding with pharmaceutical query
         try:
-            embedding_response = self.create_embeddings([
-                "metformin pharmacokinetics and drug interactions"
-            ])
-            dims = len(embedding_response.data[0].embedding) if getattr(embedding_response, 'data', None) and embedding_response.data else 0
-            results["embedding_test"] = {
-                "success": True,
-                "dimensions": dims,
-                "model": embedding_response.model
-            }
+            embedding_response = self.create_embeddings(["metformin pharmacokinetics and drug interactions"])
+            dims = (
+                len(embedding_response.data[0].embedding)
+                if getattr(embedding_response, "data", None) and embedding_response.data
+                else 0
+            )
+            results["embedding_test"] = {"success": True, "dimensions": dims, "model": embedding_response.model}
         except NVIDIABuildError as e:
-            results["embedding_test"] = {
-                "success": False,
-                "error": str(e),
-                "status_code": e.status_code
-            }
+            results["embedding_test"] = {"success": False, "error": str(e), "status_code": e.status_code}
 
         # Test chat with pharmaceutical query
         try:
-            chat_response = self.create_chat_completion([
-                {"role": "user", "content": "Briefly explain metformin's mechanism of action."}
-            ])
+            chat_response = self.create_chat_completion(
+                [{"role": "user", "content": "Briefly explain metformin's mechanism of action."}]
+            )
             results["chat_test"] = {
                 "success": True,
                 "model": chat_response.model,
-                "response_length": len(chat_response.choices[0].message.content)
+                "response_length": len(chat_response.choices[0].message.content),
             }
         except NVIDIABuildError as e:
-            results["chat_test"] = {
-                "success": False,
-                "error": str(e),
-                "status_code": e.status_code
-            }
+            results["chat_test"] = {"success": False, "error": str(e), "status_code": e.status_code}
 
         # Determine overall status
         embedding_ok = results["embedding_test"] and results["embedding_test"]["success"]
@@ -1453,7 +1476,7 @@ class OpenAIWrapper:
                 if self.config.enable_model_listing:
                     try:
                         models = self.client.models.list()
-                        available_models = [model.id for model in models.data] if hasattr(models, 'data') else []
+                        available_models = [model.id for model in models.data] if hasattr(models, "data") else []
                     except Exception as e:
                         logger.warning(f"Model listing failed during connection test: {str(e)}")
                         # Continue with connection test even if model listing fails
@@ -1467,7 +1490,7 @@ class OpenAIWrapper:
                     "available_models": len(available_models),
                     "model_listing_enabled": self.config.enable_model_listing,
                     "pharmaceutical_optimized": self.pharma_optimized,
-                    "message": "Connection successful"
+                    "message": "Connection successful",
                 }
 
         except Exception as e:
@@ -1478,7 +1501,7 @@ class OpenAIWrapper:
                 "response_time_ms": response_time_ms,
                 "error": str(e),
                 "pharmaceutical_optimized": self.pharma_optimized,
-                "message": "Connection failed"
+                "message": "Connection failed",
             }
 
     def _test_connection_safe(self) -> Dict[str, Any]:
@@ -1502,7 +1525,7 @@ class OpenAIWrapper:
                 "endpoint": self.config.base_url,
                 "response_time_ms": response_time_ms,
                 "pharmaceutical_optimized": self.pharma_optimized,
-                "message": "Safe connection test successful (no model listing)"
+                "message": "Safe connection test successful (no model listing)",
             }
 
         except Exception as e:
@@ -1513,8 +1536,9 @@ class OpenAIWrapper:
                 "response_time_ms": response_time_ms,
                 "error": str(e),
                 "pharmaceutical_optimized": self.pharma_optimized,
-                "message": "Safe connection test failed"
+                "message": "Safe connection test failed",
             }
+
 
 def get_model_catalog() -> Dict[str, Any]:
     """Expose a shared model catalog for embedding/chat models.
@@ -1527,6 +1551,7 @@ def get_model_catalog() -> Dict[str, Any]:
         "embedding": OpenAIWrapper.PHARMA_MODELS["embedding"],
         "chat": OpenAIWrapper.PHARMA_MODELS["chat"],
     }
+
 
 # Convenience functions for quick access
 def create_nvidia_build_client(pharmaceutical_optimized: bool = True) -> OpenAIWrapper:
@@ -1541,6 +1566,7 @@ def create_nvidia_build_client(pharmaceutical_optimized: bool = True) -> OpenAIW
     """
     config = NVIDIABuildConfig(pharmaceutical_optimized=pharmaceutical_optimized)
     return OpenAIWrapper(config)
+
 
 def test_nvidia_build_access() -> Dict[str, Any]:
     """
@@ -1557,14 +1583,12 @@ def test_nvidia_build_access() -> Dict[str, Any]:
             "benchmarks": client.run_pharmaceutical_benchmarks(),
         }
     except Exception as e:
-        return {
-            "overall_status": "failed",
-            "error": str(e),
-            "pharmaceutical_optimized": True
-        }
+        return {"overall_status": "failed", "error": str(e), "pharmaceutical_optimized": True}
+
 
 if __name__ == "__main__":
     # Quick validation when run directly
     import json
+
     results = test_nvidia_build_access()
     print(json.dumps(results, indent=2))

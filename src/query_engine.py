@@ -1,33 +1,34 @@
 """Pharmaceutical query orchestration with caching, ranking, and filtering."""
-
 from __future__ import annotations
 
 import hashlib
 import json
 import logging
 import os
-import unicodedata
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Literal, Iterable, Set
+from typing import Any
+from typing import Iterable
+from typing import Literal
 
+from .paper_schema import normalize_doi
+from .paper_schema import normalize_pmid
+from .pharma_utils import _CLINICAL_STUDY_TAGS
+from .pharma_utils import _NEGATION_TERMS
+from .pharma_utils import _PK_FILTERING_ENABLED
+from .pharma_utils import _SPECIES_KEYWORDS
+from .pharma_utils import _tokenize_species_string
+from .pharma_utils import CacheSizeConfig
+from .pharma_utils import cleanup_oldest_cache_files
+from .pharma_utils import DrugNameChecker
+from .pharma_utils import get_cache_dir_size_mb
+from .pharma_utils import normalize_text
 from .pharmaceutical_processor import PharmaceuticalProcessor
 from .pubmed_scraper import PubMedScraper
 from .ranking_filter import StudyRankingFilter
-from .paper_schema import normalize_doi, normalize_pmid
-from .pharma_utils import (
-    _PK_FILTERING_ENABLED,
-    _SPECIES_KEYWORDS,
-    _CLINICAL_STUDY_TAGS,
-    _NEGATION_TERMS,
-    _tokenize_species_string,
-    normalize_text,
-    CacheSizeConfig,
-    DrugNameChecker,
-    get_cache_dir_size_mb,
-    cleanup_oldest_cache_files,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,6 @@ _SORT_FIELD_ALIASES = {
 }
 
 
-
 @dataclass
 class CacheMetadata:
     """Metadata describing cached payload state."""
@@ -50,7 +50,7 @@ class CacheMetadata:
     cache_key: str
     cache_hit: bool
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "created_at": self.created_at.isoformat(),
             "expires_at": self.expires_at.isoformat(),
@@ -70,12 +70,12 @@ class EnhancedQueryEngine:
         self,
         scraper: PubMedScraper,
         *,
-        cache_dir: Optional[str] = None,
-        cache_ttl_hours: Optional[int] = None,
-        ranking_filter: Optional[StudyRankingFilter] = None,
-        ranking_weights: Optional[Dict[str, float]] = None,
-        recency_decay_years: Optional[float] = None,
-        pharma_processor: Optional[PharmaceuticalProcessor] = None,
+        cache_dir: str | None = None,
+        cache_ttl_hours: int | None = None,
+        ranking_filter: StudyRankingFilter | None = None,
+        ranking_weights: dict[str, float] | None = None,
+        recency_decay_years: float | None = None,
+        pharma_processor: PharmaceuticalProcessor | None = None,
         enable_pharma_enrichment: bool = True,
         enable_query_enhancement: bool = True,
         enhancement_mode: Literal["and", "or", "none"] = "and",
@@ -84,9 +84,9 @@ class EnhancedQueryEngine:
         infer_species_on_filter: bool = True,
         strict_species_inference: bool = True,
         re_rank: bool = True,
-        species_unknown_default: Optional[bool] = None,
+        species_unknown_default: bool | None = None,
         runtime_extraction_doc_cap: int = 200,
-        runtime_extraction_char_limit: Optional[int] = None,
+        runtime_extraction_char_limit: int | None = None,
         cache_filtered_results: bool = True,
     ) -> None:
         self.scraper = scraper
@@ -132,7 +132,7 @@ class EnhancedQueryEngine:
         # Cache write counter for opportunistic cleanup
         self._cache_write_count = 0
 
-    def _get_pharma_processor(self, ignore_enrichment_flag: bool = False) -> Optional[PharmaceuticalProcessor]:
+    def _get_pharma_processor(self, ignore_enrichment_flag: bool = False) -> PharmaceuticalProcessor | None:
         """Lazy-initialize PharmaceuticalProcessor only when needed.
 
         Args:
@@ -154,13 +154,13 @@ class EnhancedQueryEngine:
         query: str,
         max_items: int = 30,
         sort_by: str = "relevance",
-        filters: Optional[Dict[str, Any]] = None,
-        include_unknown_species: Optional[bool] = None,
+        filters: dict[str, Any] | None = None,
+        include_unknown_species: bool | None = None,
         allow_runtime_extraction_for_filters: bool = False,
         include_explanations: bool = False,
-        explanation_limit: Optional[int] = None,
+        explanation_limit: int | None = None,
         apply_diversity_filter: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute pharmaceutical PubMed workflow with caching and ranking.
 
         Supported filter keys:
@@ -210,9 +210,7 @@ class EnhancedQueryEngine:
         max_items = self._validate_max_items(max_items)
         filters = filters or {}
         if include_unknown_species is None:
-            include_unknown_species = (
-                self.species_unknown_default if self.species_unknown_default is not None else True
-            )
+            include_unknown_species = self.species_unknown_default if self.species_unknown_default is not None else True
         else:
             include_unknown_species = bool(include_unknown_species)
 
@@ -246,7 +244,9 @@ class EnhancedQueryEngine:
         if cached_payload is not None:
             logger.debug("Cache hit for query engine (key=%s)", filtered_cache_key)
             processing_end = datetime.now(timezone.utc)
-            cached_results = self._maybe_enrich_results(cached_payload.get("results", []), metadata=cached_payload.get("metadata"))
+            cached_results = self._maybe_enrich_results(
+                cached_payload.get("results", []), metadata=cached_payload.get("metadata")
+            )
             cached_meta = cached_payload.get("metadata", {})
             cached_filters = cached_meta.get("filters") or self._summarize_filters(filters)
             dedup_info = cached_meta.get("deduplication")
@@ -276,10 +276,14 @@ class EnhancedQueryEngine:
                 raw_cache_key,
                 filtered_cache_key,
             )
-            ranked_results = self._maybe_enrich_results(raw_cached_payload.get("results", []), metadata=raw_cached_payload.get("metadata"))
+            ranked_results = self._maybe_enrich_results(
+                raw_cached_payload.get("results", []), metadata=raw_cached_payload.get("metadata")
+            )
             dedup_info = (raw_cached_payload.get("metadata") or {}).get("deduplication")
             resorted_results = self._sort_ranked_results(ranked_results, sort_by)
-            filtered_results, applied_filters = self._apply_filters(resorted_results, filters, allow_runtime_extraction_for_filters=allow_runtime_extraction_for_filters)
+            filtered_results, applied_filters = self._apply_filters(
+                resorted_results, filters, allow_runtime_extraction_for_filters=allow_runtime_extraction_for_filters
+            )
 
             # Apply diversity filtering if requested
             if apply_diversity_filter and filtered_results:
@@ -310,7 +314,9 @@ class EnhancedQueryEngine:
 
             # Add ranking explanations if requested
             if include_explanations:
-                filtered_results = self._add_ranking_explanations(filtered_results, query=normalized_query, explanation_limit=explanation_limit)
+                filtered_results = self._add_ranking_explanations(
+                    filtered_results, query=normalized_query, explanation_limit=explanation_limit
+                )
 
             processing_end = datetime.now(timezone.utc)
             return self._build_response(
@@ -368,7 +374,7 @@ class EnhancedQueryEngine:
             ranked_results,
             filters,
             allow_runtime_extraction_for_filters=allow_runtime_extraction_for_filters,
-            runtime_extraction_char_limit=self.runtime_extraction_char_limit
+            runtime_extraction_char_limit=self.runtime_extraction_char_limit,
         )
 
         # Apply diversity filtering if requested
@@ -413,7 +419,9 @@ class EnhancedQueryEngine:
 
         # Add ranking explanations if requested
         if include_explanations:
-            filtered_results = self._add_ranking_explanations(filtered_results, query=normalized_query, explanation_limit=explanation_limit)
+            filtered_results = self._add_ranking_explanations(
+                filtered_results, query=normalized_query, explanation_limit=explanation_limit
+            )
 
         processing_end = datetime.now(timezone.utc)
         return self._build_response(
@@ -433,7 +441,9 @@ class EnhancedQueryEngine:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _add_ranking_explanations(self, results: List[Dict[str, Any]], *, query: str, explanation_limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def _add_ranking_explanations(
+        self, results: list[dict[str, Any]], *, query: str, explanation_limit: int | None = None
+    ) -> list[dict[str, Any]]:
         """Add ranking explanations to results when requested.
 
         Args:
@@ -443,12 +453,12 @@ class EnhancedQueryEngine:
         Returns:
             Results with ranking explanations added
         """
-        if not results or not hasattr(self.ranking_filter, 'get_ranking_explanation'):
+        if not results or not hasattr(self.ranking_filter, "get_ranking_explanation"):
             return results
 
         # Performance guard: early return if no ranking scores exist and re_rank is False
         if not self.re_rank:
-            has_ranking_scores = any('ranking_score' in result for result in results)
+            has_ranking_scores = any("ranking_score" in result for result in results)
             if not has_ranking_scores:
                 logger.debug("Skipping explanations: no ranking scores found and re_rank is False")
                 return results
@@ -486,7 +496,7 @@ class EnhancedQueryEngine:
         enhanced_query: str,
         max_items: int,
         sort_by: str,
-        filters: Dict[str, Any],
+        filters: dict[str, Any],
     ) -> str:
         payload = {
             "query": query,
@@ -513,7 +523,7 @@ class EnhancedQueryEngine:
             filters={},
         )
 
-    def _get_cached_result(self, cache_key: str) -> Tuple[Optional[Dict[str, Any]], CacheMetadata]:
+    def _get_cached_result(self, cache_key: str) -> tuple[dict[str, Any] | None, CacheMetadata]:
         cache_file = self.cache_dir / f"{cache_key}.json"
         metadata = CacheMetadata(
             created_at=datetime.now(timezone.utc),
@@ -526,7 +536,7 @@ class EnhancedQueryEngine:
             return None, metadata
 
         try:
-            with open(cache_file, "r", encoding="utf-8") as handle:
+            with open(cache_file, encoding="utf-8") as handle:
                 payload = json.load(handle)
         except Exception as exc:  # pragma: no cover - defensive path
             logger.warning("Failed to read cache file %s: %s", cache_file, exc)
@@ -567,7 +577,7 @@ class EnhancedQueryEngine:
         metadata.cache_hit = True
         return payload, metadata
 
-    def _cache_result(self, cache_key: str, payload: Dict[str, Any]) -> None:
+    def _cache_result(self, cache_key: str, payload: dict[str, Any]) -> None:
         cache_file = self.cache_dir / f"{cache_key}.json"
         payload = dict(payload)
         metadata = payload.setdefault("metadata", {})
@@ -592,21 +602,18 @@ class EnhancedQueryEngine:
                 logger.info(
                     "Cache size %.2f MB exceeds limit %d MB, cleaning up oldest files",
                     current_size_mb,
-                    self.cache_config.max_size_mb
+                    self.cache_config.max_size_mb,
                 )
-                stats = cleanup_oldest_cache_files(
-                    self.cache_dir,
-                    self.cache_config.cleanup_threshold_mb
-                )
+                stats = cleanup_oldest_cache_files(self.cache_dir, self.cache_config.cleanup_threshold_mb)
                 logger.info(
                     "Cache cleanup completed: removed %d files, freed %.2f MB",
                     stats["files_removed"],
-                    stats["bytes_freed"] / (1024 * 1024)
+                    stats["bytes_freed"] / (1024 * 1024),
                 )
         except Exception as exc:
             logger.warning("Failed to check cache size: %s", exc)
 
-    def _enhance_pharmaceutical_query(self, query: str) -> Tuple[str, bool]:
+    def _enhance_pharmaceutical_query(self, query: str) -> tuple[str, bool]:
         normalized = query.strip()
         if not self.enable_query_enhancement:
             return normalized, False
@@ -636,7 +643,7 @@ class EnhancedQueryEngine:
             return normalized, False
 
         # Build enhancement terms
-        enhancement_terms: List[str] = []
+        enhancement_terms: list[str] = []
         if not any(token in lower for token in pharma_keywords):
             enhancement_terms.extend(["drug interaction", "pharmacokinetics"])
         if "cyp" not in lower:
@@ -662,7 +669,9 @@ class EnhancedQueryEngine:
 
         return enhanced_query, True
 
-    def _maybe_enrich_results(self, results: List[Dict[str, Any]], *, metadata: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def _maybe_enrich_results(
+        self, results: list[dict[str, Any]], *, metadata: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         if not results:
             return []
         pharma_processor = self._get_pharma_processor()
@@ -675,7 +684,7 @@ class EnhancedQueryEngine:
 
         return [self._enrich_single_paper(paper) for paper in results]
 
-    def _enrich_single_paper(self, paper: Dict[str, Any]) -> Dict[str, Any]:
+    def _enrich_single_paper(self, paper: dict[str, Any]) -> dict[str, Any]:
         enriched = dict(paper)
         text_fragments = [
             enriched.get("title"),
@@ -725,9 +734,9 @@ class EnhancedQueryEngine:
 
     def _infer_species_from_text(
         self,
-        paper: Dict[str, Any],
-        mesh_terms: Optional[Iterable[str]] = None,
-    ) -> List[str]:
+        paper: dict[str, Any],
+        mesh_terms: Iterable[str] | None = None,
+    ) -> list[str]:
         combined_sources = [paper.get("title"), paper.get("abstract"), paper.get("summary")]
         if mesh_terms is None:
             mesh_terms = paper.get("mesh_terms") or []
@@ -740,7 +749,7 @@ class EnhancedQueryEngine:
         # Check for negation terms that indicate non-human contexts
         has_negation = any(term in combined_text.lower() for term in _NEGATION_TERMS)
 
-        matches: List[str] = []
+        matches: list[str] = []
         for species, keywords in _SPECIES_KEYWORDS.items():
             if species == "human" and self.strict_species_inference:
                 # For humans, require either MeSH "Humans" or clinical study context
@@ -770,9 +779,9 @@ class EnhancedQueryEngine:
 
         return matches
 
-    def _deduplicate_results(self, results: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    def _deduplicate_results(self, results: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         seen_ids = set()
-        deduped: List[Dict[str, Any]] = []
+        deduped: list[dict[str, Any]] = []
         duplicates = 0
         key_order = ["doi", "pmid", "pmcid"]
         for item in results:
@@ -782,9 +791,9 @@ class EnhancedQueryEngine:
                 value = normalized_item.get(key)
                 if value:
                     # Normalize DOI and PMID values to handle prefixes and formatting variations
-                    if key == 'doi':
+                    if key == "doi":
                         normalized_value = normalize_doi(str(value).strip())
-                    elif key == 'pmid':
+                    elif key == "pmid":
                         normalized_value = normalize_pmid(str(value).strip())
                     else:
                         normalized_value = str(value).strip()
@@ -855,7 +864,7 @@ class EnhancedQueryEngine:
         }
         return deduped, dedup_info
 
-    def _apply_diversity_filter(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _apply_diversity_filter(self, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Apply diversity filtering to reduce near-duplicates in ranked results.
 
         Uses text similarity on titles and abstracts to identify similar papers
@@ -931,11 +940,11 @@ class EnhancedQueryEngine:
 
     def _rank_results(
         self,
-        results: List[Dict[str, Any]],
+        results: list[dict[str, Any]],
         *,
         query: str,
         sort_by: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         if not results:
             return []
 
@@ -946,7 +955,7 @@ class EnhancedQueryEngine:
             ranked = list(results)
         return self._sort_ranked_results(ranked, sort_by)
 
-    def _sort_ranked_results(self, results: List[Dict[str, Any]], sort_by: str) -> List[Dict[str, Any]]:
+    def _sort_ranked_results(self, results: list[dict[str, Any]], sort_by: str) -> list[dict[str, Any]]:
         if not results:
             return []
         sorted_results = list(results)
@@ -958,7 +967,7 @@ class EnhancedQueryEngine:
             sorted_results.sort(key=lambda item: item.get("ranking_score", 0.0), reverse=True)
         return sorted_results
 
-    def _recency_sort_key(self, item: Dict[str, Any]) -> float:
+    def _recency_sort_key(self, item: dict[str, Any]) -> float:
         year = item.get("publication_year") or item.get("year")
         if year is None:
             date_str = item.get("publication_date")
@@ -976,25 +985,25 @@ class EnhancedQueryEngine:
 
     def _apply_filters(
         self,
-        results: List[Dict[str, Any]],
-        filters: Dict[str, Any],
+        results: list[dict[str, Any]],
+        filters: dict[str, Any],
         *,
         allow_runtime_extraction_for_filters: bool = False,
-        runtime_extraction_char_limit: Optional[int] = None,
-    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        runtime_extraction_char_limit: int | None = None,
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         if not results:
             return [], {}
 
         # Handle species alias for backward compatibility
-        if filters.get('species') and not filters.get('species_preference'):
+        if filters.get("species") and not filters.get("species_preference"):
             filters = dict(filters)
-            filters['species_preference'] = filters['species']
+            filters["species_preference"] = filters["species"]
 
         # Set default character limit for runtime extraction to prevent memory issues
         if allow_runtime_extraction_for_filters and runtime_extraction_char_limit is None:
             runtime_extraction_char_limit = 4000
 
-        applied: Dict[str, Any] = {}
+        applied: dict[str, Any] = {}
         year_range = filters.get("year_range")
         if isinstance(year_range, (list, tuple)) and len(year_range) == 2:
             applied["year_range"] = list(year_range)
@@ -1038,12 +1047,8 @@ class EnhancedQueryEngine:
 
         drug_names = filters.get("drug_names")
         if drug_names:
-            raw_filters = (
-                list(drug_names)
-                if isinstance(drug_names, (list, tuple, set))
-                else [drug_names]
-            )
-            canonical_filters: Set[str] = set()
+            raw_filters = list(drug_names) if isinstance(drug_names, (list, tuple, set)) else [drug_names]
+            canonical_filters: set[str] = set()
             for raw in raw_filters:
                 if raw is None:
                     continue
@@ -1059,12 +1064,12 @@ class EnhancedQueryEngine:
             # Skip filtering if canonical_filters is empty to avoid dropping all results
             if canonical_filters:
                 # Memoization for per-document extracted drug sets
-                doc_drug_cache: Dict[str, Set[str]] = {}
+                doc_drug_cache: dict[str, set[str]] = {}
 
                 # Track document counter for runtime extraction cap
                 runtime_extraction_docs_processed = 0
 
-                def _extract_doc_drugs(item: Dict[str, Any]) -> Set[str]:
+                def _extract_doc_drugs(item: dict[str, Any]) -> set[str]:
                     nonlocal runtime_extraction_docs_processed
                     # Create a cache key based on document identifier
                     doc_id = item.get("id") or item.get("pmid") or item.get("title") or ""
@@ -1074,7 +1079,7 @@ class EnhancedQueryEngine:
                     if cache_key in doc_drug_cache:
                         return doc_drug_cache[cache_key]
 
-                    names: Set[str] = set()
+                    names: set[str] = set()
                     # Skip per-document text extraction when drug_annotations are already present
                     drug_annotations = item.get("drug_annotations", []) or []
                     if drug_annotations:
@@ -1092,16 +1097,22 @@ class EnhancedQueryEngine:
                             elif entry:
                                 names.add(str(entry).lower())
                         # Only run extract_drug_names if enrichment is disabled AND runtime extraction is enabled
-                        pharma_processor = self._get_pharma_processor(ignore_enrichment_flag=allow_runtime_extraction_for_filters)
-                        if (pharma_processor and
-                            allow_runtime_extraction_for_filters and
-                            runtime_extraction_docs_processed < self.runtime_extraction_doc_cap):
+                        pharma_processor = self._get_pharma_processor(
+                            ignore_enrichment_flag=allow_runtime_extraction_for_filters
+                        )
+                        if (
+                            pharma_processor
+                            and allow_runtime_extraction_for_filters
+                            and runtime_extraction_docs_processed < self.runtime_extraction_doc_cap
+                        ):
                             # Safety check for very long abstracts to prevent memory issues
                             abstract = item.get("abstract")
                             if abstract and len(str(abstract)) > 50000:  # 50KB sanity check
-                                logger.warning("Skipping runtime extraction for document with extremely long abstract (%d chars)", len(str(abstract)))
+                                logger.warning(
+                                    "Skipping runtime extraction for document with extremely long abstract (%d chars)",
+                                    len(str(abstract)),
+                                )
                                 # Add empty names set for this document
-                                pass
                             else:
                                 doc_text = " ".join(
                                     filter(
@@ -1129,9 +1140,7 @@ class EnhancedQueryEngine:
                     return names
 
                 ranked_filtered = [
-                    item
-                    for item in ranked_filtered
-                    if _extract_doc_drugs(item).intersection(canonical_filters)
+                    item for item in ranked_filtered if _extract_doc_drugs(item).intersection(canonical_filters)
                 ]
                 applied["drug_names"] = list(raw_filters)
 
@@ -1144,7 +1153,7 @@ class EnhancedQueryEngine:
                 preferred_values = [str(species_preference).lower()]
                 applied["species_preference"] = species_preference
 
-            def _normalise_species(value: Any) -> List[str]:
+            def _normalise_species(value: Any) -> list[str]:
                 if value is None:
                     return []
                 if isinstance(value, str):
@@ -1156,7 +1165,7 @@ class EnhancedQueryEngine:
             # Check include_unknown_species flag
             include_unknown_species = filters.get("include_unknown_species", True)
 
-            filtered_items: List[Dict[str, Any]] = []
+            filtered_items: list[dict[str, Any]] = []
             for item in ranked_filtered:
                 species_values = _normalise_species(item.get("species"))
                 if not species_values and self.infer_species_on_filter:
@@ -1237,8 +1246,8 @@ class EnhancedQueryEngine:
         # Use shared normalize_text function for consistency
         normalized = normalize_text(title, remove_diacritics=True, lowercase=True)
         # Additional cleaning for identifier consistency
-        cleaned = ''.join(ch if ch.isalnum() or ch.isspace() else ' ' for ch in normalized)
-        return ' '.join(cleaned.split())
+        cleaned = "".join(ch if ch.isalnum() or ch.isspace() else " " for ch in normalized)
+        return " ".join(cleaned.split())
 
     @staticmethod
     def _normalize_author_identifier(author: str) -> str:
@@ -1286,10 +1295,7 @@ class EnhancedQueryEngine:
     @staticmethod
     def _normalize_for_cache(value: Any) -> Any:
         if isinstance(value, dict):
-            normalized = {
-                str(key): EnhancedQueryEngine._normalize_for_cache(val)
-                for key, val in value.items()
-            }
+            normalized = {str(key): EnhancedQueryEngine._normalize_for_cache(val) for key, val in value.items()}
             return dict(sorted(normalized.items()))
         if isinstance(value, list):
             return [EnhancedQueryEngine._normalize_for_cache(item) for item in value]
@@ -1300,7 +1306,7 @@ class EnhancedQueryEngine:
             return sorted(normalized_items, key=EnhancedQueryEngine._cache_sort_key)
         return value
 
-    def _summarize_filters(self, filters: Dict[str, Any]) -> Dict[str, Any]:
+    def _summarize_filters(self, filters: dict[str, Any]) -> dict[str, Any]:
         summary = {}
         for key, value in (filters or {}).items():
             if value is None:
@@ -1313,18 +1319,18 @@ class EnhancedQueryEngine:
         *,
         query: str,
         enhanced_query: str,
-        results: List[Dict[str, Any]],
+        results: list[dict[str, Any]],
         cache_metadata: CacheMetadata,
-        filters_applied: Optional[Dict[str, Any]],
+        filters_applied: dict[str, Any] | None,
         enhancement_applied: bool,
         start_time: datetime,
         end_time: datetime,
         sort_by: str,
-        dedup_info: Optional[Dict[str, Any]],
-        error: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        dedup_info: dict[str, Any] | None,
+        error: str | None = None,
+    ) -> dict[str, Any]:
         duration_ms = int((end_time - start_time).total_seconds() * 1000)
-        response: Dict[str, Any] = {
+        response: dict[str, Any] = {
             "query": query,
             "enhanced_query": enhanced_query,
             "results": results,
@@ -1346,7 +1352,7 @@ class EnhancedQueryEngine:
             response["error"] = error
         return response
 
-    def purge_expired_cache(self) -> Dict[str, Any]:
+    def purge_expired_cache(self) -> dict[str, Any]:
         """Remove expired cache files from the cache directory.
 
         Scans all cache files and removes those where the cached_at timestamp
@@ -1372,7 +1378,7 @@ class EnhancedQueryEngine:
         for cache_file in self.cache_dir.glob("*.json"):
             try:
                 # Read the cache file to get metadata
-                with open(cache_file, "r", encoding="utf-8") as f:
+                with open(cache_file, encoding="utf-8") as f:
                     cache_data = json.load(f)
 
                 # Get cached timestamp
@@ -1415,7 +1421,7 @@ class EnhancedQueryEngine:
         logger.info(
             "Cache purge completed: removed %d expired files, kept %d valid files",
             stats["files_removed"],
-            stats["files_kept"]
+            stats["files_kept"],
         )
 
         return stats

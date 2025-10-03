@@ -1,30 +1,30 @@
 """Enhanced RAG agent with medical guardrails and pharmaceutical analysis."""
-
 from __future__ import annotations
 
 import asyncio
 import logging
 import os
-import random
 import threading
 import time
-import warnings
-from typing import Any, Awaitable, Dict, List, Optional, Tuple, Union, TypedDict
+from typing import Any
+from typing import Awaitable
+from typing import TypedDict
 
 from langchain_core.documents import Document
 
-from .rag_agent import RAGAgent, RAGResponse
-from .medical_guardrails import MedicalGuardrails
-from .synthesis_engine import SynthesisEngine
 from .ddi_pk_processor import DDIPKProcessor
 from .enhanced_config import EnhancedRAGConfig
 from .enhanced_pubmed_agent import PubMedIntegrationManager
+from .medical_guardrails import MedicalGuardrails
+from .rag_agent import RAGAgent
+from .rag_agent import RAGResponse
+from .synthesis_engine import SynthesisEngine
 
 try:
     from guardrails.actions import contains_medical_disclaimer
 except ImportError:
     # Fallback if guardrails not available
-    def contains_medical_disclaimer(text: Optional[str]) -> bool:
+    def contains_medical_disclaimer(text: str | None) -> bool:
         """Fallback disclaimer detection."""
         if not text:
             return False
@@ -36,41 +36,46 @@ except ImportError:
 
         return False
 
+
 logger = logging.getLogger(__name__)
 
 
 class SafetyMetadata(TypedDict):
     """Safety validation metadata."""
-    input_validation: Dict[str, Any]
-    output_validation: Dict[str, Any]
-    retrieval_validation: Dict[str, Any]
-    warnings: List[str]
+
+    input_validation: dict[str, Any]
+    output_validation: dict[str, Any]
+    retrieval_validation: dict[str, Any]
+    warnings: list[str]
     blocked: bool
     mode: str
 
 
 class ErrorDict(TypedDict):
     """Standardized error format."""
+
     type: str
     message: str
-    details: Optional[Dict[str, Any]]
-    stage: Optional[str]
+    details: dict[str, Any] | None
+    stage: str | None
 
 
 class SourceEntry(TypedDict):
     """Individual source document entry with standardized metadata."""
+
     doc_id: str
-    title: Optional[str]
+    title: str | None
     content: str
-    metadata: Dict[str, Any]
-    score: Optional[float]
+    metadata: dict[str, Any]
+    score: float | None
     source_type: str  # "local", "pubmed", etc.
 
 
 class AnalysisResults(TypedDict):
     """Analysis results from synthesis and DDI/PK processors."""
-    synthesis: Optional[Dict[str, Any]]
-    ddi_pk: Optional[Dict[str, Any]]
+
+    synthesis: dict[str, Any] | None
+    ddi_pk: dict[str, Any] | None
     enabled: bool
     execution_time: float
 
@@ -81,17 +86,18 @@ class EnhancedRAGPayload(TypedDict):
     This TypedDict describes the structure returned by ask_question_safe_sync()
     and ask_question_safe() methods, including safety metadata and analysis results.
     """
+
     answer: str
-    sources: List[Union[Document, SourceEntry]]
-    error: Optional[Union[str, ErrorDict]]
+    sources: list[Document | SourceEntry]
+    error: str | ErrorDict | None
     processing_time: float
-    confidence_scores: Optional[List[float]]
-    disclaimer: Optional[str]
+    confidence_scores: list[float] | None
+    disclaimer: str | None
     needs_rebuild: bool
     safety: SafetyMetadata
     analysis: AnalysisResults
-    metrics: Dict[str, Any]
-    component_health: Dict[str, Dict[str, Any]]
+    metrics: dict[str, Any]
+    component_health: dict[str, dict[str, Any]]
 
 
 class EnhancedRAGAgent:
@@ -109,23 +115,23 @@ class EnhancedRAGAgent:
         vector_db_path: str = "./vector_db",
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
-        embedding_model_name: Optional[str] = None,
-        enable_preflight_embedding: Optional[bool] = None,
-        append_disclaimer_in_answer: Optional[bool] = None,
-        force_disclaimer_in_answer: Optional[bool] = None,
+        embedding_model_name: str | None = None,
+        enable_preflight_embedding: bool | None = None,
+        append_disclaimer_in_answer: bool | None = None,
+        force_disclaimer_in_answer: bool | None = None,
         *,
-        guardrails_config_path: Optional[str] = None,
+        guardrails_config_path: str | None = None,
         enable_synthesis: bool = False,
         enable_ddi_analysis: bool = False,
         safety_mode: str = "balanced",
         default_safe: bool = False,
-        config: Optional[EnhancedRAGConfig] = None,
-        pubmed_query_engine: Optional[EnhancedQueryEngine] = None,
-        pubmed_scraper: Optional[EnhancedPubMedScraper] = None,
+        config: EnhancedRAGConfig | None = None,
+        pubmed_query_engine: EnhancedQueryEngine | None = None,
+        pubmed_scraper: EnhancedPubMedScraper | None = None,
         # NeMo extraction integration (optional; passed through to base agent)
-        enable_nemo_extraction: Optional[bool] = None,
-        nemo_extraction_config: Optional[dict] = None,
-        nemo_client: Optional[Any] = None,
+        enable_nemo_extraction: bool | None = None,
+        nemo_extraction_config: dict | None = None,
+        nemo_client: Any | None = None,
     ) -> None:
         """Initialize Enhanced RAG Agent with medical safety and analysis capabilities.
 
@@ -203,11 +209,11 @@ class EnhancedRAGAgent:
         self.synthesis_available = False
         self.ddi_analysis_available = False
 
-        self.guardrails: Optional[MedicalGuardrails] = None
-        self.synthesis_engine: Optional[SynthesisEngine] = None
-        self.ddi_processor: Optional[DDIPKProcessor] = None
-        self.component_health: Dict[str, Dict[str, Any]] = {}
-        self.safety_metrics: Dict[str, Any] = {
+        self.guardrails: MedicalGuardrails | None = None
+        self.synthesis_engine: SynthesisEngine | None = None
+        self.ddi_processor: DDIPKProcessor | None = None
+        self.component_health: dict[str, dict[str, Any]] = {}
+        self.safety_metrics: dict[str, Any] = {
             "total_queries": 0,
             "blocked_queries": 0,
             "input_validation_failures": 0,
@@ -230,9 +236,7 @@ class EnhancedRAGAgent:
         # Enhanced configuration and PubMed integration
         self.config = config or EnhancedRAGConfig.from_env()
         self._pubmed_integration = PubMedIntegrationManager(
-            config=self.config,
-            pubmed_query_engine=pubmed_query_engine,
-            pubmed_scraper=pubmed_scraper
+            config=self.config, pubmed_query_engine=pubmed_query_engine, pubmed_scraper=pubmed_scraper
         )
 
         # Maintain backward compatibility for metrics
@@ -245,23 +249,23 @@ class EnhancedRAGAgent:
         self._components_initialized = False
 
     @property
-    def pubmed_scraper(self) -> Optional[EnhancedPubMedScraper]:
+    def pubmed_scraper(self) -> EnhancedPubMedScraper | None:
         """Get the PubMed scraper instance. Read-only access."""
         return self._pubmed_integration.pubmed_scraper
 
     @property
-    def pubmed_query_engine(self) -> Optional[EnhancedQueryEngine]:
+    def pubmed_query_engine(self) -> EnhancedQueryEngine | None:
         """Get the PubMed query engine instance. Read-only access."""
         return self._pubmed_integration.pubmed_query_engine
 
     # Backward compatibility aliases for deprecated private attributes
     @property
-    def _pubmed_scraper(self) -> Optional[EnhancedPubMedScraper]:
+    def _pubmed_scraper(self) -> EnhancedPubMedScraper | None:
         """Deprecated: Use pubmed_scraper property instead."""
         return self._pubmed_integration.pubmed_scraper
 
     @property
-    def _pubmed_query_engine(self) -> Optional[EnhancedQueryEngine]:
+    def _pubmed_query_engine(self) -> EnhancedQueryEngine | None:
         """Deprecated: Use pubmed_query_engine property instead."""
         return self._pubmed_integration.pubmed_query_engine
 
@@ -277,7 +281,7 @@ class EnhancedRAGAgent:
     def _initialize_components(self) -> None:
         """Initialise guardrails, synthesis engine, and DDI processor with health checks."""
         # Medical guardrails
-        guardrails_status: Dict[str, Any] = {"status": "unconfigured"}
+        guardrails_status: dict[str, Any] = {"status": "unconfigured"}
         if self.guardrails_config_path:
             try:
                 self.guardrails = MedicalGuardrails(self.guardrails_config_path)
@@ -301,7 +305,7 @@ class EnhancedRAGAgent:
         self.component_health["medical_guardrails"] = guardrails_status
 
         # Synthesis engine
-        synthesis_status: Dict[str, Any] = {"status": "disabled"}
+        synthesis_status: dict[str, Any] = {"status": "disabled"}
         if self.synthesis_configured:
             try:
                 self.synthesis_engine = SynthesisEngine()
@@ -318,7 +322,7 @@ class EnhancedRAGAgent:
         self.component_health["synthesis_engine"] = synthesis_status
 
         # DDI/PK processor
-        ddi_status: Dict[str, Any] = {"status": "disabled"}
+        ddi_status: dict[str, Any] = {"status": "disabled"}
         if self.ddi_analysis_configured:
             try:
                 self.ddi_processor = DDIPKProcessor()
@@ -338,7 +342,7 @@ class EnhancedRAGAgent:
         self._update_pubmed_component_health()
 
         # NeMo extraction component health
-        nemo_status: Dict[str, Any] = {"status": "disabled"}
+        nemo_status: dict[str, Any] = {"status": "disabled"}
         try:
             loader = getattr(self.base_agent, "document_loader", None)
             get_metrics = getattr(loader, "get_nemo_metrics", None)
@@ -401,11 +405,11 @@ class EnhancedRAGAgent:
         """Check if PubMed should be activated for this query."""
         return self._pubmed_integration.should_activate_pubmed_for_query(force_pubmed=force_pubmed)
 
-    def _filter_pubmed_results(self, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _filter_pubmed_results(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
         """Filter PubMed results for relevance and quality."""
         return self._pubmed_integration.filter_pubmed_results(payload)
 
-    def _record_pubmed_success(self, mode: str, info: Dict[str, Any]) -> None:
+    def _record_pubmed_success(self, mode: str, info: dict[str, Any]) -> None:
         with self._metrics_lock:
             self.pubmed_metrics["total_queries"] += 1
             if info.get("cache_hit"):
@@ -421,7 +425,9 @@ class EnhancedRAGAgent:
                 if results:
                     meta = dict(results[0])
                     provider = meta.get("provider") or (meta.get("metadata", {}) or {}).get("provider")
-                    provider_family = meta.get("provider_family") or (meta.get("metadata", {}) or {}).get("provider_family")
+                    provider_family = meta.get("provider_family") or (meta.get("metadata", {}) or {}).get(
+                        "provider_family"
+                    )
                     if provider:
                         self.pubmed_metrics["last_provider"] = provider
                     if provider_family:
@@ -429,7 +435,7 @@ class EnhancedRAGAgent:
             except Exception:
                 pass
 
-    def _record_pubmed_failure(self, mode: str, info: Dict[str, Any]) -> None:
+    def _record_pubmed_failure(self, mode: str, info: dict[str, Any]) -> None:
         with self._metrics_lock:
             self.pubmed_metrics["total_queries"] += 1
             self.pubmed_metrics["error_count"] += 1
@@ -438,7 +444,7 @@ class EnhancedRAGAgent:
             self.pubmed_metrics["last_error"] = info.get("error")
             self.pubmed_metrics["last_updated"] = time.time()
 
-    def _record_pubmed_skip(self, mode: str, info: Dict[str, Any]) -> None:
+    def _record_pubmed_skip(self, mode: str, info: dict[str, Any]) -> None:
         with self._metrics_lock:
             self.pubmed_metrics["last_mode"] = mode
             self.pubmed_metrics["last_error"] = info.get("reason") or info.get("error")
@@ -449,11 +455,11 @@ class EnhancedRAGAgent:
         self,
         query: str,
         *,
-        max_items: Optional[int] = None,
-        filters: Optional[Dict[str, Any]] = None,
+        max_items: int | None = None,
+        filters: dict[str, Any] | None = None,
         allow_runtime_extraction_for_filters: bool = False,
         mode: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         normalized_query = (query or "").strip()
         if not normalized_query:
             info = {"enabled": False, "reason": "empty_query"}
@@ -518,11 +524,11 @@ class EnhancedRAGAgent:
 
         return info
 
-    def _disabled_pubmed_payload(self, reason: str = "pubmed_disabled") -> Dict[str, Any]:
+    def _disabled_pubmed_payload(self, reason: str = "pubmed_disabled") -> dict[str, Any]:
         return {"enabled": False, "success": False, "reason": reason, "results": []}
 
-    def _render_pubmed_sources(self, results: Optional[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
-        rendered: List[Dict[str, Any]] = []
+    def _render_pubmed_sources(self, results: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+        rendered: list[dict[str, Any]] = []
         for idx, item in enumerate(results or []):
             # Normalize metadata to ensure pubmed_id is available for UI detection
             meta = dict(item)
@@ -547,10 +553,10 @@ class EnhancedRAGAgent:
 
     def _combine_sources(
         self,
-        local_payload: Optional[Dict[str, Any]],
-        pubmed_payload: Optional[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
-        sources: List[Dict[str, Any]] = []
+        local_payload: dict[str, Any] | None,
+        pubmed_payload: dict[str, Any] | None,
+    ) -> list[dict[str, Any]]:
+        sources: list[dict[str, Any]] = []
         if local_payload:
             sources.extend(local_payload.get("sources", []))
         if pubmed_payload:
@@ -562,10 +568,10 @@ class EnhancedRAGAgent:
         *,
         query: str,
         mode: str,
-        local_payload: Optional[Dict[str, Any]],
-        pubmed_payload: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        response: Dict[str, Any] = {
+        local_payload: dict[str, Any] | None,
+        pubmed_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        response: dict[str, Any] = {
             "query": query,
             "mode": mode,
             "local": local_payload,
@@ -596,7 +602,9 @@ class EnhancedRAGAgent:
             if mode == "pubmed_only" and pubmed_payload.get("success") and response["sources"]:
                 article_count = len([s for s in response["sources"] if s.get("source_type") == "pubmed"])
                 if article_count > 0:
-                    response["answer"] = f"Found {article_count} PubMed article{'s' if article_count != 1 else ''} relevant to your query. See Sources for details."
+                    response[
+                        "answer"
+                    ] = f"Found {article_count} PubMed article{'s' if article_count != 1 else ''} relevant to your query. See Sources for details."
 
         response["status"] = {
             "pubmed_enabled": pubmed_payload.get("enabled", False),
@@ -635,11 +643,11 @@ class EnhancedRAGAgent:
         query: str,
         k: int = 4,
         *,
-        max_external_results: Optional[int] = None,
-        filters: Optional[Dict[str, Any]] = None,
+        max_external_results: int | None = None,
+        filters: dict[str, Any] | None = None,
         allow_runtime_extraction_for_filters: bool = False,
         force_pubmed: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         # Check rollout before proceeding
         if not self._should_activate_pubmed_for_query(force_pubmed=force_pubmed):
             # Return local-only response
@@ -674,15 +682,15 @@ class EnhancedRAGAgent:
         self,
         query: str,
         *,
-        max_external_results: Optional[int] = None,
-        max_results: Optional[int] = None,
-        filters: Optional[Dict[str, Any]] = None,
+        max_external_results: int | None = None,
+        max_results: int | None = None,
+        filters: dict[str, Any] | None = None,
         allow_runtime_extraction_for_filters: bool = False,
-        fallback_to_local: Optional[bool] = None,
+        fallback_to_local: bool | None = None,
         k: int = 4,
         force_pubmed: bool = False,
         strict: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         # Check rollout before proceeding
         if not self._should_activate_pubmed_for_query(force_pubmed=force_pubmed):
             # Return error response when rollout excludes user
@@ -706,18 +714,19 @@ class EnhancedRAGAgent:
         if max_external_results is not None and max_results is not None:
             # Both provided, prefer max_external_results
             import warnings
+
             warnings.warn(
                 "Both max_external_results and max_results provided to ask_question_pubmed_only. "
                 "Using max_external_results. max_results is deprecated.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
         elif max_results is not None:
             effective_max_results = max_results
             warnings.warn(
                 "max_results parameter is deprecated. Use max_external_results instead.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
 
         # Check if strict mode is enabled (either via parameter or config)
@@ -731,7 +740,7 @@ class EnhancedRAGAgent:
             allow_runtime_extraction_for_filters=allow_runtime_extraction_for_filters,
             mode="pubmed_only",
         )
-        local_payload: Optional[Dict[str, Any]] = None
+        local_payload: dict[str, Any] | None = None
 
         # Only fallback if not in strict mode
         if not strict_mode and fallback and pubmed_payload.get("enabled") and not pubmed_payload.get("success"):
@@ -752,7 +761,7 @@ class EnhancedRAGAgent:
         if not pubmed_payload.get("success") and pubmed_payload.get("enabled"):
             response["error"] = {
                 "message": pubmed_payload.get("error") or pubmed_payload.get("reason", "PubMed query failed"),
-                "fallback": bool(local_payload)
+                "fallback": bool(local_payload),
             }
 
         return response
@@ -762,13 +771,13 @@ class EnhancedRAGAgent:
         query: str,
         k: int = 4,
         *,
-        max_external_results: Optional[int] = None,
-        local_k: Optional[int] = None,
-        pubmed_max: Optional[int] = None,
-        filters: Optional[Dict[str, Any]] = None,
+        max_external_results: int | None = None,
+        local_k: int | None = None,
+        pubmed_max: int | None = None,
+        filters: dict[str, Any] | None = None,
         allow_runtime_extraction_for_filters: bool = False,
         force_pubmed: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         # Handle parameter aliases for backward compatibility
         effective_k = k
         effective_max_external = max_external_results
@@ -776,33 +785,29 @@ class EnhancedRAGAgent:
         if local_k is not None:
             if k != 4:  # Default value
                 import warnings
+
                 warnings.warn(
-                    "Both k and local_k provided to ask_question_hybrid. "
-                    "Using k. local_k is deprecated.",
+                    "Both k and local_k provided to ask_question_hybrid. " "Using k. local_k is deprecated.",
                     DeprecationWarning,
-                    stacklevel=2
+                    stacklevel=2,
                 )
             else:
                 effective_k = local_k
-                warnings.warn(
-                    "local_k parameter is deprecated. Use k instead.",
-                    DeprecationWarning,
-                    stacklevel=2
-                )
+                warnings.warn("local_k parameter is deprecated. Use k instead.", DeprecationWarning, stacklevel=2)
 
         if max_external_results is not None and pubmed_max is not None:
             warnings.warn(
                 "Both max_external_results and pubmed_max provided to ask_question_hybrid. "
                 "Using max_external_results. pubmed_max is deprecated.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
         elif pubmed_max is not None:
             effective_max_external = pubmed_max
             warnings.warn(
                 "pubmed_max parameter is deprecated. Use max_external_results instead.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
 
         routing_mode = self._classify_query_mode(query)
@@ -875,7 +880,7 @@ class EnhancedRAGAgent:
         with self._metrics_lock:
             self.safety_metrics[key] = value
 
-    def _call_base_locked(self, query: str, k: int, disclaimer_override: Optional[bool]) -> RAGResponse:
+    def _call_base_locked(self, query: str, k: int, disclaimer_override: bool | None) -> RAGResponse:
         """Call base agent with thread safety."""
         with self._base_call_lock:
             return self.base_agent.ask_question(query, k, disclaimer_already_present=disclaimer_override)
@@ -883,8 +888,8 @@ class EnhancedRAGAgent:
     def _ensure_disclaimer(
         self,
         answer: str,
-        output_metadata: Dict[str, Any],
-    ) -> Tuple[str, Dict[str, Any]]:
+        output_metadata: dict[str, Any],
+    ) -> tuple[str, dict[str, Any]]:
         """Centralize disclaimer enforcement logic to avoid duplication.
 
         Args:
@@ -917,7 +922,7 @@ class EnhancedRAGAgent:
 
         return updated_answer, output_metadata
 
-    def _run_coroutine_blocking(self, coro: "Awaitable[Any]", *, allow_nested: bool = True) -> Any:
+    def _run_coroutine_blocking(self, coro: Awaitable[Any], *, allow_nested: bool = True) -> Any:
         """Execute an async coroutine from synchronous code, tolerating active loops.
 
         This method handles event loop edge cases that can occur in Jupyter notebooks
@@ -941,7 +946,6 @@ class EnhancedRAGAgent:
 
             # Use the running loop's executor to run asyncio.run(coro) in a separate thread
             # This maintains better loop affinity compared to manually creating threads
-            import concurrent.futures
 
             def _runner() -> Any:
                 # Create a new event loop in the executor thread
@@ -952,8 +956,8 @@ class EnhancedRAGAgent:
             future = loop.run_in_executor(None, _runner)
 
             # Block until the future completes, but in a thread-safe way
-            result_container: Dict[str, Any] = {}
-            error_container: Dict[str, BaseException] = {}
+            result_container: dict[str, Any] = {}
+            error_container: dict[str, BaseException] = {}
 
             def _waiter():
                 try:
@@ -962,6 +966,7 @@ class EnhancedRAGAgent:
                     error_container["error"] = exc
 
             import threading
+
             wait_thread = threading.Thread(target=_waiter, daemon=True)
             wait_thread.start()
             wait_thread.join()
@@ -977,7 +982,7 @@ class EnhancedRAGAgent:
         query: str,
         k: int = 4,
         enable_analysis: bool = False,
-        analysis_options: Optional[Dict[str, Any]] = None,
+        analysis_options: dict[str, Any] | None = None,
     ) -> EnhancedRAGPayload:
         """Async safe query entry point with validation and advanced analysis.
 
@@ -986,17 +991,17 @@ class EnhancedRAGAgent:
                 analysis results, and component health information. See EnhancedRAGPayload
                 for the complete structure.
         """
-        wall_start_time = time.time()
+        time.time()
         start_perf = time.perf_counter()
         self._inc_metric("total_queries")
         analysis_options = analysis_options or {}
-        safety_metadata: Dict[str, Any] = {
+        safety_metadata: dict[str, Any] = {
             "input_validation": None,
             "retrieval_validation": None,
             "output_validation": None,
             "analysis": {},
         }
-        stage_timings: Dict[str, float] = {}
+        stage_timings: dict[str, float] = {}
 
         try:
             stage_start = time.perf_counter()
@@ -1016,7 +1021,7 @@ class EnhancedRAGAgent:
                     "base_payload": {
                         "analysis": {"status": "skipped", "reason": "input_validation_failed"},
                         "timings": {"input_validation": stage_timings["input_validation"]},
-                    }
+                    },
                 }
                 return self._handle_guardrails_exception(context)
 
@@ -1024,7 +1029,7 @@ class EnhancedRAGAgent:
             rails_configured = self._rails_configured()
             base_append_enabled = bool(self.base_agent.append_disclaimer_in_answer)
             disclaimer_deferred = bool(rails_configured and base_append_enabled)
-            disclaimer_override: Optional[bool] = True if disclaimer_deferred else None
+            disclaimer_override: bool | None = True if disclaimer_deferred else None
 
             # Execute query without mutating shared base agent flags
             stage_start = time.perf_counter()
@@ -1043,17 +1048,17 @@ class EnhancedRAGAgent:
 
             needs_rebuild = bool(getattr(base_response, "needs_rebuild", False))
             papers = base_payload.get("sources", [])
-            analysis_results: Dict[str, Any] = {}
-            analysis_metadata: Dict[str, Any] = {}
+            analysis_results: dict[str, Any] = {}
+            analysis_metadata: dict[str, Any] = {}
             stage_timings["analysis_total"] = 0.0
             stage_timings["analysis_synthesis"] = 0.0
             stage_timings["analysis_ddi_pk"] = 0.0
             stage_timings["retrieval_validation"] = 0.0
             stage_timings["output_validation"] = 0.0
 
-            retrieval_validation: Optional[Dict[str, Any]] = None
-            output_validation: Optional[Dict[str, Any]] = None
-            output_metadata: Dict[str, Any] = {}
+            retrieval_validation: dict[str, Any] | None = None
+            output_validation: dict[str, Any] | None = None
+            output_metadata: dict[str, Any] = {}
             output_rails_used = False
             disclaimer_enforced = False
 
@@ -1078,8 +1083,8 @@ class EnhancedRAGAgent:
                         "nemo_rails_used": False,
                         "metadata": {
                             "guardrails_enabled": bool(self.guardrails and self.guardrails.enabled),
-                            "warnings": ["Vector database rebuild required"]
-                        }
+                            "warnings": ["Vector database rebuild required"],
+                        },
                     },
                     "guardrails_triggered": False,
                     "timings": stage_timings,
@@ -1089,9 +1094,7 @@ class EnhancedRAGAgent:
 
                 # Return consistent payload
                 return self._package_enhanced_response(
-                    base_payload,
-                    analysis_results={"status": "skipped"},
-                    safety_metadata=safety_metadata
+                    base_payload, analysis_results={"status": "skipped"}, safety_metadata=safety_metadata
                 )
 
             if papers:
@@ -1135,7 +1138,7 @@ class EnhancedRAGAgent:
                         },
                         "timings": stage_timings,
                         "retrieval_validation": retrieval_validation,
-                    }
+                    },
                 }
                 return self._handle_guardrails_exception(context)
             else:
@@ -1167,7 +1170,7 @@ class EnhancedRAGAgent:
                                 "analysis": analysis_results or {"status": "skipped"},
                                 "timings": stage_timings,
                                 "retrieval_validation": retrieval_validation,
-                            }
+                            },
                         }
                         return self._handle_guardrails_exception(context)
                     elif self.safety_mode == "balanced":
@@ -1220,18 +1223,12 @@ class EnhancedRAGAgent:
             # Update guardrails_active metric based on actual usage
             guardrails_actively_used = bool(
                 input_validation.get("metadata", {}).get("guardrails_enabled")
-                or (
-                    output_validation
-                    and output_validation.get("metadata", {}).get("guardrails_enabled")
-                )
-                or (
-                    retrieval_validation
-                    and retrieval_validation.get("metadata", {}).get("guardrails_enabled")
-                )
+                or (output_validation and output_validation.get("metadata", {}).get("guardrails_enabled"))
+                or (retrieval_validation and retrieval_validation.get("metadata", {}).get("guardrails_enabled"))
             )
             self._set_metric("guardrails_active", guardrails_actively_used)
 
-            def _flag_from_issues(issues: List[Any], keywords: Tuple[str, ...]) -> bool:
+            def _flag_from_issues(issues: list[Any], keywords: tuple[str, ...]) -> bool:
                 for issue in issues:
                     if isinstance(issue, str):
                         lowered = issue.lower()
@@ -1239,14 +1236,21 @@ class EnhancedRAGAgent:
                             return True
                 return False
 
-            pii_detected = _flag_from_issues(input_validation.get("issues", []), ("pii", "phi", "personal data", "personal information"))
-            jailbreak_detected = _flag_from_issues(input_validation.get("issues", []), ("jailbreak", "ignore", "bypass"))
+            pii_detected = _flag_from_issues(
+                input_validation.get("issues", []), ("pii", "phi", "personal data", "personal information")
+            )
+            jailbreak_detected = _flag_from_issues(
+                input_validation.get("issues", []), ("jailbreak", "ignore", "bypass")
+            )
 
             # Disclaimer enforcement metrics may undercount when guardrails add disclaimer text
             disclaimer_enforced = (
-                disclaimer_enforced or  # From _ensure_disclaimer
-                bool(output_metadata.get("disclaimer_added")) or  # From guardrails
-                (output_validation.get("validated_response") and contains_medical_disclaimer(output_validation.get("validated_response")))  # Detection in validated response
+                disclaimer_enforced
+                or bool(output_metadata.get("disclaimer_added"))  # From _ensure_disclaimer
+                or (  # From guardrails
+                    output_validation.get("validated_response")
+                    and contains_medical_disclaimer(output_validation.get("validated_response"))
+                )  # Detection in validated response
             )
 
             if pii_detected:
@@ -1258,9 +1262,9 @@ class EnhancedRAGAgent:
 
             # Update guardrails_used metric based on actual rails usage
             guardrails_actually_used = bool(
-                input_validation.get("nemo_rails_used") or
-                (output_validation and output_validation.get("nemo_rails_used")) or
-                (retrieval_validation and retrieval_validation.get("nemo_rails_used"))
+                input_validation.get("nemo_rails_used")
+                or (output_validation and output_validation.get("nemo_rails_used"))
+                or (retrieval_validation and retrieval_validation.get("nemo_rails_used"))
             )
             self._set_metric("guardrails_used", guardrails_actually_used)
 
@@ -1344,7 +1348,7 @@ class EnhancedRAGAgent:
         query: str,
         k: int = 4,
         enable_analysis: bool = False,
-        analysis_options: Optional[Dict[str, Any]] = None,
+        analysis_options: dict[str, Any] | None = None,
     ) -> EnhancedRAGPayload:
         """Synchronous safe query entry point with validation and advanced analysis.
 
@@ -1376,12 +1380,12 @@ class EnhancedRAGAgent:
         query: str,
         k: int = 4,
         enable_analysis: bool = False,
-        analysis_options: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        analysis_options: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """DEPRECATED: Use ask_question_safe_sync instead for clarity."""
         return self.ask_question_safe_sync(query, k, enable_analysis, analysis_options)
 
-    async def _validate_input_safely(self, query: str) -> Dict[str, Any]:
+    async def _validate_input_safely(self, query: str) -> dict[str, Any]:
         """Run medical guardrails input validation when available."""
         self._ensure_components_initialized()
         guardrails = self.guardrails
@@ -1397,8 +1401,8 @@ class EnhancedRAGAgent:
         rails_capable = self._rails_configured() and hasattr(guardrails, "run_input_validation_rails")
         fallback_validator = getattr(guardrails, "validate_medical_query", None)
 
-        result: Optional[Dict[str, Any]] = None
-        rails_exception: Optional[Exception] = None
+        result: dict[str, Any] | None = None
+        rails_exception: Exception | None = None
         rails_used = False
 
         if rails_capable:
@@ -1450,7 +1454,7 @@ class EnhancedRAGAgent:
             result["metadata"].setdefault("rails_exception", str(rails_exception))
         return result
 
-    async def _validate_output_safely(self, response: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def _validate_output_safely(self, response: str, sources: list[dict[str, Any]]) -> dict[str, Any]:
         """Run medical guardrails output validation when available."""
         self._ensure_components_initialized()
         guardrails = self.guardrails
@@ -1467,8 +1471,8 @@ class EnhancedRAGAgent:
         rails_capable = self._rails_configured() and hasattr(guardrails, "run_output_validation_rails")
         fallback_validator = getattr(guardrails, "validate_medical_response", None)
 
-        result: Optional[Dict[str, Any]] = None
-        rails_exception: Optional[Exception] = None
+        result: dict[str, Any] | None = None
+        rails_exception: Exception | None = None
         rails_used = False
 
         if rails_capable:
@@ -1522,9 +1526,9 @@ class EnhancedRAGAgent:
 
     async def _validate_retrieval_safely(
         self,
-        papers: List[Dict[str, Any]],
+        papers: list[dict[str, Any]],
         query: str,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Run retrieval/document validation when supported by guardrails."""
         self._ensure_components_initialized()
         guardrails = self.guardrails
@@ -1534,7 +1538,7 @@ class EnhancedRAGAgent:
         rails_capable = self._rails_configured() and hasattr(guardrails, "run_retrieval_validation_rails")
         fallback_callable = getattr(guardrails, "_validate_retrieved_documents_fallback", None)
 
-        result: Optional[Dict[str, Any]] = None
+        result: dict[str, Any] | None = None
         rails_used = False
         try:
             if rails_capable:
@@ -1573,16 +1577,16 @@ class EnhancedRAGAgent:
 
     async def _perform_advanced_analysis(
         self,
-        papers: List[Dict[str, Any]],
+        papers: list[dict[str, Any]],
         query: str,
-        options: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        options: dict[str, Any],
+    ) -> dict[str, Any]:
         """Run synthesis and DDI/PK analysis as configured."""
         self._ensure_components_initialized()
         analysis_type = self._determine_analysis_type(query)
         analysis_start = time.perf_counter()
-        metadata: Dict[str, Any] = {"analysis_type": analysis_type, "timings": {}}
-        timings: Dict[str, float] = {"total": 0.0, "synthesis": 0.0, "ddi_pk": 0.0}
+        metadata: dict[str, Any] = {"analysis_type": analysis_type, "timings": {}}
+        timings: dict[str, float] = {"total": 0.0, "synthesis": 0.0, "ddi_pk": 0.0}
         synthesis_available = bool(self.enable_synthesis and self.synthesis_engine)
         ddi_required = analysis_type in {"drug_interaction", "pharmacokinetic"}
         ddi_available = bool(self.enable_ddi_analysis and self.ddi_processor)
@@ -1602,8 +1606,8 @@ class EnhancedRAGAgent:
             metadata["timings"] = timings
             return {"status": "skipped", "reason": "no_sources", "metadata": metadata}
 
-        results: Dict[str, Any] = {"status": "completed", "metadata": metadata}
-        component_errors: Dict[str, str] = {}
+        results: dict[str, Any] = {"status": "completed", "metadata": metadata}
+        component_errors: dict[str, str] = {}
 
         if synthesis_status == "pending":
             synthesis_start = time.perf_counter()
@@ -1679,9 +1683,7 @@ class EnhancedRAGAgent:
         metadata["timings"] = timings
 
         considered_statuses = [
-            status
-            for status in (synthesis_status, ddi_status)
-            if status not in {"disabled", "not_applicable"}
+            status for status in (synthesis_status, ddi_status) if status not in {"disabled", "not_applicable"}
         ]
         has_error = any(status == "error" for status in considered_statuses)
         has_completed = any(status == "completed" for status in considered_statuses)
@@ -1711,7 +1713,7 @@ class EnhancedRAGAgent:
             return "comparative"
         return "general_research"
 
-    def _infer_drug_targets(self, query: str, options: Dict[str, Any]) -> Tuple[Optional[str], List[str]]:
+    def _infer_drug_targets(self, query: str, options: dict[str, Any]) -> tuple[str | None, list[str]]:
         """Infer primary and secondary drug entities from options or query heuristics.
 
         Uses pharmaceutical entity extractor when available, falling back to
@@ -1738,14 +1740,16 @@ class EnhancedRAGAgent:
         # Fallback to basic heuristic: split on keywords to detect drug pairs
         lowered = (query or "").lower()
         delimiters = [" and ", " with ", " vs ", " versus ", " + ", " interaction", " combined with "]
-        primary_candidate: Optional[str] = None
-        secondary_candidates: List[str] = []
+        primary_candidate: str | None = None
+        secondary_candidates: list[str] = []
         for delimiter in delimiters:
             if delimiter in lowered:
                 parts = lowered.split(delimiter)
                 if len(parts) >= 2:
                     primary_candidate = parts[0].strip().split()[-1]
-                    secondary_candidates = [segment.strip().split()[0] for segment in parts[1].split(",") if segment.strip()]
+                    secondary_candidates = [
+                        segment.strip().split()[0] for segment in parts[1].split(",") if segment.strip()
+                    ]
                     break
 
         logger.debug("Heuristic drug inference: primary=%s, secondary=%s", primary_candidate, secondary_candidates)
@@ -1753,12 +1757,12 @@ class EnhancedRAGAgent:
 
     def _package_enhanced_response(
         self,
-        base_response: Dict[str, Any],
-        analysis_results: Dict[str, Any],
-        safety_metadata: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        base_response: dict[str, Any],
+        analysis_results: dict[str, Any],
+        safety_metadata: dict[str, Any],
+    ) -> dict[str, Any]:
         """Combine base response, analysis, and safety metadata into final payload."""
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "answer": base_response.get("answer"),
             "sources": base_response.get("sources", []),
             "confidence_scores": base_response.get("confidence_scores"),
@@ -1800,7 +1804,7 @@ class EnhancedRAGAgent:
         payload["component_health"] = self.component_health
         return payload
 
-    def _serialize_base_response(self, response: Union[RAGResponse, Dict[str, Any]]) -> Dict[str, Any]:
+    def _serialize_base_response(self, response: RAGResponse | dict[str, Any]) -> dict[str, Any]:
         """Convert the base RAGResponse or dict into a JSON-serialisable dictionary.
 
         Maps common fields from document metadata to top-level keys to ensure
@@ -1809,7 +1813,7 @@ class EnhancedRAGAgent:
         # Handle dict responses
         if isinstance(response, dict):
             # Transform dict to expected structure
-            sources = response.get('sources', [])
+            sources = response.get("sources", [])
             # Normalize sources if they're not in the expected format
             normalized_sources = []
             for idx, doc in enumerate(sources):
@@ -1848,7 +1852,7 @@ class EnhancedRAGAgent:
             }
 
         # Handle RAGResponse objects (existing behavior)
-        sources_payload: List[Dict[str, Any]] = []
+        sources_payload: list[dict[str, Any]] = []
         for idx, doc in enumerate(response.source_documents or []):
             if isinstance(doc, Document):
                 page_content = doc.page_content
@@ -1893,11 +1897,11 @@ class EnhancedRAGAgent:
             "needs_rebuild": response.needs_rebuild,
         }
 
-    def get_safety_metrics(self) -> Dict[str, Any]:
+    def get_safety_metrics(self) -> dict[str, Any]:
         """Expose aggregated safety metrics via the locked async accessor."""
         return self._run_coroutine_blocking(self.get_safety_metrics_async())
 
-    async def get_safety_metrics_async(self) -> Dict[str, Any]:
+    async def get_safety_metrics_async(self) -> dict[str, Any]:
         """Async version of get_safety_metrics with proper locking."""
         self._ensure_components_initialized()
         self._ensure_pubmed_components()
@@ -1911,7 +1915,7 @@ class EnhancedRAGAgent:
 
         return await asyncio.to_thread(_read_metrics)
 
-    def get_system_status(self) -> Dict[str, Any]:
+    def get_system_status(self) -> dict[str, Any]:
         """Return consolidated status for Streamlit dashboards and monitoring."""
         self._ensure_components_initialized()
         self._ensure_pubmed_components()
@@ -1938,7 +1942,7 @@ class EnhancedRAGAgent:
             },
         }
 
-    def _handle_guardrails_exception(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _handle_guardrails_exception(self, context: dict[str, Any]) -> dict[str, Any]:
         """Return a structured response when guardrails block a query."""
         # Track guardrails usage
         with self._metrics_lock:

@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # 🚀 Quick Start Guide
 
 Get up and running with the RAG Template for NVIDIA NemoRetriever in **5 minutes**.
@@ -141,10 +147,10 @@ ENABLE_RAG_PUBMED_INTEGRATION=true
 
 ### 2. Advanced Configuration
 
-- [NGC Deprecation Immunity](docs/NGC_DEPRECATION_IMMUNITY.md)
-- [NVIDIA Model Access Guide](docs/NVIDIA_MODEL_ACCESS_GUIDE.md)
-- [Deployment Guide](docs/DEPLOYMENT.md)
-- [Pharmaceutical Best Practices](docs/PHARMACEUTICAL_BEST_PRACTICES.md)
+- [NGC Deprecation Immunity](../NGC_DEPRECATION_IMMUNITY.md)
+- [NVIDIA Model Access Guide](../NVIDIA_MODEL_ACCESS_GUIDE.md)
+- [Deployment Guide](../DEPLOYMENT.md)
+- [Pharmaceutical Best Practices](../PHARMACEUTICAL_BEST_PRACTICES.md)
 
 ### 3. Development Setup
 
@@ -159,7 +165,7 @@ pre-commit install
 make test
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for full development guide.
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for full development guide.
 
 ---
 
@@ -261,7 +267,7 @@ EOF
 - **Documentation**: Check `/docs` directory
 - **Issues**: [GitHub Issues](https://github.com/your-org/RAG-Template-for-NVIDIA-nemoretriever/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/your-org/RAG-Template-for-NVIDIA-nemoretriever/discussions)
-- **Security**: See [SECURITY.md](SECURITY.md)
+- **Security**: See [SECURITY.md](../../SECURITY.md)
 
 ---
 
@@ -278,13 +284,21 @@ After completing this guide, you should have:
 
 **What's Next?**
 
-- Explore [pharmaceutical features](docs/PHARMACEUTICAL_BEST_PRACTICES.md)
-- Set up [PubMed integration](docs/API_INTEGRATION_GUIDE.md)
-- Learn about [NGC deprecation immunity](docs/NGC_DEPRECATION_IMMUNITY.md)
-- Read the [full README](README.md)
+- Explore [pharmaceutical features](../PHARMACEUTICAL_BEST_PRACTICES.md)
+- Set up [PubMed integration](../API_INTEGRATION_GUIDE.md)
+- Learn about [NGC deprecation immunity](../NGC_DEPRECATION_IMMUNITY.md)
+- Read the [full README](../../README.md)
 
 ---
 
 **Time to production**: 5 minutes ✓
 **Difficulty**: Beginner-friendly ✓
-**Next**: [Full Documentation](README.md)
+**Next**: [Full Documentation](../../README.md)
+
+---
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

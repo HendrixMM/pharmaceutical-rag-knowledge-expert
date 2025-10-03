@@ -4,24 +4,20 @@ Pharmaceutical Benchmark Test Suite
 Comprehensive tests for pharmaceutical benchmarking system.
 Tests benchmark datasets, execution, tracking, and reporting.
 """
-
 import json
-import pytest
+import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+
+import pytest
 
 # Import benchmark components
-import sys
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts.run_pharmaceutical_benchmarks import BenchmarkLoader, QueryEvaluator, BenchmarkRunner, BenchmarkConfig
 from scripts.generate_pharmaceutical_benchmarks import BenchmarkGenerator, DrugDataLoader
-from src.monitoring.pharmaceutical_benchmark_tracker import (
-    BenchmarkMetrics,
-    RegressionDetector,
-    PharmaceuticalBenchmarkTracker
-)
+from scripts.run_pharmaceutical_benchmarks import BenchmarkConfig, BenchmarkLoader, BenchmarkRunner, QueryEvaluator
+from src.monitoring.pharmaceutical_benchmark_tracker import PharmaceuticalBenchmarkTracker, RegressionDetector
 
 
 class TestBenchmarkDatasets:
@@ -39,7 +35,7 @@ class TestBenchmarkDatasets:
             "pharmacokinetics",
             "clinical_terminology",
             "mechanism_of_action",
-            "adverse_reactions"
+            "adverse_reactions",
         ]
 
         for category in categories:
@@ -51,7 +47,7 @@ class TestBenchmarkDatasets:
         file_path = benchmarks_dir / "drug_interactions_v1.json"
 
         if file_path.exists():
-            with open(file_path, 'r') as f:
+            with open(file_path) as f:
                 data = json.load(f)
 
             # Check required top-level keys
@@ -82,31 +78,33 @@ class TestBenchmarkDatasets:
     def test_query_count_matches_metadata(self, benchmarks_dir):
         """Test that actual query count matches metadata."""
         for file_path in benchmarks_dir.glob("*_v1.json"):
-            with open(file_path, 'r') as f:
+            with open(file_path) as f:
                 data = json.load(f)
 
             metadata_count = data["metadata"]["total_queries"]
             actual_count = len(data["queries"])
 
-            assert metadata_count == actual_count, \
-                f"Query count mismatch in {file_path.name}: metadata={metadata_count}, actual={actual_count}"
+            assert (
+                metadata_count == actual_count
+            ), f"Query count mismatch in {file_path.name}: metadata={metadata_count}, actual={actual_count}"
 
     def test_evaluation_criteria_weights(self, benchmarks_dir):
         """Test that evaluation criteria weights sum to 1.0."""
         for file_path in benchmarks_dir.glob("*_v1.json"):
-            with open(file_path, 'r') as f:
+            with open(file_path) as f:
                 data = json.load(f)
 
             for query in data["queries"]:
                 criteria = query["evaluation_criteria"]
                 total_weight = (
-                    criteria.get("accuracy_weight", 0) +
-                    criteria.get("completeness_weight", 0) +
-                    criteria.get("relevance_weight", 0)
+                    criteria.get("accuracy_weight", 0)
+                    + criteria.get("completeness_weight", 0)
+                    + criteria.get("relevance_weight", 0)
                 )
 
-                assert abs(total_weight - 1.0) < 0.01, \
-                    f"Weights don't sum to 1.0 in {file_path.name}, query {query['id']}: {total_weight}"
+                assert (
+                    abs(total_weight - 1.0) < 0.01
+                ), f"Weights don't sum to 1.0 in {file_path.name}, query {query['id']}: {total_weight}"
 
 
 class TestBenchmarkLoader:
@@ -232,11 +230,7 @@ class TestRegressionDetector:
     @pytest.fixture
     def detector(self):
         """Fixture for RegressionDetector."""
-        return RegressionDetector(
-            accuracy_threshold=0.05,
-            cost_threshold=0.20,
-            latency_threshold=0.50
-        )
+        return RegressionDetector(accuracy_threshold=0.05, cost_threshold=0.20, latency_threshold=0.50)
 
     def test_accuracy_regression(self, detector):
         """Test detection of accuracy regression."""
@@ -284,7 +278,7 @@ class TestPharmaceuticalBenchmarkTracker:
             accuracy=0.85,
             cost=12.5,
             latency_ms=350.0,
-            success=True
+            success=True,
         )
 
         assert tracker.metrics.total_queries == 1
@@ -298,13 +292,9 @@ class TestPharmaceuticalBenchmarkTracker:
                 "category": "pharmacokinetics",
                 "total_queries": 50,
                 "successful_queries": 48,
-                "failed_queries": 2
+                "failed_queries": 2,
             },
-            "metrics": {
-                "average_accuracy": 0.82,
-                "average_credits_per_query": 11.5,
-                "average_latency_ms": 420.0
-            }
+            "metrics": {"average_accuracy": 0.82, "average_credits_per_query": 11.5, "average_latency_ms": 420.0},
         }
 
         tracker.track_benchmark_run(result)
@@ -333,11 +323,7 @@ class TestPharmaceuticalBenchmarkTracker:
 
         # Baseline with aggregate-style keys (single-mode, no nested mode key)
         tracker.baseline_metrics = {
-            "drug_safety": {
-                "average_accuracy": 0.90,
-                "average_credits_per_query": 10.0,
-                "average_latency_ms": 400.0
-            }
+            "drug_safety": {"average_accuracy": 0.90, "average_credits_per_query": 10.0, "average_latency_ms": 400.0}
         }
 
         # Result indicating an accuracy drop triggering regression
@@ -347,13 +333,13 @@ class TestPharmaceuticalBenchmarkTracker:
                 "mode": "cloud",
                 "total_queries": 5,
                 "successful_queries": 5,
-                "failed_queries": 0
+                "failed_queries": 0,
             },
             "metrics": {
                 "average_accuracy": 0.80,  # 10% drop from baseline
                 "average_credits_per_query": 10.0,
-                "average_latency_ms": 400.0
-            }
+                "average_latency_ms": 400.0,
+            },
         }
 
         tracker.track_benchmark_run(result)
@@ -401,7 +387,7 @@ class TestConfiguration:
 
     def test_default_config(self):
         """Test default configuration when file missing."""
-        with tempfile.NamedTemporaryFile(suffix='.yaml') as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".yaml") as tmp:
             # Use non-existent path
             config = BenchmarkConfig("/nonexistent/config.yaml")
 

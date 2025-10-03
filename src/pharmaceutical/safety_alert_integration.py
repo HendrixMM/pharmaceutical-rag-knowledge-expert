@@ -16,36 +16,48 @@ Features:
 This system ensures critical pharmaceutical safety information is prioritized
 and routed through the cloud-first architecture with appropriate urgency.
 """
-
 import asyncio
+import hashlib
+import json
 import logging
 import time
-import json
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+from datetime import datetime
+from datetime import timedelta
 from enum import Enum
-import hashlib
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 try:
-    from .query_classifier import (
-        PharmaceuticalQueryClassifier, PharmaceuticalContext,
-        PharmaceuticalDomain, SafetyUrgency, ResearchPriority
-    )
-    from ..monitoring.alert_manager import PharmaceuticalAlertManager
     from ..enhanced_config import EnhancedRAGConfig
-except ImportError:
-    from src.pharmaceutical.query_classifier import (
-        PharmaceuticalQueryClassifier, PharmaceuticalContext,
-        PharmaceuticalDomain, SafetyUrgency, ResearchPriority
+    from ..monitoring.alert_manager import PharmaceuticalAlertManager
+    from .query_classifier import (
+        PharmaceuticalContext,
+        PharmaceuticalDomain,
+        PharmaceuticalQueryClassifier,
+        SafetyUrgency,
     )
-    from src.monitoring.alert_manager import PharmaceuticalAlertManager
+except ImportError:
     from src.enhanced_config import EnhancedRAGConfig
+    from src.monitoring.alert_manager import PharmaceuticalAlertManager
+    from src.pharmaceutical.query_classifier import (
+        PharmaceuticalContext,
+        PharmaceuticalDomain,
+        PharmaceuticalQueryClassifier,
+        SafetyUrgency,
+    )
 
 logger = logging.getLogger(__name__)
 
+
 class SafetyAlertType(Enum):
     """Types of drug safety alerts."""
+
     CRITICAL_SAFETY = "critical_safety"
     DRUG_INTERACTION = "drug_interaction"
     ADVERSE_REACTION = "adverse_reaction"
@@ -55,16 +67,20 @@ class SafetyAlertType(Enum):
     REGULATORY_WARNING = "regulatory_warning"
     MONITORING_REQUIREMENT = "monitoring_requirement"
 
+
 class AlertUrgency(Enum):
     """Alert urgency levels for drug safety."""
-    IMMEDIATE = "immediate"      # Requires immediate attention
-    URGENT = "urgent"           # Requires attention within hours
-    ROUTINE = "routine"         # Standard safety information
+
+    IMMEDIATE = "immediate"  # Requires immediate attention
+    URGENT = "urgent"  # Requires attention within hours
+    ROUTINE = "routine"  # Standard safety information
     INFORMATIONAL = "informational"  # Background safety data
+
 
 @dataclass
 class DrugSafetyAlert:
     """Drug safety alert with comprehensive context."""
+
     alert_id: str
     alert_type: SafetyAlertType
     urgency: AlertUrgency
@@ -78,6 +94,7 @@ class DrugSafetyAlert:
     acknowledged: bool = False
     acknowledgment_timestamp: Optional[datetime] = None
 
+
 class DrugSafetyAlertIntegration:
     """
     Integrated drug safety alert system with pharmaceutical query classification.
@@ -86,9 +103,9 @@ class DrugSafetyAlertIntegration:
     generates appropriate alerts with routing optimization.
     """
 
-    def __init__(self,
-                 config: Optional[EnhancedRAGConfig] = None,
-                 alert_manager: Optional[PharmaceuticalAlertManager] = None):
+    def __init__(
+        self, config: Optional[EnhancedRAGConfig] = None, alert_manager: Optional[PharmaceuticalAlertManager] = None
+    ):
         """
         Initialize drug safety alert integration.
 
@@ -109,18 +126,18 @@ class DrugSafetyAlertIntegration:
             "contraindications": {
                 "metformin": ["severe kidney disease", "acute heart failure", "metabolic acidosis"],
                 "warfarin": ["pregnancy", "active bleeding", "recent surgery"],
-                "ace_inhibitors": ["pregnancy", "bilateral renal artery stenosis", "hyperkalemia"]
+                "ace_inhibitors": ["pregnancy", "bilateral renal artery stenosis", "hyperkalemia"],
             },
             "critical_interactions": {
                 "warfarin": ["aspirin", "nsaids", "antibiotics"],
                 "metformin": ["contrast agents", "alcohol"],
-                "digoxin": ["diuretics", "calcium channel blockers"]
+                "digoxin": ["diuretics", "calcium channel blockers"],
             },
             "monitoring_requirements": {
                 "warfarin": ["inr", "bleeding signs"],
                 "metformin": ["kidney function", "lactic acid"],
-                "statins": ["liver enzymes", "muscle symptoms"]
-            }
+                "statins": ["liver enzymes", "muscle symptoms"],
+            },
         }
 
         # Patient population safety warnings
@@ -129,7 +146,7 @@ class DrugSafetyAlertIntegration:
             "pediatric": ["dosing adjustments", "safety profile", "development effects"],
             "pregnancy": ["teratogenic risk", "category classification", "fetal effects"],
             "kidney_disease": ["dosing adjustment", "accumulation risk", "toxicity"],
-            "liver_disease": ["metabolism impairment", "hepatotoxicity", "clearance"]
+            "liver_disease": ["metabolism impairment", "hepatotoxicity", "clearance"],
         }
 
         # Safety alert callbacks
@@ -137,9 +154,9 @@ class DrugSafetyAlertIntegration:
 
         logger.info("DrugSafetyAlertIntegration initialized with comprehensive safety monitoring")
 
-    async def process_pharmaceutical_query(self,
-                                         query_text: str,
-                                         user_context: Optional[Dict[str, Any]] = None) -> Tuple[PharmaceuticalContext, List[DrugSafetyAlert]]:
+    async def process_pharmaceutical_query(
+        self, query_text: str, user_context: Optional[Dict[str, Any]] = None
+    ) -> Tuple[PharmaceuticalContext, List[DrugSafetyAlert]]:
         """
         Process pharmaceutical query with safety alert generation.
 
@@ -154,9 +171,7 @@ class DrugSafetyAlertIntegration:
         pharmaceutical_context = self.query_classifier.classify_query(query_text)
 
         # Generate safety alerts based on classification
-        safety_alerts = await self._generate_safety_alerts(
-            query_text, pharmaceutical_context, user_context
-        )
+        safety_alerts = await self._generate_safety_alerts(query_text, pharmaceutical_context, user_context)
 
         # Process and route alerts
         await self._process_safety_alerts(safety_alerts)
@@ -165,10 +180,9 @@ class DrugSafetyAlertIntegration:
 
         return pharmaceutical_context, safety_alerts
 
-    async def _generate_safety_alerts(self,
-                                    query_text: str,
-                                    context: PharmaceuticalContext,
-                                    user_context: Optional[Dict[str, Any]]) -> List[DrugSafetyAlert]:
+    async def _generate_safety_alerts(
+        self, query_text: str, context: PharmaceuticalContext, user_context: Optional[Dict[str, Any]]
+    ) -> List[DrugSafetyAlert]:
         """Generate appropriate safety alerts based on query analysis."""
         alerts = []
 
@@ -206,9 +220,7 @@ class DrugSafetyAlertIntegration:
 
         return alerts
 
-    async def _create_critical_safety_alert(self,
-                                          query_text: str,
-                                          context: PharmaceuticalContext) -> DrugSafetyAlert:
+    async def _create_critical_safety_alert(self, query_text: str, context: PharmaceuticalContext) -> DrugSafetyAlert:
         """Create critical drug safety alert."""
         alert_id = self._generate_alert_id("critical_safety", query_text)
 
@@ -216,7 +228,7 @@ class DrugSafetyAlertIntegration:
             "IMMEDIATE ATTENTION REQUIRED - Patient safety implications",
             "Consult drug safety database for complete information",
             "Consider immediate medical consultation if patient-related",
-            "Document safety query and response for compliance"
+            "Document safety query and response for compliance",
         ]
 
         if context.drug_names:
@@ -231,12 +243,12 @@ class DrugSafetyAlertIntegration:
             safety_message="CRITICAL DRUG SAFETY QUERY DETECTED - Immediate review required",
             drug_names=context.drug_names,
             patient_populations=[context.patient_population] if context.patient_population else [],
-            recommendations=recommendations
+            recommendations=recommendations,
         )
 
-    async def _generate_drug_interaction_alerts(self,
-                                              query_text: str,
-                                              context: PharmaceuticalContext) -> List[DrugSafetyAlert]:
+    async def _generate_drug_interaction_alerts(
+        self, query_text: str, context: PharmaceuticalContext
+    ) -> List[DrugSafetyAlert]:
         """Generate drug interaction safety alerts."""
         alerts = []
 
@@ -249,10 +261,7 @@ class DrugSafetyAlertIntegration:
 
                 # Check if query mentions any interacting drugs
                 query_lower = query_text.lower()
-                mentioned_interactions = [
-                    drug for drug in interacting_drugs
-                    if drug in query_lower
-                ]
+                mentioned_interactions = [drug for drug in interacting_drugs if drug in query_lower]
 
                 if mentioned_interactions:
                     alert_id = self._generate_alert_id("drug_interaction", f"{drug_name}_{mentioned_interactions[0]}")
@@ -270,16 +279,14 @@ class DrugSafetyAlertIntegration:
                             "Review complete drug interaction profile",
                             "Consider alternative medications if appropriate",
                             "Monitor for interaction-related adverse effects",
-                            "Adjust dosing if interaction is unavoidable"
-                        ]
+                            "Adjust dosing if interaction is unavoidable",
+                        ],
                     )
                     alerts.append(alert)
 
         return alerts
 
-    async def _create_adverse_reaction_alert(self,
-                                           query_text: str,
-                                           context: PharmaceuticalContext) -> DrugSafetyAlert:
+    async def _create_adverse_reaction_alert(self, query_text: str, context: PharmaceuticalContext) -> DrugSafetyAlert:
         """Create adverse reaction monitoring alert."""
         alert_id = self._generate_alert_id("adverse_reaction", query_text)
 
@@ -296,31 +303,33 @@ class DrugSafetyAlertIntegration:
                 "Document adverse reaction details thoroughly",
                 "Consider pharmacovigilance reporting if applicable",
                 "Review patient risk factors for adverse events",
-                "Monitor patient closely for additional reactions"
-            ]
+                "Monitor patient closely for additional reactions",
+            ],
         )
 
-    async def _generate_population_safety_alert(self,
-                                              query_text: str,
-                                              context: PharmaceuticalContext) -> Optional[DrugSafetyAlert]:
+    async def _generate_population_safety_alert(
+        self, query_text: str, context: PharmaceuticalContext
+    ) -> Optional[DrugSafetyAlert]:
         """Generate patient population-specific safety alert."""
         population = context.patient_population
         if not population or population not in self.population_warnings:
             return None
 
         population_risks = self.population_warnings[population]
-        alert_id = self._generate_alert_id("patient_population", f"{population}_{context.drug_names[0] if context.drug_names else 'general'}")
+        alert_id = self._generate_alert_id(
+            "patient_population", f"{population}_{context.drug_names[0] if context.drug_names else 'general'}"
+        )
 
         recommendations = [
             f"Special considerations for {population} population required",
             f"Review {population}-specific dosing guidelines",
-            f"Monitor for {population}-specific adverse effects"
+            f"Monitor for {population}-specific adverse effects",
         ]
 
         # Add population-specific recommendations
         if "dosing" in population_risks[0].lower():
             recommendations.append("Dose adjustment may be necessary")
-        if "monitoring" in ' '.join(population_risks).lower():
+        if "monitoring" in " ".join(population_risks).lower():
             recommendations.append("Enhanced monitoring protocols recommended")
 
         return DrugSafetyAlert(
@@ -332,13 +341,12 @@ class DrugSafetyAlertIntegration:
             safety_message=f"PATIENT POPULATION ALERT: {population} considerations for {', '.join(context.drug_names) if context.drug_names else 'medication'}",
             drug_names=context.drug_names,
             patient_populations=[population],
-            recommendations=recommendations
+            recommendations=recommendations,
         )
 
-    async def _generate_drug_specific_alerts(self,
-                                           query_text: str,
-                                           drug_name: str,
-                                           context: PharmaceuticalContext) -> List[DrugSafetyAlert]:
+    async def _generate_drug_specific_alerts(
+        self, query_text: str, drug_name: str, context: PharmaceuticalContext
+    ) -> List[DrugSafetyAlert]:
         """Generate drug-specific safety alerts."""
         alerts = []
         drug_lower = drug_name.lower()
@@ -350,8 +358,7 @@ class DrugSafetyAlertIntegration:
             # Check if query mentions contraindications
             query_lower = query_text.lower()
             relevant_contraindications = [
-                contra for contra in contraindications
-                if any(word in query_lower for word in contra.split())
+                contra for contra in contraindications if any(word in query_lower for word in contra.split())
             ]
 
             if relevant_contraindications:
@@ -369,8 +376,8 @@ class DrugSafetyAlertIntegration:
                     recommendations=[
                         f"Verify patient does not have {', '.join(relevant_contraindications)}",
                         "Consider alternative medication if contraindication present",
-                        "Document contraindication assessment"
-                    ]
+                        "Document contraindication assessment",
+                    ],
                 )
                 alerts.append(alert)
 
@@ -393,16 +400,16 @@ class DrugSafetyAlertIntegration:
                     f"Establish baseline monitoring for: {', '.join(monitoring_reqs)}",
                     "Schedule regular monitoring intervals",
                     "Educate patient on monitoring importance",
-                    "Document monitoring plan and results"
-                ]
+                    "Document monitoring plan and results",
+                ],
             )
             alerts.append(alert)
 
         return alerts
 
-    async def _create_regulatory_compliance_alert(self,
-                                                query_text: str,
-                                                context: PharmaceuticalContext) -> Optional[DrugSafetyAlert]:
+    async def _create_regulatory_compliance_alert(
+        self, query_text: str, context: PharmaceuticalContext
+    ) -> Optional[DrugSafetyAlert]:
         """Create regulatory compliance monitoring alert."""
         if not context.regulatory_context:
             return None
@@ -421,8 +428,8 @@ class DrugSafetyAlertIntegration:
             recommendations=[
                 "Review current regulatory guidelines",
                 "Ensure compliance with prescribing requirements",
-                "Document regulatory compliance considerations"
-            ]
+                "Document regulatory compliance considerations",
+            ],
         )
 
     async def _process_safety_alerts(self, alerts: List[DrugSafetyAlert]) -> None:
@@ -454,15 +461,13 @@ class DrugSafetyAlertIntegration:
                 "pharmaceutical_context": {
                     "domain": alert.pharmaceutical_context.domain.value,
                     "safety_urgency": alert.pharmaceutical_context.safety_urgency.name,
-                    "research_priority": alert.pharmaceutical_context.research_priority.name
-                }
+                    "research_priority": alert.pharmaceutical_context.research_priority.name,
+                },
             }
 
             # Route through alert manager
             await self.alert_manager.create_alert(
-                alert_type="pharmaceutical_safety",
-                message=alert.safety_message,
-                metadata=alert_data
+                alert_type="pharmaceutical_safety", message=alert.safety_message, metadata=alert_data
             )
 
         except Exception as e:
@@ -474,7 +479,7 @@ class DrugSafetyAlertIntegration:
             AlertUrgency.IMMEDIATE: "critical",
             AlertUrgency.URGENT: "high",
             AlertUrgency.ROUTINE: "medium",
-            AlertUrgency.INFORMATIONAL: "low"
+            AlertUrgency.INFORMATIONAL: "low",
         }
         return mapping.get(urgency, "medium")
 
@@ -511,7 +516,7 @@ class DrugSafetyAlertIntegration:
                 "drug_names": alert.drug_names,
                 "patient_populations": alert.patient_populations,
                 "timestamp": alert.timestamp.isoformat(),
-                "acknowledged": alert.acknowledged
+                "acknowledged": alert.acknowledged,
             }
             for alert in self.active_safety_alerts.values()
             if not alert.acknowledged
@@ -532,10 +537,7 @@ class DrugSafetyAlertIntegration:
         now = datetime.now()
         last_24h = now - timedelta(hours=24)
 
-        recent_alerts = [
-            alert for alert in self.alert_history
-            if alert.timestamp >= last_24h
-        ]
+        recent_alerts = [alert for alert in self.alert_history if alert.timestamp >= last_24h]
 
         return {
             "dashboard_timestamp": now.isoformat(),
@@ -544,13 +546,19 @@ class DrugSafetyAlertIntegration:
             "critical_alerts": len([a for a in recent_alerts if a.urgency == AlertUrgency.IMMEDIATE]),
             "alert_breakdown": {
                 "critical_safety": len([a for a in recent_alerts if a.alert_type == SafetyAlertType.CRITICAL_SAFETY]),
-                "drug_interactions": len([a for a in recent_alerts if a.alert_type == SafetyAlertType.DRUG_INTERACTION]),
-                "adverse_reactions": len([a for a in recent_alerts if a.alert_type == SafetyAlertType.ADVERSE_REACTION]),
-                "contraindications": len([a for a in recent_alerts if a.alert_type == SafetyAlertType.CONTRAINDICATION]),
+                "drug_interactions": len(
+                    [a for a in recent_alerts if a.alert_type == SafetyAlertType.DRUG_INTERACTION]
+                ),
+                "adverse_reactions": len(
+                    [a for a in recent_alerts if a.alert_type == SafetyAlertType.ADVERSE_REACTION]
+                ),
+                "contraindications": len(
+                    [a for a in recent_alerts if a.alert_type == SafetyAlertType.CONTRAINDICATION]
+                ),
             },
             "top_drugs_alerted": self._get_top_drugs_with_alerts(recent_alerts),
             "safety_monitoring_active": True,
-            "pharmaceutical_optimization": True
+            "pharmaceutical_optimization": True,
         }
 
     def _get_top_drugs_with_alerts(self, alerts: List[DrugSafetyAlert]) -> List[Dict[str, Any]]:
@@ -565,9 +573,11 @@ class DrugSafetyAlertIntegration:
             for drug, count in sorted(drug_counts.items(), key=lambda x: x[1], reverse=True)[:5]
         ]
 
+
 # Convenience functions for drug safety integration
-async def process_pharmaceutical_query_with_safety(query_text: str,
-                                                  user_context: Optional[Dict[str, Any]] = None) -> Tuple[PharmaceuticalContext, List[DrugSafetyAlert]]:
+async def process_pharmaceutical_query_with_safety(
+    query_text: str, user_context: Optional[Dict[str, Any]] = None
+) -> Tuple[PharmaceuticalContext, List[DrugSafetyAlert]]:
     """
     Process pharmaceutical query with integrated safety monitoring.
 
@@ -581,6 +591,7 @@ async def process_pharmaceutical_query_with_safety(query_text: str,
     safety_integration = DrugSafetyAlertIntegration()
     return await safety_integration.process_pharmaceutical_query(query_text, user_context)
 
+
 def create_drug_safety_monitor() -> DrugSafetyAlertIntegration:
     """
     Create drug safety monitoring system with optimal configuration.
@@ -591,10 +602,8 @@ def create_drug_safety_monitor() -> DrugSafetyAlertIntegration:
     config = EnhancedRAGConfig.from_env()
     alert_manager = PharmaceuticalAlertManager()
 
-    return DrugSafetyAlertIntegration(
-        config=config,
-        alert_manager=alert_manager
-    )
+    return DrugSafetyAlertIntegration(config=config, alert_manager=alert_manager)
+
 
 if __name__ == "__main__":
     # Test drug safety alert integration
@@ -605,7 +614,7 @@ if __name__ == "__main__":
             "Urgent: Patient on warfarin experiencing bleeding after taking aspirin - drug interaction concern",
             "Metformin contraindications in elderly patient with severe kidney disease",
             "ACE inhibitor mechanism of action in cardiovascular treatment",
-            "Adverse reactions to new oncology drug in phase III clinical trial"
+            "Adverse reactions to new oncology drug in phase III clinical trial",
         ]
 
         for query in test_queries:

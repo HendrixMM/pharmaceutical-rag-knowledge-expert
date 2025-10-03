@@ -17,7 +17,6 @@ Prerequisites:
   - APP_ENV=production (forces strict mode)
   - Place at least one PDF under Data/Docs/ or provide a path via --pdf
 """
-
 from __future__ import annotations
 
 import argparse
@@ -26,7 +25,6 @@ import glob
 import os
 import sys
 from pathlib import Path
-from typing import List
 
 try:
     from dotenv import load_dotenv
@@ -40,13 +38,14 @@ for p in (ROOT,):
     if str(p) not in sys.path:
         sys.path.append(str(p))
 
-from src.nemo_retriever_client import create_nemo_client, NVIDIABuildCreditsMonitor
 from src.nemo_extraction_service import NeMoExtractionService
+from src.nemo_retriever_client import NVIDIABuildCreditsMonitor, create_nemo_client
 from src.pharmaceutical_processor import PharmaceuticalProcessor
+
 # Import embedding service lazily only when embedding step runs to avoid type
 # dependency issues if optional monitoring classes change
 try:
-    from src.nemo_embedding_service import NeMoEmbeddingService, EmbeddingConfig
+    from src.nemo_embedding_service import EmbeddingConfig, NeMoEmbeddingService
 except Exception:  # pragma: no cover - defensive import
     NeMoEmbeddingService = None  # type: ignore
     EmbeddingConfig = None  # type: ignore
@@ -124,7 +123,7 @@ async def _extract_with_nemo(pdf_path: Path) -> NeMoExtractionService:
     return service, result
 
 
-async def _embed_with_nemo(texts: List[str]) -> None:
+async def _embed_with_nemo(texts: list[str]) -> None:
     print("=== NEMO EMBEDDING TEST ===")
     if not texts:
         print("ℹ️  No texts to embed (empty extraction)")
@@ -153,7 +152,7 @@ async def _embed_with_nemo(texts: List[str]) -> None:
         print(f"❌ Embedding failed: {exc}")
 
 
-async def _rerank_with_nemo(query: str, docs: List[str]) -> None:
+async def _rerank_with_nemo(query: str, docs: list[str]) -> None:
     print("=== NEMO RERANKING TEST ===")
     if not docs:
         print("ℹ️  No documents to rerank (empty extraction)")
@@ -181,14 +180,19 @@ async def _rerank_with_nemo(query: str, docs: List[str]) -> None:
         print(f"❌ Reranking error: {exc}")
 
 
-def _overlay_summary(texts: List[str]) -> None:
+def _overlay_summary(texts: list[str]) -> None:
     print("=== PHARMACEUTICAL DOMAIN OVERLAY TEST ===")
     overlay_on = os.getenv("PHARMA_DOMAIN_OVERLAY", "false").strip().lower() in {"1", "true", "yes", "on"}
     print(f"Overlay: {'active' if overlay_on else 'inactive'}")
     if not overlay_on:
         return
     proc = PharmaceuticalProcessor()
-    drug_canon = set(); reg_tags = set(); agencies = set(); evidence = set(); species = set(); pk = set()
+    drug_canon = set()
+    reg_tags = set()
+    agencies = set()
+    evidence = set()
+    species = set()
+    pk = set()
     risk_labels = []
     for text in texts[:3]:
         meta = proc.enhance_document_metadata({"page_content": text, "metadata": {}})["metadata"]
@@ -207,6 +211,7 @@ def _overlay_summary(texts: List[str]) -> None:
     print(f"Agencies: {sorted(agencies) if agencies else []}")
     if risk_labels:
         from collections import Counter
+
         print(f"CYP risk: {Counter(risk_labels).most_common(1)[0][0]}")
     print(f"Evidence: {sorted(evidence) if evidence else []}")
     print(f"Species: {sorted(species) if species else []}")
@@ -232,7 +237,7 @@ async def main() -> int:
         return 2
 
     # 1) Validate services
-    free_tier = os.getenv("NVIDIA_BUILD_FREE_TIER", "").strip().lower() in {"1","true","yes","on"}
+    free_tier = os.getenv("NVIDIA_BUILD_FREE_TIER", "").strip().lower() in {"1", "true", "yes", "on"}
     credits_monitor = NVIDIABuildCreditsMonitor(os.getenv("NVIDIA_API_KEY")) if free_tier else None
     if not await _validate_services():
         print("❌ NIM services not fully available - cannot proceed (strict mode)")

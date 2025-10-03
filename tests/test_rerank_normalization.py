@@ -5,11 +5,10 @@ Verifies that regardless of cloud or NeMo shapes, wrapper returns
 NeMoAPIResponse with data.reranked_passages as [{"text": str, "score": float}]
 sorted by descending score.
 """
-
-import os
 import pytest
 
-from src.nemo_retriever_client import NeMoClientWrapper, NeMoAPIResponse
+from src.nemo_retriever_client import NeMoAPIResponse
+from src.nemo_retriever_client import NeMoClientWrapper
 
 
 class _DummyCloudRerank:
@@ -83,4 +82,3 @@ async def test_wrapper_rerank_normalized_nemo():
         assert all(set(x.keys()) == {"text", "score"} for x in items)
         scores = [x["score"] for x in items]
         assert scores == sorted(scores, reverse=True)
-

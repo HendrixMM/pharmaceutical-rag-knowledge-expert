@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # 🔄 Template Conversion Complete!
 
 ## ✅ **Successfully Converted to General RAG Template**
@@ -195,4 +201,10 @@ Your template now serves as a **complete, professional foundation** that develop
 
 **🎉 Your RAG Template is now a universal, community-ready resource that can help developers worldwide build amazing document Q&A systems! 🚀**
 
-**Repository**: https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever
+## **Repository**: https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

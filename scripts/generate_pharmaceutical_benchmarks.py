@@ -12,7 +12,6 @@ Usage:
     python scripts/generate_pharmaceutical_benchmarks.py --version 2
     python scripts/generate_pharmaceutical_benchmarks.py --output benchmarks/
 """
-
 import argparse
 import json
 import logging
@@ -20,13 +19,13 @@ import random
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -43,21 +42,15 @@ class DrugDataLoader:
         # Load brand names
         brand_file = self.data_dir / "drugs_brand.txt"
         if brand_file.exists():
-            with open(brand_file, 'r') as f:
-                self.brand_drugs = [
-                    line.strip() for line in f
-                    if line.strip() and not line.strip().startswith('#')
-                ]
+            with open(brand_file) as f:
+                self.brand_drugs = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
             logger.info(f"Loaded {len(self.brand_drugs)} brand drug names")
 
         # Load generic names
         generic_file = self.data_dir / "drugs_generic.txt"
         if generic_file.exists():
-            with open(generic_file, 'r') as f:
-                self.generic_drugs = [
-                    line.strip() for line in f
-                    if line.strip() and not line.strip().startswith('#')
-                ]
+            with open(generic_file) as f:
+                self.generic_drugs = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
             logger.info(f"Loaded {len(self.generic_drugs)} generic drug names")
 
     def get_random_drug(self, drug_type: str = "any") -> str:
@@ -79,7 +72,7 @@ class BenchmarkGenerator:
         "pharmacokinetics",
         "clinical_terminology",
         "mechanism_of_action",
-        "adverse_reactions"
+        "adverse_reactions",
     ]
 
     def __init__(self, output_dir: str = "benchmarks", seed: Optional[int] = None):
@@ -110,24 +103,24 @@ class BenchmarkGenerator:
                 "success_rate": 0.98,
                 "average_cost_per_query": 12.5,
                 "average_accuracy": 0.85,
-                "notes": "Based on NVIDIA Build cloud endpoints (integrate.api.nvidia.com). Update after baseline run."
+                "notes": "Based on NVIDIA Build cloud endpoints (integrate.api.nvidia.com). Update after baseline run.",
             },
             "self_hosted": {
                 "average_latency_ms": 850.0,
                 "success_rate": 0.95,
                 "average_cost_per_query": 0.0,
                 "average_accuracy": 0.82,
-                "notes": "Based on local NIM containers with GPU acceleration. Update after baseline run."
+                "notes": "Based on local NIM containers with GPU acceleration. Update after baseline run.",
             },
             "regression_thresholds": {
                 "accuracy_drop_percent": 5,
                 "cost_increase_percent": 20,
-                "latency_increase_percent": 50
+                "latency_increase_percent": 50,
             },
             "classifier_validation": {
                 "overall_accuracy": 0.95,
-                "notes": "Expected PharmaceuticalQueryClassifier accuracy for domain, safety urgency, and research priority"
-            }
+                "notes": "Expected PharmaceuticalQueryClassifier accuracy for domain, safety urgency, and research priority",
+            },
         }
 
     def generate_metadata(self, category: str, version: int, total_queries: int) -> Dict[str, Any]:
@@ -137,7 +130,7 @@ class BenchmarkGenerator:
             "pharmacokinetics": "ADME queries covering absorption, distribution, metabolism, and excretion parameters",
             "clinical_terminology": "Terminology queries covering drug classifications, medical terms, and pharmaceutical concepts",
             "mechanism_of_action": "Mechanism queries covering receptor interactions, enzyme targets, and signaling pathways",
-            "adverse_reactions": "Adverse reaction queries covering common and serious side effects, warnings, and monitoring"
+            "adverse_reactions": "Adverse reaction queries covering common and serious side effects, warnings, and monitoring",
         }
 
         meta = {
@@ -146,7 +139,7 @@ class BenchmarkGenerator:
             "created_date": datetime.now().strftime("%Y-%m-%d"),
             "total_queries": total_queries,
             "description": descriptions.get(category, "Pharmaceutical benchmark queries"),
-            "baselines": self.generate_baselines(category)
+            "baselines": self.generate_baselines(category),
         }
         if getattr(self, "seed", None) is not None:
             meta["generation_seed"] = int(self.seed)  # type: ignore[arg-type]
@@ -166,11 +159,7 @@ class BenchmarkGenerator:
         return found_drugs
 
     def generate_classification(
-        self,
-        category: str,
-        query_text: str,
-        expected_type: str,
-        drug_names_in_query: Optional[List[str]] = None
+        self, category: str, query_text: str, expected_type: str, drug_names_in_query: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Generate expected_classification for a query.
@@ -190,7 +179,7 @@ class BenchmarkGenerator:
             "pharmacokinetics": "pharmacokinetics",
             "clinical_terminology": "general_research",  # Most terminology is general
             "mechanism_of_action": "mechanism_of_action",
-            "adverse_reactions": "adverse_reactions"
+            "adverse_reactions": "adverse_reactions",
         }
 
         # Determine safety urgency based on expected_type and category
@@ -215,7 +204,7 @@ class BenchmarkGenerator:
             "domain": domain_mapping.get(category, "general_research"),
             "safety_urgency": safety_urgency,
             "research_priority": research_priority,
-            "drug_names": drug_names_in_query
+            "drug_names": drug_names_in_query,
         }
 
     def generate_query_template(
@@ -229,15 +218,12 @@ class BenchmarkGenerator:
         drug_names: Optional[List[str]] = None,
         accuracy_weight: float = 0.4,
         completeness_weight: float = 0.3,
-        relevance_weight: float = 0.3
+        relevance_weight: float = 0.3,
     ) -> Dict[str, Any]:
         """Generate a query entry template."""
         # Generate classification
         classification = self.generate_classification(
-            category=category,
-            query_text=query_text,
-            expected_type=expected_type,
-            drug_names_in_query=drug_names
+            category=category, query_text=query_text, expected_type=expected_type, drug_names_in_query=drug_names
         )
 
         return {
@@ -249,9 +235,9 @@ class BenchmarkGenerator:
             "evaluation_criteria": {
                 "accuracy_weight": accuracy_weight,
                 "completeness_weight": completeness_weight,
-                "relevance_weight": relevance_weight
+                "relevance_weight": relevance_weight,
             },
-            "tags": tags
+            "tags": tags,
         }
 
     def generate_sample_queries(self, category: str, count: int = 10) -> List[Dict[str, Any]]:
@@ -265,9 +251,16 @@ class BenchmarkGenerator:
 
         # Therapeutic areas used to add variety when relevant
         therapeutic_areas = [
-            "oncology", "cardiology", "neurology", "psychiatry",
-            "endocrinology", "infectious disease", "dermatology",
-            "gastroenterology", "nephrology", "pulmonology"
+            "oncology",
+            "cardiology",
+            "neurology",
+            "psychiatry",
+            "endocrinology",
+            "infectious disease",
+            "dermatology",
+            "gastroenterology",
+            "nephrology",
+            "pulmonology",
         ]
 
         rnd = random.Random()
@@ -481,12 +474,7 @@ class BenchmarkGenerator:
 
         return queries
 
-    def generate_benchmark(
-        self,
-        category: str,
-        version: int = 1,
-        num_queries: int = 50
-    ) -> Dict[str, Any]:
+    def generate_benchmark(self, category: str, version: int = 1, num_queries: int = 50) -> Dict[str, Any]:
         """Generate a complete benchmark dataset."""
         if category not in self.CATEGORIES:
             raise ValueError(f"Unknown category: {category}. Must be one of {self.CATEGORIES}")
@@ -496,17 +484,14 @@ class BenchmarkGenerator:
         metadata = self.generate_metadata(category, version, num_queries)
         queries = self.generate_sample_queries(category, num_queries)
 
-        return {
-            "metadata": metadata,
-            "queries": queries
-        }
+        return {"metadata": metadata, "queries": queries}
 
     def save_benchmark(self, benchmark: Dict[str, Any], category: str, version: int) -> Path:
         """Save benchmark to JSON file."""
         filename = f"{category}_v{version}.json"
         filepath = self.output_dir / filename
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(benchmark, f, indent=2)
 
         logger.info(f"Saved benchmark to {filepath}")
@@ -529,64 +514,35 @@ class BenchmarkGenerator:
 
 def main():
     """Main entry point for benchmark generation."""
-    parser = argparse.ArgumentParser(
-        description="Generate pharmaceutical benchmark datasets"
-    )
+    parser = argparse.ArgumentParser(description="Generate pharmaceutical benchmark datasets")
     parser.add_argument(
-        '--category',
-        choices=BenchmarkGenerator.CATEGORIES + ['all'],
-        default='all',
-        help='Benchmark category to generate'
+        "--category",
+        choices=BenchmarkGenerator.CATEGORIES + ["all"],
+        default="all",
+        help="Benchmark category to generate",
     )
-    parser.add_argument(
-        '--version',
-        type=int,
-        default=1,
-        help='Benchmark version number'
-    )
-    parser.add_argument(
-        '--num-queries',
-        type=int,
-        default=50,
-        help='Number of queries to generate'
-    )
-    parser.add_argument(
-        '--output',
-        default='benchmarks',
-        help='Output directory for benchmark files'
-    )
-    parser.add_argument(
-        '--seed',
-        type=int,
-        help='Random seed for reproducible dataset generation'
-    )
+    parser.add_argument("--version", type=int, default=1, help="Benchmark version number")
+    parser.add_argument("--num-queries", type=int, default=50, help="Number of queries to generate")
+    parser.add_argument("--output", default="benchmarks", help="Output directory for benchmark files")
+    parser.add_argument("--seed", type=int, help="Random seed for reproducible dataset generation")
 
     args = parser.parse_args()
 
-    generator = BenchmarkGenerator(output_dir=args.output, seed=getattr(args, 'seed', None))
+    generator = BenchmarkGenerator(output_dir=args.output, seed=getattr(args, "seed", None))
 
     try:
-        if args.category == 'all':
+        if args.category == "all":
             logger.info("Generating benchmarks for all categories")
-            files = generator.generate_all_categories(
-                version=args.version,
-                num_queries=args.num_queries
-            )
+            files = generator.generate_all_categories(version=args.version, num_queries=args.num_queries)
             logger.info(f"Generated {len(files)} benchmark files")
             for file in files:
                 print(f"  - {file}")
         else:
             logger.info(f"Generating benchmark for category: {args.category}")
             benchmark = generator.generate_benchmark(
-                category=args.category,
-                version=args.version,
-                num_queries=args.num_queries
+                category=args.category, version=args.version, num_queries=args.num_queries
             )
-            filepath = generator.save_benchmark(
-                benchmark,
-                args.category,
-                args.version
-            )
+            filepath = generator.save_benchmark(benchmark, args.category, args.version)
             print(f"Generated: {filepath}")
 
         logger.info("Benchmark generation completed successfully")

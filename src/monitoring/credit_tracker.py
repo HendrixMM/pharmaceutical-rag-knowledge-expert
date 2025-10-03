@@ -19,14 +19,18 @@ Integration:
 - Adds pharmaceutical research context
 - Provides actionable cost optimization insights
 """
-
-import os
 import json
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, field
+import os
+from dataclasses import dataclass
+from dataclasses import field
+from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 # Import existing credit monitor for composition
 try:
@@ -48,11 +52,14 @@ except ImportError:
             def get_usage_summary(self):
                 return {"requests_this_month": self.credits_used}
 
+
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class PharmaceuticalQuery:
     """Represents a pharmaceutical research query for cost tracking."""
+
     query_type: str  # "drug_interaction", "pharmacokinetics", "mechanism", "clinical"
     model_used: str
     tokens_consumed: int
@@ -61,9 +68,11 @@ class PharmaceuticalQuery:
     timestamp: datetime
     research_context: Optional[str] = None
 
+
 @dataclass
 class ResearchProject:
     """Represents a pharmaceutical research project for budget tracking."""
+
     project_id: str
     name: str
     description: str
@@ -71,6 +80,7 @@ class ResearchProject:
     queries_used: int = 0
     created_at: datetime = field(default_factory=datetime.now)
     tags: List[str] = field(default_factory=list)
+
 
 class PharmaceuticalCreditTracker:
     """
@@ -80,10 +90,12 @@ class PharmaceuticalCreditTracker:
     analytics and cost optimization for drug research workflows.
     """
 
-    def __init__(self,
-                 base_monitor: Optional[NVIDIABuildCreditsMonitor] = None,
-                 cache_dir: Optional[str] = None,
-                 enable_project_tracking: bool = True):
+    def __init__(
+        self,
+        base_monitor: Optional[NVIDIABuildCreditsMonitor] = None,
+        cache_dir: Optional[str] = None,
+        enable_project_tracking: bool = True,
+    ):
         """
         Initialize pharmaceutical credit tracker.
 
@@ -95,9 +107,7 @@ class PharmaceuticalCreditTracker:
         # Composition: Use existing monitor as base
         # Initialize base monitor with default monthly limit; it will be updated
         # from centralized config below when available.
-        self.base_monitor = base_monitor or NVIDIABuildCreditsMonitor(
-            api_key=os.getenv("NVIDIA_API_KEY")
-        )
+        self.base_monitor = base_monitor or NVIDIABuildCreditsMonitor(api_key=os.getenv("NVIDIA_API_KEY"))
         # Attach self to base monitor when supported for rich callbacks
         try:
             if hasattr(self.base_monitor, "attach_pharma_tracker"):
@@ -116,10 +126,10 @@ class PharmaceuticalCreditTracker:
 
         # Alert thresholds (pharmaceutical research optimized)
         self.alert_thresholds = {
-            "daily_burn_rate": 0.05,    # 5% of monthly limit per day (150 requests)
-            "weekly_burn_rate": 0.20,   # 20% of monthly limit per week (2000 requests)
-            "monthly_usage": 0.80,      # 80% of monthly limit (8000 requests)
-            "research_project_budget": 0.75  # 75% of project budget used
+            "daily_burn_rate": 0.05,  # 5% of monthly limit per day (150 requests)
+            "weekly_burn_rate": 0.20,  # 20% of monthly limit per week (2000 requests)
+            "monthly_usage": 0.80,  # 80% of monthly limit (8000 requests)
+            "research_project_budget": 0.75,  # 75% of project budget used
         }
         # Centralized monthly free-tier limit (default 10k), may be overridden by alerts.yaml
         self._monthly_free_requests: int = 10000
@@ -137,14 +147,16 @@ class PharmaceuticalCreditTracker:
 
         logger.info("Pharmaceutical credit tracker initialized")
 
-    def track_pharmaceutical_query(self,
-                                  query_type: str,
-                                  model_used: str,
-                                  tokens_consumed: int,
-                                  response_time_ms: int,
-                                  cost_tier: str = "free_tier",
-                                  research_context: Optional[str] = None,
-                                  project_id: Optional[str] = None) -> None:
+    def track_pharmaceutical_query(
+        self,
+        query_type: str,
+        model_used: str,
+        tokens_consumed: int,
+        response_time_ms: int,
+        cost_tier: str = "free_tier",
+        research_context: Optional[str] = None,
+        project_id: Optional[str] = None,
+    ) -> None:
         """
         Track a pharmaceutical research query with detailed analytics.
 
@@ -183,7 +195,7 @@ class PharmaceuticalCreditTracker:
             response_time_ms=response_time_ms,
             cost_tier=cost_tier,
             timestamp=datetime.now(),
-            research_context=research_context
+            research_context=research_context,
         )
 
         self.pharmaceutical_queries.append(query)
@@ -200,12 +212,9 @@ class PharmaceuticalCreditTracker:
 
         logger.debug(f"Pharmaceutical query tracked: {query_type} using {model_used}")
 
-    def create_research_project(self,
-                               project_id: str,
-                               name: str,
-                               description: str,
-                               budget_limit: int,
-                               tags: Optional[List[str]] = None) -> ResearchProject:
+    def create_research_project(
+        self, project_id: str, name: str, description: str, budget_limit: int, tags: Optional[List[str]] = None
+    ) -> ResearchProject:
         """
         Create a new research project for budget tracking.
 
@@ -223,11 +232,7 @@ class PharmaceuticalCreditTracker:
             raise ValueError(f"Research project {project_id} already exists")
 
         project = ResearchProject(
-            project_id=project_id,
-            name=name,
-            description=description,
-            budget_limit=budget_limit,
-            tags=tags or []
+            project_id=project_id, name=name, description=description, budget_limit=budget_limit, tags=tags or []
         )
 
         self.research_projects[project_id] = project
@@ -268,37 +273,35 @@ class PharmaceuticalCreditTracker:
         infrastructure_queries = len([q for q in month_queries if q.cost_tier == "infrastructure"])
 
         # Performance metrics
-        avg_response_time = (
-            sum(q.response_time_ms for q in month_queries) / max(len(month_queries), 1)
-        )
+        avg_response_time = sum(q.response_time_ms for q in month_queries) / max(len(month_queries), 1)
         total_tokens = sum(q.tokens_consumed for q in month_queries)
 
         result = {
             "time_period_analysis": {
                 "today": len(today_queries),
                 "this_week": len(week_queries),
-                "this_month": len(month_queries)
+                "this_month": len(month_queries),
             },
             "query_type_distribution": query_types,
             "model_usage_distribution": model_usage,
             "cost_analysis": {
                 "free_tier_queries": free_tier_queries,
                 "infrastructure_queries": infrastructure_queries,
-                "cost_optimization_percentage": (
-                    free_tier_queries / max(len(month_queries), 1) * 100
-                )
+                "cost_optimization_percentage": (free_tier_queries / max(len(month_queries), 1) * 100),
             },
             "performance_metrics": {
                 "avg_response_time_ms": int(avg_response_time),
                 "total_tokens_consumed": total_tokens,
-                "avg_tokens_per_query": int(total_tokens / max(len(month_queries), 1))
+                "avg_tokens_per_query": int(total_tokens / max(len(month_queries), 1)),
             },
             "research_projects": {
                 "active_projects": len(self.research_projects),
                 "total_budget": sum(p.budget_limit for p in self.research_projects.values()),
-                "budget_used": sum(p.queries_used for p in self.research_projects.values())
+                "budget_used": sum(p.queries_used for p in self.research_projects.values()),
             },
-            "base_monitor_summary": self.base_monitor.get_usage_summary() if hasattr(self.base_monitor, 'get_usage_summary') else {}
+            "base_monitor_summary": self.base_monitor.get_usage_summary()
+            if hasattr(self.base_monitor, "get_usage_summary")
+            else {},
         }
         # Include daily burn snapshot if the base monitor provides it
         try:
@@ -321,36 +324,42 @@ class PharmaceuticalCreditTracker:
         # Free tier optimization
         free_tier_percentage = analytics["cost_analysis"]["cost_optimization_percentage"]
         if free_tier_percentage < 80:
-            recommendations.append({
-                "category": "cost_optimization",
-                "priority": "high",
-                "title": "Increase Free Tier Usage",
-                "description": f"Currently using free tier for {free_tier_percentage:.1f}% of queries. "
-                              "Consider prioritizing cloud endpoints to maximize free tier benefits.",
-                "action": "Enable cloud-first configuration and batch queries for efficiency"
-            })
+            recommendations.append(
+                {
+                    "category": "cost_optimization",
+                    "priority": "high",
+                    "title": "Increase Free Tier Usage",
+                    "description": f"Currently using free tier for {free_tier_percentage:.1f}% of queries. "
+                    "Consider prioritizing cloud endpoints to maximize free tier benefits.",
+                    "action": "Enable cloud-first configuration and batch queries for efficiency",
+                }
+            )
 
         # Query efficiency
         avg_tokens = analytics["performance_metrics"]["avg_tokens_per_query"]
         if avg_tokens > 1000:
-            recommendations.append({
-                "category": "efficiency",
-                "priority": "medium",
-                "title": "Optimize Query Length",
-                "description": f"Average tokens per query: {avg_tokens}. Consider more concise queries.",
-                "action": "Use specific pharmaceutical terminology and shorter context windows"
-            })
+            recommendations.append(
+                {
+                    "category": "efficiency",
+                    "priority": "medium",
+                    "title": "Optimize Query Length",
+                    "description": f"Average tokens per query: {avg_tokens}. Consider more concise queries.",
+                    "action": "Use specific pharmaceutical terminology and shorter context windows",
+                }
+            )
 
         # Response time optimization
         avg_response_time = analytics["performance_metrics"]["avg_response_time_ms"]
         if avg_response_time > 3000:
-            recommendations.append({
-                "category": "performance",
-                "priority": "medium",
-                "title": "Improve Response Times",
-                "description": f"Average response time: {avg_response_time}ms. Consider endpoint optimization.",
-                "action": "Enable batch processing and request optimization features"
-            })
+            recommendations.append(
+                {
+                    "category": "performance",
+                    "priority": "medium",
+                    "title": "Improve Response Times",
+                    "description": f"Average response time: {avg_response_time}ms. Consider endpoint optimization.",
+                    "action": "Enable batch processing and request optimization features",
+                }
+            )
 
         # Budget utilization
         if analytics["research_projects"]["active_projects"] > 0:
@@ -361,13 +370,15 @@ class PharmaceuticalCreditTracker:
                     projects_over_budget.append(project.name)
 
             if projects_over_budget:
-                recommendations.append({
-                    "category": "budget_management",
-                    "priority": "high",
-                    "title": "Project Budget Alert",
-                    "description": f"Projects near budget limit: {', '.join(projects_over_budget)}",
-                    "action": "Review project budgets and consider optimization strategies"
-                })
+                recommendations.append(
+                    {
+                        "category": "budget_management",
+                        "priority": "high",
+                        "title": "Project Budget Alert",
+                        "description": f"Projects near budget limit: {', '.join(projects_over_budget)}",
+                        "action": "Review project budgets and consider optimization strategies",
+                    }
+                )
 
         return recommendations
 
@@ -388,12 +399,12 @@ class PharmaceuticalCreditTracker:
                 "total_queries": analytics["time_period_analysis"]["this_month"],
                 "cost_optimization": f"{analytics['cost_analysis']['cost_optimization_percentage']:.1f}%",
                 "avg_response_time": f"{analytics['performance_metrics']['avg_response_time_ms']}ms",
-                "active_projects": analytics["research_projects"]["active_projects"]
+                "active_projects": analytics["research_projects"]["active_projects"],
             },
             "detailed_analytics": analytics,
             "optimization_recommendations": recommendations,
             "pharmaceutical_insights": self._generate_pharmaceutical_insights(),
-            "next_steps": self._generate_next_steps(recommendations)
+            "next_steps": self._generate_next_steps(recommendations),
         }
 
     def _track_project_usage(self, project_id: str, query: PharmaceuticalQuery) -> None:
@@ -433,8 +444,8 @@ class PharmaceuticalCreditTracker:
             # Prefer configured monthly_free_requests; fall back to base monitor's summary
             monthly_limit = self._monthly_free_requests
             try:
-                base_summary = getattr(self.base_monitor, 'get_usage_summary', lambda: {})() or {}
-                monthly_limit = int(base_summary.get('monthly_limit', monthly_limit) or monthly_limit)
+                base_summary = getattr(self.base_monitor, "get_usage_summary", lambda: {})() or {}
+                monthly_limit = int(base_summary.get("monthly_limit", monthly_limit) or monthly_limit)
             except Exception:
                 pass
             today = [q for q in self.pharmaceutical_queries if q.timestamp.date() == datetime.now().date()]
@@ -459,13 +470,17 @@ class PharmaceuticalCreditTracker:
             cfg_path = Path("config/alerts.yaml")
             if not cfg_path.exists():
                 return
-            with open(cfg_path, "r") as f:
+            with open(cfg_path) as f:
                 cfg = yaml.safe_load(f) or {}
-            nb = (cfg.get("nvidia_build", {}) or {})
+            nb = cfg.get("nvidia_build", {}) or {}
             nv = nb.get("usage_alerts", {}) if isinstance(nb, dict) else {}
             if nv:
-                self.alert_thresholds["daily_burn_rate"] = float(nv.get("daily_burn_rate", self.alert_thresholds["daily_burn_rate"]))
-                self.alert_thresholds["weekly_burn_rate"] = float(nv.get("weekly_burn_rate", self.alert_thresholds["weekly_burn_rate"]))
+                self.alert_thresholds["daily_burn_rate"] = float(
+                    nv.get("daily_burn_rate", self.alert_thresholds["daily_burn_rate"])
+                )
+                self.alert_thresholds["weekly_burn_rate"] = float(
+                    nv.get("weekly_burn_rate", self.alert_thresholds["weekly_burn_rate"])
+                )
             # Pick up the configured monthly free requests if present
             try:
                 mfr = int(nb.get("monthly_free_requests", self._monthly_free_requests))
@@ -476,7 +491,9 @@ class PharmaceuticalCreditTracker:
             pharma = cfg.get("pharmaceutical", {}) or {}
             proj = pharma.get("project_budget", {}) or {}
             if proj:
-                self.alert_thresholds["research_project_budget"] = float(proj.get("warning_threshold", self.alert_thresholds["research_project_budget"]))
+                self.alert_thresholds["research_project_budget"] = float(
+                    proj.get("warning_threshold", self.alert_thresholds["research_project_budget"])
+                )
         except Exception:
             # best-effort only
             pass
@@ -490,20 +507,24 @@ class PharmaceuticalCreditTracker:
         query_types = analytics["query_type_distribution"]
         if query_types:
             most_common_type = max(query_types, key=query_types.get)
-            insights.append({
-                "category": "research_focus",
-                "insight": f"Most common query type: {most_common_type}",
-                "implication": "Consider optimizing workflows for this query type"
-            })
+            insights.append(
+                {
+                    "category": "research_focus",
+                    "insight": f"Most common query type: {most_common_type}",
+                    "implication": "Consider optimizing workflows for this query type",
+                }
+            )
 
         # Model efficiency insights
         model_usage = analytics["model_usage_distribution"]
         if len(model_usage) > 1:
-            insights.append({
-                "category": "model_optimization",
-                "insight": f"Using {len(model_usage)} different models",
-                "implication": "Evaluate model performance vs cost for pharmaceutical queries"
-            })
+            insights.append(
+                {
+                    "category": "model_optimization",
+                    "insight": f"Using {len(model_usage)} different models",
+                    "implication": "Evaluate model performance vs cost for pharmaceutical queries",
+                }
+            )
 
         return insights
 
@@ -533,12 +554,12 @@ class PharmaceuticalCreditTracker:
                     "response_time_ms": q.response_time_ms,
                     "cost_tier": q.cost_tier,
                     "timestamp": q.timestamp.isoformat(),
-                    "research_context": q.research_context
+                    "research_context": q.research_context,
                 }
                 for q in self.pharmaceutical_queries[-1000:]  # Keep last 1000 queries
             ]
 
-            with open(queries_file, 'w') as f:
+            with open(queries_file, "w") as f:
                 json.dump(queries_data, f, indent=2)
 
             # Save research projects
@@ -551,12 +572,12 @@ class PharmaceuticalCreditTracker:
                     "budget_limit": p.budget_limit,
                     "queries_used": p.queries_used,
                     "created_at": p.created_at.isoformat(),
-                    "tags": p.tags
+                    "tags": p.tags,
                 }
                 for pid, p in self.research_projects.items()
             }
 
-            with open(projects_file, 'w') as f:
+            with open(projects_file, "w") as f:
                 json.dump(projects_data, f, indent=2)
 
         except Exception as e:
@@ -568,7 +589,7 @@ class PharmaceuticalCreditTracker:
             # Load pharmaceutical queries
             queries_file = self.cache_dir / "pharmaceutical_queries.json"
             if queries_file.exists():
-                with open(queries_file, 'r') as f:
+                with open(queries_file) as f:
                     queries_data = json.load(f)
 
                 self.pharmaceutical_queries = [
@@ -579,7 +600,7 @@ class PharmaceuticalCreditTracker:
                         response_time_ms=q["response_time_ms"],
                         cost_tier=q["cost_tier"],
                         timestamp=datetime.fromisoformat(q["timestamp"]),
-                        research_context=q.get("research_context")
+                        research_context=q.get("research_context"),
                     )
                     for q in queries_data
                 ]
@@ -587,7 +608,7 @@ class PharmaceuticalCreditTracker:
             # Load research projects
             projects_file = self.cache_dir / "research_projects.json"
             if projects_file.exists():
-                with open(projects_file, 'r') as f:
+                with open(projects_file) as f:
                     projects_data = json.load(f)
 
                 self.research_projects = {
@@ -598,13 +619,14 @@ class PharmaceuticalCreditTracker:
                         budget_limit=p["budget_limit"],
                         queries_used=p["queries_used"],
                         created_at=datetime.fromisoformat(p["created_at"]),
-                        tags=p["tags"]
+                        tags=p["tags"],
                     )
                     for pid, p in projects_data.items()
                 }
 
         except Exception as e:
             logger.error(f"Failed to load cached data: {str(e)}")
+
 
 # Convenience function for pharmaceutical research
 def create_pharmaceutical_tracker(enable_project_tracking: bool = True) -> PharmaceuticalCreditTracker:
@@ -619,6 +641,7 @@ def create_pharmaceutical_tracker(enable_project_tracking: bool = True) -> Pharm
     """
     return PharmaceuticalCreditTracker(enable_project_tracking=enable_project_tracking)
 
+
 if __name__ == "__main__":
     # Quick test of pharmaceutical tracking
     tracker = create_pharmaceutical_tracker()
@@ -629,7 +652,7 @@ if __name__ == "__main__":
         model_used="nvidia/nv-embedqa-e5-v5",
         tokens_consumed=150,
         response_time_ms=800,
-        research_context="metformin drug interactions study"
+        research_context="metformin drug interactions study",
     )
 
     # Generate analytics

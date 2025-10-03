@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # 🚀 Complete Setup Guide - RAG Template for NVIDIA NemoRetriever
 
 This guide provides detailed, step-by-step instructions for setting up and running the RAG template.
@@ -389,4 +395,10 @@ Once everything is working:
 - Explore the document statistics
 - Customize the system for your needs
 
-**You're now ready to build amazing RAG applications with NVIDIA's AI models!** 🚀
+## **You're now ready to build amazing RAG applications with NVIDIA's AI models!** 🚀
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

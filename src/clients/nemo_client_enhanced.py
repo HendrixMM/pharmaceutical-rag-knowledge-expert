@@ -16,27 +16,31 @@ Integration Points:
 - Enhanced configuration for decision logic
 - Performance monitoring and cost tracking
 """
-
-import os
-import logging
-import time
-import re
 import asyncio
-import threading
 import hashlib
 import json
-import requests  # noqa: F401
+import logging
+import os
+import threading
+import time
 from collections import OrderedDict
-from typing import List, Dict, Any, Optional, Union, Tuple, TYPE_CHECKING
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import TYPE_CHECKING
+
+import requests  # noqa: F401
 
 # Initialize logger early for use in imports
 logger = logging.getLogger(__name__)
 
 # Local imports
 try:
-    from .openai_wrapper import OpenAIWrapper, NVIDIABuildConfig, NVIDIABuildError
+    from .openai_wrapper import NVIDIABuildConfig, NVIDIABuildError, OpenAIWrapper
+
     OPENAI_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"OpenAI SDK not available: {e}")
@@ -45,8 +49,8 @@ except ImportError as e:
     NVIDIABuildError = None
     OPENAI_AVAILABLE = False
 
-from .ollama_client import OllamaClient, OllamaConfig, OllamaClientError
 from .model_normalization import normalize_model as _normalize_shared_model
+from .ollama_client import OllamaClient, OllamaConfig
 
 try:
     from ..enhanced_config import EnhancedRAGConfig
@@ -77,14 +81,19 @@ def _to_dict_safe(obj: Any) -> Optional[Dict[str, Any]]:
         return obj.__dict__
     except Exception:
         return {"repr": repr(obj)}
+
+
 class EndpointType(Enum):
     """Endpoint types for fallback strategy."""
+
     CLOUD = "cloud"
     SELF_HOSTED = "self_hosted"
+
 
 @dataclass
 class ClientResponse:
     """Standardized response wrapper for both cloud and self-hosted clients."""
+
     success: bool
     data: Any = None
     error: Optional[str] = None
@@ -94,6 +103,7 @@ class ClientResponse:
     response_time_ms: Optional[int] = None
     cost_tier: Optional[str] = None  # "free_tier" or "infrastructure"
 
+
 class EnhancedNeMoClient:
     """
     Enhanced NeMo client with cloud-first architecture and seamless fallback.
@@ -102,11 +112,13 @@ class EnhancedNeMoClient:
     NeMo client, providing pharmaceutical optimizations and cost monitoring.
     """
 
-    def __init__(self,
-                 config: Optional[EnhancedRAGConfig] = None,
-                 enable_fallback: bool = True,
-                 pharmaceutical_optimized: bool = True,
-                 api_key: Optional[str] = None):
+    def __init__(
+        self,
+        config: Optional[EnhancedRAGConfig] = None,
+        enable_fallback: bool = True,
+        pharmaceutical_optimized: bool = True,
+        api_key: Optional[str] = None,
+    ):
         """
         Initialize enhanced NeMo client with cloud-first configuration.
 
@@ -137,7 +149,7 @@ class EnhancedNeMoClient:
             "fallback_requests": 0,
             "self_hosted_requests": 0,
             "failed_requests": 0,
-            "total_response_time_ms": 0.0
+            "total_response_time_ms": 0.0,
         }
 
         # Background event loop for safe coroutine execution when already inside a loop
@@ -176,9 +188,11 @@ class EnhancedNeMoClient:
         if self._bg_loop is not None and self._bg_loop_thread is not None and self._bg_loop_thread.is_alive():
             return
         self._bg_loop = asyncio.new_event_loop()
+
         def _run_loop(loop: asyncio.AbstractEventLoop) -> None:
             asyncio.set_event_loop(loop)
             loop.run_forever()
+
         self._bg_loop_thread = threading.Thread(target=_run_loop, args=(self._bg_loop,), daemon=True)
         self._bg_loop_thread.start()
 
@@ -199,27 +213,31 @@ class EnhancedNeMoClient:
         """Classify pharmaceutical query using centralized classifier."""
         try:
             from ..utils.pharma import classify_pharma_query_safe
+
             return classify_pharma_query_safe(text)
         except ImportError:
             try:
                 from src.utils.pharma import classify_pharma_query_safe
+
                 return classify_pharma_query_safe(text)
             except ImportError:
                 # Log warning once and default to general classification
-                if not hasattr(self, '_pharma_import_warned'):
+                if not hasattr(self, "_pharma_import_warned"):
                     logger.warning("Pharma query classification utilities unavailable, defaulting to 'general'")
                     self._pharma_import_warned = True
-                return 'general'
+                return "general"
 
     # ---------------------------- Cache utils ----------------------------
-    def _generate_secure_cache_key(self,
-                                 messages: List[Dict[str, str]],
-                                 model: Optional[str] = None,
-                                 temperature: Optional[float] = None,
-                                 max_tokens: Optional[int] = None,
-                                 query_type: Optional[str] = None,
-                                 conversation_id: Optional[str] = None,
-                                 **kwargs) -> str:
+    def _generate_secure_cache_key(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        query_type: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        **kwargs,
+    ) -> str:
         """
         Generate collision-resistant cache key using SHA256 with full conversation context.
 
@@ -248,53 +266,49 @@ class EnhancedNeMoClient:
         try:
             # 1. Full conversation context hash
             conversation_data = {
-                'messages': [
-                    {
-                        'role': msg.get('role', ''),
-                        'content': str(msg.get('content', '')),
-                        'sequence': idx
-                    }
+                "messages": [
+                    {"role": msg.get("role", ""), "content": str(msg.get("content", "")), "sequence": idx}
                     for idx, msg in enumerate(messages or [])
                 ],
-                'conversation_id': conversation_id or 'single_turn',
-                'message_count': len(messages or []),
-                'has_system_prompt': any(m.get('role') == 'system' for m in (messages or [])),
-                'user_message_count': sum(1 for m in (messages or []) if m.get('role') == 'user'),
-                'assistant_message_count': sum(1 for m in (messages or []) if m.get('role') == 'assistant')
+                "conversation_id": conversation_id or "single_turn",
+                "message_count": len(messages or []),
+                "has_system_prompt": any(m.get("role") == "system" for m in (messages or [])),
+                "user_message_count": sum(1 for m in (messages or []) if m.get("role") == "user"),
+                "assistant_message_count": sum(1 for m in (messages or []) if m.get("role") == "assistant"),
             }
 
-            conversation_json = json.dumps(conversation_data, sort_keys=True, separators=(',', ':'))
-            conversation_hash = hashlib.sha256(conversation_json.encode('utf-8')).hexdigest()
+            conversation_json = json.dumps(conversation_data, sort_keys=True, separators=(",", ":"))
+            conversation_hash = hashlib.sha256(conversation_json.encode("utf-8")).hexdigest()
 
             # 2. Parameters hash
             params_data = {
-                'model': model or '',
-                'temperature': temperature,
-                'max_tokens': max_tokens,
-                'query_type': query_type or 'general',
-                'additional_params': sorted(kwargs.items()) if kwargs else []
+                "model": model or "",
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "query_type": query_type or "general",
+                "additional_params": sorted(kwargs.items()) if kwargs else [],
             }
-            params_json = json.dumps(params_data, sort_keys=True, separators=(',', ':'))
-            params_hash = hashlib.sha256(params_json.encode('utf-8')).hexdigest()[:16]
+            params_json = json.dumps(params_data, sort_keys=True, separators=(",", ":"))
+            params_hash = hashlib.sha256(params_json.encode("utf-8")).hexdigest()[:16]
 
             # 3. Pharmaceutical configuration hash
             config_data = {
-                'disclaimer': bool(getattr(self.config, "pharma_require_disclaimer", False)),
-                'compliance': bool(getattr(self.config, "pharma_compliance_mode", False)),
-                'workflows': bool(getattr(self.config, "pharma_workflow_templates_enabled", False)),
-                'qa_enabled': bool(getattr(self.config, "pharma_quality_assurance_enabled", False)),
-                'region': getattr(self.config, "pharma_region", "US"),
-                'pharmaceutical_optimized': bool(self.pharmaceutical_optimized)
+                "disclaimer": bool(getattr(self.config, "pharma_require_disclaimer", False)),
+                "compliance": bool(getattr(self.config, "pharma_compliance_mode", False)),
+                "workflows": bool(getattr(self.config, "pharma_workflow_templates_enabled", False)),
+                "qa_enabled": bool(getattr(self.config, "pharma_quality_assurance_enabled", False)),
+                "region": getattr(self.config, "pharma_region", "US"),
+                "pharmaceutical_optimized": bool(self.pharmaceutical_optimized),
             }
-            config_json = json.dumps(config_data, sort_keys=True, separators=(',', ':'))
-            config_hash = hashlib.sha256(config_json.encode('utf-8')).hexdigest()[:16]
+            config_json = json.dumps(config_data, sort_keys=True, separators=(",", ":"))
+            config_hash = hashlib.sha256(config_json.encode("utf-8")).hexdigest()[:16]
 
             # 4. Time bucket for cache expiry (1-hour buckets for pharmaceutical safety)
             time_bucket = str(int(time.time() // 3600))
 
             # Combine into collision-resistant key
             final_key_data = f"{conversation_hash}::{params_hash}::{config_hash}::{time_bucket}"
-            final_key = hashlib.sha256(final_key_data.encode('utf-8')).hexdigest()
+            final_key = hashlib.sha256(final_key_data.encode("utf-8")).hexdigest()
 
             # Return with pharmaceutical prefix for identification
             return f"pharma_chat::{final_key[:32]}"
@@ -303,7 +317,7 @@ class EnhancedNeMoClient:
             logger.warning(f"Error generating secure cache key: {e}, falling back to simple key")
             # Fallback to a simple but unique key
             simple_data = f"{str(messages)}::{model}::{temperature}::{max_tokens}::{query_type}::{time.time()}"
-            simple_hash = hashlib.sha256(simple_data.encode('utf-8')).hexdigest()
+            simple_hash = hashlib.sha256(simple_data.encode("utf-8")).hexdigest()
             return f"pharma_fallback::{simple_hash[:32]}"
 
     def _get_from_cache(self, cache_key: str) -> Optional[Any]:
@@ -329,28 +343,31 @@ class EnhancedNeMoClient:
     def _extract_pharmaceutical_safety_markers(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
         """Extract pharmaceutical safety markers from conversation messages."""
         safety_markers = {
-            'contains_drug_names': False,
-            'contains_dosage_info': False,
-            'contains_interaction_warnings': False,
-            'contains_medical_disclaimers': False,
-            'high_risk_content': False
+            "contains_drug_names": False,
+            "contains_dosage_info": False,
+            "contains_interaction_warnings": False,
+            "contains_medical_disclaimers": False,
+            "high_risk_content": False,
         }
 
         try:
-            full_text = ' '.join(str(msg.get('content', '')) for msg in (messages or []))
+            full_text = " ".join(str(msg.get("content", "")) for msg in (messages or []))
             text_lower = full_text.lower()
 
             # Basic pharmaceutical content detection
-            drug_keywords = ['medication', 'drug', 'prescription', 'dosage', 'mg', 'tablet', 'pill']
-            interaction_keywords = ['interaction', 'contraindication', 'side effect', 'adverse', 'warning']
-            disclaimer_keywords = ['consult', 'physician', 'doctor', 'medical advice', 'disclaimer']
+            drug_keywords = ["medication", "drug", "prescription", "dosage", "mg", "tablet", "pill"]
+            interaction_keywords = ["interaction", "contraindication", "side effect", "adverse", "warning"]
+            disclaimer_keywords = ["consult", "physician", "doctor", "medical advice", "disclaimer"]
 
-            safety_markers['contains_drug_names'] = any(keyword in text_lower for keyword in drug_keywords)
-            safety_markers['contains_interaction_warnings'] = any(keyword in text_lower for keyword in interaction_keywords)
-            safety_markers['contains_medical_disclaimers'] = any(keyword in text_lower for keyword in disclaimer_keywords)
-            safety_markers['high_risk_content'] = (
-                safety_markers['contains_drug_names'] and
-                safety_markers['contains_interaction_warnings']
+            safety_markers["contains_drug_names"] = any(keyword in text_lower for keyword in drug_keywords)
+            safety_markers["contains_interaction_warnings"] = any(
+                keyword in text_lower for keyword in interaction_keywords
+            )
+            safety_markers["contains_medical_disclaimers"] = any(
+                keyword in text_lower for keyword in disclaimer_keywords
+            )
+            safety_markers["high_risk_content"] = (
+                safety_markers["contains_drug_names"] and safety_markers["contains_interaction_warnings"]
             )
 
         except Exception as e:
@@ -374,29 +391,31 @@ class EnhancedNeMoClient:
                 "You are a clinical trials analyst. Summarize study design, phase, arms, endpoints, and key outcomes. "
                 "Note limitations and population details where relevant."
             )
-        return (
-            "You are a medical research assistant. Provide concise, accurate, and source-aware responses."
-        )
+        return "You are a medical research assistant. Provide concise, accurate, and source-aware responses."
 
     def _validate_medical_terminology(self, text: str, query_type: str) -> bool:
         if not text:
             return False
         t = text.lower()
         if query_type == "drug_interaction":
-            return any(k in t for k in ["interaction", "contraindication", "monitor", "cyp", "p-gp", "transport"])  # simple heuristic
+            return any(
+                k in t for k in ["interaction", "contraindication", "monitor", "cyp", "p-gp", "transport"]
+            )  # simple heuristic
         if query_type == "pharmacokinetics":
             return any(k in t for k in ["half-life", "clearance", "cmax", "tmax", "auc"])  # heuristic
         if query_type == "clinical_trial":
             return any(k in t for k in ["phase", "endpoint", "random", "placebo", "cohort", "arm"])  # heuristic
         return True
 
-    def _cache_key(self,
-                   messages: List[Dict[str, str]],
-                   model: Optional[str],
-                   temperature: Optional[float] = None,
-                   max_tokens: Optional[int] = None,
-                   query_type: Optional[str] = None,
-                   endpoint_label: Optional[str] = None) -> str:
+    def _cache_key(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str],
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        query_type: Optional[str] = None,
+        endpoint_label: Optional[str] = None,
+    ) -> str:
         """
         Generate comprehensive cache key including all parameters that affect response.
 
@@ -422,6 +441,7 @@ class EnhancedNeMoClient:
         for m in messages or []:
             if m.get("role") == "system":
                 import hashlib
+
                 system_prompt_hash = hashlib.md5(str(m.get("content", "")).encode()).hexdigest()[:8]
                 break
 
@@ -435,16 +455,16 @@ class EnhancedNeMoClient:
 
         # Build comprehensive cache key
         key_parts = [
-            (model or '').strip(),
-            str(temperature or 'auto'),
-            str(max_tokens or 'auto'),
+            (model or "").strip(),
+            str(temperature or "auto"),
+            str(max_tokens or "auto"),
             system_prompt_hash,
-            query_type or 'general',
-            (endpoint_label or 'auto'),
+            query_type or "general",
+            (endpoint_label or "auto"),
             f"disc={int(disclaimer)}",
             f"comp={int(compliance)}",
             f"wf={int(workflows)}",
-            last_user.strip()[:400]  # Reduced to fit other params
+            last_user.strip()[:400],  # Reduced to fit other params
         ]
         return "::".join(key_parts)
 
@@ -534,14 +554,14 @@ class EnhancedNeMoClient:
             logger.warning(
                 "Large pharmaceutical batch size (%d) may impact drug interaction query accuracy. "
                 "Consider reducing to ≤100 for optimal pharmaceutical research precision.",
-                batch_size
+                batch_size,
             )
 
         if batch_latency > 2000:
             logger.warning(
                 "High pharmaceutical batch latency (%dms) may delay safety-critical queries. "
                 "Consider reducing to ≤2000ms for responsive pharmaceutical research.",
-                batch_latency
+                batch_latency,
             )
 
         # Validate pharmaceutical safety settings
@@ -585,7 +605,9 @@ class EnhancedNeMoClient:
                     budget_limit = getattr(self.config, "research_project_budget_limit_usd", 0.0)
 
                     if research_project_budgeting and not budget_limit:
-                        logger.warning("Budgeting enabled but PHARMA_BUDGET_LIMIT_USD is 0.0; cost guards will be inert")
+                        logger.warning(
+                            "Budgeting enabled but PHARMA_BUDGET_LIMIT_USD is 0.0; cost guards will be inert"
+                        )
 
                     enabled_eit, eit_value = (False, None)
                     try:
@@ -598,7 +620,9 @@ class EnhancedNeMoClient:
 
                     # Determine batch optimization from feature flags (not budgeting)
                     try:
-                        batch_opt_enabled = bool(self.config.get_feature_flags().get("batch_optimization_enabled", True))
+                        batch_opt_enabled = bool(
+                            self.config.get_feature_flags().get("batch_optimization_enabled", True)
+                        )
                     except Exception:
                         batch_opt_enabled = True
 
@@ -650,6 +674,7 @@ class EnhancedNeMoClient:
                 api_key = self._get_effective_api_key()
                 # Local import to avoid circular dependency at module import time
                 from ..nemo_retriever_client import NeMoRetrieverClient  # type: ignore
+
                 self.nemo_client = NeMoRetrieverClient(api_key=api_key)
                 logger.info("NeMo self-hosted client initialized successfully")
 
@@ -663,12 +688,14 @@ class EnhancedNeMoClient:
         if getattr(self.config, "enable_ollama", False):
             try:
                 ocfg = self.config.get_ollama_config()
-                self.ollama_client = OllamaClient(OllamaConfig(
-                    base_url=ocfg["base_url"],
-                    chat_model=ocfg["chat_model"],
-                    embed_model=ocfg["embed_model"],
-                    timeout_seconds=int(ocfg.get("timeout_seconds", 60)),
-                ))
+                self.ollama_client = OllamaClient(
+                    OllamaConfig(
+                        base_url=ocfg["base_url"],
+                        chat_model=ocfg["chat_model"],
+                        embed_model=ocfg["embed_model"],
+                        timeout_seconds=int(ocfg.get("timeout_seconds", 60)),
+                    )
+                )
                 logger.info("Ollama local client initialized (%s)", ocfg["base_url"])
             except Exception as e:
                 logger.warning("Ollama client initialization failed: %s", e)
@@ -676,13 +703,15 @@ class EnhancedNeMoClient:
         if not self.cloud_client and not self.ollama_client and not self.nemo_client:
             raise RuntimeError("No clients available - both cloud and self-hosted initialization failed")
 
-    def _execute_with_fallback(self,
-                               operation: str,
-                               cloud_func: callable,
-                               nemo_func: callable,
-                               ollama_func: Optional[callable] = None,
-                               force_endpoint: Optional[EndpointType] = None,
-                               **kwargs) -> ClientResponse:
+    def _execute_with_fallback(
+        self,
+        operation: str,
+        cloud_func: callable,
+        nemo_func: callable,
+        ollama_func: Optional[callable] = None,
+        force_endpoint: Optional[EndpointType] = None,
+        **kwargs,
+    ) -> ClientResponse:
         """
         Execute operation with intelligent fallback logic respecting configured order.
 
@@ -712,7 +741,7 @@ class EnhancedNeMoClient:
         endpoint_mappings = {
             "nvidia_build": (cloud_func, self.cloud_client, "cloud_requests", EndpointType.CLOUD, "free_tier"),
             "nemo": (nemo_func, self.nemo_client, "fallback_requests", EndpointType.SELF_HOSTED, "infrastructure"),
-            "ollama": (ollama_func, self.ollama_client, "ollama_requests", EndpointType.SELF_HOSTED, "infrastructure")
+            "ollama": (ollama_func, self.ollama_client, "ollama_requests", EndpointType.SELF_HOSTED, "infrastructure"),
         }
 
         errors = []
@@ -751,7 +780,7 @@ class EnhancedNeMoClient:
                     data=result,
                     endpoint_type=endpoint_type,
                     response_time_ms=response_time,
-                    cost_tier=cost_tier
+                    cost_tier=cost_tier,
                 )
 
             except Exception as e:
@@ -763,15 +792,12 @@ class EnhancedNeMoClient:
         self.metrics["failed_requests"] += 1
         combined_error = "; ".join(errors) if errors else "No clients available"
         return ClientResponse(
-            success=False,
-            error=combined_error,
-            response_time_ms=int((time.time() - start_time) * 1000)
+            success=False, error=combined_error, response_time_ms=int((time.time() - start_time) * 1000)
         )
 
-    def create_embeddings(self,
-                         texts: List[str],
-                         model: Optional[str] = None,
-                         is_query: bool = False) -> ClientResponse:
+    def create_embeddings(
+        self, texts: List[str], model: Optional[str] = None, is_query: bool = False
+    ) -> ClientResponse:
         """
         Create embeddings with cloud-first fallback.
 
@@ -785,6 +811,7 @@ class EnhancedNeMoClient:
             and selected model string to ensure consistent consumer expectations
             across all client implementations.
         """
+
         def _cloud_embedding(client: OpenAIWrapper, **kwargs) -> Any:
             texts_in = kwargs["texts"]
             model_in = kwargs.get("model")
@@ -799,8 +826,8 @@ class EnhancedNeMoClient:
                 try:
                     if isinstance(texts_in, list) and texts_in:
                         avg_len = sum(len(t or "") for t in texts_in) / max(1, len(texts_in))
-                        has_q = any(isinstance(t, str) and ('?' in t) for t in texts_in)
-                        is_query_in = (len(texts_in) <= 3 and avg_len < 200 and has_q)
+                        has_q = any(isinstance(t, str) and ("?" in t) for t in texts_in)
+                        is_query_in = len(texts_in) <= 3 and avg_len < 200 and has_q
                 except Exception:
                     pass
             # Respect config gate for input_type forwarding
@@ -820,12 +847,12 @@ class EnhancedNeMoClient:
                     texts_in,
                     model=normalized_model,
                     # If enabled, choose query/pass based on detection
-                    input_type=("query" if (eit_enabled and is_query_in) else ("passage" if eit_enabled else None))
+                    input_type=("query" if (eit_enabled and is_query_in) else ("passage" if eit_enabled else None)),
                 )
                 # Sort by index and extract embeddings
                 batched_sorted = sorted(batched, key=lambda x: x.get("index", 0))
                 embeddings = [item["embedding"] for item in batched_sorted]
-                dims = (len(embeddings[0]) if embeddings and isinstance(embeddings[0], list) else None)
+                dims = len(embeddings[0]) if embeddings and isinstance(embeddings[0], list) else None
                 return {
                     "embeddings": embeddings,
                     "model": normalized_model,
@@ -840,7 +867,7 @@ class EnhancedNeMoClient:
                 is_query=(is_query_in if eit_enabled else None),
             )
             embs = [data.embedding for data in response.data]
-            dims = (len(embs[0]) if embs and isinstance(embs[0], list) else None)
+            dims = len(embs[0]) if embs and isinstance(embs[0], list) else None
             return {
                 "embeddings": embs,
                 "model": self._normalize_model_name(getattr(response, "model", None) or normalized_model),
@@ -856,11 +883,12 @@ class EnhancedNeMoClient:
             async def _run():
                 # Local import to avoid circular dependency
                 from ..nemo_retriever_client import NeMoRetrieverClient  # type: ignore  # noqa: F401
+
                 resp = await client.embed_texts(kwargs["texts"], model="nv-embedqa-e5-v5")
                 if resp.success:
                     data = resp.data or {}
                     embs = data.get("embeddings") or data.get("data") or []
-                    dims = (len(embs[0]) if embs and isinstance(embs[0], list) else None)
+                    dims = len(embs[0]) if embs and isinstance(embs[0], list) else None
                     return {
                         "embeddings": embs,
                         "model": self._normalize_model_name("nvidia/nv-embedqa-e5-v5"),
@@ -868,14 +896,15 @@ class EnhancedNeMoClient:
                         "dimensions": dims,
                     }
                 raise RuntimeError(resp.error or "NeMo embedding failed")
+
             return self.run_coro_sync(_run())
 
         # Early return for empty inputs - standardized format matching OpenAI wrapper
         if not texts:
             # Select appropriate default model
             selected_model = model or (
-                self.config.nvidia_build_embedding_model or
-                "nvidia/nv-embedqa-e5-v5"  # Pharmaceutical-optimized default
+                self.config.nvidia_build_embedding_model
+                or "nvidia/nv-embedqa-e5-v5"  # Pharmaceutical-optimized default
             )
 
             return ClientResponse(
@@ -888,7 +917,7 @@ class EnhancedNeMoClient:
                 },
                 response_time_ms=0,
                 endpoint_used="empty_input",
-                cost_tier="free"
+                cost_tier="free",
             )
 
         # Prefer configured model when not explicitly provided
@@ -905,12 +934,10 @@ class EnhancedNeMoClient:
             _ollama_embedding if self.ollama_client else None,
             texts=texts,
             model=model,
-            is_query=is_query
+            is_query=is_query,
         )
 
-    async def embed_texts(self,
-                         texts: List[str],
-                         model: Optional[str] = None) -> "NeMoAPIResponse":
+    async def embed_texts(self, texts: List[str], model: Optional[str] = None) -> "NeMoAPIResponse":
         """
         Legacy compatibility adapter for embed_texts method.
 
@@ -949,12 +976,12 @@ class EnhancedNeMoClient:
                         "embeddings": embeddings,
                         "model": model_used,
                         "dimensions": client_response.data.get("dimensions"),
-                        "usage": client_response.data.get("usage")
+                        "usage": client_response.data.get("usage"),
                     },
                     error=None,
                     response_time_ms=response_time_ms,
                     service="enhanced_nemo_client",
-                    model=model_used
+                    model=model_used,
                 )
             else:
                 # Handle error case
@@ -966,7 +993,7 @@ class EnhancedNeMoClient:
                     error=client_response.error or "Embedding creation failed",
                     response_time_ms=response_time_ms,
                     service="enhanced_nemo_client",
-                    model=model
+                    model=model,
                 )
 
         except Exception as e:
@@ -985,15 +1012,17 @@ class EnhancedNeMoClient:
                 error=str(e),
                 response_time_ms=response_time_ms,
                 service="enhanced_nemo_client",
-                model=model
+                model=model,
             )
 
-    def create_chat_completion(self,
-                          messages: List[Dict[str, str]],
-                          model: Optional[str] = None,
-                          max_tokens: Optional[int] = None,
-                          temperature: Optional[float] = None,
-                          force_endpoint: Optional[EndpointType] = None) -> ClientResponse:
+    def create_chat_completion(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        force_endpoint: Optional[EndpointType] = None,
+    ) -> ClientResponse:
         """
         Create chat completion with cloud-first fallback.
 
@@ -1027,9 +1056,9 @@ class EnhancedNeMoClient:
 
         # Cache check
         endpoint_label = (
-            'cloud' if force_endpoint == EndpointType.CLOUD else (
-                'self_hosted' if force_endpoint == EndpointType.SELF_HOSTED else 'auto'
-            )
+            "cloud"
+            if force_endpoint == EndpointType.CLOUD
+            else ("self_hosted" if force_endpoint == EndpointType.SELF_HOSTED else "auto")
         )
         cache_key = self._cache_key(messages, model, temperature, max_tokens, query_type, endpoint_label=endpoint_label)
         cached = self._cache_get(cache_key)
@@ -1040,7 +1069,11 @@ class EnhancedNeMoClient:
                 ep_value = cached.get("endpoint_type")
             endpoint = None
             if isinstance(ep_value, str):
-                endpoint = EndpointType.CLOUD if ep_value == "cloud" else (EndpointType.SELF_HOSTED if ep_value == "self_hosted" else None)
+                endpoint = (
+                    EndpointType.CLOUD
+                    if ep_value == "cloud"
+                    else (EndpointType.SELF_HOSTED if ep_value == "self_hosted" else None)
+                )
             return ClientResponse(
                 success=True,
                 data=payload,
@@ -1055,15 +1088,18 @@ class EnhancedNeMoClient:
                 kwargs["messages"],
                 model=kwargs.get("model"),
                 max_tokens=kwargs.get("max_tokens"),
-                temperature=kwargs.get("temperature")
+                temperature=kwargs.get("temperature"),
             )
             content = response.choices[0].message.content
             data = {
                 "content": content,
                 "model": self._normalize_model_name(response.model),
                 "usage": _to_dict_safe(getattr(response, "usage", None)),
-                "quality_ok": (self._validate_medical_terminology(content, query_type)
-                                if self.config.pharma_quality_assurance_enabled else True),
+                "quality_ok": (
+                    self._validate_medical_terminology(content, query_type)
+                    if self.config.pharma_quality_assurance_enabled
+                    else True
+                ),
                 "query_type": query_type,
             }
             # Append or flag disclaimer for pharma compliance
@@ -1071,9 +1107,16 @@ class EnhancedNeMoClient:
                 require_disclaimer = bool(getattr(self.config, "pharma_require_disclaimer", False))
             except Exception:
                 require_disclaimer = False
-            append_disclaimer = os.getenv("APPEND_DISCLAIMER_IN_ANSWER", "true").strip().lower() in {"1","true","yes","on"}
+            append_disclaimer = os.getenv("APPEND_DISCLAIMER_IN_ANSWER", "true").strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
             if require_disclaimer:
-                disclaimer_text = os.getenv("MEDICAL_DISCLAIMER", "This information is for educational purposes and not medical advice.")
+                disclaimer_text = os.getenv(
+                    "MEDICAL_DISCLAIMER", "This information is for educational purposes and not medical advice."
+                )
                 data["disclaimer_added"] = True
                 data["disclaimer_text"] = disclaimer_text
                 if append_disclaimer and isinstance(data.get("content"), str):
@@ -1090,7 +1133,9 @@ class EnhancedNeMoClient:
             content = (data.get("message", {}) or {}).get("content", "")
             payload = {
                 "content": content,
-                "model": self._normalize_model_name(kwargs.get("model") or self.config.ollama_chat_model or "llama3.1:8b"),
+                "model": self._normalize_model_name(
+                    kwargs.get("model") or self.config.ollama_chat_model or "llama3.1:8b"
+                ),
                 "usage": None,
             }
             # Pharma disclaimer flag for local responses as well
@@ -1098,9 +1143,16 @@ class EnhancedNeMoClient:
                 require_disclaimer = bool(getattr(self.config, "pharma_require_disclaimer", False))
             except Exception:
                 require_disclaimer = False
-            append_disclaimer = os.getenv("APPEND_DISCLAIMER_IN_ANSWER", "true").strip().lower() in {"1","true","yes","on"}
+            append_disclaimer = os.getenv("APPEND_DISCLAIMER_IN_ANSWER", "true").strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
             if require_disclaimer:
-                disclaimer_text = os.getenv("MEDICAL_DISCLAIMER", "This information is for educational purposes and not medical advice.")
+                disclaimer_text = os.getenv(
+                    "MEDICAL_DISCLAIMER", "This information is for educational purposes and not medical advice."
+                )
                 payload["disclaimer_added"] = True
                 payload["disclaimer_text"] = disclaimer_text
                 if append_disclaimer and isinstance(payload.get("content"), str):
@@ -1110,6 +1162,7 @@ class EnhancedNeMoClient:
         def _nemo_chat(client: "NeMoRetrieverClient", **kwargs) -> Any:
             # Local import to avoid circular dependency
             from ..nemo_retriever_client import NeMoRetrieverClient  # type: ignore  # noqa: F401
+
             # NeMo Retriever does not provide chat; raise to continue fallback chain
             raise RuntimeError("NeMo chat is not supported in Retriever client")
 
@@ -1122,7 +1175,7 @@ class EnhancedNeMoClient:
             messages=messages,
             model=model,
             max_tokens=max_tokens,
-            temperature=temperature
+            temperature=temperature,
         )
 
         # Post-process for QA and potential single retry for critical queries
@@ -1135,7 +1188,13 @@ class EnhancedNeMoClient:
                 try:
                     # One guided retry with more conservative settings
                     guided = list(messages)
-                    guided.insert(0, {"role": "system", "content": "Ensure terminology appropriate to the query type and include key details."})
+                    guided.insert(
+                        0,
+                        {
+                            "role": "system",
+                            "content": "Ensure terminology appropriate to the query type and include key details.",
+                        },
+                    )
                     response = self._execute_with_fallback(
                         "chat_completion",
                         _cloud_chat,
@@ -1152,12 +1211,17 @@ class EnhancedNeMoClient:
 
         # Cache store on success (regenerate key with final parameter values)
         if response.success and isinstance(response.data, dict):
-            final_cache_key = self._cache_key(messages, model, temperature, max_tokens, query_type, endpoint_label=endpoint_label)
-            self._cache_put(final_cache_key, {
-                "payload": response.data,
-                "endpoint_type": response.endpoint_type.value if response.endpoint_type else None,
-                "cost_tier": response.cost_tier,
-            })
+            final_cache_key = self._cache_key(
+                messages, model, temperature, max_tokens, query_type, endpoint_label=endpoint_label
+            )
+            self._cache_put(
+                final_cache_key,
+                {
+                    "payload": response.data,
+                    "endpoint_type": response.endpoint_type.value if response.endpoint_type else None,
+                    "cost_tier": response.cost_tier,
+                },
+            )
 
         return response
 
@@ -1174,7 +1238,7 @@ class EnhancedNeMoClient:
             "nemo_test": None,
             "embedding_test": None,
             "chat_test": None,
-            "overall_status": "unknown"
+            "overall_status": "unknown",
         }
 
         # Test cloud client if available
@@ -1189,35 +1253,32 @@ class EnhancedNeMoClient:
         if self.nemo_client:
             try:
                 # Basic health check for NeMo
-                results["nemo_test"] = {
-                    "success": True,
-                    "message": "NeMo client available"
-                }
+                results["nemo_test"] = {"success": True, "message": "NeMo client available"}
             except Exception as e:
                 results["nemo_test"] = {"success": False, "error": str(e)}
 
         # Test integrated embedding functionality
-        embedding_response = self.create_embeddings([
-            "metformin pharmacokinetics and drug interactions with ACE inhibitors"
-        ])
+        embedding_response = self.create_embeddings(
+            ["metformin pharmacokinetics and drug interactions with ACE inhibitors"]
+        )
         results["embedding_test"] = {
             "success": embedding_response.success,
             "endpoint_type": embedding_response.endpoint_type.value if embedding_response.endpoint_type else None,
             "response_time_ms": embedding_response.response_time_ms,
             "cost_tier": embedding_response.cost_tier,
-            "error": embedding_response.error
+            "error": embedding_response.error,
         }
 
         # Test integrated chat functionality
-        chat_response = self.create_chat_completion([
-            {"role": "user", "content": "Explain the mechanism of action of metformin in type 2 diabetes treatment."}
-        ])
+        chat_response = self.create_chat_completion(
+            [{"role": "user", "content": "Explain the mechanism of action of metformin in type 2 diabetes treatment."}]
+        )
         results["chat_test"] = {
             "success": chat_response.success,
             "endpoint_type": chat_response.endpoint_type.value if chat_response.endpoint_type else None,
             "response_time_ms": chat_response.response_time_ms,
             "cost_tier": chat_response.cost_tier,
-            "error": chat_response.error
+            "error": chat_response.error,
         }
 
         # Determine overall status
@@ -1235,9 +1296,7 @@ class EnhancedNeMoClient:
 
     def get_performance_metrics(self) -> Dict[str, Any]:
         """Get performance metrics and cost analysis."""
-        avg_response_time = (
-            self.metrics["total_response_time_ms"] / max(self.metrics["total_requests"], 1)
-        )
+        avg_response_time = self.metrics["total_response_time_ms"] / max(self.metrics["total_requests"], 1)
 
         # Compute self_hosted_requests as sum of fallback_requests + ollama_requests for clarity
         computed_self_hosted = self.metrics["fallback_requests"] + self.metrics["ollama_requests"]
@@ -1251,18 +1310,16 @@ class EnhancedNeMoClient:
             "computed_self_hosted_requests": computed_self_hosted,  # For verification
             "failed_requests": self.metrics["failed_requests"],
             "success_rate": (
-                (self.metrics["total_requests"] - self.metrics["failed_requests"]) /
-                max(self.metrics["total_requests"], 1)
+                (self.metrics["total_requests"] - self.metrics["failed_requests"])
+                / max(self.metrics["total_requests"], 1)
             ),
             "avg_response_time_ms": int(avg_response_time),
-            "cloud_usage_percentage": (
-                self.metrics["cloud_requests"] / max(self.metrics["total_requests"], 1) * 100
-            ),
+            "cloud_usage_percentage": (self.metrics["cloud_requests"] / max(self.metrics["total_requests"], 1) * 100),
             "cost_optimization": {
                 "free_tier_requests": self.metrics["cloud_requests"],
                 "infrastructure_requests": self.metrics["self_hosted_requests"],
-                "estimated_monthly_projection": self.metrics["cloud_requests"] * 30
-            }
+                "estimated_monthly_projection": self.metrics["cloud_requests"] * 30,
+            },
         }
 
     def get_endpoint_status(self) -> Dict[str, Any]:
@@ -1271,7 +1328,7 @@ class EnhancedNeMoClient:
             "cloud_available": self.cloud_client is not None,
             "nemo_available": self.nemo_client is not None,
             "fallback_enabled": self.enable_fallback,
-            "pharmaceutical_optimized": self.pharmaceutical_optimized
+            "pharmaceutical_optimized": self.pharmaceutical_optimized,
         }
 
         # Test cloud endpoint if available
@@ -1302,17 +1359,16 @@ class EnhancedNeMoClient:
         return status
 
     # ---------------------------- Reranking ----------------------------
-    def rerank_passages(self,
-                        query: str,
-                        passages: List[str],
-                        model: Optional[str] = None,
-                        top_n: Optional[int] = None) -> ClientResponse:
+    def rerank_passages(
+        self, query: str, passages: List[str], model: Optional[str] = None, top_n: Optional[int] = None
+    ) -> ClientResponse:
         """Rerank passages using cloud (NVIDIA Build) with fallback to NeMo.
 
         Returns data in a normalized schema:
             {"reranked_passages": [{"text": str, "score": float}, ...]}
         sorted by descending score.
         """
+
         def _cloud_rerank(client: OpenAIWrapper, **kwargs) -> Any:
             # Respect configured model preference when not explicitly provided
             default_model = (
@@ -1331,7 +1387,7 @@ class EnhancedNeMoClient:
             # Normalize and sort desc
             norm = []
             for item in rankings or []:
-                txt = (item.get("text") or item.get("passage") or "")
+                txt = item.get("text") or item.get("passage") or ""
                 try:
                     score = float(item.get("score") if item.get("score") is not None else 0.0)
                 except Exception:
@@ -1347,6 +1403,7 @@ class EnhancedNeMoClient:
             async def _run():
                 # Local import to avoid circular dependency
                 from ..nemo_retriever_client import NeMoRetrieverClient  # type: ignore  # noqa: F401
+
                 # Use short-name for legacy NeMo client, but report full name in response
                 default_model = (
                     kwargs.get("model")
@@ -1370,11 +1427,9 @@ class EnhancedNeMoClient:
                         txt = item.get("text") or item.get("passage") or item.get("document", "")
                         norm.append({"text": txt, "score": float(score)})
                     norm.sort(key=lambda x: x.get("score", 0.0), reverse=True)
-                    return {
-                        "reranked_passages": norm,
-                        "model": self._normalize_model_name(default_model)
-                    }
+                    return {"reranked_passages": norm, "model": self._normalize_model_name(default_model)}
                 raise RuntimeError(resp.error or "NeMo rerank failed")
+
             return self.run_coro_sync(_run())
 
         return self._execute_with_fallback(
@@ -1387,16 +1442,13 @@ class EnhancedNeMoClient:
             top_n=top_n,
         )
 
-    async def rerank_passages_async(self,
-                                    query: str,
-                                    passages: List[str],
-                                    model: Optional[str] = None,
-                                    top_n: Optional[int] = None) -> ClientResponse:
+    async def rerank_passages_async(
+        self, query: str, passages: List[str], model: Optional[str] = None, top_n: Optional[int] = None
+    ) -> ClientResponse:
         """Async-compatible alias matching legacy client signature."""
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None, lambda: self.rerank_passages(query, passages, model, top_n)
-        )
+        return await loop.run_in_executor(None, lambda: self.rerank_passages(query, passages, model, top_n))
+
 
 # Advanced pharmaceutical client factory
 def create_pharmaceutical_client(config: Optional[EnhancedRAGConfig] = None) -> EnhancedNeMoClient:
@@ -1413,10 +1465,9 @@ def create_pharmaceutical_client(config: Optional[EnhancedRAGConfig] = None) -> 
         EnhancedNeMoClient configured for pharmaceutical research with cloud-first strategy
     """
     return EnhancedNeMoClient(
-        config=config or EnhancedRAGConfig.from_env(),
-        pharmaceutical_optimized=True,
-        enable_fallback=True
+        config=config or EnhancedRAGConfig.from_env(), pharmaceutical_optimized=True, enable_fallback=True
     )
+
 
 if __name__ == "__main__":
     # Quick pharmaceutical capability test

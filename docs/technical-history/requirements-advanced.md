@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # Pharmaceutical RAG Knowledge Expert - Product Requirements Document
 
 ## Project Overview
@@ -444,3 +450,11 @@ Example Queries:
 **Document Version**: 2.0
 **Last Updated**: September 16, 2025
 **Next Review**: October 1, 2025
+
+---
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

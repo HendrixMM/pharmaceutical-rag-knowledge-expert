@@ -10,47 +10,44 @@ Comprehensive testing of the pharmaceutical safety alert integration system with
 
 Tests validate safety alert system for pharmaceutical research protection.
 """
+import json
+import os
+import tempfile
+import time
+from datetime import datetime
+from datetime import timedelta
 
 import pytest
-import asyncio
-import os
-import json
-import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
-from unittest.mock import Mock, patch, MagicMock
-import tempfile
 
 # Import modules under test
 try:
+    from src.pharmaceutical.contraindication_analyzer import ContraindicationRisk
+    from src.pharmaceutical.drug_interaction_checker import InteractionSeverity
     from src.pharmaceutical.safety_alert_integration import (
-        PharmaceuticalSafetyMonitor,
+        AlertTrigger,
+        ContraindicationAlert,
         DrugSafetyAlert,
         InteractionAlert,
-        ContraindicationAlert,
+        PharmaceuticalSafetyMonitor,
         SafetyLevel,
-        AlertTrigger,
-        SafetyResponse
+        SafetyResponse,
     )
-    from src.pharmaceutical.drug_interaction_checker import DrugInteractionChecker, InteractionSeverity
-    from src.pharmaceutical.contraindication_analyzer import ContraindicationAnalyzer, ContraindicationRisk
-    from src.monitoring.alert_manager import AlertManager, AlertType, AlertSeverity
 except ImportError:
     import sys
     from pathlib import Path
+
     sys.path.append(str(Path(__file__).parent.parent))
+    from src.pharmaceutical.contraindication_analyzer import ContraindicationRisk
+    from src.pharmaceutical.drug_interaction_checker import InteractionSeverity
     from src.pharmaceutical.safety_alert_integration import (
-        PharmaceuticalSafetyMonitor,
+        AlertTrigger,
+        ContraindicationAlert,
         DrugSafetyAlert,
         InteractionAlert,
-        ContraindicationAlert,
+        PharmaceuticalSafetyMonitor,
         SafetyLevel,
-        AlertTrigger,
-        SafetyResponse
+        SafetyResponse,
     )
-    from src.pharmaceutical.drug_interaction_checker import DrugInteractionChecker, InteractionSeverity
-    from src.pharmaceutical.contraindication_analyzer import ContraindicationAnalyzer, ContraindicationRisk
-    from src.monitoring.alert_manager import AlertManager, AlertType, AlertSeverity
 
 
 class TestPharmaceuticalSafetyMonitor:
@@ -61,40 +58,35 @@ class TestPharmaceuticalSafetyMonitor:
         """Setup test environment with safety monitoring configuration."""
         self.safety_config = {
             "drug_interactions": {
-                "severity_thresholds": {
-                    "critical": 0.9,
-                    "major": 0.7,
-                    "moderate": 0.5,
-                    "minor": 0.3
-                },
+                "severity_thresholds": {"critical": 0.9, "major": 0.7, "moderate": 0.5, "minor": 0.3},
                 "high_risk_combinations": [
                     ["warfarin", "aspirin"],
                     ["metformin", "contrast_dye"],
                     ["ace_inhibitors", "potassium_supplements"],
-                    ["digoxin", "amiodarone"]
-                ]
+                    ["digoxin", "amiodarone"],
+                ],
             },
             "contraindications": {
                 "absolute_contraindications": {
                     "metformin": ["severe_kidney_disease", "diabetic_ketoacidosis"],
                     "warfarin": ["active_bleeding", "pregnancy"],
-                    "ace_inhibitors": ["pregnancy", "hyperkalemia", "bilateral_renal_artery_stenosis"]
+                    "ace_inhibitors": ["pregnancy", "hyperkalemia", "bilateral_renal_artery_stenosis"],
                 },
                 "relative_contraindications": {
                     "metformin": ["mild_kidney_disease", "heart_failure"],
-                    "statins": ["liver_disease", "myopathy_history"]
-                }
+                    "statins": ["liver_disease", "myopathy_history"],
+                },
             },
             "safety_monitoring": {
                 "real_time_enabled": True,
                 "alert_escalation_threshold": 3,
                 "safety_check_mandatory_for": ["drug_safety_queries", "drug_interactions"],
-                "automatic_contraindication_check": True
-            }
+                "automatic_contraindication_check": True,
+            },
         }
 
         # Create temporary configuration file
-        self.temp_config_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        self.temp_config_file = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
         json.dump(self.safety_config, self.temp_config_file)
         self.temp_config_file.close()
 
@@ -105,46 +97,40 @@ class TestPharmaceuticalSafetyMonitor:
 
     def test_safety_monitor_initialization(self):
         """Test pharmaceutical safety monitor initialization."""
-        monitor = PharmaceuticalSafetyMonitor(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        monitor = PharmaceuticalSafetyMonitor(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         assert monitor is not None
-        assert hasattr(monitor, 'pharmaceutical_optimized')
+        assert hasattr(monitor, "pharmaceutical_optimized")
         assert monitor.pharmaceutical_optimized == True
-        assert hasattr(monitor, 'interaction_checker')
-        assert hasattr(monitor, 'contraindication_analyzer')
-        assert hasattr(monitor, 'alert_manager')
+        assert hasattr(monitor, "interaction_checker")
+        assert hasattr(monitor, "contraindication_analyzer")
+        assert hasattr(monitor, "alert_manager")
 
         # Should load safety configuration
-        assert hasattr(monitor, 'high_risk_combinations')
-        assert hasattr(monitor, 'contraindication_rules')
+        assert hasattr(monitor, "high_risk_combinations")
+        assert hasattr(monitor, "contraindication_rules")
 
     def test_drug_interaction_detection(self):
         """Test drug interaction detection and alert generation."""
-        monitor = PharmaceuticalSafetyMonitor(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        monitor = PharmaceuticalSafetyMonitor(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Test high-risk drug interaction detection
         high_risk_scenarios = [
             {
                 "query": "Can I take warfarin and aspirin together for cardiovascular protection?",
                 "expected_drugs": ["warfarin", "aspirin"],
-                "expected_severity": InteractionSeverity.CRITICAL
+                "expected_severity": InteractionSeverity.CRITICAL,
             },
             {
                 "query": "Is it safe to use metformin before contrast dye imaging?",
                 "expected_drugs": ["metformin", "contrast_dye"],
-                "expected_severity": InteractionSeverity.MAJOR
+                "expected_severity": InteractionSeverity.MAJOR,
             },
             {
                 "query": "ACE inhibitor with potassium supplement interaction risk",
                 "expected_drugs": ["ace_inhibitors", "potassium_supplements"],
-                "expected_severity": InteractionSeverity.MAJOR
-            }
+                "expected_severity": InteractionSeverity.MAJOR,
+            },
         ]
 
         for scenario in high_risk_scenarios:
@@ -162,10 +148,7 @@ class TestPharmaceuticalSafetyMonitor:
 
     def test_contraindication_analysis(self):
         """Test contraindication analysis and warning system."""
-        monitor = PharmaceuticalSafetyMonitor(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        monitor = PharmaceuticalSafetyMonitor(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Test absolute contraindication detection
         absolute_contraindication_cases = [
@@ -173,20 +156,20 @@ class TestPharmaceuticalSafetyMonitor:
                 "query": "Can I prescribe metformin to a patient with severe kidney disease?",
                 "drug": "metformin",
                 "condition": "severe_kidney_disease",
-                "expected_risk": ContraindicationRisk.ABSOLUTE
+                "expected_risk": ContraindicationRisk.ABSOLUTE,
             },
             {
                 "query": "Warfarin use during pregnancy safety considerations",
                 "drug": "warfarin",
                 "condition": "pregnancy",
-                "expected_risk": ContraindicationRisk.ABSOLUTE
+                "expected_risk": ContraindicationRisk.ABSOLUTE,
             },
             {
                 "query": "ACE inhibitors in pregnancy - is this safe?",
                 "drug": "ace_inhibitors",
                 "condition": "pregnancy",
-                "expected_risk": ContraindicationRisk.ABSOLUTE
-            }
+                "expected_risk": ContraindicationRisk.ABSOLUTE,
+            },
         ]
 
         for case in absolute_contraindication_cases:
@@ -203,13 +186,11 @@ class TestPharmaceuticalSafetyMonitor:
 
     def test_real_time_safety_monitoring(self):
         """Test real-time safety monitoring during query processing."""
-        monitor = PharmaceuticalSafetyMonitor(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        monitor = PharmaceuticalSafetyMonitor(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Mock alert manager for testing
         mock_alerts_sent = []
+
         def mock_send_alert(alert):
             mock_alerts_sent.append(alert)
             return True
@@ -221,7 +202,7 @@ class TestPharmaceuticalSafetyMonitor:
             "Patient on warfarin experiencing unusual bleeding - what should I check?",
             "Metformin patient scheduled for CT scan with contrast tomorrow",
             "Elderly patient on digoxin and amiodarone showing signs of toxicity",
-            "Pregnant woman asking about ACE inhibitor safety"
+            "Pregnant woman asking about ACE inhibitor safety",
         ]
 
         safety_responses = []
@@ -238,9 +219,9 @@ class TestPharmaceuticalSafetyMonitor:
         # Each response should include safety assessment
         for response in safety_responses:
             assert isinstance(response, SafetyResponse)
-            assert hasattr(response, 'safety_level')
-            assert hasattr(response, 'alerts_triggered')
-            assert hasattr(response, 'recommended_actions')
+            assert hasattr(response, "safety_level")
+            assert hasattr(response, "alerts_triggered")
+            assert hasattr(response, "recommended_actions")
 
         # Critical queries should have high safety levels
         high_safety_responses = [r for r in safety_responses if r.safety_level >= SafetyLevel.HIGH]
@@ -248,19 +229,13 @@ class TestPharmaceuticalSafetyMonitor:
 
     def test_safety_alert_escalation(self):
         """Test safety alert escalation for critical pharmaceutical issues."""
-        monitor = PharmaceuticalSafetyMonitor(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        monitor = PharmaceuticalSafetyMonitor(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Track escalations
         escalations_triggered = []
+
         def mock_escalate(alert, escalation_level):
-            escalations_triggered.append({
-                "alert": alert,
-                "level": escalation_level,
-                "timestamp": datetime.now()
-            })
+            escalations_triggered.append({"alert": alert, "level": escalation_level, "timestamp": datetime.now()})
 
         monitor.escalate_safety_alert = mock_escalate
 
@@ -268,7 +243,7 @@ class TestPharmaceuticalSafetyMonitor:
         critical_scenarios = [
             "Patient experiencing warfarin overdose symptoms - immediate help needed",
             "Severe allergic reaction to newly prescribed medication - emergency",
-            "Multiple drug interactions causing patient hospitalization"
+            "Multiple drug interactions causing patient hospitalization",
         ]
 
         for scenario in critical_scenarios:
@@ -289,10 +264,7 @@ class TestPharmaceuticalSafetyMonitor:
     @pytest.mark.asyncio
     async def test_integrated_safety_workflow(self):
         """Test integrated safety workflow with pharmaceutical query processing."""
-        monitor = PharmaceuticalSafetyMonitor(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        monitor = PharmaceuticalSafetyMonitor(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Complex pharmaceutical scenario requiring multiple safety checks
         complex_scenario = {
@@ -300,17 +272,17 @@ class TestPharmaceuticalSafetyMonitor:
                 "age": 78,
                 "conditions": ["diabetes", "heart_failure", "kidney_disease"],
                 "current_medications": ["metformin", "digoxin", "furosemide"],
-                "allergies": ["sulfa"]
+                "allergies": ["sulfa"],
             },
             "query": "What are the safety considerations for adding warfarin anticoagulation therapy to this patient's regimen?",
-            "new_medication": "warfarin"
+            "new_medication": "warfarin",
         }
 
         # Process through integrated safety workflow
         workflow_result = await monitor.process_integrated_safety_workflow(
             query=complex_scenario["query"],
             patient_context=complex_scenario["patient_context"],
-            proposed_medication=complex_scenario["new_medication"]
+            proposed_medication=complex_scenario["new_medication"],
         )
 
         # Should perform comprehensive safety analysis
@@ -335,25 +307,13 @@ class TestPharmaceuticalSafetyMonitor:
 
     def test_drug_safety_database_integration(self):
         """Test integration with drug safety databases and knowledge sources."""
-        monitor = PharmaceuticalSafetyMonitor(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        monitor = PharmaceuticalSafetyMonitor(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Test safety database queries for comprehensive information
         safety_queries = [
-            {
-                "drug": "warfarin",
-                "safety_aspects": ["interactions", "contraindications", "monitoring", "reversal"]
-            },
-            {
-                "drug": "metformin",
-                "safety_aspects": ["contraindications", "adverse_effects", "special_populations"]
-            },
-            {
-                "drug": "digoxin",
-                "safety_aspects": ["interactions", "toxicity", "monitoring", "dosing"]
-            }
+            {"drug": "warfarin", "safety_aspects": ["interactions", "contraindications", "monitoring", "reversal"]},
+            {"drug": "metformin", "safety_aspects": ["contraindications", "adverse_effects", "special_populations"]},
+            {"drug": "digoxin", "safety_aspects": ["interactions", "toxicity", "monitoring", "dosing"]},
         ]
 
         for query in safety_queries:
@@ -374,10 +334,7 @@ class TestPharmaceuticalSafetyMonitor:
 
     def test_safety_alert_suppression_and_filtering(self):
         """Test safety alert suppression and filtering to prevent alert fatigue."""
-        monitor = PharmaceuticalSafetyMonitor(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        monitor = PharmaceuticalSafetyMonitor(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Test duplicate alert suppression
         duplicate_query = "warfarin aspirin interaction risk assessment"
@@ -398,7 +355,7 @@ class TestPharmaceuticalSafetyMonitor:
             drug_name="vitamin_d",
             safety_concern="mild_gastrointestinal_upset",
             severity=SafetyLevel.LOW,
-            alert_trigger=AlertTrigger.ROUTINE_MONITORING
+            alert_trigger=AlertTrigger.ROUTINE_MONITORING,
         )
 
         # Low severity alerts might be filtered in high-volume scenarios
@@ -410,7 +367,7 @@ class TestPharmaceuticalSafetyMonitor:
             drug_name="warfarin",
             safety_concern="major_bleeding_risk",
             severity=SafetyLevel.CRITICAL,
-            alert_trigger=AlertTrigger.IMMEDIATE_ATTENTION
+            alert_trigger=AlertTrigger.IMMEDIATE_ATTENTION,
         )
 
         should_send_critical = monitor.should_send_alert(critical_alert, volume_threshold=100)
@@ -418,10 +375,7 @@ class TestPharmaceuticalSafetyMonitor:
 
     def test_pharmaceutical_safety_analytics(self):
         """Test pharmaceutical safety analytics and reporting."""
-        monitor = PharmaceuticalSafetyMonitor(
-            config_path=self.temp_config_file.name,
-            pharmaceutical_optimized=True
-        )
+        monitor = PharmaceuticalSafetyMonitor(config_path=self.temp_config_file.name, pharmaceutical_optimized=True)
 
         # Simulate safety monitoring over time period
         safety_events = []
@@ -433,7 +387,7 @@ class TestPharmaceuticalSafetyMonitor:
                 "type": "drug_interaction",
                 "severity": ["minor", "moderate", "major", "critical"][i % 4],
                 "drugs": ["warfarin_aspirin", "metformin_contrast", "digoxin_amiodarone"][i % 3],
-                "outcome": "detected" if i % 3 != 0 else "prevented"
+                "outcome": "detected" if i % 3 != 0 else "prevented",
             }
             safety_events.append(event)
 
@@ -445,7 +399,7 @@ class TestPharmaceuticalSafetyMonitor:
                 "severity": ["moderate", "major", "critical"][i % 3],
                 "drug": ["metformin", "warfarin", "ace_inhibitor"][i % 3],
                 "condition": ["kidney_disease", "pregnancy", "hyperkalemia"][i % 3],
-                "outcome": "prevented"
+                "outcome": "prevented",
             }
             safety_events.append(event)
 
@@ -484,39 +438,33 @@ class TestIntegratedSafetyWorkflows:
         safety_config = {
             "drug_interactions": {
                 "severity_thresholds": {"critical": 0.9, "major": 0.7, "moderate": 0.5},
-                "high_risk_combinations": [["warfarin", "aspirin"], ["digoxin", "amiodarone"]]
+                "high_risk_combinations": [["warfarin", "aspirin"], ["digoxin", "amiodarone"]],
             },
             "contraindications": {
                 "absolute_contraindications": {
                     "metformin": ["severe_kidney_disease"],
-                    "warfarin": ["active_bleeding", "pregnancy"]
+                    "warfarin": ["active_bleeding", "pregnancy"],
                 }
             },
             "safety_monitoring": {
                 "real_time_enabled": True,
                 "alert_escalation_threshold": 2,
-                "automatic_contraindication_check": True
-            }
+                "automatic_contraindication_check": True,
+            },
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as config_file:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as config_file:
             json.dump(safety_config, config_file)
             config_path = config_file.name
 
         try:
-            monitor = PharmaceuticalSafetyMonitor(
-                config_path=config_path,
-                pharmaceutical_optimized=True
-            )
+            monitor = PharmaceuticalSafetyMonitor(config_path=config_path, pharmaceutical_optimized=True)
 
             # Track all safety events
             safety_events = []
+
             def track_safety_event(event):
-                safety_events.append({
-                    "timestamp": datetime.now(),
-                    "event": event,
-                    "type": type(event).__name__
-                })
+                safety_events.append({"timestamp": datetime.now(), "event": event, "type": type(event).__name__})
 
             monitor.on_safety_event = track_safety_event
 
@@ -524,20 +472,20 @@ class TestIntegratedSafetyWorkflows:
             complex_safety_scenarios = [
                 {
                     "query": "Elderly patient on warfarin and digoxin wants to start aspirin for heart protection",
-                    "expected_alerts": ["drug_interaction", "multiple_anticoagulants"]
+                    "expected_alerts": ["drug_interaction", "multiple_anticoagulants"],
                 },
                 {
                     "query": "Pregnant woman with diabetes asking about metformin safety",
-                    "expected_alerts": ["pregnancy_contraindication"]
+                    "expected_alerts": ["pregnancy_contraindication"],
                 },
                 {
                     "query": "Patient with severe kidney disease prescribed metformin for diabetes",
-                    "expected_alerts": ["absolute_contraindication", "renal_function"]
+                    "expected_alerts": ["absolute_contraindication", "renal_function"],
                 },
                 {
                     "query": "Digoxin toxicity symptoms in patient also taking amiodarone",
-                    "expected_alerts": ["drug_interaction", "toxicity_risk", "immediate_attention"]
-                }
+                    "expected_alerts": ["drug_interaction", "toxicity_risk", "immediate_attention"],
+                },
             ]
 
             workflow_results = []
@@ -551,17 +499,15 @@ class TestIntegratedSafetyWorkflows:
                     enable_real_time_monitoring=True,
                     perform_interaction_check=True,
                     perform_contraindication_check=True,
-                    generate_recommendations=True
+                    generate_recommendations=True,
                 )
 
                 end_time = time.time()
                 processing_time = end_time - start_time
 
-                workflow_results.append({
-                    "scenario": scenario,
-                    "response": safety_response,
-                    "processing_time": processing_time
-                })
+                workflow_results.append(
+                    {"scenario": scenario, "response": safety_response, "processing_time": processing_time}
+                )
 
             # Validate comprehensive safety workflow
 
@@ -617,9 +563,7 @@ class TestIntegratedSafetyWorkflows:
 
     def test_safety_monitoring_cost_integration(self):
         """Test safety monitoring integration with cost optimization systems."""
-        monitor = PharmaceuticalSafetyMonitor(
-            pharmaceutical_optimized=True
-        )
+        monitor = PharmaceuticalSafetyMonitor(pharmaceutical_optimized=True)
 
         # Test cost-aware safety monitoring
         safety_scenarios_with_cost = [
@@ -627,34 +571,28 @@ class TestIntegratedSafetyWorkflows:
                 "query": "emergency warfarin reversal protocol",
                 "urgency": "critical",
                 "expected_cost_tier": "premium",
-                "expected_processing_priority": 5
+                "expected_processing_priority": 5,
             },
             {
                 "query": "routine drug interaction check for new prescription",
                 "urgency": "standard",
                 "expected_cost_tier": "standard",
-                "expected_processing_priority": 2
+                "expected_processing_priority": 2,
             },
             {
                 "query": "general medication safety information",
                 "urgency": "low",
                 "expected_cost_tier": "low",
-                "expected_processing_priority": 1
-            }
+                "expected_processing_priority": 1,
+            },
         ]
 
         cost_optimization_results = []
 
         for scenario in safety_scenarios_with_cost:
-            cost_analysis = monitor.analyze_safety_query_cost(
-                query=scenario["query"],
-                urgency=scenario["urgency"]
-            )
+            cost_analysis = monitor.analyze_safety_query_cost(query=scenario["query"], urgency=scenario["urgency"])
 
-            cost_optimization_results.append({
-                "scenario": scenario,
-                "cost_analysis": cost_analysis
-            })
+            cost_optimization_results.append({"scenario": scenario, "cost_analysis": cost_analysis})
 
         # Validate cost-aware safety processing
 

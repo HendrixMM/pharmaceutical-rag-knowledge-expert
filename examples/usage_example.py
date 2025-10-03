@@ -5,22 +5,22 @@ Usage Example: Microsoft Learn MCP Integration for NeMo Retriever
 This script demonstrates how to use the MCP integration for enhanced
 prompts with up-to-date NeMo Retriever documentation.
 """
-
 import logging
+
+from agent_integration import MCPEnhancedAgent
 from mcp_client import create_mcp_client
 from prompt_generator import MCPPromptGenerator
-from agent_integration import MCPEnhancedAgent
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
 def example_1_basic_client_usage():
     """Example 1: Basic MCP client usage."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 1: Basic MCP Client Usage")
-    print("="*60)
+    print("=" * 60)
 
     # Create MCP client
     client = create_mcp_client()
@@ -38,16 +38,15 @@ def example_1_basic_client_usage():
 
 def example_2_prompt_generation():
     """Example 2: Enhanced prompt generation."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 2: Enhanced Prompt Generation")
-    print("="*60)
+    print("=" * 60)
 
     generator = MCPPromptGenerator()
 
     # Generate migration prompt
     migration_prompt = generator.build_migration_prompt(
-        "nemo_retriever",
-        "Migrate a large-scale document processing system with 10M documents"
+        "nemo_retriever", "Migrate a large-scale document processing system with 10M documents"
     )
 
     print("Generated Migration Prompt:")
@@ -58,9 +57,9 @@ def example_2_prompt_generation():
 
 def example_3_troubleshooting_assistant():
     """Example 3: Troubleshooting with live docs."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 3: Troubleshooting Assistant")
-    print("="*60)
+    print("=" * 60)
 
     generator = MCPPromptGenerator()
 
@@ -77,9 +76,9 @@ def example_3_troubleshooting_assistant():
 
 def example_4_enhanced_agent():
     """Example 4: Enhanced agent with automatic context."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 4: Enhanced Agent with Auto Context")
-    print("="*60)
+    print("=" * 60)
 
     agent = MCPEnhancedAgent()
 
@@ -91,8 +90,7 @@ def example_4_enhanced_agent():
 
     # Ask with automatic context
     enhanced_query = agent.ask_with_context(
-        "How do I optimize embedding performance for large document collections?",
-        context_type="auto"
+        "How do I optimize embedding performance for large document collections?", context_type="auto"
     )
 
     print(f"\nEnhanced Query (first 300 chars):")
@@ -101,16 +99,15 @@ def example_4_enhanced_agent():
 
 def example_5_migration_workflow():
     """Example 5: Complete migration workflow."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 5: Complete Migration Workflow")
-    print("="*60)
+    print("=" * 60)
 
     agent = MCPEnhancedAgent()
 
     # Generate migration code for LangChain + FAISS to NeMo
     migration_code = agent.generate_migration_code(
-        "LangChain with FAISS vector store",
-        "Need to maintain existing API while improving performance by 10x"
+        "LangChain with FAISS vector store", "Need to maintain existing API while improving performance by 10x"
     )
 
     print("Migration Code Prompt:")
@@ -121,16 +118,16 @@ def example_5_migration_workflow():
 
 def example_6_feature_implementation():
     """Example 6: Feature implementation with docs."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 6: Feature Implementation with Documentation")
-    print("="*60)
+    print("=" * 60)
 
     agent = MCPEnhancedAgent()
 
     # Implement a new feature with context
     feature_prompt = agent.implement_feature_with_context(
         "Batch Embedding Processor",
-        "Create a system that can process 100k documents in batches with optimal GPU utilization"
+        "Create a system that can process 100k documents in batches with optimal GPU utilization",
     )
 
     print("Feature Implementation Prompt:")
@@ -141,44 +138,36 @@ def example_6_feature_implementation():
 
 def example_7_custom_configuration():
     """Example 7: Using custom MCP configuration."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 7: Custom MCP Configuration")
-    print("="*60)
+    print("=" * 60)
 
     # This example shows how to extend the configuration
     # for additional MCP servers (when they become available)
 
     custom_config = {
         "servers": {
-            "microsoft-learn": {
-                "type": "sse",
-                "url": "https://learn.microsoft.com/api/mcp"
-            },
-            "nvidia-docs": {
-                "type": "stdio",
-                "command": "nvidia-docs-mcp",
-                "args": ["--model", "nemo-retriever"]
-            },
+            "microsoft-learn": {"type": "sse", "url": "https://learn.microsoft.com/api/mcp"},
+            "nvidia-docs": {"type": "stdio", "command": "nvidia-docs-mcp", "args": ["--model", "nemo-retriever"]},
             "github-docs": {
                 "type": "sse",
                 "url": "https://api.github.com/mcp",
-                "headers": {
-                    "Authorization": "Bearer ${GITHUB_TOKEN}"
-                }
-            }
+                "headers": {"Authorization": "Bearer ${GITHUB_TOKEN}"},
+            },
         }
     }
 
     print("Example extended configuration:")
     import json
+
     print(json.dumps(custom_config, indent=2))
 
 
 def example_8_performance_monitoring():
     """Example 8: Performance monitoring and optimization."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 8: Performance Monitoring")
-    print("="*60)
+    print("=" * 60)
 
     import time
 
@@ -189,7 +178,7 @@ def example_8_performance_monitoring():
         "nvidia nemo retriever",
         "embedding optimization",
         "vector database performance",
-        "langchain integration"
+        "langchain integration",
     ]
 
     total_time = 0
@@ -227,9 +216,9 @@ def main():
         example_7_custom_configuration()
         example_8_performance_monitoring()
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("🎉 All examples completed successfully!")
-        print("="*60)
+        print("=" * 60)
 
         print("\n📚 Next Steps:")
         print("1. Customize mcp_config.json for your specific MCP servers")

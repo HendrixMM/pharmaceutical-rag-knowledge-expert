@@ -159,6 +159,7 @@ def test_nemo_failure_falls_back_to_pypdf(monkeypatch, tmp_path):
     class LocalPyPDFLoader:
         def __init__(self, path: str):
             self.path = path
+
         def load(self):
             Document = sys.modules["langchain_core.documents"].Document
             return [Document("legacy page 1", {"page": 1}), Document("legacy page 2", {"page": 2})]
@@ -204,6 +205,7 @@ def test_flag_disabled_uses_legacy(monkeypatch, tmp_path):
     class LocalPyPDFLoader2:
         def __init__(self, path: str):
             self.path = path
+
         def load(self):
             Document = sys.modules["langchain_core.documents"].Document
             return [Document("legacy page 1", {"page": 1}), Document("legacy page 2", {"page": 2})]

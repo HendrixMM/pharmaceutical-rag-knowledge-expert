@@ -11,7 +11,7 @@ pravastatin
 fluvastatin
 pitavastatin
 
-# Cardiovascular - Anticoagulants/Antiplatelets  
+# Cardiovascular - Anticoagulants/Antiplatelets
 warfarin
 heparin
 enoxaparin

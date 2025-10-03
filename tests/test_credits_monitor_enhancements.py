@@ -1,8 +1,5 @@
-import os
-from unittest.mock import patch
-
-from src.nemo_retriever_client import NVIDIABuildCreditsMonitor
 from src.monitoring.credit_tracker import PharmaceuticalCreditTracker
+from src.nemo_retriever_client import NVIDIABuildCreditsMonitor
 
 
 def test_daily_burn_rate_increments_and_reports():

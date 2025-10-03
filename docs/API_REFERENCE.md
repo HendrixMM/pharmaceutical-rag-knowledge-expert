@@ -7,6 +7,7 @@ Review Cadence: Bi-weekly
 # API Reference and Configuration
 
 <!-- TOC -->
+
 - [Overview](#overview)
 - [Environment Variables](#environment-variables)
 - [Core Configuration](#core-configuration)

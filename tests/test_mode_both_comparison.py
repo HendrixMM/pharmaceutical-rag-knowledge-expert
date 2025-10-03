@@ -5,16 +5,16 @@ Tests for Comment 2 verification: cloud vs self-hosted comparison feature.
 Tests the new mode="both" functionality that executes queries against both
 cloud and self-hosted endpoints and compares results.
 """
-
-import pytest
 import sys
 from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import patch
+
+import pytest
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts.run_pharmaceutical_benchmarks import BenchmarkRunner, BenchmarkConfig
+from scripts.run_pharmaceutical_benchmarks import BenchmarkConfig, BenchmarkRunner
 
 
 @pytest.mark.pharmaceutical
@@ -29,13 +29,11 @@ class TestExecuteQueryWithEndpoint:
         config = BenchmarkConfig()
         from scripts.run_pharmaceutical_benchmarks import EndpointType
 
-        runner = BenchmarkRunner(config, use_real_clients=False, mode='both')
+        runner = BenchmarkRunner(config, use_real_clients=False, mode="both")
         query = "What are the side effects of metformin?"
 
         # Execute with cloud endpoint (simulated)
-        response, latency, credits = runner.execute_query_with_endpoint(
-            query, timeout=30, endpoint=EndpointType.CLOUD
-        )
+        response, latency, credits = runner.execute_query_with_endpoint(query, timeout=30, endpoint=EndpointType.CLOUD)
 
         # Verify response structure (simulated responses)
         assert isinstance(response, str)
@@ -50,7 +48,7 @@ class TestExecuteQueryWithEndpoint:
         config = BenchmarkConfig()
         from scripts.run_pharmaceutical_benchmarks import EndpointType
 
-        runner = BenchmarkRunner(config, use_real_clients=False, mode='both')
+        runner = BenchmarkRunner(config, use_real_clients=False, mode="both")
         query = "What are the drug interactions with aspirin?"
 
         # Execute with self-hosted endpoint (simulated)
@@ -78,7 +76,7 @@ class TestExecuteQueryBoth:
         """Test execute_query_both() when both endpoints succeed in simulation mode."""
         config = BenchmarkConfig()
 
-        runner = BenchmarkRunner(config, use_real_clients=False, mode='both')
+        runner = BenchmarkRunner(config, use_real_clients=False, mode="both")
         query = "What are the contraindications for warfarin?"
 
         # Execute against both endpoints (simulated)
@@ -117,7 +115,7 @@ class TestExecuteQueryBoth:
         """Test execute_query_both() latency comparison calculations in simulation mode."""
         config = BenchmarkConfig()
 
-        runner = BenchmarkRunner(config, use_real_clients=False, mode='both')
+        runner = BenchmarkRunner(config, use_real_clients=False, mode="both")
         query = "Test query"
 
         result = runner.execute_query_both(query, timeout=30)
@@ -148,10 +146,10 @@ class TestRunBenchmarkModeBoth:
         """Test run_benchmark() with mode='both' produces correct result structure in simulation mode."""
         config = BenchmarkConfig()
 
-        runner = BenchmarkRunner(config, use_real_clients=False, mode='both')
+        runner = BenchmarkRunner(config, use_real_clients=False, mode="both")
 
         # Mock the loader
-        with patch.object(runner.loader, 'load_benchmark', return_value=sample_benchmark_data):
+        with patch.object(runner.loader, "load_benchmark", return_value=sample_benchmark_data):
             result = runner.run_benchmark("drug_interactions", version=1)
 
         # Verify metadata
@@ -211,46 +209,34 @@ class TestCompareAgainstBaselinesModeBoth:
 
         from scripts.run_pharmaceutical_benchmarks import BenchmarkRunner
 
-        runner = BenchmarkRunner(config, use_real_clients=False, mode='both')
+        runner = BenchmarkRunner(config, use_real_clients=False, mode="both")
 
         # Create mock benchmark result for mode='both'
         benchmark_result = {
-            "metadata": {
-                "category": "drug_interactions",
-                "version": 1,
-                "mode": "both"
-            },
+            "metadata": {"category": "drug_interactions", "version": 1, "mode": "both"},
             "metrics": {
                 "cloud": {
                     "average_accuracy": 0.80,  # 5.9% drop from baseline
                     "average_credits_per_query": 15.0,  # 20% increase from baseline
-                    "average_latency_ms": 500.0  # 11% increase from baseline
+                    "average_latency_ms": 500.0,  # 11% increase from baseline
                 },
                 "self_hosted": {
                     "average_accuracy": 0.78,  # 4.9% drop from baseline (no regression)
                     "average_credits_per_query": 0.0,  # Same as baseline
-                    "average_latency_ms": 1300.0  # 53% increase from baseline (regression)
-                }
-            }
+                    "average_latency_ms": 1300.0,  # 53% increase from baseline (regression)
+                },
+            },
         }
 
         # Baselines from drug_interactions_v1.json
         baselines = {
-            "cloud": {
-                "average_accuracy": 0.85,
-                "average_cost_per_query": 12.5,
-                "average_latency_ms": 450.0
-            },
-            "self_hosted": {
-                "average_accuracy": 0.82,
-                "average_cost_per_query": 0.0,
-                "average_latency_ms": 850.0
-            },
+            "cloud": {"average_accuracy": 0.85, "average_cost_per_query": 12.5, "average_latency_ms": 450.0},
+            "self_hosted": {"average_accuracy": 0.82, "average_cost_per_query": 0.0, "average_latency_ms": 850.0},
             "regression_thresholds": {
                 "accuracy_drop_percent": 5,
                 "cost_increase_percent": 20,
-                "latency_increase_percent": 50
-            }
+                "latency_increase_percent": 50,
+            },
         }
 
         # Compare against baselines
@@ -285,40 +271,28 @@ class TestCompareAgainstBaselinesModeBoth:
 
         from scripts.run_pharmaceutical_benchmarks import BenchmarkRunner
 
-        runner = BenchmarkRunner(config, use_real_clients=False, mode='both')
+        runner = BenchmarkRunner(config, use_real_clients=False, mode="both")
 
         # Create mock benchmark result with improvements
         benchmark_result = {
-            "metadata": {
-                "category": "drug_interactions",
-                "version": 1,
-                "mode": "both"
-            },
+            "metadata": {"category": "drug_interactions", "version": 1, "mode": "both"},
             "metrics": {
                 "cloud": {
                     "average_accuracy": 0.87,  # Improved
                     "average_credits_per_query": 12.0,  # Improved
-                    "average_latency_ms": 400.0  # Improved
+                    "average_latency_ms": 400.0,  # Improved
                 },
                 "self_hosted": {
                     "average_accuracy": 0.84,  # Improved
                     "average_credits_per_query": 0.0,  # Same
-                    "average_latency_ms": 800.0  # Improved
-                }
-            }
+                    "average_latency_ms": 800.0,  # Improved
+                },
+            },
         }
 
         baselines = {
-            "cloud": {
-                "average_accuracy": 0.85,
-                "average_cost_per_query": 12.5,
-                "average_latency_ms": 450.0
-            },
-            "self_hosted": {
-                "average_accuracy": 0.82,
-                "average_cost_per_query": 0.0,
-                "average_latency_ms": 850.0
-            }
+            "cloud": {"average_accuracy": 0.85, "average_cost_per_query": 12.5, "average_latency_ms": 450.0},
+            "self_hosted": {"average_accuracy": 0.82, "average_cost_per_query": 0.0, "average_latency_ms": 850.0},
         }
 
         comparison = runner.compare_against_baselines(benchmark_result, baselines)

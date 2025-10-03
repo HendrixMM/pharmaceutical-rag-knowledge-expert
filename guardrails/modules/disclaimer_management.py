@@ -4,15 +4,13 @@ Medical disclaimer management utilities.
 Provides standardized disclaimer detection, insertion, and formatting
 for pharmaceutical safety compliance.
 """
-
 import re
 from typing import Optional
 
+from ..constants import DISCLAIMER_DETECTION_PATTERNS
+from ..constants import MEDICAL_DISCLAIMER_MARKDOWN as STANDARD_MEDICAL_DISCLAIMER
+
 # Import unified disclaimer constants
-from ..constants import (
-    MEDICAL_DISCLAIMER_MARKDOWN as STANDARD_MEDICAL_DISCLAIMER,
-    DISCLAIMER_DETECTION_PATTERNS
-)
 
 
 def contains_medical_disclaimer(text: Optional[str]) -> bool:

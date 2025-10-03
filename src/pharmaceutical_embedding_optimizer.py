@@ -15,20 +15,23 @@ Features:
 
 <<use_mcp microsoft-learn>>
 """
-
 import logging
 import re
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple, Any, Union
-from enum import Enum
-import json
-import hashlib
 from collections import defaultdict
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 logger = logging.getLogger(__name__)
 
+
 class PharmaceuticalContentType(Enum):
     """Types of pharmaceutical content for specialized optimization."""
+
     CLINICAL_TRIAL = "clinical_trial"
     DRUG_LABEL = "drug_label"
     REGULATORY_DOCUMENT = "regulatory_document"
@@ -40,25 +43,31 @@ class PharmaceuticalContentType(Enum):
     PHARMACOVIGILANCE = "pharmacovigilance"
     SUBMISSION_DOCUMENT = "submission_document"
 
+
 class SafetyCriticalityLevel(Enum):
     """Safety criticality levels for pharmaceutical content."""
+
     CRITICAL = "critical"  # Black box warnings, contraindications
-    HIGH = "high"         # Serious adverse events, drug interactions
-    MEDIUM = "medium"     # Common side effects, precautions
-    LOW = "low"          # General information, background
+    HIGH = "high"  # Serious adverse events, drug interactions
+    MEDIUM = "medium"  # Common side effects, precautions
+    LOW = "low"  # General information, background
+
 
 @dataclass
 class PharmaceuticalTermMapping:
     """Mapping for pharmaceutical term normalization."""
+
     canonical_term: str
     synonyms: List[str]
     category: str
     regulatory_status: str = "approved"
     safety_level: SafetyCriticalityLevel = SafetyCriticalityLevel.LOW
 
+
 @dataclass
 class OptimizationResult:
     """Result of pharmaceutical content optimization."""
+
     optimized_text: str
     original_text: str
     optimizations_applied: List[str]
@@ -68,6 +77,7 @@ class OptimizationResult:
     content_type: PharmaceuticalContentType
     safety_criticality: SafetyCriticalityLevel
     optimization_confidence: float
+
 
 class PharmaceuticalEmbeddingOptimizer:
     """
@@ -104,7 +114,7 @@ class PharmaceuticalEmbeddingOptimizer:
             "drug_normalizations": 0,
             "terminology_standardizations": 0,
             "safety_signals_detected": 0,
-            "regulatory_enhancements": 0
+            "regulatory_enhancements": 0,
         }
 
         logger.info("Initialized Pharmaceutical Embedding Optimizer")
@@ -116,7 +126,7 @@ class PharmaceuticalEmbeddingOptimizer:
         enable_drug_normalization: bool = True,
         enable_terminology_standardization: bool = True,
         enable_safety_detection: bool = True,
-        enable_regulatory_enhancement: bool = True
+        enable_regulatory_enhancement: bool = True,
     ) -> List[OptimizationResult]:
         """
         Optimize pharmaceutical content for improved embedding quality.
@@ -141,7 +151,7 @@ class PharmaceuticalEmbeddingOptimizer:
                 enable_drug_normalization=enable_drug_normalization,
                 enable_terminology_standardization=enable_terminology_standardization,
                 enable_safety_detection=enable_safety_detection,
-                enable_regulatory_enhancement=enable_regulatory_enhancement
+                enable_regulatory_enhancement=enable_regulatory_enhancement,
             )
             results.append(result)
 
@@ -155,7 +165,7 @@ class PharmaceuticalEmbeddingOptimizer:
         enable_drug_normalization: bool,
         enable_terminology_standardization: bool,
         enable_safety_detection: bool,
-        enable_regulatory_enhancement: bool
+        enable_regulatory_enhancement: bool,
     ) -> OptimizationResult:
         """Optimize a single pharmaceutical text."""
 
@@ -217,10 +227,7 @@ class PharmaceuticalEmbeddingOptimizer:
 
         # Calculate optimization confidence
         optimization_confidence = self._calculate_optimization_confidence(
-            len(optimizations_applied),
-            len(pharmaceutical_terms_found),
-            len(safety_signals_detected),
-            content_type
+            len(optimizations_applied), len(pharmaceutical_terms_found), len(safety_signals_detected), content_type
         )
 
         return OptimizationResult(
@@ -232,7 +239,7 @@ class PharmaceuticalEmbeddingOptimizer:
             regulatory_references=regulatory_references,
             content_type=content_type,
             safety_criticality=safety_criticality,
-            optimization_confidence=optimization_confidence
+            optimization_confidence=optimization_confidence,
         )
 
     def _initialize_drug_mappings(self) -> Dict[str, PharmaceuticalTermMapping]:
@@ -243,34 +250,34 @@ class PharmaceuticalEmbeddingOptimizer:
                 canonical_term="acetaminophen",
                 synonyms=["paracetamol", "APAP", "N-acetyl-p-aminophenol"],
                 category="analgesic",
-                regulatory_status="approved"
+                regulatory_status="approved",
             ),
             "ibuprofen": PharmaceuticalTermMapping(
                 canonical_term="ibuprofen",
                 synonyms=["advil", "motrin", "brufen"],
                 category="NSAID",
-                regulatory_status="approved"
+                regulatory_status="approved",
             ),
             "aspirin": PharmaceuticalTermMapping(
                 canonical_term="aspirin",
                 synonyms=["acetylsalicylic acid", "ASA"],
                 category="NSAID",
                 regulatory_status="approved",
-                safety_level=SafetyCriticalityLevel.MEDIUM
+                safety_level=SafetyCriticalityLevel.MEDIUM,
             ),
             "warfarin": PharmaceuticalTermMapping(
                 canonical_term="warfarin",
                 synonyms=["coumadin", "jantoven"],
                 category="anticoagulant",
                 regulatory_status="approved",
-                safety_level=SafetyCriticalityLevel.HIGH
+                safety_level=SafetyCriticalityLevel.HIGH,
             ),
             "metformin": PharmaceuticalTermMapping(
                 canonical_term="metformin",
                 synonyms=["glucophage", "fortamet", "glumetza"],
                 category="antidiabetic",
-                regulatory_status="approved"
-            )
+                regulatory_status="approved",
+            ),
         }
 
     def _initialize_medical_terminology(self) -> Dict[str, str]:
@@ -290,7 +297,7 @@ class PharmaceuticalEmbeddingOptimizer:
             "cardiovascular": "cardiovascular (CV)",
             "central nervous system": "central nervous system (CNS)",
             "pharmacokinetics": "pharmacokinetics (PK)",
-            "pharmacodynamics": "pharmacodynamics (PD)"
+            "pharmacodynamics": "pharmacodynamics (PD)",
         }
 
     def _initialize_regulatory_frameworks(self) -> Dict[str, List[str]]:
@@ -303,14 +310,14 @@ class PharmaceuticalEmbeddingOptimizer:
                 "FDA guidance",
                 "CDER",
                 "CBER",
-                "CDRH"
+                "CDRH",
             ],
             "EMA": [
                 "European Medicines Agency",
                 "European Union",
                 "EMA guideline",
                 "CHMP",
-                "Committee for Medicinal Products for Human Use"
+                "Committee for Medicinal Products for Human Use",
             ],
             "ICH": [
                 "International Council for Harmonisation",
@@ -318,8 +325,8 @@ class PharmaceuticalEmbeddingOptimizer:
                 "Good Clinical Practice",
                 "GCP",
                 "Good Manufacturing Practice",
-                "GMP"
-            ]
+                "GMP",
+            ],
         }
 
     def _initialize_safety_patterns(self) -> Dict[str, List[str]]:
@@ -332,7 +339,7 @@ class PharmaceuticalEmbeddingOptimizer:
                 "fatal",
                 "life-threatening",
                 "death",
-                "mortality"
+                "mortality",
             ],
             "serious_adverse_events": [
                 "serious adverse event",
@@ -341,14 +348,14 @@ class PharmaceuticalEmbeddingOptimizer:
                 "disability",
                 "birth defect",
                 "malignancy",
-                "overdose"
+                "overdose",
             ],
             "drug_interactions": [
                 "drug interaction",
                 "contraindicated with",
                 "avoid concurrent use",
                 "increased risk when combined",
-                "CYP450 interaction"
+                "CYP450 interaction",
             ],
             "pregnancy_safety": [
                 "pregnancy category",
@@ -356,29 +363,55 @@ class PharmaceuticalEmbeddingOptimizer:
                 "embryotoxic",
                 "lactation",
                 "breastfeeding",
-                "reproductive toxicity"
-            ]
+                "reproductive toxicity",
+            ],
         }
 
     def _initialize_content_type_patterns(self) -> Dict[PharmaceuticalContentType, List[str]]:
         """Initialize content type detection patterns."""
         return {
             PharmaceuticalContentType.CLINICAL_TRIAL: [
-                "clinical trial", "randomized controlled", "phase I", "phase II", "phase III",
-                "primary endpoint", "secondary endpoint", "efficacy", "safety", "clinical study"
+                "clinical trial",
+                "randomized controlled",
+                "phase I",
+                "phase II",
+                "phase III",
+                "primary endpoint",
+                "secondary endpoint",
+                "efficacy",
+                "safety",
+                "clinical study",
             ],
             PharmaceuticalContentType.DRUG_LABEL: [
-                "prescribing information", "package insert", "drug label", "contraindications",
-                "warnings and precautions", "dosage and administration", "adverse reactions"
+                "prescribing information",
+                "package insert",
+                "drug label",
+                "contraindications",
+                "warnings and precautions",
+                "dosage and administration",
+                "adverse reactions",
             ],
             PharmaceuticalContentType.REGULATORY_DOCUMENT: [
-                "FDA approval", "regulatory submission", "NDA", "BLA", "ANDA", "regulatory review",
-                "compliance", "inspection", "Form 483"
+                "FDA approval",
+                "regulatory submission",
+                "NDA",
+                "BLA",
+                "ANDA",
+                "regulatory review",
+                "compliance",
+                "inspection",
+                "Form 483",
             ],
             PharmaceuticalContentType.SAFETY_DATA: [
-                "adverse event", "safety signal", "pharmacovigilance", "FAERS", "periodic safety update",
-                "risk evaluation", "REMS", "safety profile"
-            ]
+                "adverse event",
+                "safety signal",
+                "pharmacovigilance",
+                "FAERS",
+                "periodic safety update",
+                "risk evaluation",
+                "REMS",
+                "safety profile",
+            ],
         }
 
     def _initialize_abbreviation_mappings(self) -> Dict[str, str]:
@@ -404,7 +437,7 @@ class PharmaceuticalEmbeddingOptimizer:
             "ICH": "International Council for Harmonisation",
             "GCP": "Good Clinical Practice",
             "GMP": "Good Manufacturing Practice",
-            "CFR": "Code of Federal Regulations"
+            "CFR": "Code of Federal Regulations",
         }
 
     def _detect_content_type(self, text: str) -> PharmaceuticalContentType:
@@ -457,7 +490,7 @@ class PharmaceuticalEmbeddingOptimizer:
 
         for abbrev, expansion in self.abbreviation_mappings.items():
             # Match abbreviation as whole word
-            pattern = r'\b' + re.escape(abbrev) + r'\b'
+            pattern = r"\b" + re.escape(abbrev) + r"\b"
             if re.search(pattern, text, re.IGNORECASE):
                 expanded_text = re.sub(pattern, f"{abbrev} ({expansion})", expanded_text, flags=re.IGNORECASE)
                 expanded_abbreviations.append(abbrev)
@@ -476,11 +509,7 @@ class PharmaceuticalEmbeddingOptimizer:
 
         return safety_signals
 
-    def _enhance_regulatory_content(
-        self,
-        text: str,
-        content_type: PharmaceuticalContentType
-    ) -> Tuple[str, List[str]]:
+    def _enhance_regulatory_content(self, text: str, content_type: PharmaceuticalContentType) -> Tuple[str, List[str]]:
         """Enhance regulatory content with proper context."""
         enhanced_text = text
         regulatory_refs = []
@@ -497,11 +526,7 @@ class PharmaceuticalEmbeddingOptimizer:
 
         return enhanced_text, regulatory_refs
 
-    def _apply_content_type_optimizations(
-        self,
-        text: str,
-        content_type: PharmaceuticalContentType
-    ) -> str:
+    def _apply_content_type_optimizations(self, text: str, content_type: PharmaceuticalContentType) -> str:
         """Apply content-type specific optimizations."""
         optimized_text = text
 
@@ -523,9 +548,7 @@ class PharmaceuticalEmbeddingOptimizer:
         return optimized_text
 
     def _assess_safety_criticality(
-        self,
-        safety_signals: List[str],
-        content_type: PharmaceuticalContentType
+        self, safety_signals: List[str], content_type: PharmaceuticalContentType
     ) -> SafetyCriticalityLevel:
         """Assess the safety criticality level of content."""
         critical_indicators = ["critical_warnings", "fatal", "death"]
@@ -547,7 +570,7 @@ class PharmaceuticalEmbeddingOptimizer:
         optimizations_count: int,
         pharmaceutical_terms_count: int,
         safety_signals_count: int,
-        content_type: PharmaceuticalContentType
+        content_type: PharmaceuticalContentType,
     ) -> float:
         """Calculate confidence score for optimization quality."""
         base_score = 0.5  # Base confidence
@@ -566,13 +589,10 @@ class PharmaceuticalEmbeddingOptimizer:
             PharmaceuticalContentType.DRUG_LABEL: 0.1,
             PharmaceuticalContentType.CLINICAL_TRIAL: 0.08,
             PharmaceuticalContentType.SAFETY_DATA: 0.12,
-            PharmaceuticalContentType.REGULATORY_DOCUMENT: 0.09
+            PharmaceuticalContentType.REGULATORY_DOCUMENT: 0.09,
         }.get(content_type, 0.05)
 
-        total_confidence = min(
-            base_score + optimization_boost + terms_boost + safety_boost + content_type_boost,
-            1.0
-        )
+        total_confidence = min(base_score + optimization_boost + terms_boost + safety_boost + content_type_boost, 1.0)
 
         return total_confidence
 
@@ -584,7 +604,7 @@ class PharmaceuticalEmbeddingOptimizer:
             "available_medical_terms": len(self.medical_terms),
             "regulatory_frameworks": list(self.regulatory_frameworks.keys()),
             "safety_pattern_categories": list(self.safety_patterns.keys()),
-            "supported_content_types": [ct.value for ct in PharmaceuticalContentType]
+            "supported_content_types": [ct.value for ct in PharmaceuticalContentType],
         }
 
     def add_custom_drug_mapping(
@@ -592,14 +612,11 @@ class PharmaceuticalEmbeddingOptimizer:
         canonical_name: str,
         synonyms: List[str],
         category: str,
-        safety_level: SafetyCriticalityLevel = SafetyCriticalityLevel.LOW
+        safety_level: SafetyCriticalityLevel = SafetyCriticalityLevel.LOW,
     ):
         """Add custom drug mapping for specialized pharmaceutical content."""
         self.drug_mappings[canonical_name] = PharmaceuticalTermMapping(
-            canonical_term=canonical_name,
-            synonyms=synonyms,
-            category=category,
-            safety_level=safety_level
+            canonical_term=canonical_name, synonyms=synonyms, category=category, safety_level=safety_level
         )
         logger.info(f"Added custom drug mapping: {canonical_name}")
 
@@ -612,10 +629,9 @@ class PharmaceuticalEmbeddingOptimizer:
 # Global instance for easy access
 pharmaceutical_optimizer = PharmaceuticalEmbeddingOptimizer()
 
+
 def optimize_pharmaceutical_texts(
-    texts: List[str],
-    content_type: Optional[str] = None,
-    enable_all_optimizations: bool = True
+    texts: List[str], content_type: Optional[str] = None, enable_all_optimizations: bool = True
 ) -> List[OptimizationResult]:
     """
     Convenience function to optimize pharmaceutical texts for embeddings.
@@ -642,5 +658,5 @@ def optimize_pharmaceutical_texts(
         enable_drug_normalization=enable_all_optimizations,
         enable_terminology_standardization=enable_all_optimizations,
         enable_safety_detection=enable_all_optimizations,
-        enable_regulatory_enhancement=enable_all_optimizations
+        enable_regulatory_enhancement=enable_all_optimizations,
     )

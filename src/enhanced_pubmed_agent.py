@@ -4,14 +4,13 @@ This module contains PubMed-specific logic extracted from EnhancedRAGAgent
 to keep the core agent focused on safety validation while providing
 optional PubMed integration through minimal hooks.
 """
-
 from __future__ import annotations
 
 import logging
 import random
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .enhanced_config import EnhancedRAGConfig
 from .enhanced_pubmed_scraper import EnhancedPubMedScraper
@@ -26,8 +25,8 @@ class PubMedIntegrationManager:
     def __init__(
         self,
         config: EnhancedRAGConfig,
-        pubmed_query_engine: Optional[EnhancedQueryEngine] = None,
-        pubmed_scraper: Optional[EnhancedPubMedScraper] = None,
+        pubmed_query_engine: EnhancedQueryEngine | None = None,
+        pubmed_scraper: EnhancedPubMedScraper | None = None,
     ) -> None:
         """Initialize PubMed integration manager.
 
@@ -37,13 +36,13 @@ class PubMedIntegrationManager:
             pubmed_scraper: Optional pre-configured scraper
         """
         self.config = config
-        self._pubmed_query_engine: Optional[EnhancedQueryEngine] = pubmed_query_engine
-        self._pubmed_scraper: Optional[EnhancedPubMedScraper] = pubmed_scraper
+        self._pubmed_query_engine: EnhancedQueryEngine | None = pubmed_query_engine
+        self._pubmed_scraper: EnhancedPubMedScraper | None = pubmed_scraper
         self._pubmed_components_initialized = False
         self._pubmed_lock = threading.RLock()
 
         # PubMed-specific metrics
-        self.pubmed_metrics: Dict[str, Any] = {
+        self.pubmed_metrics: dict[str, Any] = {
             "total_queries": 0,
             "cache_hits": 0,
             "error_count": 0,
@@ -56,7 +55,7 @@ class PubMedIntegrationManager:
         }
 
         # Component health tracking
-        self.component_health: Dict[str, Dict[str, Any]] = {
+        self.component_health: dict[str, dict[str, Any]] = {
             "pubmed_integration": {
                 "status": "disabled" if not self.config.should_enable_pubmed() else "pending",
                 "enabled_via_config": self.config.should_enable_pubmed(),
@@ -66,12 +65,12 @@ class PubMedIntegrationManager:
         }
 
     @property
-    def pubmed_scraper(self) -> Optional[EnhancedPubMedScraper]:
+    def pubmed_scraper(self) -> EnhancedPubMedScraper | None:
         """Get the PubMed scraper instance. Read-only access."""
         return self._pubmed_scraper
 
     @property
-    def pubmed_query_engine(self) -> Optional[EnhancedQueryEngine]:
+    def pubmed_query_engine(self) -> EnhancedQueryEngine | None:
         """Get the PubMed query engine instance. Read-only access."""
         return self._pubmed_query_engine
 
@@ -81,7 +80,7 @@ class PubMedIntegrationManager:
             if self._pubmed_components_initialized:
                 return
 
-            pubmed_health: Dict[str, Any] = self.component_health.get("pubmed_integration", {}) or {}
+            pubmed_health: dict[str, Any] = self.component_health.get("pubmed_integration", {}) or {}
 
             # Check if PubMed is enabled
             if not self.config.should_enable_pubmed():
@@ -217,13 +216,13 @@ class PubMedIntegrationManager:
             return True
 
         # Check rollout status
-        is_rollout_active = getattr(self.config, 'is_rollout_active', None)
+        is_rollout_active = getattr(self.config, "is_rollout_active", None)
         if not callable(is_rollout_active) or not is_rollout_active():
             return True
 
         # Get rollout percentage
         try:
-            rollout_pct = float(getattr(self.config, 'rollout_percentage', 0.0))
+            rollout_pct = float(getattr(self.config, "rollout_percentage", 0.0))
         except (ValueError, TypeError):
             rollout_pct = 0.0
 
@@ -237,7 +236,7 @@ class PubMedIntegrationManager:
 
         return selected
 
-    def filter_pubmed_results(self, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def filter_pubmed_results(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
         """Filter and format PubMed results from query engine response."""
         results = payload.get("results", [])
         if not results:
@@ -269,12 +268,24 @@ class PubMedIntegrationManager:
 
         # Explicit routing terms
         local_only_terms = (
-            "local documents", "local files", "my documents", "uploaded files",
-            "corporate", "internal", "proprietary", "company", "organization"
+            "local documents",
+            "local files",
+            "my documents",
+            "uploaded files",
+            "corporate",
+            "internal",
+            "proprietary",
+            "company",
+            "organization",
         )
         pubmed_only_terms = (
-            "pubmed", "medical literature", "clinical trials", "research studies",
-            "recent studies", "pubmed search", "medical database"
+            "pubmed",
+            "medical literature",
+            "clinical trials",
+            "research studies",
+            "recent studies",
+            "pubmed search",
+            "medical database",
         )
 
         if any(term in normalized for term in local_only_terms):
@@ -298,16 +309,42 @@ class PubMedIntegrationManager:
 
         # Pharmaceutical classification terms
         pharma_terms = (
-            "drug interaction", "pharmacokinetic", "pharmacodynamic", "adverse reaction",
-            "contraindication", "dosage", "administration", "bioavailability", "metabolism",
-            "drug metabolism", "cytochrome", "cyp", "induction", "inhibition", "therapeutic",
-            "half-life", "clearance", "protein binding", "distribution", "elimination"
+            "drug interaction",
+            "pharmacokinetic",
+            "pharmacodynamic",
+            "adverse reaction",
+            "contraindication",
+            "dosage",
+            "administration",
+            "bioavailability",
+            "metabolism",
+            "drug metabolism",
+            "cytochrome",
+            "cyp",
+            "induction",
+            "inhibition",
+            "therapeutic",
+            "half-life",
+            "clearance",
+            "protein binding",
+            "distribution",
+            "elimination",
         )
 
         # Medical classification terms
         medical_terms = (
-            "disease", "symptom", "treatment", "diagnosis", "therapy", "clinical",
-            "patient", "medicine", "health", "medical", "hospital", "healthcare"
+            "disease",
+            "symptom",
+            "treatment",
+            "diagnosis",
+            "therapy",
+            "clinical",
+            "patient",
+            "medicine",
+            "health",
+            "medical",
+            "hospital",
+            "healthcare",
         )
 
         if any(term in normalized for term in pharma_terms):
@@ -317,10 +354,10 @@ class PubMedIntegrationManager:
         else:
             return "general"
 
-    def get_pubmed_health(self) -> Dict[str, Any]:
+    def get_pubmed_health(self) -> dict[str, Any]:
         """Get current PubMed integration health status."""
         return self.component_health.get("pubmed_integration", {})
 
-    def get_pubmed_metrics(self) -> Dict[str, Any]:
+    def get_pubmed_metrics(self) -> dict[str, Any]:
         """Get PubMed metrics."""
         return self.pubmed_metrics.copy()

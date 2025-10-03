@@ -10,29 +10,30 @@ It will:
 - Run a pharma chat prompt
 - Run an embedding request
 """
-
 from __future__ import annotations
 
 import json
-import os
+
 
 def main() -> int:
     try:
         from dotenv import load_dotenv
+
         load_dotenv()
     except Exception:
         pass
 
     try:
-        from src.enhanced_config import EnhancedRAGConfig
         from src.clients.nemo_client_enhanced import EnhancedNeMoClient
+        from src.enhanced_config import EnhancedRAGConfig
     except ModuleNotFoundError:
         import sys
         from pathlib import Path
+
         ROOT = Path(__file__).resolve().parents[1]
         sys.path.append(str(ROOT))
-        from src.enhanced_config import EnhancedRAGConfig
         from src.clients.nemo_client_enhanced import EnhancedNeMoClient
+        from src.enhanced_config import EnhancedRAGConfig
 
     cfg = EnhancedRAGConfig.from_env()
     print("Ollama enabled:", cfg.enable_ollama)
@@ -48,9 +49,9 @@ def main() -> int:
 
     # Chat test
     print("\nChat test (metformin MoA):")
-    chat = client.create_chat_completion([
-        {"role": "user", "content": "In one sentence, explain metformin mechanism of action."}
-    ])
+    chat = client.create_chat_completion(
+        [{"role": "user", "content": "In one sentence, explain metformin mechanism of action."}]
+    )
     print("  success:", chat.success, "endpoint:", (chat.endpoint_type.value if chat.endpoint_type else None))
     if chat.success:
         print("  response:", (chat.data.get("content", "") or "")[:200])
@@ -63,7 +64,7 @@ def main() -> int:
     print("  success:", emb.success, "endpoint:", (emb.endpoint_type.value if emb.endpoint_type else None))
     if emb.success:
         embs = emb.data.get("embeddings")
-        dim = (len(embs[0]) if isinstance(embs, list) and embs and isinstance(embs[0], list) else "unknown")
+        dim = len(embs[0]) if isinstance(embs, list) and embs and isinstance(embs[0], list) else "unknown"
         print("  dimension:", dim)
     else:
         print("  error:", emb.error)

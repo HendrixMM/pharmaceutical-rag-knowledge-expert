@@ -10,7 +10,7 @@
   "anemia": "hematology",
   "leukemia": "hematology",
   "lymphoma": "hematology",
-  
+
   "anti-inflammatory agents": "immunology",
   "anti-inflammatory agents, non-steroidal": "immunology",
   "immunosuppressive agents": "immunology",
@@ -23,9 +23,9 @@
   "cytokines": "immunology",
   "interleukins": "immunology",
   "tumor necrosis factor": "immunology",
-  
+
   "anti-infective agents": "infectious diseases",
-  "antibacterial agents": "infectious diseases", 
+  "antibacterial agents": "infectious diseases",
   "antiviral agents": "infectious diseases",
   "antifungal agents": "infectious diseases",
   "antiparasitic agents": "infectious diseases",
@@ -45,7 +45,7 @@
   "tuberculosis": "infectious diseases",
   "hepatitis": "infectious diseases",
   "hiv infections": "infectious diseases",
-  
+
   "antihypertensive agents": "cardiology",
   "anti-hypertensive agents": "cardiology",
   "cardiovascular agents": "cardiology",
@@ -70,7 +70,7 @@
   "cardiovascular diseases": "cardiology",
   "coronary disease": "cardiology",
   "angina pectoris": "cardiology",
-  
+
   "antineoplastic agents": "oncology",
   "anti-neoplastic agents": "oncology",
   "antineoplastic combined chemotherapy protocols": "oncology",
@@ -98,7 +98,7 @@
   "cancer": "oncology",
   "tumor": "oncology",
   "malignancy": "oncology",
-  
+
   "anticonvulsants": "neurology",
   "antiepileptic agents": "neurology",
   "central nervous system agents": "neurology",
@@ -134,7 +134,7 @@
   "spinal cord": "neurology",
   "neurons": "neurology",
   "neurodegenerative": "neurology",
-  
+
   "hypoglycemic agents": "endocrinology",
   "antidiabetic agents": "endocrinology",
   "insulin": "endocrinology",
@@ -159,7 +159,7 @@
   "polycystic ovary syndrome": "endocrinology",
   "endocrine system diseases": "endocrinology",
   "hormone replacement therapy": "endocrinology",
-  
+
   "bronchodilator agents": "pulmonology",
   "anti-asthmatic agents": "pulmonology",
   "glucocorticoids": "pulmonology",
@@ -177,7 +177,7 @@
   "lung diseases": "pulmonology",
   "respiratory insufficiency": "pulmonology",
   "sleep apnea syndromes": "pulmonology",
-  
+
   "gastrointestinal agents": "gastroenterology",
   "proton pump inhibitors": "gastroenterology",
   "histamine h2 antagonists": "gastroenterology",
@@ -200,7 +200,7 @@
   "liver diseases": "gastroenterology",
   "hepatitis": "gastroenterology",
   "cirrhosis": "gastroenterology",
-  
+
   "analgesics": "pain management",
   "analgesics, opioid": "pain management",
   "analgesics, non-narcotic": "pain management",
@@ -214,7 +214,7 @@
   "fibromyalgia": "pain management",
   "headache": "pain management",
   "migraine": "pain management",
-  
+
   "bone density conservation agents": "rheumatology",
   "disease-modifying antirheumatic drugs": "rheumatology",
   "anti-inflammatory agents": "rheumatology",
@@ -227,7 +227,7 @@
   "osteoporosis": "rheumatology",
   "joint diseases": "rheumatology",
   "connective tissue diseases": "rheumatology",
-  
+
   "antipsychotic agents": "psychiatry",
   "antidepressive agents": "psychiatry",
   "anxiolytics": "psychiatry",
@@ -242,7 +242,7 @@
   "psychotic disorders": "psychiatry",
   "sleep disorders": "psychiatry",
   "substance-related disorders": "psychiatry",
-  
+
   "dermatologic agents": "dermatology",
   "anti-inflammatory agents, topical": "dermatology",
   "keratolytic agents": "dermatology",
@@ -253,7 +253,7 @@
   "dermatitis": "dermatology",
   "acne vulgaris": "dermatology",
   "skin neoplasms": "dermatology",
-  
+
   "contraceptive agents": "gynecology",
   "fertility agents": "gynecology",
   "estrogens": "gynecology",
@@ -266,7 +266,7 @@
   "endometriosis": "gynecology",
   "uterine diseases": "gynecology",
   "ovarian diseases": "gynecology",
-  
+
   "urological agents": "urology",
   "diuretics": "urology",
   "kidney diseases": "urology",
@@ -276,7 +276,7 @@
   "urinary incontinence": "urology",
   "renal insufficiency": "urology",
   "nephritis": "urology",
-  
+
   "ophthalmic solutions": "ophthalmology",
   "anti-glaucoma agents": "ophthalmology",
   "mydriatics": "ophthalmology",
@@ -285,7 +285,7 @@
   "macular degeneration": "ophthalmology",
   "diabetic retinopathy": "ophthalmology",
   "cataracts": "ophthalmology",
-  
+
   "otic agents": "otolaryngology",
   "ear diseases": "otolaryngology",
   "hearing loss": "otolaryngology",

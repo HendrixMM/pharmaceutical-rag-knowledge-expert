@@ -6,13 +6,12 @@ Validates all three verification comments:
 2. Comment 2: Tracker records failures in dual-mode (not just successes)
 3. Comment 3: Generator produces complete schema with baselines and expected_classification
 """
-
-import pytest
-import sys
 import json
+import sys
 import tempfile
 from pathlib import Path
-from typing import Dict, Any
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -34,26 +33,27 @@ class TestVerificationCommentsFixes:
             {
                 "mode": "both",
                 "cloud": {"succeeded": True, "scores": {"accuracy": 0.9}},
-                "self_hosted": {"succeeded": True, "scores": {"accuracy": 0.85}}
+                "self_hosted": {"succeeded": True, "scores": {"accuracy": 0.85}},
             },
             {
                 "mode": "both",
                 "cloud": {"succeeded": True, "scores": {"accuracy": 0.88}},
-                "self_hosted": {"succeeded": True, "scores": {"accuracy": 0.82}}
+                "self_hosted": {"succeeded": True, "scores": {"accuracy": 0.82}},
             },
             {
                 "mode": "both",
                 "cloud": {"succeeded": True, "scores": {"accuracy": 0.91}},
-                "self_hosted": {"succeeded": True, "scores": {"accuracy": 0.87}}
-            }
+                "self_hosted": {"succeeded": True, "scores": {"accuracy": 0.87}},
+            },
         ]
 
         # Calculate failed_queries using the fixed logic
         failed_queries = sum(
-            1 for r in query_results
-            if r.get('mode') == 'both'
-            and not r.get('cloud', {}).get('succeeded')
-            and not r.get('self_hosted', {}).get('succeeded')
+            1
+            for r in query_results
+            if r.get("mode") == "both"
+            and not r.get("cloud", {}).get("succeeded")
+            and not r.get("self_hosted", {}).get("succeeded")
         )
 
         assert failed_queries == 0, "Should be 0 failures when both endpoints succeed on all queries"
@@ -67,26 +67,27 @@ class TestVerificationCommentsFixes:
             {
                 "mode": "both",
                 "cloud": {"succeeded": False, "error": "timeout"},
-                "self_hosted": {"succeeded": False, "error": "timeout"}
+                "self_hosted": {"succeeded": False, "error": "timeout"},
             },
             {
                 "mode": "both",
                 "cloud": {"succeeded": True, "scores": {"accuracy": 0.88}},
-                "self_hosted": {"succeeded": True, "scores": {"accuracy": 0.82}}
+                "self_hosted": {"succeeded": True, "scores": {"accuracy": 0.82}},
             },
             {
                 "mode": "both",
                 "cloud": {"succeeded": False, "error": "API error"},
-                "self_hosted": {"succeeded": False, "error": "Connection failed"}
-            }
+                "self_hosted": {"succeeded": False, "error": "Connection failed"},
+            },
         ]
 
         # Calculate failed_queries using the fixed logic
         failed_queries = sum(
-            1 for r in query_results
-            if r.get('mode') == 'both'
-            and not r.get('cloud', {}).get('succeeded')
-            and not r.get('self_hosted', {}).get('succeeded')
+            1
+            for r in query_results
+            if r.get("mode") == "both"
+            and not r.get("cloud", {}).get("succeeded")
+            and not r.get("self_hosted", {}).get("succeeded")
         )
 
         assert failed_queries == 2, "Should count 2 failures (queries 1 and 3)"
@@ -103,26 +104,27 @@ class TestVerificationCommentsFixes:
             {
                 "mode": "both",
                 "cloud": {"succeeded": False, "error": "timeout"},
-                "self_hosted": {"succeeded": True, "scores": {"accuracy": 0.85}}
+                "self_hosted": {"succeeded": True, "scores": {"accuracy": 0.85}},
             },
             {
                 "mode": "both",
                 "cloud": {"succeeded": True, "scores": {"accuracy": 0.88}},
-                "self_hosted": {"succeeded": False, "error": "connection error"}
+                "self_hosted": {"succeeded": False, "error": "connection error"},
             },
             {
                 "mode": "both",
                 "cloud": {"succeeded": True, "scores": {"accuracy": 0.91}},
-                "self_hosted": {"succeeded": True, "scores": {"accuracy": 0.87}}
-            }
+                "self_hosted": {"succeeded": True, "scores": {"accuracy": 0.87}},
+            },
         ]
 
         # Calculate failed_queries using the fixed logic
         failed_queries = sum(
-            1 for r in query_results
-            if r.get('mode') == 'both'
-            and not r.get('cloud', {}).get('succeeded')
-            and not r.get('self_hosted', {}).get('succeeded')
+            1
+            for r in query_results
+            if r.get("mode") == "both"
+            and not r.get("cloud", {}).get("succeeded")
+            and not r.get("self_hosted", {}).get("succeeded")
         )
 
         assert failed_queries == 0, "Should be 0 failures when no query fails on BOTH endpoints"
@@ -138,27 +140,21 @@ class TestVerificationCommentsFixes:
         tracked_calls = []
 
         def mock_track_query_result(category, query_type, accuracy, cost, latency_ms, success):
-            tracked_calls.append({
-                "category": category,
-                "query_type": query_type,
-                "accuracy": accuracy,
-                "cost": cost,
-                "latency_ms": latency_ms,
-                "success": success
-            })
+            tracked_calls.append(
+                {
+                    "category": category,
+                    "query_type": query_type,
+                    "accuracy": accuracy,
+                    "cost": cost,
+                    "latency_ms": latency_ms,
+                    "success": success,
+                }
+            )
 
         # Simulate dual-mode query result with one success and one failure
         dual_result = {
-            "cloud": {
-                "succeeded": True,
-                "credits_used": 12.5,
-                "latency_ms": 450.0
-            },
-            "self_hosted": {
-                "succeeded": False,
-                "credits_used": 0.0,
-                "latency_ms": 0.0
-            }
+            "cloud": {"succeeded": True, "credits_used": 12.5, "latency_ms": 450.0},
+            "self_hosted": {"succeeded": False, "credits_used": 0.0, "latency_ms": 0.0},
         }
 
         cloud_scores = {"accuracy": 0.85}
@@ -174,16 +170,11 @@ class TestVerificationCommentsFixes:
                 accuracy=cloud_scores["accuracy"],
                 cost=dual_result["cloud"]["credits_used"],
                 latency_ms=dual_result["cloud"]["latency_ms"],
-                success=True
+                success=True,
             )
         else:
             mock_track_query_result(
-                category=category,
-                query_type=query_type,
-                accuracy=0.0,
-                cost=0.0,
-                latency_ms=0.0,
-                success=False
+                category=category, query_type=query_type, accuracy=0.0, cost=0.0, latency_ms=0.0, success=False
             )
 
         # Track self-hosted endpoint (failure)
@@ -194,16 +185,11 @@ class TestVerificationCommentsFixes:
                 accuracy=0.0,  # Would use sh_scores if it existed
                 cost=dual_result["self_hosted"]["credits_used"],
                 latency_ms=dual_result["self_hosted"]["latency_ms"],
-                success=True
+                success=True,
             )
         else:
             mock_track_query_result(
-                category=category,
-                query_type=query_type,
-                accuracy=0.0,
-                cost=0.0,
-                latency_ms=0.0,
-                success=False
+                category=category, query_type=query_type, accuracy=0.0, cost=0.0, latency_ms=0.0, success=False
             )
 
         # Verify both endpoints were tracked
@@ -273,7 +259,7 @@ class TestVerificationCommentsFixes:
             expected_content=["interaction mechanism", "clinical significance"],
             tags=["interaction", "pharmacokinetic"],
             category="drug_interactions",
-            drug_names=["aspirin", "warfarin"]
+            drug_names=["aspirin", "warfarin"],
         )
 
         # Verify expected_classification exists
@@ -310,7 +296,7 @@ class TestVerificationCommentsFixes:
             expected_content=["side effects"],
             tags=["safety"],
             category="adverse_reactions",
-            drug_names=["ibuprofen"]
+            drug_names=["ibuprofen"],
         )
 
         assert safety_query["expected_classification"]["safety_urgency"] == "high"
@@ -325,7 +311,7 @@ class TestVerificationCommentsFixes:
             expected_content=["twice daily"],
             tags=["abbreviation"],
             category="clinical_terminology",
-            drug_names=[]
+            drug_names=[],
         )
 
         assert definition_query["expected_classification"]["safety_urgency"] == "none"
@@ -340,7 +326,7 @@ class TestVerificationCommentsFixes:
             expected_content=["mechanism", "molecular target"],
             tags=["mechanism"],
             category="mechanism_of_action",
-            drug_names=["metformin"]
+            drug_names=["metformin"],
         )
 
         assert mechanism_query["expected_classification"]["domain"] == "mechanism_of_action"
@@ -398,15 +384,15 @@ class TestVerificationCommentsFixes:
         # Generate and save benchmark to temp file
         benchmark = generator.generate_benchmark("drug_interactions", version=1, num_queries=3)
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             temp_path = f.name
 
         try:
-            with open(temp_path, 'w') as f:
+            with open(temp_path, "w") as f:
                 json.dump(benchmark, f, indent=2)
 
             # Verify file can be read back
-            with open(temp_path, 'r') as f:
+            with open(temp_path) as f:
                 loaded_benchmark = json.load(f)
 
             # Verify structure matches
@@ -431,10 +417,11 @@ class TestVerificationCommentsFixes:
         ]
 
         failed_queries = sum(
-            1 for r in query_results
-            if r.get('mode') == 'both'
-            and not r.get('cloud', {}).get('succeeded')
-            and not r.get('self_hosted', {}).get('succeeded')
+            1
+            for r in query_results
+            if r.get("mode") == "both"
+            and not r.get("cloud", {}).get("succeeded")
+            and not r.get("self_hosted", {}).get("succeeded")
         )
 
         assert failed_queries == 0
@@ -451,10 +438,11 @@ class TestVerificationCommentsFixes:
         ]
 
         failed_queries = sum(
-            1 for r in query_results
-            if r.get('mode') == 'both'
-            and not r.get('cloud', {}).get('succeeded')
-            and not r.get('self_hosted', {}).get('succeeded')
+            1
+            for r in query_results
+            if r.get("mode") == "both"
+            and not r.get("cloud", {}).get("succeeded")
+            and not r.get("self_hosted", {}).get("succeeded")
         )
 
         assert failed_queries == 3

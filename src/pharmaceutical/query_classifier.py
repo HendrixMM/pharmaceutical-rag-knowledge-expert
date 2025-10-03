@@ -14,19 +14,25 @@ Features:
 Integrates with the cloud-first architecture to ensure critical pharmaceutical
 queries receive optimal routing and resource allocation.
 """
-
-import re
 import logging
-from typing import Dict, List, Any, Optional, Tuple, Set
-from dataclasses import dataclass, field
-from enum import Enum, IntEnum
-import json
+import re
+from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
+from enum import Enum
+from enum import IntEnum
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 logger = logging.getLogger(__name__)
 
+
 class PharmaceuticalDomain(Enum):
     """Primary pharmaceutical research domains."""
+
     DRUG_SAFETY = "drug_safety"
     CLINICAL_TRIALS = "clinical_trials"
     PHARMACOKINETICS = "pharmacokinetics"
@@ -39,25 +45,31 @@ class PharmaceuticalDomain(Enum):
     PHARMACOGENOMICS = "pharmacogenomics"
     GENERAL_RESEARCH = "general_research"
 
+
 class SafetyUrgency(IntEnum):
     """Safety urgency levels for pharmaceutical queries."""
-    CRITICAL = 1    # Immediate safety concerns
-    HIGH = 2        # Important safety information
-    MODERATE = 3    # General safety guidance
-    LOW = 4         # Background safety information
-    NONE = 5        # No safety implications
+
+    CRITICAL = 1  # Immediate safety concerns
+    HIGH = 2  # Important safety information
+    MODERATE = 3  # General safety guidance
+    LOW = 4  # Background safety information
+    NONE = 5  # No safety implications
+
 
 class ResearchPriority(IntEnum):
     """Research priority levels."""
-    EMERGENCY = 1   # Emergency/critical patient care
-    HIGH = 2        # Active clinical research
-    NORMAL = 3      # Standard research queries
+
+    EMERGENCY = 1  # Emergency/critical patient care
+    HIGH = 2  # Active clinical research
+    NORMAL = 3  # Standard research queries
     BACKGROUND = 4  # Literature review, general research
-    EXPLORATORY = 5 # Discovery and exploration
+    EXPLORATORY = 5  # Discovery and exploration
+
 
 @dataclass
 class PharmaceuticalContext:
     """Comprehensive pharmaceutical context for queries."""
+
     domain: PharmaceuticalDomain
     safety_urgency: SafetyUrgency
     research_priority: ResearchPriority
@@ -67,6 +79,7 @@ class PharmaceuticalContext:
     patient_population: Optional[str] = None
     clinical_phase: Optional[str] = None
     confidence_score: float = 0.0
+
 
 class PharmaceuticalQueryClassifier:
     """
@@ -82,74 +95,130 @@ class PharmaceuticalQueryClassifier:
         # Safety-critical keywords (highest priority)
         self.safety_critical_keywords = {
             "immediate_danger": [
-                "overdose", "toxic", "poisoning", "fatal", "death", "emergency",
-                "life-threatening", "critical", "urgent", "immediate"
+                "overdose",
+                "toxic",
+                "poisoning",
+                "fatal",
+                "death",
+                "emergency",
+                "life-threatening",
+                "critical",
+                "urgent",
+                "immediate",
             ],
             "adverse_reactions": [
-                "adverse", "side effect", "reaction", "toxicity", "harm",
-                "dangerous", "warning", "contraindicated", "avoid"
+                "adverse",
+                "side effect",
+                "reaction",
+                "toxicity",
+                "harm",
+                "dangerous",
+                "warning",
+                "contraindicated",
+                "avoid",
             ],
             "drug_interactions": [
-                "interaction", "combined with", "together with", "concurrent",
-                "contraindication", "incompatible", "drug-drug"
+                "interaction",
+                "combined with",
+                "together with",
+                "concurrent",
+                "contraindication",
+                "incompatible",
+                "drug-drug",
             ],
             "safety_monitoring": [
-                "monitoring", "blood test", "liver function", "kidney function",
-                "cardiac", "respiratory", "neurological"
-            ]
+                "monitoring",
+                "blood test",
+                "liver function",
+                "kidney function",
+                "cardiac",
+                "respiratory",
+                "neurological",
+            ],
         }
 
         # Clinical research keywords
         self.clinical_research_keywords = {
             "clinical_trials": [
-                "clinical trial", "study", "phase i", "phase ii", "phase iii",
-                "randomized", "placebo", "double-blind", "efficacy", "endpoint"
+                "clinical trial",
+                "study",
+                "phase i",
+                "phase ii",
+                "phase iii",
+                "randomized",
+                "placebo",
+                "double-blind",
+                "efficacy",
+                "endpoint",
             ],
             "regulatory": [
-                "fda approved", "regulatory", "indication", "label", "prescribing",
-                "compliance", "guideline", "protocol"
+                "fda approved",
+                "regulatory",
+                "indication",
+                "label",
+                "prescribing",
+                "compliance",
+                "guideline",
+                "protocol",
             ],
             "therapeutic_areas": [
-                "oncology", "cardiology", "neurology", "psychiatry", "endocrinology",
-                "infectious disease", "dermatology", "gastroenterology"
-            ]
+                "oncology",
+                "cardiology",
+                "neurology",
+                "psychiatry",
+                "endocrinology",
+                "infectious disease",
+                "dermatology",
+                "gastroenterology",
+            ],
         }
 
         # Pharmacological keywords
         self.pharmacology_keywords = {
             "pharmacokinetics": [
-                "absorption", "distribution", "metabolism", "excretion", "adme",
-                "bioavailability", "clearance", "half-life", "pharmacokinetics"
+                "absorption",
+                "distribution",
+                "metabolism",
+                "excretion",
+                "adme",
+                "bioavailability",
+                "clearance",
+                "half-life",
+                "pharmacokinetics",
             ],
             "mechanism_of_action": [
-                "mechanism", "action", "pathway", "target", "receptor",
-                "enzyme", "protein", "molecular", "cellular"
+                "mechanism",
+                "action",
+                "pathway",
+                "target",
+                "receptor",
+                "enzyme",
+                "protein",
+                "molecular",
+                "cellular",
             ],
-            "dosing": [
-                "dose", "dosage", "dosing", "administration", "frequency",
-                "regimen", "schedule", "titration"
-            ]
+            "dosing": ["dose", "dosage", "dosing", "administration", "frequency", "regimen", "schedule", "titration"],
         }
 
         # Drug name patterns (common pharmaceutical naming patterns)
         self.drug_name_patterns = [
-            r'\b\w+mycin\b',      # Antibiotics ending in -mycin
-            r'\b\w+cillin\b',     # Penicillin derivatives
-            r'\b\w+prazole\b',    # Proton pump inhibitors
-            r'\b\w+sartan\b',     # ARBs
-            r'\b\w+pril\b',       # ACE inhibitors
-            r'\b\w+olol\b',       # Beta blockers
-            r'\b\w+statin\b',     # Statins
-            r'\b\w+tidine\b',     # H2 blockers
-            r'\b\w+zole\b',       # Antifungals
-            r'\b\w+mab\b'         # Monoclonal antibodies
+            r"\b\w+mycin\b",  # Antibiotics ending in -mycin
+            r"\b\w+cillin\b",  # Penicillin derivatives
+            r"\b\w+prazole\b",  # Proton pump inhibitors
+            r"\b\w+sartan\b",  # ARBs
+            r"\b\w+pril\b",  # ACE inhibitors
+            r"\b\w+olol\b",  # Beta blockers
+            r"\b\w+statin\b",  # Statins
+            r"\b\w+tidine\b",  # H2 blockers
+            r"\b\w+zole\b",  # Antifungals
+            r"\b\w+mab\b",  # Monoclonal antibodies
         ]
 
         # Patient population keywords
         self.patient_populations = {
             "vulnerable": ["pediatric", "elderly", "geriatric", "pregnant", "nursing"],
             "comorbidity": ["diabetes", "hypertension", "kidney", "liver", "cardiac"],
-            "special": ["renal impairment", "hepatic impairment", "dialysis"]
+            "special": ["renal impairment", "hepatic impairment", "dialysis"],
         }
 
         logger.info("PharmaceuticalQueryClassifier initialized with comprehensive domain knowledge")
@@ -186,9 +255,7 @@ class PharmaceuticalQueryClassifier:
             domain = self._classify_pharmaceutical_domain(query_lower)
 
         # Research priority assignment
-        research_priority = self._assign_research_priority(
-            query_lower, domain, safety_urgency
-        )
+        research_priority = self._assign_research_priority(query_lower, domain, safety_urgency)
 
         # Extract drug names
         drug_names = self._extract_drug_names(query_text)
@@ -206,9 +273,7 @@ class PharmaceuticalQueryClassifier:
         clinical_phase = self._extract_clinical_phase(query_lower)
 
         # Calculate confidence score
-        confidence_score = self._calculate_confidence_score(
-            query_text, domain, safety_urgency, research_priority
-        )
+        confidence_score = self._calculate_confidence_score(query_text, domain, safety_urgency, research_priority)
 
         return PharmaceuticalContext(
             domain=domain,
@@ -219,7 +284,7 @@ class PharmaceuticalQueryClassifier:
             regulatory_context=regulatory_context,
             patient_population=patient_population,
             clinical_phase=clinical_phase,
-            confidence_score=confidence_score
+            confidence_score=confidence_score,
         )
 
     def _classify_safety_urgency(self, query_lower: str) -> Tuple[SafetyUrgency, Optional[PharmaceuticalDomain]]:
@@ -278,10 +343,9 @@ class PharmaceuticalQueryClassifier:
 
         return PharmaceuticalDomain.GENERAL_RESEARCH
 
-    def _assign_research_priority(self,
-                                query_lower: str,
-                                domain: PharmaceuticalDomain,
-                                safety_urgency: SafetyUrgency) -> ResearchPriority:
+    def _assign_research_priority(
+        self, query_lower: str, domain: PharmaceuticalDomain, safety_urgency: SafetyUrgency
+    ) -> ResearchPriority:
         """Assign research priority based on domain and safety urgency."""
 
         # Safety urgency overrides other considerations
@@ -295,7 +359,7 @@ class PharmaceuticalQueryClassifier:
             PharmaceuticalDomain.DRUG_SAFETY,
             PharmaceuticalDomain.ADVERSE_REACTIONS,
             PharmaceuticalDomain.DRUG_INTERACTIONS,
-            PharmaceuticalDomain.CLINICAL_TRIALS
+            PharmaceuticalDomain.CLINICAL_TRIALS,
         }
 
         if domain in high_priority_domains:
@@ -335,25 +399,50 @@ class PharmaceuticalQueryClassifier:
         # Common pharmaceutical names (not exhaustive, but covers major categories)
         common_drugs = [
             # Cardiovascular
-            "metoprolol", "atenolol", "propranolol", "lisinopril", "enalapril",
-            "losartan", "valsartan", "amlodipine", "nifedipine", "atorvastatin",
-            "simvastatin", "warfarin", "heparin", "aspirin",
-
+            "metoprolol",
+            "atenolol",
+            "propranolol",
+            "lisinopril",
+            "enalapril",
+            "losartan",
+            "valsartan",
+            "amlodipine",
+            "nifedipine",
+            "atorvastatin",
+            "simvastatin",
+            "warfarin",
+            "heparin",
+            "aspirin",
             # Diabetes
-            "metformin", "insulin", "glipizide", "glyburide", "pioglitazone",
-
+            "metformin",
+            "insulin",
+            "glipizide",
+            "glyburide",
+            "pioglitazone",
             # Antibiotics
-            "amoxicillin", "penicillin", "azithromycin", "ciprofloxacin",
-            "doxycycline", "vancomycin",
-
+            "amoxicillin",
+            "penicillin",
+            "azithromycin",
+            "ciprofloxacin",
+            "doxycycline",
+            "vancomycin",
             # Pain/Inflammation
-            "ibuprofen", "naproxen", "acetaminophen", "tramadol", "morphine",
-
+            "ibuprofen",
+            "naproxen",
+            "acetaminophen",
+            "tramadol",
+            "morphine",
             # Psychiatric
-            "sertraline", "fluoxetine", "escitalopram", "alprazolam", "lorazepam",
-
+            "sertraline",
+            "fluoxetine",
+            "escitalopram",
+            "alprazolam",
+            "lorazepam",
             # Gastrointestinal
-            "omeprazole", "lansoprazole", "ranitidine", "famotidine"
+            "omeprazole",
+            "lansoprazole",
+            "ranitidine",
+            "famotidine",
         ]
 
         query_lower = query_text.lower()
@@ -377,7 +466,7 @@ class PharmaceuticalQueryClassifier:
             "gastroenterology": ["gastrointestinal", "stomach", "liver", "digestive"],
             "pulmonology": ["respiratory", "lung", "asthma", "copd"],
             "nephrology": ["kidney", "renal", "dialysis"],
-            "dermatology": ["skin", "dermatological", "topical"]
+            "dermatology": ["skin", "dermatological", "topical"],
         }
 
         for area, keywords in area_keywords.items():
@@ -395,7 +484,7 @@ class PharmaceuticalQueryClassifier:
             "ich": ["ich", "international council for harmonisation"],
             "guideline": ["guideline", "guidance", "protocol"],
             "approval": ["approval", "approved", "indication"],
-            "label": ["label", "labeling", "prescribing information"]
+            "label": ["label", "labeling", "prescribing information"],
         }
 
         for context, keywords in regulatory_patterns.items():
@@ -420,9 +509,16 @@ class PharmaceuticalQueryClassifier:
         """Extract clinical trial phase information."""
 
         phase_patterns = [
-            "phase i", "phase 1", "phase ii", "phase 2",
-            "phase iii", "phase 3", "phase iv", "phase 4",
-            "preclinical", "post-marketing"
+            "phase i",
+            "phase 1",
+            "phase ii",
+            "phase 2",
+            "phase iii",
+            "phase 3",
+            "phase iv",
+            "phase 4",
+            "preclinical",
+            "post-marketing",
         ]
 
         for phase in phase_patterns:
@@ -431,11 +527,13 @@ class PharmaceuticalQueryClassifier:
 
         return None
 
-    def _calculate_confidence_score(self,
-                                  query_text: str,
-                                  domain: PharmaceuticalDomain,
-                                  safety_urgency: SafetyUrgency,
-                                  research_priority: ResearchPriority) -> float:
+    def _calculate_confidence_score(
+        self,
+        query_text: str,
+        domain: PharmaceuticalDomain,
+        safety_urgency: SafetyUrgency,
+        research_priority: ResearchPriority,
+    ) -> float:
         """Calculate confidence score for the classification."""
 
         base_score = 0.5  # Base confidence
@@ -448,7 +546,7 @@ class PharmaceuticalQueryClassifier:
         specific_domains = {
             PharmaceuticalDomain.DRUG_SAFETY,
             PharmaceuticalDomain.DRUG_INTERACTIONS,
-            PharmaceuticalDomain.ADVERSE_REACTIONS
+            PharmaceuticalDomain.ADVERSE_REACTIONS,
         }
         if domain in specific_domains:
             base_score += 0.2
@@ -491,36 +589,37 @@ class PharmaceuticalQueryClassifier:
             "batch_eligible": True,
             "cost_tier_preference": "free_tier",
             "timeout_seconds": 30,
-            "retry_attempts": 3
+            "retry_attempts": 3,
         }
 
         # Critical safety queries get priority routing
         if context.safety_urgency == SafetyUrgency.CRITICAL:
-            config.update({
-                "cloud_first_priority": True,
-                "batch_eligible": False,  # Process immediately
-                "cost_tier_preference": "any",  # Cost not a factor
-                "timeout_seconds": 15,  # Faster timeout
-                "retry_attempts": 5  # More retries
-            })
+            config.update(
+                {
+                    "cloud_first_priority": True,
+                    "batch_eligible": False,  # Process immediately
+                    "cost_tier_preference": "any",  # Cost not a factor
+                    "timeout_seconds": 15,  # Faster timeout
+                    "retry_attempts": 5,  # More retries
+                }
+            )
 
         # High priority research gets enhanced routing
         elif context.research_priority in [ResearchPriority.EMERGENCY, ResearchPriority.HIGH]:
-            config.update({
-                "cloud_first_priority": True,
-                "batch_eligible": False,
-                "timeout_seconds": 20,
-                "retry_attempts": 4
-            })
+            config.update(
+                {"cloud_first_priority": True, "batch_eligible": False, "timeout_seconds": 20, "retry_attempts": 4}
+            )
 
         # Background queries can be batched and deprioritized
         elif context.research_priority in [ResearchPriority.BACKGROUND, ResearchPriority.EXPLORATORY]:
-            config.update({
-                "batch_eligible": True,
-                "cost_tier_preference": "free_tier_only",
-                "timeout_seconds": 60,
-                "retry_attempts": 2
-            })
+            config.update(
+                {
+                    "batch_eligible": True,
+                    "cost_tier_preference": "free_tier_only",
+                    "timeout_seconds": 60,
+                    "retry_attempts": 2,
+                }
+            )
 
         return config
 
@@ -549,10 +648,10 @@ class PharmaceuticalQueryClassifier:
                 "regulatory_context": context.regulatory_context,
                 "patient_population": context.patient_population,
                 "clinical_phase": context.clinical_phase,
-                "confidence_score": round(context.confidence_score, 3)
+                "confidence_score": round(context.confidence_score, 3),
             },
             "routing_configuration": routing_config,
-            "recommendations": self._generate_recommendations(context)
+            "recommendations": self._generate_recommendations(context),
         }
 
     def _generate_recommendations(self, context: PharmaceuticalContext) -> List[str]:
@@ -578,6 +677,7 @@ class PharmaceuticalQueryClassifier:
 
         return recommendations
 
+
 # Convenience functions for pharmaceutical classification
 def classify_pharmaceutical_query(query_text: str) -> PharmaceuticalContext:
     """
@@ -591,6 +691,7 @@ def classify_pharmaceutical_query(query_text: str) -> PharmaceuticalContext:
     """
     classifier = PharmaceuticalQueryClassifier()
     return classifier.classify_query(query_text)
+
 
 def get_pharmaceutical_routing_config(query_text: str) -> Dict[str, Any]:
     """
@@ -606,6 +707,7 @@ def get_pharmaceutical_routing_config(query_text: str) -> Dict[str, Any]:
     context = classifier.classify_query(query_text)
     return classifier.get_priority_routing_config(context)
 
+
 if __name__ == "__main__":
     # Test pharmaceutical classification
     classifier = PharmaceuticalQueryClassifier()
@@ -615,7 +717,7 @@ if __name__ == "__main__":
         "Explain the mechanism of action of ACE inhibitors in hypertension treatment",
         "Drug interactions between warfarin and NSAIDs - urgent patient safety concern",
         "Phase III clinical trial results for new oncology drug efficacy",
-        "General overview of cardiovascular medication classes"
+        "General overview of cardiovascular medication classes",
     ]
 
     for query in test_queries:

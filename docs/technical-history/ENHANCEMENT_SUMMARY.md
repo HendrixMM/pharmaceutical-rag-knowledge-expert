@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # Summary of Changes to RAG Template for NVIDIA NemoRetriever
 
 ## Overview
@@ -60,3 +66,11 @@ The project has been significantly enhanced with medical/pharmaceutical features
 - Enhanced embedding model configuration with fallback support
 - Medical safety features configuration
 - Rate limiting configuration for NCBI compliance
+
+---
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

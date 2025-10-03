@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # 🌐 RAG Template - Web Interface Guide
 
 ## 🎉 **Beautiful Web Interface Successfully Created!**
@@ -242,4 +248,10 @@ To enable these features:
 2. Set `ENABLE_MEDICAL_GUARDRAILS=true` in your environment
 3. Restart the web interface
 
-**🤖 Your RAG Template is now accessible through a beautiful, professional web interface! 🚀**
+## **🤖 Your RAG Template is now accessible through a beautiful, professional web interface! 🚀**
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

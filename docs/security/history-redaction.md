@@ -8,6 +8,7 @@ Status: PENDING
 # Git History Cleanup and Secret Redaction Runbook
 
 <!-- TOC -->
+
 - [Executive Summary](#executive-summary)
 - [Incident Timeline](#incident-timeline)
 - [Approval Workflow](#approval-workflow)
@@ -29,13 +30,12 @@ Status: PENDING
 - [Appendix: Edge Cases](#appendix-edge-cases)
 <!-- /TOC -->
 
-
 This runbook documents the complete process to identify, remove, verify, and prevent secret exposure in git history. It provides an audit trail, roles and responsibilities, and step‑by‑step execution guidance.
 
 ## Executive Summary
 
 - Incident: Historical commits contained exposed API credentials and emails (PII).
-- Secret types: NVIDIA API keys (nvapi-*), PubMed E-utilities keys, Apify tokens, emails.
+- Secret types: NVIDIA API keys (nvapi-\*), PubMed E-utilities keys, Apify tokens, emails.
 - Impact: Moderate to high; requires history rewrite and key rotation.
 - Status: PENDING (working tree is clean; history cleanup to be performed per this runbook).
 
@@ -60,20 +60,22 @@ This runbook documents the complete process to identify, remove, verify, and pre
 
 ## Exposed Secrets Inventory
 
-| Secret Type         | First Exposed | Last Exposed | Commits Affected | Rotated | New Key ID        |
-|---------------------|---------------|--------------|------------------|---------|-------------------|
-| NVIDIA API Key      | YYYY-MM-DD    | YYYY-MM-DD   | N commits        | ☐/✅    | nvapi-xxx…        |
-| PubMed API Key      | YYYY-MM-DD    | YYYY-MM-DD   | N commits        | ☐/✅    | [hash/prefix]     |
-| Apify Token         | YYYY-MM-DD    | YYYY-MM-DD   | N commits        | ☐/✅    | [hash/prefix]     |
+| Secret Type    | First Exposed | Last Exposed | Commits Affected | Rotated | New Key ID    |
+| -------------- | ------------- | ------------ | ---------------- | ------- | ------------- |
+| NVIDIA API Key | YYYY-MM-DD    | YYYY-MM-DD   | N commits        | ☐/✅    | nvapi-xxx…    |
+| PubMed API Key | YYYY-MM-DD    | YYYY-MM-DD   | N commits        | ☐/✅    | [hash/prefix] |
+| Apify Token    | YYYY-MM-DD    | YYYY-MM-DD   | N commits        | ☐/✅    | [hash/prefix] |
 
 ## Cleanup Process Runbook
 
 ### Step 1: Preparation
+
 - Create coordination ticket and schedule force‑push window.
 - Notify stakeholders about the merge freeze and required re‑clone.
 - Create backups: tag `backup/week2-start`, `pip freeze` snapshot, branch backup.
 
 ### Step 2: Secret Identification
+
 - Run history scanner:
   ```bash
   bash scripts/identify_secrets_in_history.sh --report backups/secret-scan-$(date +%Y%m%d).txt
@@ -81,6 +83,7 @@ This runbook documents the complete process to identify, remove, verify, and pre
 - Review and sanitize `scripts/sensitive-patterns.txt` (no real secrets, only prefixes/fingerprints).
 
 ### Step 3: BFG Execution
+
 - Dry-run:
   ```bash
   bash scripts/git_history_cleanup.sh --dry-run
@@ -92,16 +95,19 @@ This runbook documents the complete process to identify, remove, verify, and pre
 - Review logs and verify results.
 
 ### Step 4: Force-Push
+
 - Coordinate with team; confirm freeze is active.
 - Force-push cleaned history and tags per script output.
 - Notify completion and re‑clone requirement.
 
 ### Step 5: Key Rotation
+
 - Rotate NVIDIA, PubMed, Apify credentials.
 - Update CI/CD secrets and `.env.example` placeholders.
 - Track changes in `docs/security/key-rotation-tracker.md`.
 
 ### Step 6: Verification
+
 - Run verification script:
   ```bash
   bash scripts/verify_history_cleanup.sh
@@ -129,6 +135,7 @@ This runbook documents the complete process to identify, remove, verify, and pre
 ## Team Coordination
 
 Notification Template:
+
 ```
 Subject: [ACTION REQUIRED] Git History Cleanup - Force Push Scheduled
 

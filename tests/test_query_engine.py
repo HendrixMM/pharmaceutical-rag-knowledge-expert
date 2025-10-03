@@ -1,5 +1,6 @@
 import json
-from datetime import UTC, datetime
+from datetime import datetime
+from datetime import UTC
 from pathlib import Path
 
 from src.query_engine import EnhancedQueryEngine
@@ -84,17 +85,19 @@ def test_drug_filter_expands_aliases(tmp_path):
         brand_lexicon_path=str(brand_path),
     )
 
-    scraper = StubScraper([
-        {
-            "title": "Azole inhibitor study",
-            "abstract": "CYP3A4 inhibition observed with Nizoral (ketoconazole).",
-            "drug_annotations": [{"name": "ketoconazole", "type": "generic"}],
-        },
-        {
-            "title": "Control study",
-            "abstract": "Placebo group without azole treatment.",
-        },
-    ])
+    scraper = StubScraper(
+        [
+            {
+                "title": "Azole inhibitor study",
+                "abstract": "CYP3A4 inhibition observed with Nizoral (ketoconazole).",
+                "drug_annotations": [{"name": "ketoconazole", "type": "generic"}],
+            },
+            {
+                "title": "Control study",
+                "abstract": "Placebo group without azole treatment.",
+            },
+        ]
+    )
 
     engine = EnhancedQueryEngine(
         scraper,
@@ -179,9 +182,7 @@ def test_enhancement_switches_modes_based_on_signals(tmp_path):
     assert " OR " in enhanced_query
     assert " AND (" not in enhanced_query
 
-    enhanced_query_strict, applied_strict = engine._enhance_pharmaceutical_query(
-        "ketoconazole CYP3A4 drug interaction"
-    )
+    enhanced_query_strict, applied_strict = engine._enhance_pharmaceutical_query("ketoconazole CYP3A4 drug interaction")
     assert applied_strict is False
     assert enhanced_query_strict == "ketoconazole CYP3A4 drug interaction"
 
@@ -232,10 +233,7 @@ def test_runtime_drug_extraction_cap_limits_docs(tmp_path):
         runtime_extraction_doc_cap=1,
     )
 
-    results = [
-        {"title": f"Study {idx}", "abstract": "ketoconazole details"}
-        for idx in range(3)
-    ]
+    results = [{"title": f"Study {idx}", "abstract": "ketoconazole details"} for idx in range(3)]
 
     engine._apply_filters(
         results,
@@ -248,13 +246,15 @@ def test_runtime_drug_extraction_cap_limits_docs(tmp_path):
 
 
 def test_species_unknown_default_includes_unknown_documents(tmp_path):
-    scraper = StubScraper([
-        {
-            "title": "Unknown species study",
-            "abstract": "",
-            "publication_year": datetime.now(UTC).year,
-        }
-    ])
+    scraper = StubScraper(
+        [
+            {
+                "title": "Unknown species study",
+                "abstract": "",
+                "publication_year": datetime.now(UTC).year,
+            }
+        ]
+    )
     engine = EnhancedQueryEngine(
         scraper,
         cache_dir=str(tmp_path / "cache_species"),
@@ -333,20 +333,22 @@ def test_cache_pruning_limits_cache_dir(tmp_path):
 def test_filtered_cache_control(tmp_path):
     """Test that cache_filtered_results controls filtered cache writing."""
     current_year = datetime.now(UTC).year
-    scraper = StubScraper([
-        {
-            "title": "Human Study",
-            "abstract": "A study on humans",
-            "publication_year": current_year,
-            "species": ["Human"],
-        },
-        {
-            "title": "Mouse Study",
-            "abstract": "A study on mice",
-            "publication_year": current_year,
-            "species": ["Mouse"],
-        },
-    ])
+    scraper = StubScraper(
+        [
+            {
+                "title": "Human Study",
+                "abstract": "A study on humans",
+                "publication_year": current_year,
+                "species": ["Human"],
+            },
+            {
+                "title": "Mouse Study",
+                "abstract": "A study on mice",
+                "publication_year": current_year,
+                "species": ["Mouse"],
+            },
+        ]
+    )
 
     # Test with cache_filtered_results=True (default)
     engine_enabled = EnhancedQueryEngine(
@@ -355,10 +357,7 @@ def test_filtered_cache_control(tmp_path):
         cache_filtered_results=True,
     )
 
-    response1 = engine_enabled.process_pharmaceutical_query(
-        "test query",
-        filters={"species_preference": "human"}
-    )
+    response1 = engine_enabled.process_pharmaceutical_query("test query", filters={"species_preference": "human"})
 
     # Should have both raw and filtered cache
     cache_files = list(Path(tmp_path / "cache_enabled").glob("*.json"))
@@ -385,10 +384,7 @@ def test_filtered_cache_control(tmp_path):
         cache_filtered_results=False,
     )
 
-    response2 = engine_disabled.process_pharmaceutical_query(
-        "test query",
-        filters={"species_preference": "human"}
-    )
+    response2 = engine_disabled.process_pharmaceutical_query("test query", filters={"species_preference": "human"})
 
     # Should only have raw cache
     cache_files = list(Path(tmp_path / "cache_disabled").glob("*.json"))
@@ -408,17 +404,11 @@ def test_filtered_cache_control(tmp_path):
     )
 
     # First call - should create raw cache
-    response3 = engine_reuse.process_pharmaceutical_query(
-        "test query",
-        filters={"species_preference": "human"}
-    )
+    response3 = engine_reuse.process_pharmaceutical_query("test query", filters={"species_preference": "human"})
     assert scraper3.calls == 1
 
     # Second call with different filters - should reuse raw cache
-    response4 = engine_reuse.process_pharmaceutical_query(
-        "test query",
-        filters={"species_preference": "mouse"}
-    )
+    response4 = engine_reuse.process_pharmaceutical_query("test query", filters={"species_preference": "mouse"})
     assert scraper3.calls == 1  # Should reuse raw cache
     assert response4["cache_hit"] is True
 

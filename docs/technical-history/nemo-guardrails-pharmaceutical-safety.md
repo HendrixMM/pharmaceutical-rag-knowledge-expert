@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # NVIDIA NeMo Guardrails Integration Guide for Pharmaceutical RAG Safety
 
 ## **Comprehensive Safety Framework for Medical AI Applications**
@@ -1111,3 +1117,11 @@ Your pharmaceutical RAG system now has enterprise-grade safety guardrails that e
 **Integration Status**: Production Ready
 **Safety Level**: Medical Grade
 **Compliance**: FDA/EMA/HIPAA Aligned
+
+---
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

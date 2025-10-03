@@ -1,5 +1,4 @@
 """Compatibility shim that prefers the third-party ``regex`` package when available."""
-
 from __future__ import annotations
 
 import importlib

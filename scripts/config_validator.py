@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass, field
-from typing import List, Optional
+from dataclasses import dataclass
+from dataclasses import field
 
 import requests
 
@@ -23,35 +23,35 @@ except Exception:  # pragma: no cover - defensive import fallback
 @dataclass
 class ConfigValidationResult:
     valid: bool
-    errors: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
-def _combine(results: List[ConfigValidationResult]) -> ConfigValidationResult:
-    errors: List[str] = []
-    warnings: List[str] = []
+def _combine(results: list[ConfigValidationResult]) -> ConfigValidationResult:
+    errors: list[str] = []
+    warnings: list[str] = []
     for r in results:
         errors.extend(r.errors)
         warnings.extend(r.warnings)
     return ConfigValidationResult(valid=(len(errors) == 0), errors=errors, warnings=warnings)
 
 
-def validate_nvidia_api_key(api_key: Optional[str]) -> ConfigValidationResult:
-    errors: List[str] = []
-    warnings: List[str] = []
+def validate_nvidia_api_key(api_key: str | None) -> ConfigValidationResult:
+    errors: list[str] = []
+    warnings: list[str] = []
     if not api_key:
         errors.append("NVIDIA_API_KEY is missing. Set it in your environment or .env file.")
         return ConfigValidationResult(False, errors, warnings)
 
     # Check for placeholder values
     placeholder_patterns = [
-        r'your[_\-].*key',
-        r'your[_\-].*api',
-        r'example',
-        r'placeholder',
-        r'replace[_\-]?this',
-        r'changeme',
-        r'xxx+',
+        r"your[_\-].*key",
+        r"your[_\-].*api",
+        r"example",
+        r"placeholder",
+        r"replace[_\-]?this",
+        r"changeme",
+        r"xxx+",
     ]
     api_key_lower = api_key.lower()
     for pattern in placeholder_patterns:
@@ -69,10 +69,10 @@ def validate_nvidia_api_key(api_key: Optional[str]) -> ConfigValidationResult:
     return ConfigValidationResult(len(errors) == 0, errors, warnings)
 
 
-def _validate_model_common(service: str, model: Optional[str]) -> ConfigValidationResult:
+def _validate_model_common(service: str, model: str | None) -> ConfigValidationResult:
     if not model:
         return ConfigValidationResult(True, [], [])
-    errors: List[str] = []
+    errors: list[str] = []
     ok = True
     if NeMoRetrieverClient is not None and model:
         try:
@@ -82,9 +82,7 @@ def _validate_model_common(service: str, model: Optional[str]) -> ConfigValidati
                 {},
             )
             key = model.split("/")[-1]
-            ok = key in reg or any(
-                (isinstance(info, dict) and info.get("full_name") == model) for info in reg.values()
-            )
+            ok = key in reg or any((isinstance(info, dict) and info.get("full_name") == model) for info in reg.values())
         except Exception:
             ok = True
     if not ok:
@@ -98,20 +96,20 @@ def _validate_model_common(service: str, model: Optional[str]) -> ConfigValidati
     return ConfigValidationResult(len(errors) == 0, errors, [])
 
 
-def validate_embedding_model(model: Optional[str]) -> ConfigValidationResult:
+def validate_embedding_model(model: str | None) -> ConfigValidationResult:
     return _validate_model_common("embedding", model)
 
 
-def validate_reranking_model(model: Optional[str]) -> ConfigValidationResult:
+def validate_reranking_model(model: str | None) -> ConfigValidationResult:
     return _validate_model_common("reranking", model)
 
 
-def validate_endpoint_url(url: Optional[str]) -> ConfigValidationResult:
+def validate_endpoint_url(url: str | None) -> ConfigValidationResult:
     if not url:
         return ConfigValidationResult(True, [], [])
 
-    errors: List[str] = []
-    warnings: List[str] = []
+    errors: list[str] = []
+    warnings: list[str] = []
     app_env = os.getenv("APP_ENV", "").strip().lower()
 
     if not re.match(r"^https?://", url):
@@ -137,7 +135,7 @@ def validate_endpoint_url(url: Optional[str]) -> ConfigValidationResult:
 
 
 def validate_production_environment() -> ConfigValidationResult:
-    warnings: List[str] = []
+    warnings: list[str] = []
     expected = {
         "ENABLE_NEMO_EXTRACTION": "true",
         "NEMO_EXTRACTION_STRATEGY": "nemo",
@@ -159,7 +157,7 @@ def validate_complete_configuration() -> ConfigValidationResult:
     custom_reranking_endpoint = os.getenv("NEMO_RERANKING_ENDPOINT")
     custom_extraction_endpoint = os.getenv("NEMO_EXTRACTION_ENDPOINT")
 
-    results: List[ConfigValidationResult] = []
+    results: list[ConfigValidationResult] = []
     results.append(validate_nvidia_api_key(api_key))
     results.append(validate_embedding_model(embedding_model))
     results.append(validate_reranking_model(rerank_model))

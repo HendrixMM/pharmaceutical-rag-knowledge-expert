@@ -18,7 +18,7 @@ import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 def _checksum(path: Path) -> str:
@@ -32,8 +32,8 @@ def _checksum(path: Path) -> str:
     return h.hexdigest()
 
 
-def _preview_rows(path: Path, limit: int = 3) -> List[Dict[str, Any]]:
-    rows: List[Dict[str, Any]] = []
+def _preview_rows(path: Path, limit: int = 3) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     with path.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         for i, row in enumerate(reader):
@@ -57,8 +57,8 @@ def create_manifest(csv_path: Path) -> Path:
     return out
 
 
-def validate_csv(csv_path: Path) -> List[str]:
-    errs: List[str] = []
+def validate_csv(csv_path: Path) -> list[str]:
+    errs: list[str] = []
     try:
         with csv_path.open("r", encoding="utf-8", newline="") as f:
             reader = csv.reader(f)
@@ -119,4 +119,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

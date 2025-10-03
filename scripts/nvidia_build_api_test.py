@@ -20,13 +20,12 @@ Returns:
   - Sample outputs for verification
   - Recommendations for integration
 """
-
 import os
 import sys
-import json
 import time
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
+from typing import Dict
 
 import requests
 
@@ -38,9 +37,11 @@ for p in (ROOT,):
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     print("Warning: python-dotenv not installed. Using environment variables directly.")
+
 
 def test_embedding_model(api_key: str) -> Dict[str, Any]:
     """Test access to nvidia/nv-embed-v1 embedding model."""
@@ -51,14 +52,14 @@ def test_embedding_model(api_key: str) -> Dict[str, Any]:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "User-Agent": "NVIDIA-Build-Test/1.0",
-        "accept": "application/json"
+        "accept": "application/json",
     }
 
     payload = {
         "model": "nvidia/nv-embed-v1",
         "input": ["This is a test for pharmaceutical research applications"],
         "input_type": "query",
-        "encoding_format": "float"
+        "encoding_format": "float",
     }
 
     start_time = time.time()
@@ -71,16 +72,11 @@ def test_embedding_model(api_key: str) -> Dict[str, Any]:
             "status_code": response.status_code,
             "response_time_ms": int((end_time - start_time) * 1000),
             "error": None if response.status_code == 200 else response.text,
-            "sample_output": response.json() if response.status_code == 200 else None
+            "sample_output": response.json() if response.status_code == 200 else None,
         }
     except Exception as e:
-        return {
-            "success": False,
-            "status_code": None,
-            "response_time_ms": None,
-            "error": str(e),
-            "sample_output": None
-        }
+        return {"success": False, "status_code": None, "response_time_ms": None, "error": str(e), "sample_output": None}
+
 
 def test_llm_model(api_key: str) -> Dict[str, Any]:
     """Test access to meta/llama-3.1-8b-instruct language model."""
@@ -91,20 +87,17 @@ def test_llm_model(api_key: str) -> Dict[str, Any]:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "User-Agent": "NVIDIA-Build-Test/1.0",
-        "accept": "application/json"
+        "accept": "application/json",
     }
 
     payload = {
         "model": "meta/llama-3.1-8b-instruct",
         "messages": [
-            {
-                "role": "user",
-                "content": "What are the key considerations for pharmaceutical drug interactions?"
-            }
+            {"role": "user", "content": "What are the key considerations for pharmaceutical drug interactions?"}
         ],
         "max_tokens": 100,
         "temperature": 0.2,
-        "top_p": 0.7
+        "top_p": 0.7,
     }
 
     start_time = time.time()
@@ -117,16 +110,11 @@ def test_llm_model(api_key: str) -> Dict[str, Any]:
             "status_code": response.status_code,
             "response_time_ms": int((end_time - start_time) * 1000),
             "error": None if response.status_code == 200 else response.text,
-            "sample_output": response.json() if response.status_code == 200 else None
+            "sample_output": response.json() if response.status_code == 200 else None,
         }
     except Exception as e:
-        return {
-            "success": False,
-            "status_code": None,
-            "response_time_ms": None,
-            "error": str(e),
-            "sample_output": None
-        }
+        return {"success": False, "status_code": None, "response_time_ms": None, "error": str(e), "sample_output": None}
+
 
 def print_test_results(model_name: str, results: Dict[str, Any]) -> None:
     """Print formatted test results."""
@@ -151,6 +139,7 @@ def print_test_results(model_name: str, results: Dict[str, Any]) -> None:
         print("❌ ACCESS FAILED")
         print(f"Status Code: {results['status_code']}")
         print(f"Error: {results['error']}")
+
 
 def generate_recommendations(embedding_success: bool, llm_success: bool) -> None:
     """Generate recommendations based on test results."""
@@ -188,6 +177,7 @@ def generate_recommendations(embedding_success: bool, llm_success: bool) -> None
         print("3. Ensure you have NVIDIA Build platform access")
         print("4. Your current NeMo Retriever setup may be using different endpoints")
 
+
 def main():
     print("NVIDIA Build API Access Verification Test")
     print(f"{'='*60}")
@@ -210,10 +200,7 @@ def main():
     print_test_results("meta/llama-3.1-8b-instruct", llm_results)
 
     # Generate recommendations
-    generate_recommendations(
-        embedding_results["success"],
-        llm_results["success"]
-    )
+    generate_recommendations(embedding_results["success"], llm_results["success"])
 
     # Summary
     print(f"\n{'='*60}")
@@ -223,6 +210,7 @@ def main():
     print(f"meta/llama-3.1-8b-instruct: {'✅ ACCESSIBLE' if llm_results['success'] else '❌ FAILED'}")
 
     return 0 if (embedding_results["success"] or llm_results["success"]) else 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

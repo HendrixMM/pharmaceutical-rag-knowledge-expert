@@ -1,15 +1,10 @@
-import os
 from datetime import datetime
-from pathlib import Path
 
 import pytest
 
 from src.pubmed_scraper import PubMedScraper
 
-
-pytestmark = pytest.mark.skip(
-    reason="Apify-based live tests deprecated; E-utilities is the primary source."
-)
+pytestmark = pytest.mark.skip(reason="Apify-based live tests deprecated; E-utilities is the primary source.")
 
 TEST_QUERIES = ("cancer treatment", "diabetes management")
 

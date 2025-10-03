@@ -1,6 +1,3 @@
-import types
-
-
 def test_fetch_credit_burn_snapshot_handles_missing(monkeypatch):
     import streamlit_app
 

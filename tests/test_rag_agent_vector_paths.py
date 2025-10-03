@@ -4,7 +4,8 @@ import shutil
 import sys
 import types
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
+from typing import Union
 
 langchain_module = types.ModuleType("langchain")
 langchain_module.__path__ = []
@@ -70,7 +71,7 @@ sys.modules["langchain.llms"] = llms_module
 sys.modules["langchain.llms.base"] = llms_base_module
 sys.modules["langchain.text_splitter"] = text_splitter_module
 
-from src.rag_agent import RAGAgent, MEDICAL_DISCLAIMER
+from src.rag_agent import MEDICAL_DISCLAIMER, RAGAgent
 
 
 class DummyEmbeddings:
@@ -325,7 +326,9 @@ def test_reconcile_before_query_switches_path_on_fallback_with_clear_logs(tmp_pa
     assert rebuild_message is None
     assert Path(agent.vector_db_path) == expected_path
     assert agent.vector_db.db_path == expected_path
-    assert "Embedding model changed from 'preferred/model' to 'fallback/model'; reconciling vector DB path." in caplog.text
+    assert (
+        "Embedding model changed from 'preferred/model' to 'fallback/model'; reconciling vector DB path." in caplog.text
+    )
     assert "Will rebuild at" in caplog.text
 
 

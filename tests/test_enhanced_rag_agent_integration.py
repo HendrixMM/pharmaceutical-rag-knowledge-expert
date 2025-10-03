@@ -1,25 +1,26 @@
 """Tests for Enhanced RAG Agent PubMed integration."""
+import sys
+import tempfile
+from pathlib import Path
+from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
-import os
-import tempfile
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
 
 # Add src to path
-import sys
+
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from src.enhanced_rag_agent import EnhancedRAGAgent
 from src.enhanced_config import EnhancedRAGConfig
 from src.enhanced_pubmed_scraper import EnhancedPubMedScraper
-from src.query_engine import EnhancedQueryEngine
+from src.enhanced_rag_agent import EnhancedRAGAgent
 from src.pharmaceutical_query_adapter import (
+    SystemHealthReport,
     build_enhanced_rag_agent,
     build_integrated_system,
     check_system_health,
-    SystemHealthReport
 )
+from src.query_engine import EnhancedQueryEngine
 
 
 class TestEnhancedRAGAgentPubMedIntegration:
@@ -68,12 +69,12 @@ class TestEnhancedRAGAgentPubMedIntegration:
                 "authors": ["Author A", "Author B"],
                 "journal": "Test Journal",
                 "publication_date": "2023-01-01",
-                "url": "https://pubmed.ncbi.nlm.nih.gov/12345"
+                "url": "https://pubmed.ncbi.nlm.nih.gov/12345",
             }
         ]
         scraper.combined_status_report.return_value = {
             "cache": {"status": "ready", "hit_rate": 0.8},
-            "rate_limit": {"status": "ready", "requests_remaining": 100}
+            "rate_limit": {"status": "ready", "requests_remaining": 100},
         }
         return scraper
 
@@ -91,44 +92,34 @@ class TestEnhancedRAGAgentPubMedIntegration:
                     "journal": "Test Journal",
                     "publication_date": "2023-01-01",
                     "url": "https://pubmed.ncbi.nlm.nih.gov/12345",
-                    "relevance_score": 0.85
+                    "relevance_score": 0.85,
                 }
             ],
-            "query_info": {
-                "total_results": 1,
-                "search_time": 1.5,
-                "cache_hits": 0
-            }
+            "query_info": {"total_results": 1, "search_time": 1.5, "cache_hits": 0},
         }
         return engine
 
     @pytest.fixture
     def rag_agent(self, temp_docs_folder, mock_config):
         """Create an Enhanced RAG agent with mocked components."""
-        with patch('src.enhanced_rag_agent.RAGAgent'), \
-             patch('src.enhanced_rag_agent.MedicalGuardrails'), \
-             patch('src.enhanced_rag_agent.SynthesisEngine'), \
-             patch('src.enhanced_rag_agent.DDIProcessor'), \
-             patch('src.nvidia_embeddings.NVIDIAEmbeddings'):
-
+        with patch("src.enhanced_rag_agent.RAGAgent"), patch("src.enhanced_rag_agent.MedicalGuardrails"), patch(
+            "src.enhanced_rag_agent.SynthesisEngine"
+        ), patch("src.enhanced_rag_agent.DDIProcessor"), patch("src.nvidia_embeddings.NVIDIAEmbeddings"):
             agent = EnhancedRAGAgent(
                 docs_folder=temp_docs_folder,
                 api_key="test_api_key",
                 config=mock_config,
                 enable_synthesis=False,
-                enable_ddi_analysis=False
+                enable_ddi_analysis=False,
             )
             # Mock the base agent
             agent.base_agent = Mock()
             agent.base_agent.ask_question.return_value = {
                 "answer": "Test answer from local documents",
                 "sources": [{"metadata": {"source_file": "test.pdf"}, "page_content": "Test content"}],
-                "processing_time": 1.0
+                "processing_time": 1.0,
             }
-            agent.base_agent.get_knowledge_base_stats.return_value = {
-                "document_count": 1,
-                "pdf_files_available": 1
-            }
+            agent.base_agent.get_knowledge_base_stats.return_value = {"document_count": 1, "pdf_files_available": 1}
             return agent
 
     def test_pubmed_integration_initialization(self, rag_agent, mock_config):
@@ -139,9 +130,9 @@ class TestEnhancedRAGAgentPubMedIntegration:
     def test_ensure_pubmed_components_creates_components(self, rag_agent, mock_pubmed_scraper, mock_query_engine):
         """Test that PubMed components are created when needed."""
         # Mock the component creation
-        with patch('src.enhanced_pubmed_scraper.EnhancedPubMedScraper', return_value=mock_pubmed_scraper), \
-             patch('src.query_engine.EnhancedQueryEngine', return_value=mock_query_engine):
-
+        with patch("src.enhanced_pubmed_scraper.EnhancedPubMedScraper", return_value=mock_pubmed_scraper), patch(
+            "src.query_engine.EnhancedQueryEngine", return_value=mock_query_engine
+        ):
             rag_agent._ensure_pubmed_components()
 
             assert rag_agent._pubmed_scraper == mock_pubmed_scraper
@@ -242,11 +233,7 @@ class TestEnhancedRAGAgentPubMedIntegration:
         rag_agent._pubmed_query_engine = mock_query_engine
 
         # Mock cache status
-        mock_pubmed_scraper.get_cache_status.return_value = {
-            "hit_rate": 0.8,
-            "size_mb": 10.5,
-            "total_entries": 100
-        }
+        mock_pubmed_scraper.get_cache_status.return_value = {"hit_rate": 0.8, "size_mb": 10.5, "total_entries": 100}
 
         response = rag_agent.ask_question_pubmed_only("test query")
 
@@ -262,7 +249,7 @@ class TestEnhancedRAGAgentPubMedIntegration:
         mock_pubmed_scraper.get_rate_limit_status.return_value = {
             "requests_remaining": 5,
             "reset_time": "2023-01-01T12:00:00Z",
-            "wait_time_seconds": 10
+            "wait_time_seconds": 10,
         }
 
         response = rag_agent.ask_question_pubmed_only("test query")
@@ -276,15 +263,10 @@ class TestBuildEnhancedRAGAgent:
 
     def test_build_enhanced_rag_agent_with_pubmed(self, temp_docs_folder, mock_config):
         """Test building enhanced RAG agent with PubMed integration."""
-        with patch('src.enhanced_rag_agent.EnhancedRAGAgent') as mock_agent_class, \
-             patch('src.enhanced_pubmed_scraper.EnhancedPubMedScraper') as mock_scraper_class, \
-             patch('src.query_engine.EnhancedQueryEngine') as mock_engine_class:
-
-            agent = build_enhanced_rag_agent(
-                docs_folder=temp_docs_folder,
-                api_key="test_key",
-                config=mock_config
-            )
+        with patch("src.enhanced_rag_agent.EnhancedRAGAgent") as mock_agent_class, patch(
+            "src.enhanced_pubmed_scraper.EnhancedPubMedScraper"
+        ) as mock_scraper_class, patch("src.query_engine.EnhancedQueryEngine") as mock_engine_class:
+            agent = build_enhanced_rag_agent(docs_folder=temp_docs_folder, api_key="test_key", config=mock_config)
 
             # Should create PubMed components
             mock_scraper_class.assert_called_once()
@@ -293,21 +275,15 @@ class TestBuildEnhancedRAGAgent:
 
     def test_build_integrated_system(self, temp_docs_folder, mock_config):
         """Test building complete integrated system."""
-        with patch('src.pharmaceutical_query_adapter.build_enhanced_rag_agent') as mock_build:
+        with patch("src.pharmaceutical_query_adapter.build_enhanced_rag_agent") as mock_build:
             mock_agent = Mock()
             mock_agent._pubmed_scraper = Mock()
             mock_agent._pubmed_query_engine = Mock()
             mock_agent._pubmed_available.return_value = True
-            mock_agent.component_health = {
-                "pubmed_integration": {"status": "ready"}
-            }
+            mock_agent.component_health = {"pubmed_integration": {"status": "ready"}}
             mock_build.return_value = mock_agent
 
-            system = build_integrated_system(
-                docs_folder=temp_docs_folder,
-                api_key="test_key",
-                config=mock_config
-            )
+            system = build_integrated_system(docs_folder=temp_docs_folder, api_key="test_key", config=mock_config)
 
             assert "rag_agent" in system
             assert "config" in system
@@ -316,7 +292,7 @@ class TestBuildEnhancedRAGAgent:
 
     def test_check_system_health(self, temp_docs_folder):
         """Test system health checking."""
-        with patch('src.pharmaceutical_query_adapter.EnhancedRAGConfig') as mock_config_class:
+        with patch("src.pharmaceutical_query_adapter.EnhancedRAGConfig") as mock_config_class:
             mock_config = Mock()
             mock_config.should_enable_pubmed.return_value = True
             mock_config_class.from_env.return_value = mock_config
@@ -329,19 +305,16 @@ class TestBuildEnhancedRAGAgent:
                 "pubmed_integration": {"status": "ready"},
                 "medical_guardrails": {"status": "ready"},
                 "synthesis_engine": {"status": "ready"},
-                "ddi_pk_processor": {"status": "ready"}
+                "ddi_pk_processor": {"status": "ready"},
             }
 
             mock_scraper = Mock()
             mock_scraper.combined_status_report.return_value = {
                 "cache": {"status": "ready"},
-                "rate_limit": {"status": "ready"}
+                "rate_limit": {"status": "ready"},
             }
 
-            report = check_system_health(
-                rag_agent=mock_agent,
-                pubmed_scraper=mock_scraper
-            )
+            report = check_system_health(rag_agent=mock_agent, pubmed_scraper=mock_scraper)
 
             assert isinstance(report, SystemHealthReport)
             assert report.rag_agent_ready == True
@@ -353,12 +326,8 @@ class TestBuildEnhancedRAGAgent:
         config = Mock(spec=EnhancedRAGConfig)
         config.should_enable_pubmed.return_value = False
 
-        with patch('src.enhanced_rag_agent.EnhancedRAGAgent') as mock_agent_class:
-            agent = build_enhanced_rag_agent(
-                docs_folder=temp_docs_folder,
-                api_key="test_key",
-                config=config
-            )
+        with patch("src.enhanced_rag_agent.EnhancedRAGAgent") as mock_agent_class:
+            agent = build_enhanced_rag_agent(docs_folder=temp_docs_folder, api_key="test_key", config=config)
 
             # Should not create PubMed components
             mock_agent_class.assert_called_once()
@@ -373,20 +342,16 @@ class TestBuildEnhancedRAGAgent:
         config.should_enable_pubmed.return_value = True
         config.enable_rate_limiting = False
 
-        with patch('src.enhanced_rag_agent.EnhancedRAGAgent') as mock_agent_class, \
-             patch('src.enhanced_pubmed_scraper.EnhancedPubMedScraper') as mock_scraper_class:
-
-            agent = build_enhanced_rag_agent(
-                docs_folder=temp_docs_folder,
-                api_key="test_key",
-                config=config
-            )
+        with patch("src.enhanced_rag_agent.EnhancedRAGAgent") as mock_agent_class, patch(
+            "src.enhanced_pubmed_scraper.EnhancedPubMedScraper"
+        ) as mock_scraper_class:
+            agent = build_enhanced_rag_agent(docs_folder=temp_docs_folder, api_key="test_key", config=config)
 
             # Should pass configuration to scraper
             mock_scraper_class.assert_called_once_with(
                 enable_rate_limiting=False,
                 enable_advanced_caching=config.enable_advanced_caching,
-                use_normalized_cache_keys=config.use_normalized_cache_keys
+                use_normalized_cache_keys=config.use_normalized_cache_keys,
             )
 
 

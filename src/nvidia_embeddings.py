@@ -13,17 +13,19 @@ for the following reasons:
 While langchain_nvidia_ai_endpoints is available in requirements.txt, the direct approach
 provides better control over the embedding lifecycle and error scenarios.
 """
-
-import os
 import json
 import logging
+import os
 import re
-import requests
 import time
+from typing import Dict
+from typing import List
+from typing import Optional
+
+import requests
+from langchain_core.embeddings import Embeddings
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from typing import List, Optional, Dict, Any
-from langchain_core.embeddings import Embeddings
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -43,44 +45,45 @@ def _env_true(name: str, default: bool = True) -> bool:
 
     return default
 
+
 class NVIDIAEmbeddings(Embeddings):
     """NVIDIA LLaMA 3.2 NemoRetriever embedding model integration"""
 
     # Known model name aliases to canonical names
     MODEL_ALIASES = {
-        'nvidia/llama-3_2-nemoretriever-1b-vlm-embed-v1': 'nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1',
-        'nvidia/llama-3-2-nemoretriever-1b-vlm-embed-v1': 'nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1',
-        'nvidia/llama3.2-nemoretriever-1b-vlm-embed-v1': 'nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1',
-        'llama-3_2-nemoretriever-1b-vlm-embed-v1': 'nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1',
-        'llama-3-2-nemoretriever-1b-vlm-embed-v1': 'nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1',
+        "nvidia/llama-3_2-nemoretriever-1b-vlm-embed-v1": "nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1",
+        "nvidia/llama-3-2-nemoretriever-1b-vlm-embed-v1": "nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1",
+        "nvidia/llama3.2-nemoretriever-1b-vlm-embed-v1": "nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1",
+        "llama-3_2-nemoretriever-1b-vlm-embed-v1": "nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1",
+        "llama-3-2-nemoretriever-1b-vlm-embed-v1": "nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1",
         # Add more aliases here as needed
     }
 
     # Model capabilities based on model family patterns
     MODEL_CAPABILITIES = {
         # NemoRetriever models support input_type and don't need encoding_format
-        'nemoretriever': {
-            'supports_input_type': True,
-            'supports_encoding_format': False,
-            'supports_truncate': True,
-            'default_truncate': 'END'
+        "nemoretriever": {
+            "supports_input_type": True,
+            "supports_encoding_format": False,
+            "supports_truncate": True,
+            "default_truncate": "END",
         },
         # NV-Embed models support encoding_format but not input_type
-        'nv-embed': {
-            'supports_input_type': False,
-            'supports_encoding_format': True,
-            'supports_truncate': False,
-            'default_encoding_format': 'float'
+        "nv-embed": {
+            "supports_input_type": False,
+            "supports_encoding_format": True,
+            "supports_truncate": False,
+            "default_encoding_format": "float",
         },
         # Default capabilities for unknown models
-        'default': {
-            'supports_input_type': False,
-            'supports_encoding_format': True,
-            'supports_truncate': False,
-            'default_encoding_format': 'float'
-        }
+        "default": {
+            "supports_input_type": False,
+            "supports_encoding_format": True,
+            "supports_truncate": False,
+            "default_encoding_format": "float",
+        },
     }
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -90,7 +93,7 @@ class NVIDIAEmbeddings(Embeddings):
         retry_delay: float = 1.0,
         batch_size: int = 10,
         probe_on_init: Optional[bool] = None,
-        fallback_model_name: Optional[str] = None
+        fallback_model_name: Optional[str] = None,
     ):
         """
         Initialize NVIDIA embeddings
@@ -112,7 +115,11 @@ class NVIDIAEmbeddings(Embeddings):
             raise ValueError("NVIDIA API key is required. Set NVIDIA_API_KEY environment variable.")
 
         # Set preferred model from parameter, environment, or default
-        provided_model_name = embedding_model_name or os.getenv("EMBEDDING_MODEL_NAME") or "nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1"
+        provided_model_name = (
+            embedding_model_name
+            or os.getenv("EMBEDDING_MODEL_NAME")
+            or "nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1"
+        )
         self.model_name = self._normalize_model_name(provided_model_name)
         fallback_model_name = fallback_model_name or os.getenv("EMBEDDING_FALLBACK_MODEL", "nvidia/nv-embed-v1")
         self._fallback_model = self._normalize_model_name(fallback_model_name)
@@ -186,7 +193,7 @@ class NVIDIAEmbeddings(Embeddings):
             total=self.max_retries,
             backoff_factor=1,
             status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["POST"]
+            allowed_methods=["POST"],
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self._session.mount("http://", adapter)
@@ -212,21 +219,21 @@ class NVIDIAEmbeddings(Embeddings):
             bool: True if this is a NVIDIA embedding model
         """
         # Must start with 'nvidia/' or be a known alias
-        if model_name.startswith('nvidia/'):
+        if model_name.startswith("nvidia/"):
             return True
 
         # Check if it's a known alias that maps to a NVIDIA model
         if model_name in self.MODEL_ALIASES:
             canonical_name = self.MODEL_ALIASES[model_name]
-            if canonical_name.startswith('nvidia/'):
+            if canonical_name.startswith("nvidia/"):
                 return True
 
         # Check for NVIDIA embedding model patterns
-        embedding_indicators = ['nemoretriever', 'nv-embed', 'embed-v1']
+        embedding_indicators = ["nemoretriever", "nv-embed", "embed-v1"]
         has_embedding_indicator = any(indicator in model_name.lower() for indicator in embedding_indicators)
 
         # Additional check: must be from a known NVIDIA embedding family
-        nvidia_families = ['llama', 'nemoretriever', 'nv-embed']
+        nvidia_families = ["llama", "nemoretriever", "nv-embed"]
         has_nvidia_family = any(family in model_name.lower() for family in nvidia_families)
 
         return has_embedding_indicator and has_nvidia_family
@@ -255,14 +262,14 @@ class NVIDIAEmbeddings(Embeddings):
 
         # Only apply normalization to recognized LLaMA model name patterns
         # Pattern: "llama-X_Y" where X and Y are digits
-        if re.match(r'.*llama-\d+_\d+.*', model_name, re.IGNORECASE):
+        if re.match(r".*llama-\d+_\d+.*", model_name, re.IGNORECASE):
             # Convert underscore to dot in version numbers for LLaMA models
             # e.g., "llama-3_2" -> "llama-3.2"
-            normalized = re.sub(r'(llama-\d+)_(\d+)', r'\1.\2', model_name, flags=re.IGNORECASE)
+            normalized = re.sub(r"(llama-\d+)_(\d+)", r"\1.\2", model_name, flags=re.IGNORECASE)
             return normalized
 
         # Handle compact variants such as "llama3.2" or "llama32"
-        compact_pattern = re.compile(r'(llama)[\-_]?(\d)(?:[\.\-_]?(\d))?', re.IGNORECASE)
+        compact_pattern = re.compile(r"(llama)[\-_]?(\d)(?:[\.\-_]?(\d))?", re.IGNORECASE)
         match = compact_pattern.search(model_name)
         if match:
             prefix, major, minor = match.groups()
@@ -289,12 +296,12 @@ class NVIDIAEmbeddings(Embeddings):
         """
         model_name_lower = model_name.lower()
 
-        if 'nemoretriever' in model_name_lower:
-            return 'nemoretriever'
-        elif 'nv-embed' in model_name_lower:
-            return 'nv-embed'
+        if "nemoretriever" in model_name_lower:
+            return "nemoretriever"
+        elif "nv-embed" in model_name_lower:
+            return "nv-embed"
         else:
-            return 'default'
+            return "default"
 
     def _get_model_capabilities(self, model_family: str) -> Dict:
         """
@@ -306,7 +313,7 @@ class NVIDIAEmbeddings(Embeddings):
         Returns:
             Dictionary of model capabilities
         """
-        return self.MODEL_CAPABILITIES.get(model_family, self.MODEL_CAPABILITIES['default'])
+        return self.MODEL_CAPABILITIES.get(model_family, self.MODEL_CAPABILITIES["default"])
 
     def _parse_embeddings_response(self, json_result: Dict) -> List[List[float]]:
         """
@@ -415,11 +422,7 @@ class NVIDIAEmbeddings(Embeddings):
                 url = f"{self.base_url}/embeddings"
                 payload = self._build_probe_payload(self.model_name)
 
-                response = self._session.post(
-                    url,
-                    json=payload,
-                    timeout=self.probe_timeout
-                )
+                response = self._session.post(url, json=payload, timeout=self.probe_timeout)
 
                 if response.status_code == 200:
                     logger.info(f"Successfully using preferred model: {preferred}")
@@ -427,9 +430,11 @@ class NVIDIAEmbeddings(Embeddings):
                     return
                 elif response.status_code in (401, 403):  # Authentication/Authorization errors
                     logger.error(f"Authentication error during probe (status {response.status_code}): {response.text}")
-                    raise Exception(f"Authentication failed with status {response.status_code}. Check your NVIDIA API key.")
+                    raise Exception(
+                        f"Authentication failed with status {response.status_code}. Check your NVIDIA API key."
+                    )
                 elif response.status_code == 429:  # Rate limit
-                    wait_time = self.retry_delay * (2 ** attempt)
+                    wait_time = self.retry_delay * (2**attempt)
                     logger.warning(f"Rate limited during probe. Waiting {wait_time} seconds...")
                     time.sleep(wait_time)
                     continue
@@ -447,9 +452,7 @@ class NVIDIAEmbeddings(Embeddings):
                         logger.info(f"Probe-based permanent fallback to default model: {self.model_name}")
                         return
 
-                    logger.warning(
-                        f"Model probe received {response.status_code} with non-fallback error."
-                    )
+                    logger.warning(f"Model probe received {response.status_code} with non-fallback error.")
                     if attempt < self.max_retries - 1:
                         time.sleep(self.retry_delay)
                         continue
@@ -473,15 +476,13 @@ class NVIDIAEmbeddings(Embeddings):
                     break
 
         # If we reach here, all preferred-model probes hit transient errors; attempt a final soft probe with fallback
-        logger.warning(f"Model probe failed after {self.max_retries} attempts with transient errors. Keeping model: {preferred}")
+        logger.warning(
+            f"Model probe failed after {self.max_retries} attempts with transient errors. Keeping model: {preferred}"
+        )
         try:
             url = f"{self.base_url}/embeddings"
             payload = self._build_probe_payload(fallback)
-            response = self._session.post(
-                url,
-                json=payload,
-                timeout=self.probe_timeout
-            )
+            response = self._session.post(url, json=payload, timeout=self.probe_timeout)
             if response.status_code == 200:
                 logger.info(
                     "Fallback model '%s' responded successfully during soft probe. Will continue with preferred model but fallback is warm.",
@@ -512,26 +513,21 @@ class NVIDIAEmbeddings(Embeddings):
         url = f"{self.base_url}/embeddings"
 
         # Build payload based on model capabilities
-        payload = {
-            "input": texts,
-            "model": self.model_name
-        }
+        payload = {"input": texts, "model": self.model_name}
 
         # Add encoding_format if supported by model
-        if self.model_capabilities['supports_encoding_format']:
-            payload["encoding_format"] = self.model_capabilities.get('default_encoding_format', 'float')
+        if self.model_capabilities["supports_encoding_format"]:
+            payload["encoding_format"] = self.model_capabilities.get("default_encoding_format", "float")
             logger.debug(f"Using encoding_format='{payload['encoding_format']}' for {self.model_family}")
 
         # Add input_type if supported by model and enabled
-        if (self.model_capabilities['supports_input_type'] and
-            self.input_type_enabled and
-            input_type):
+        if self.model_capabilities["supports_input_type"] and self.input_type_enabled and input_type:
             payload["input_type"] = input_type
             logger.debug(f"Using input_type='{input_type}' for {self.model_family}")
 
         # Add truncate if supported by model
-        if self.model_capabilities['supports_truncate']:
-            payload["truncate"] = self.model_capabilities.get('default_truncate', 'END')
+        if self.model_capabilities["supports_truncate"]:
+            payload["truncate"] = self.model_capabilities.get("default_truncate", "END")
             logger.debug(f"Using truncate='{payload['truncate']}' for {self.model_family}")
 
         logger.debug(f"Built payload for {self.model_family} model: {list(payload.keys())}")
@@ -540,13 +536,11 @@ class NVIDIAEmbeddings(Embeddings):
 
         for attempt in range(self.max_retries):
             try:
-                logger.debug(f"Making embedding request with model '{self.model_name}' (attempt {attempt + 1}/{self.max_retries})")
-
-                response = self._session.post(
-                    url,
-                    json=payload,
-                    timeout=self.request_timeout
+                logger.debug(
+                    f"Making embedding request with model '{self.model_name}' (attempt {attempt + 1}/{self.max_retries})"
                 )
+
+                response = self._session.post(url, json=payload, timeout=self.request_timeout)
 
                 if response.status_code == 200:
                     result = response.json()
@@ -556,9 +550,11 @@ class NVIDIAEmbeddings(Embeddings):
 
                 elif response.status_code in (401, 403):  # Authentication/Authorization errors
                     logger.error(f"Authentication error (status {response.status_code}): {response.text}")
-                    raise Exception(f"Authentication failed with status {response.status_code}. Check your NVIDIA API key.")
+                    raise Exception(
+                        f"Authentication failed with status {response.status_code}. Check your NVIDIA API key."
+                    )
                 elif response.status_code == 429:  # Rate limit
-                    wait_time = self.retry_delay * (2 ** attempt)
+                    wait_time = self.retry_delay * (2**attempt)
                     logger.warning(f"Rate limited. Waiting {wait_time} seconds...")
                     time.sleep(wait_time)
                     continue
@@ -587,28 +583,25 @@ class NVIDIAEmbeddings(Embeddings):
                                 payload["model"] = self.model_name
 
                                 # Rebuild payload with new model capabilities
-                                payload = {
-                                    "input": texts,
-                                    "model": self.model_name
-                                }
+                                payload = {"input": texts, "model": self.model_name}
 
                                 # Add encoding_format if supported by fallback model
-                                if self.model_capabilities['supports_encoding_format']:
-                                    payload["encoding_format"] = self.model_capabilities.get('default_encoding_format', 'float')
+                                if self.model_capabilities["supports_encoding_format"]:
+                                    payload["encoding_format"] = self.model_capabilities.get(
+                                        "default_encoding_format", "float"
+                                    )
 
                                 # Add truncate if supported by fallback model
-                                if self.model_capabilities['supports_truncate']:
-                                    payload["truncate"] = self.model_capabilities.get('default_truncate', 'END')
+                                if self.model_capabilities["supports_truncate"]:
+                                    payload["truncate"] = self.model_capabilities.get("default_truncate", "END")
 
-                                logger.debug(f"Rebuilt payload for fallback model '{self.model_family}': {list(payload.keys())}")
+                                logger.debug(
+                                    f"Rebuilt payload for fallback model '{self.model_family}': {list(payload.keys())}"
+                                )
 
                                 logger.info(f"Retrying request with fallback model: {self.model_name}")
 
-                                fallback_response = self._session.post(
-                                    url,
-                                    json=payload,
-                                    timeout=self.request_timeout
-                                )
+                                fallback_response = self._session.post(url, json=payload, timeout=self.request_timeout)
 
                                 if fallback_response.status_code == 200:
                                     result = fallback_response.json()
@@ -706,28 +699,25 @@ class NVIDIAEmbeddings(Embeddings):
         Returns:
             dict: Capability-aware probe payload
         """
-        payload = {
-            "input": ["probe"],
-            "model": model_name
-        }
+        payload = {"input": ["probe"], "model": model_name}
 
         # Get model family for the model being probed
         model_family = self._detect_model_family(model_name)
-        capabilities = self.MODEL_CAPABILITIES.get(model_family, self.MODEL_CAPABILITIES['default'])
+        capabilities = self.MODEL_CAPABILITIES.get(model_family, self.MODEL_CAPABILITIES["default"])
 
         # Add encoding_format if supported by model
-        if capabilities['supports_encoding_format']:
-            payload["encoding_format"] = capabilities.get('default_encoding_format', 'float')
+        if capabilities["supports_encoding_format"]:
+            payload["encoding_format"] = capabilities.get("default_encoding_format", "float")
             logger.debug(f"Using encoding_format='{payload['encoding_format']}' for {model_family} probe")
 
         # Add input_type if supported by model (use 'query' as default for probes)
-        if capabilities['supports_input_type']:
+        if capabilities["supports_input_type"]:
             payload["input_type"] = "query"
             logger.debug(f"Using input_type='query' for {model_family} probe")
 
         # Add truncate if supported by model
-        if capabilities['supports_truncate']:
-            payload["truncate"] = capabilities.get('default_truncate', 'END')
+        if capabilities["supports_truncate"]:
+            payload["truncate"] = capabilities.get("default_truncate", "END")
             logger.debug(f"Using truncate='{payload['truncate']}' for {model_family} probe")
 
         logger.debug(f"Built probe payload for {model_family}: {list(payload.keys())}")
@@ -736,44 +726,46 @@ class NVIDIAEmbeddings(Embeddings):
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """
         Embed a list of documents
-        
+
         Args:
             texts: List of document texts to embed
-            
+
         Returns:
             List of embedding vectors
         """
         if not texts:
             return []
-        
+
         logger.info(f"Embedding {len(texts)} documents")
-        
+
         # Process in batches to avoid API limits
         all_embeddings = []
 
         for i in range(0, len(texts), self.batch_size):
-            batch = texts[i:i + self.batch_size]
-            logger.debug(f"Processing batch {i//self.batch_size + 1}/{(len(texts) + self.batch_size - 1)//self.batch_size}")
-            
+            batch = texts[i : i + self.batch_size]
+            logger.debug(
+                f"Processing batch {i//self.batch_size + 1}/{(len(texts) + self.batch_size - 1)//self.batch_size}"
+            )
+
             # Use "passage" as input_type for documents when enabled
             input_type = "passage" if self.input_type_enabled else None
             batch_embeddings = self._make_request(batch, input_type=input_type)
             all_embeddings.extend(batch_embeddings)
-            
+
             # Small delay between batches to be respectful to the API
             if i + self.batch_size < len(texts):
                 time.sleep(0.1)
-        
+
         logger.info(f"Successfully embedded {len(all_embeddings)} documents")
         return all_embeddings
-    
+
     def embed_query(self, text: str) -> List[float]:
         """
         Embed a single query text
-        
+
         Args:
             text: Query text to embed
-            
+
         Returns:
             Embedding vector
         """
@@ -784,11 +776,11 @@ class NVIDIAEmbeddings(Embeddings):
         if not embeddings:
             raise Exception("Empty embedding response for query")
         return embeddings[0]
-    
+
     def test_connection(self) -> bool:
         """
         Test the connection to NVIDIA API
-        
+
         Returns:
             True if connection is successful, False otherwise
         """
@@ -800,7 +792,7 @@ class NVIDIAEmbeddings(Embeddings):
         except Exception as e:
             logger.error(f"Connection test failed: {str(e)}")
             return False
-    
+
     def get_embedding_dimension(self) -> Optional[int]:
         """
         Get the dimension of embeddings from this model
@@ -828,6 +820,7 @@ class NVIDIAEmbeddings(Embeddings):
 def main():
     """Test the NVIDIA embeddings"""
     from dotenv import load_dotenv
+
     load_dotenv()
 
     # Unit-like assertions to demonstrate non-embed names are not altered
@@ -839,7 +832,7 @@ def main():
         "meta/llama-3.1-8b-instruct",
         "meta/llama-3_1-8b-instruct",
         "microsoft/DialoGPT-medium",
-        "gpt-3.5-turbo"
+        "gpt-3.5-turbo",
     ]
 
     for name in non_embed_names:
@@ -855,12 +848,14 @@ def main():
         ("llama-3_2-nemoretriever-1b-vlm-embed-v1", "nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1"),
         ("llama-3-2-nemoretriever-1b-vlm-embed-v1", "nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1"),
         ("nvidia/nv-embed-v1", "nvidia/nv-embed-v1"),  # Should remain unchanged
-        ("nvidia/llama3.2-embed", "nvidia/llama-3.2-embed")  # Should be normalized (has nvidia prefix)
+        ("nvidia/llama3.2-embed", "nvidia/llama-3.2-embed"),  # Should be normalized (has nvidia prefix)
     ]
 
     for original, expected in embed_names_tests:
         normalized = test_embeddings._normalize_model_name(original)
-        assert normalized == expected, f"Embed model name '{original}' normalized to '{normalized}', expected '{expected}'"
+        assert (
+            normalized == expected
+        ), f"Embed model name '{original}' normalized to '{normalized}', expected '{expected}'"
         print(f"✅ Embed name normalized correctly: '{original}' -> '{normalized}'")
 
     # Additional edge case tests to verify tight normalization
@@ -893,7 +888,7 @@ def main():
         # Test embedding
         test_texts = [
             "This is a test document about artificial intelligence.",
-            "Machine learning is a subset of AI that focuses on algorithms."
+            "Machine learning is a subset of AI that focuses on algorithms.",
         ]
 
         print(f"\nTesting embedding of {len(test_texts)} documents...")

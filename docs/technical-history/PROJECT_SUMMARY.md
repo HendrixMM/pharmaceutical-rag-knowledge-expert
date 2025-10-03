@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # 🎉 RAG Template Successfully Uploaded to GitHub!
 
 ## 📍 **Repository Information**
@@ -169,4 +175,10 @@ The template is designed to be easily extensible:
 
 **🏛️ Your RAG Template for NVIDIA NemoRetriever is now live on GitHub and ready for the community to use! 🚀**
 
-**Repository**: https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever
+## **Repository**: https://github.com/zainulabedeen123/RAG-Template-for-NVIDIA-nemoretriever
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

@@ -6,8 +6,10 @@ This directory contains versioned benchmark datasets for evaluating pharmaceutic
 
 ## Dataset Categories
 
-### 1. Drug Interactions (drug_interactions_v*.json)
+### 1. Drug Interactions (drug_interactions_v\*.json)
+
 Tests the system's ability to identify and explain drug-drug interactions, including:
+
 - Mechanism-based interactions
 - Pharmacokinetic interactions
 - Pharmacodynamic interactions
@@ -17,8 +19,10 @@ Tests the system's ability to identify and explain drug-drug interactions, inclu
 **Query Types:** Comparison, retrieval, reasoning
 **Expected Response:** Detailed interaction mechanisms, clinical implications, monitoring requirements
 
-### 2. Pharmacokinetics (pharmacokinetics_v*.json)
+### 2. Pharmacokinetics (pharmacokinetics_v\*.json)
+
 Evaluates understanding of ADME (Absorption, Distribution, Metabolism, Excretion) properties:
+
 - Absorption characteristics and bioavailability
 - Distribution volumes and protein binding
 - Metabolic pathways (CYP450 enzymes)
@@ -28,8 +32,10 @@ Evaluates understanding of ADME (Absorption, Distribution, Metabolism, Excretion
 **Query Types:** Scientific, retrieval
 **Expected Response:** Quantitative pharmacokinetic parameters, pathway details
 
-### 3. Clinical Terminology (clinical_terminology_v*.json)
+### 3. Clinical Terminology (clinical_terminology_v\*.json)
+
 Tests medical and pharmaceutical terminology comprehension:
+
 - Drug classification systems (ATC, therapeutic classes)
 - Medical terminology and abbreviations
 - Dosage forms and routes of administration
@@ -39,8 +45,10 @@ Tests medical and pharmaceutical terminology comprehension:
 **Query Types:** Definition, classification
 **Expected Response:** Accurate terminology definitions, proper classifications
 
-### 4. Mechanism of Action (mechanism_of_action_v*.json)
+### 4. Mechanism of Action (mechanism_of_action_v\*.json)
+
 Assesses understanding of drug mechanisms and molecular targets:
+
 - Receptor interactions and signaling pathways
 - Enzyme inhibition/activation
 - Ion channel modulation
@@ -50,8 +58,10 @@ Assesses understanding of drug mechanisms and molecular targets:
 **Query Types:** Scientific, reasoning
 **Expected Response:** Detailed molecular mechanisms, pathway diagrams (when applicable)
 
-### 5. Adverse Reactions (adverse_reactions_v*.json)
+### 5. Adverse Reactions (adverse_reactions_v\*.json)
+
 Evaluates knowledge of drug safety profiles:
+
 - Common and serious adverse effects
 - Black box warnings
 - Frequency and severity of reactions
@@ -102,6 +112,7 @@ Versions are immutable once created. New queries are added in new versions to en
 ## Data Sources
 
 Benchmark queries are derived from:
+
 - FDA-approved drug labels and package inserts
 - Clinical pharmacology textbooks
 - Peer-reviewed pharmaceutical literature
@@ -109,6 +120,7 @@ Benchmark queries are derived from:
 - Drug databases (DrugBank, PubChem, RxNorm)
 
 Drug names sourced from:
+
 - `Data/drugs_brand.txt` (345 brand names)
 - `Data/drugs_generic.txt` (344 generic names)
 
@@ -146,6 +158,7 @@ python scripts/generate_pharmaceutical_benchmarks.py --version 2
 ## Quality Assurance
 
 All benchmark queries undergo:
+
 1. **Clinical Validation**: Review by pharmaceutical domain experts
 2. **Technical Validation**: Ensure expected_content is achievable
 3. **Diversity Check**: Balanced coverage across drug classes
@@ -154,6 +167,7 @@ All benchmark queries undergo:
 ## Evaluation Metrics
 
 Benchmarks track:
+
 - **Accuracy**: Correctness of information (0-1 scale)
 - **Completeness**: Coverage of expected_content (0-1 scale)
 - **Relevance**: Alignment with query intent (0-1 scale)
@@ -163,6 +177,7 @@ Benchmarks track:
 ### Regression Detection
 
 Regression is flagged when:
+
 - Accuracy drops > 5% from previous version
 - Cost per query increases > 20% without quality improvement
 - Response time increases > 50% from baseline
@@ -170,6 +185,7 @@ Regression is flagged when:
 ## Integration
 
 Benchmarks integrate with:
+
 - **PharmaceuticalCostAnalyzer**: Track credits usage per query type
 - **EnhancedNeMoClient**: Execute queries against NeMo models
 - **Monitoring Dashboard**: Real-time performance visualization
@@ -184,6 +200,7 @@ Benchmarks integrate with:
 ## Contributing
 
 When adding new benchmark queries:
+
 1. Follow the JSON schema strictly
 2. Ensure clinical accuracy
 3. Include diverse drug examples

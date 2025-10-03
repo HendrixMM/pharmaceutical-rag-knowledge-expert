@@ -16,28 +16,29 @@ Features:
 Integrates with the NVIDIA Build cloud-first architecture to ensure optimal
 pharmaceutical research performance and accuracy.
 """
-
-import re
 import logging
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, field
+import re
+from dataclasses import dataclass
 from enum import Enum
-import json
-from datetime import datetime
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 try:
-    from .query_classifier import PharmaceuticalDomain, PharmaceuticalContext
-    from ..clients.openai_wrapper import OpenAIWrapper
     from ..enhanced_config import EnhancedRAGConfig
+    from .query_classifier import PharmaceuticalContext, PharmaceuticalDomain
 except ImportError:
-    from src.pharmaceutical.query_classifier import PharmaceuticalDomain, PharmaceuticalContext
-    from src.clients.openai_wrapper import OpenAIWrapper
     from src.enhanced_config import EnhancedRAGConfig
+    from src.pharmaceutical.query_classifier import PharmaceuticalContext, PharmaceuticalDomain
 
 logger = logging.getLogger(__name__)
 
+
 class PharmaceuticalModelType(Enum):
     """Types of pharmaceutical model optimization."""
+
     DRUG_SAFETY = "drug_safety"
     CLINICAL_RESEARCH = "clinical_research"
     REGULATORY_COMPLIANCE = "regulatory_compliance"
@@ -45,9 +46,11 @@ class PharmaceuticalModelType(Enum):
     DRUG_INTERACTIONS = "drug_interactions"
     GENERAL_MEDICAL = "general_medical"
 
+
 @dataclass
 class PharmaceuticalPromptTemplate:
     """Template for pharmaceutical domain-specific prompts."""
+
     template_name: str
     domain: PharmaceuticalDomain
     system_prompt: str
@@ -57,6 +60,7 @@ class PharmaceuticalPromptTemplate:
     medical_disclaimers: List[str]
     context_requirements: List[str]
 
+
 class PharmaceuticalModelOptimizer:
     """
     Advanced model optimizer for pharmaceutical research applications.
@@ -65,8 +69,7 @@ class PharmaceuticalModelOptimizer:
     and safety-critical response formatting for pharmaceutical research.
     """
 
-    def __init__(self,
-                 config: Optional[EnhancedRAGConfig] = None):
+    def __init__(self, config: Optional[EnhancedRAGConfig] = None):
         """
         Initialize pharmaceutical model optimizer.
 
@@ -93,66 +96,127 @@ class PharmaceuticalModelOptimizer:
         """Load pharmaceutical terminology for model optimization."""
         return {
             "drug_classes": [
-                "ace_inhibitors", "arbs", "beta_blockers", "calcium_channel_blockers",
-                "diuretics", "statins", "nsaids", "antibiotics", "antifungals",
-                "antivirals", "anticoagulants", "antiplatelets", "opioids",
-                "benzodiazepines", "antidepressants", "antipsychotics"
+                "ace_inhibitors",
+                "arbs",
+                "beta_blockers",
+                "calcium_channel_blockers",
+                "diuretics",
+                "statins",
+                "nsaids",
+                "antibiotics",
+                "antifungals",
+                "antivirals",
+                "anticoagulants",
+                "antiplatelets",
+                "opioids",
+                "benzodiazepines",
+                "antidepressants",
+                "antipsychotics",
             ],
             "therapeutic_areas": [
-                "cardiology", "oncology", "neurology", "psychiatry", "endocrinology",
-                "gastroenterology", "pulmonology", "nephrology", "infectious_disease",
-                "dermatology", "rheumatology", "hematology"
+                "cardiology",
+                "oncology",
+                "neurology",
+                "psychiatry",
+                "endocrinology",
+                "gastroenterology",
+                "pulmonology",
+                "nephrology",
+                "infectious_disease",
+                "dermatology",
+                "rheumatology",
+                "hematology",
             ],
             "administration_routes": [
-                "oral", "intravenous", "intramuscular", "subcutaneous", "topical",
-                "inhalation", "rectal", "transdermal", "sublingual", "buccal"
+                "oral",
+                "intravenous",
+                "intramuscular",
+                "subcutaneous",
+                "topical",
+                "inhalation",
+                "rectal",
+                "transdermal",
+                "sublingual",
+                "buccal",
             ],
             "dosage_forms": [
-                "tablet", "capsule", "injection", "solution", "suspension",
-                "cream", "ointment", "patch", "inhaler", "suppository"
-            ]
+                "tablet",
+                "capsule",
+                "injection",
+                "solution",
+                "suspension",
+                "cream",
+                "ointment",
+                "patch",
+                "inhaler",
+                "suppository",
+            ],
         }
 
     def _load_clinical_terminology(self) -> Dict[str, List[str]]:
         """Load clinical research terminology."""
         return {
-            "clinical_phases": [
-                "phase_i", "phase_ii", "phase_iii", "phase_iv",
-                "preclinical", "post_marketing"
-            ],
+            "clinical_phases": ["phase_i", "phase_ii", "phase_iii", "phase_iv", "preclinical", "post_marketing"],
             "study_designs": [
-                "randomized_controlled_trial", "double_blind", "placebo_controlled",
-                "crossover", "cohort_study", "case_control", "meta_analysis"
+                "randomized_controlled_trial",
+                "double_blind",
+                "placebo_controlled",
+                "crossover",
+                "cohort_study",
+                "case_control",
+                "meta_analysis",
             ],
             "endpoints": [
-                "primary_endpoint", "secondary_endpoint", "surrogate_endpoint",
-                "composite_endpoint", "safety_endpoint", "efficacy_endpoint"
+                "primary_endpoint",
+                "secondary_endpoint",
+                "surrogate_endpoint",
+                "composite_endpoint",
+                "safety_endpoint",
+                "efficacy_endpoint",
             ],
             "safety_measures": [
-                "adverse_event", "serious_adverse_event", "adverse_drug_reaction",
-                "contraindication", "warning", "precaution", "black_box_warning"
-            ]
+                "adverse_event",
+                "serious_adverse_event",
+                "adverse_drug_reaction",
+                "contraindication",
+                "warning",
+                "precaution",
+                "black_box_warning",
+            ],
         }
 
     def _load_regulatory_terminology(self) -> Dict[str, List[str]]:
         """Load regulatory compliance terminology."""
         return {
-            "agencies": [
-                "fda", "ema", "health_canada", "pmda", "tga",
-                "ich", "who", "ispe", "pda"
-            ],
+            "agencies": ["fda", "ema", "health_canada", "pmda", "tga", "ich", "who", "ispe", "pda"],
             "regulatory_processes": [
-                "nda", "anda", "bla", "510k", "ide", "ind",
-                "marketing_authorization", "clinical_trial_application"
+                "nda",
+                "anda",
+                "bla",
+                "510k",
+                "ide",
+                "ind",
+                "marketing_authorization",
+                "clinical_trial_application",
             ],
             "compliance_frameworks": [
-                "gcp", "glp", "gmp", "ich_e6", "ich_q1", "ich_q2",
-                "cfr_part_11", "gdpr", "hipaa"
+                "gcp",
+                "glp",
+                "gmp",
+                "ich_e6",
+                "ich_q1",
+                "ich_q2",
+                "cfr_part_11",
+                "gdpr",
+                "hipaa",
             ],
             "documentation": [
-                "protocol", "investigator_brochure", "informed_consent",
-                "case_report_form", "clinical_study_report"
-            ]
+                "protocol",
+                "investigator_brochure",
+                "informed_consent",
+                "case_report_form",
+                "clinical_study_report",
+            ],
         }
 
     def _initialize_prompt_templates(self) -> Dict[PharmaceuticalDomain, PharmaceuticalPromptTemplate]:
@@ -173,7 +237,6 @@ Key responsibilities:
 - Use evidence-based information from clinical trials and post-marketing surveillance
 
 Always maintain the highest standards of medical accuracy and include appropriate safety disclaimers.""",
-
             user_prompt_template="""Pharmaceutical Safety Query: {query}
 
 Please provide comprehensive drug safety information addressing:
@@ -184,35 +247,31 @@ Please provide comprehensive drug safety information addressing:
 5. Special population considerations
 
 Format your response with clear safety warnings prominently displayed.""",
-
             safety_instructions=[
                 "Always prioritize patient safety in recommendations",
                 "Clearly distinguish between contraindications and warnings",
                 "Emphasize serious or life-threatening adverse reactions",
                 "Include monitoring parameters when applicable",
-                "Reference FDA safety communications or black box warnings when relevant"
+                "Reference FDA safety communications or black box warnings when relevant",
             ],
-
             formatting_instructions={
                 "warnings": "Use **BOLD** formatting for critical safety warnings",
                 "structure": "Organize response with clear headings and bullet points",
                 "emphasis": "Use ALL CAPS for CONTRAINDICATIONS",
-                "monitoring": "List monitoring requirements in numbered format"
+                "monitoring": "List monitoring requirements in numbered format",
             },
-
             medical_disclaimers=[
                 "This information is for educational purposes only",
                 "Always consult prescribing information and clinical guidelines",
                 "Patient-specific factors may modify safety recommendations",
-                "Contact healthcare provider for patient-specific guidance"
+                "Contact healthcare provider for patient-specific guidance",
             ],
-
             context_requirements=[
                 "Include drug name and therapeutic class",
                 "Specify patient population when relevant",
                 "Reference clinical evidence quality",
-                "Note any regulatory safety updates"
-            ]
+                "Note any regulatory safety updates",
+            ],
         )
 
         # Clinical Research Template
@@ -229,7 +288,6 @@ Key responsibilities:
 - Provide evidence-based clinical recommendations
 
 Maintain objectivity in evidence evaluation and clearly distinguish between statistical significance and clinical significance.""",
-
             user_prompt_template="""Clinical Research Query: {query}
 
 Please provide comprehensive clinical research analysis including:
@@ -241,33 +299,29 @@ Please provide comprehensive clinical research analysis including:
 6. Regulatory implications
 
 Format your response with clear evidence quality assessments.""",
-
             safety_instructions=[
                 "Distinguish between statistical and clinical significance",
                 "Identify study limitations and potential biases",
                 "Assess evidence quality using established criteria",
-                "Note any safety signals from clinical trials"
+                "Note any safety signals from clinical trials",
             ],
-
             formatting_instructions={
                 "evidence": "Grade evidence quality (high/moderate/low)",
                 "statistics": "Present statistical data in tabular format when possible",
                 "structure": "Use clear headings for different trial phases",
-                "citations": "Reference specific trials and publications"
+                "citations": "Reference specific trials and publications",
             },
-
             medical_disclaimers=[
                 "Clinical trial results may not reflect real-world outcomes",
                 "Individual patient responses may vary from trial populations",
-                "Consult current clinical guidelines for treatment recommendations"
+                "Consult current clinical guidelines for treatment recommendations",
             ],
-
             context_requirements=[
                 "Specify clinical trial phase and population",
                 "Include primary endpoint and statistical methods",
                 "Note regulatory approval status",
-                "Reference study duration and follow-up"
-            ]
+                "Reference study duration and follow-up",
+            ],
         )
 
         # Drug Interactions Template
@@ -284,7 +338,6 @@ Key responsibilities:
 - Consider patient-specific factors affecting interaction risk
 
 Prioritize patient safety and provide practical clinical management guidance.""",
-
             user_prompt_template="""Drug Interaction Query: {query}
 
 Please provide comprehensive drug interaction analysis including:
@@ -296,33 +349,29 @@ Please provide comprehensive drug interaction analysis including:
 6. Monitoring requirements
 
 Clearly indicate interaction severity and urgency of clinical action required.""",
-
             safety_instructions=[
                 "Categorize interactions by clinical significance",
                 "Emphasize life-threatening or severe interactions",
                 "Provide specific management recommendations",
-                "Consider patient-specific risk factors"
+                "Consider patient-specific risk factors",
             ],
-
             formatting_instructions={
                 "severity": "Use color-coding or symbols for interaction severity",
                 "mechanism": "Clearly explain PK vs PD mechanisms",
                 "management": "Provide step-by-step management guidance",
-                "monitoring": "Specify monitoring parameters and frequency"
+                "monitoring": "Specify monitoring parameters and frequency",
             },
-
             medical_disclaimers=[
                 "Interaction significance may vary between patients",
                 "Consult drug interaction databases for comprehensive screening",
-                "Patient-specific factors may modify interaction risk"
+                "Patient-specific factors may modify interaction risk",
             ],
-
             context_requirements=[
                 "Include all interacting medications",
                 "Specify dosages and administration timing",
                 "Note patient age, organ function, and comorbidities",
-                "Reference interaction database sources"
-            ]
+                "Reference interaction database sources",
+            ],
         )
 
         # Regulatory Compliance Template
@@ -339,7 +388,6 @@ Key responsibilities:
 - Reference specific regulatory documents and guidelines
 
 Maintain accuracy in regulatory interpretation and acknowledge when expert consultation is recommended.""",
-
             user_prompt_template="""Regulatory Compliance Query: {query}
 
 Please provide comprehensive regulatory analysis including:
@@ -351,33 +399,29 @@ Please provide comprehensive regulatory analysis including:
 6. International harmonization aspects
 
 Reference specific regulatory documents and provide practical compliance guidance.""",
-
             safety_instructions=[
                 "Reference current regulatory guidance documents",
                 "Distinguish between requirements and recommendations",
                 "Note any recent regulatory updates or changes",
-                "Acknowledge regulatory complexity when appropriate"
+                "Acknowledge regulatory complexity when appropriate",
             ],
-
             formatting_instructions={
                 "regulations": "Cite specific CFR sections or ICH guidelines",
                 "pathways": "Use flowcharts or step-by-step guidance",
                 "timelines": "Provide realistic timeline estimates",
-                "documents": "List required regulatory submissions"
+                "documents": "List required regulatory submissions",
             },
-
             medical_disclaimers=[
                 "Regulatory requirements may change over time",
                 "Consult current regulatory guidance for latest requirements",
-                "Regulatory strategy should be developed with expert consultation"
+                "Regulatory strategy should be developed with expert consultation",
             ],
-
             context_requirements=[
                 "Specify regulatory jurisdiction (FDA, EMA, etc.)",
                 "Include development phase or product type",
                 "Note any special regulatory designations",
-                "Reference applicable guidance documents"
-            ]
+                "Reference applicable guidance documents",
+            ],
         )
 
         return templates
@@ -390,27 +434,27 @@ Reference specific regulatory documents and provide practical compliance guidanc
                     "expand_abbreviations": True,
                     "normalize_drug_names": True,
                     "preserve_dosage_units": True,
-                    "expand_medical_acronyms": True
+                    "expand_medical_acronyms": True,
                 },
                 "contextual_enhancement": {
                     "add_therapeutic_class": True,
                     "include_indication_context": True,
                     "append_safety_keywords": True,
-                    "enhance_mechanism_terms": True
-                }
+                    "enhance_mechanism_terms": True,
+                },
             },
             "clinical_context": {
                 "study_design_recognition": True,
                 "endpoint_classification": True,
                 "population_characterization": True,
-                "regulatory_context_addition": True
+                "regulatory_context_addition": True,
             },
             "safety_prioritization": {
                 "boost_safety_terms": True,
                 "emphasize_contraindications": True,
                 "highlight_interactions": True,
-                "prioritize_adverse_events": True
-            }
+                "prioritize_adverse_events": True,
+            },
         }
 
     def _initialize_chat_optimizations(self) -> Dict[str, Dict[str, Any]]:
@@ -420,25 +464,23 @@ Reference specific regulatory documents and provide practical compliance guidanc
                 "use_medical_structure": True,
                 "include_safety_warnings": True,
                 "provide_evidence_levels": True,
-                "add_clinical_context": True
+                "add_clinical_context": True,
             },
             "pharmaceutical_accuracy": {
                 "verify_drug_names": True,
                 "check_dosage_ranges": True,
                 "validate_indications": True,
-                "confirm_safety_information": True
+                "confirm_safety_information": True,
             },
             "clinical_reasoning": {
                 "explain_mechanisms": True,
                 "provide_evidence_basis": True,
                 "consider_alternatives": True,
-                "assess_risk_benefit": True
-            }
+                "assess_risk_benefit": True,
+            },
         }
 
-    def optimize_embedding_query(self,
-                                query_text: str,
-                                pharmaceutical_context: PharmaceuticalContext) -> str:
+    def optimize_embedding_query(self, query_text: str, pharmaceutical_context: PharmaceuticalContext) -> str:
         """
         Optimize embedding query for pharmaceutical terminology and context.
 
@@ -458,25 +500,25 @@ Reference specific regulatory documents and provide practical compliance guidanc
         optimized_query = self._normalize_drug_names(optimized_query)
 
         # Add contextual pharmaceutical terminology
-        optimized_query = self._enhance_pharmaceutical_context(
-            optimized_query, pharmaceutical_context
-        )
+        optimized_query = self._enhance_pharmaceutical_context(optimized_query, pharmaceutical_context)
 
         # Add safety-critical keywords for safety domains
         if pharmaceutical_context.domain in [
             PharmaceuticalDomain.DRUG_SAFETY,
             PharmaceuticalDomain.ADVERSE_REACTIONS,
-            PharmaceuticalDomain.DRUG_INTERACTIONS
+            PharmaceuticalDomain.DRUG_INTERACTIONS,
         ]:
             optimized_query = self._add_safety_context(optimized_query)
 
         logger.debug(f"Embedding query optimized: '{query_text}' -> '{optimized_query}'")
         return optimized_query
 
-    def optimize_chat_prompt(self,
-                           query_text: str,
-                           pharmaceutical_context: PharmaceuticalContext,
-                           additional_context: Optional[Dict[str, Any]] = None) -> Tuple[str, List[Dict[str, str]]]:
+    def optimize_chat_prompt(
+        self,
+        query_text: str,
+        pharmaceutical_context: PharmaceuticalContext,
+        additional_context: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[str, List[Dict[str, str]]]:
         """
         Optimize chat prompt for pharmaceutical domain expertise and safety.
 
@@ -490,24 +532,18 @@ Reference specific regulatory documents and provide practical compliance guidanc
         """
         # Get domain-specific prompt template
         template = self.prompt_templates.get(
-            pharmaceutical_context.domain,
-            self.prompt_templates[PharmaceuticalDomain.GENERAL_RESEARCH]
+            pharmaceutical_context.domain, self.prompt_templates[PharmaceuticalDomain.GENERAL_RESEARCH]
         )
 
         # Build enhanced system prompt
-        system_prompt = self._build_enhanced_system_prompt(
-            template, pharmaceutical_context, additional_context
-        )
+        system_prompt = self._build_enhanced_system_prompt(template, pharmaceutical_context, additional_context)
 
         # Build optimized user message
         user_message = self._build_optimized_user_message(
             template, query_text, pharmaceutical_context, additional_context
         )
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ]
+        messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_message}]
 
         logger.debug(f"Chat prompt optimized for domain: {pharmaceutical_context.domain.value}")
         return system_prompt, messages
@@ -535,12 +571,12 @@ Reference specific regulatory documents and provide practical compliance guidanc
             "TID": "three times daily",
             "QID": "four times daily",
             "QD": "once daily",
-            "PRN": "as needed"
+            "PRN": "as needed",
         }
 
         for abbrev, expansion in abbreviations.items():
             # Use word boundaries to avoid partial replacements
-            pattern = r'\b' + re.escape(abbrev) + r'\b'
+            pattern = r"\b" + re.escape(abbrev) + r"\b"
             replacement = f"{abbrev} ({expansion})"
             text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
 
@@ -561,18 +597,16 @@ Reference specific regulatory documents and provide practical compliance guidanc
             "Lasix": "furosemide (Lasix)",
             "Tylenol": "acetaminophen (Tylenol)",
             "Advil": "ibuprofen (Advil)",
-            "Motrin": "ibuprofen (Motrin)"
+            "Motrin": "ibuprofen (Motrin)",
         }
 
         for brand, generic_brand in drug_mappings.items():
-            pattern = r'\b' + re.escape(brand) + r'\b'
+            pattern = r"\b" + re.escape(brand) + r"\b"
             text = re.sub(pattern, generic_brand, text, flags=re.IGNORECASE)
 
         return text
 
-    def _enhance_pharmaceutical_context(self,
-                                      text: str,
-                                      context: PharmaceuticalContext) -> str:
+    def _enhance_pharmaceutical_context(self, text: str, context: PharmaceuticalContext) -> str:
         """Enhance text with pharmaceutical context information."""
         enhancements = []
 
@@ -582,7 +616,7 @@ Reference specific regulatory documents and provide practical compliance guidanc
             PharmaceuticalDomain.CLINICAL_TRIALS: ["clinical trials", "efficacy", "clinical research"],
             PharmaceuticalDomain.PHARMACOKINETICS: ["pharmacokinetics", "ADME", "drug metabolism"],
             PharmaceuticalDomain.DRUG_INTERACTIONS: ["drug interactions", "drug-drug interactions"],
-            PharmaceuticalDomain.REGULATORY_COMPLIANCE: ["regulatory compliance", "FDA guidelines"]
+            PharmaceuticalDomain.REGULATORY_COMPLIANCE: ["regulatory compliance", "FDA guidelines"],
         }
 
         domain_enhancement = domain_terms.get(context.domain, [])
@@ -607,17 +641,23 @@ Reference specific regulatory documents and provide practical compliance guidanc
     def _add_safety_context(self, text: str) -> str:
         """Add safety-critical context keywords."""
         safety_keywords = [
-            "patient safety", "clinical safety", "adverse events",
-            "contraindications", "warnings", "precautions"
+            "patient safety",
+            "clinical safety",
+            "adverse events",
+            "contraindications",
+            "warnings",
+            "precautions",
         ]
 
         safety_context = " ".join(safety_keywords)
         return f"{text} [Safety Context: {safety_context}]"
 
-    def _build_enhanced_system_prompt(self,
-                                    template: PharmaceuticalPromptTemplate,
-                                    context: PharmaceuticalContext,
-                                    additional_context: Optional[Dict[str, Any]]) -> str:
+    def _build_enhanced_system_prompt(
+        self,
+        template: PharmaceuticalPromptTemplate,
+        context: PharmaceuticalContext,
+        additional_context: Optional[Dict[str, Any]],
+    ) -> str:
         """Build enhanced system prompt with pharmaceutical expertise."""
 
         base_prompt = template.system_prompt
@@ -659,11 +699,13 @@ Consider population-specific factors, dosing adjustments, and safety considerati
 
         return base_prompt
 
-    def _build_optimized_user_message(self,
-                                    template: PharmaceuticalPromptTemplate,
-                                    query_text: str,
-                                    context: PharmaceuticalContext,
-                                    additional_context: Optional[Dict[str, Any]]) -> str:
+    def _build_optimized_user_message(
+        self,
+        template: PharmaceuticalPromptTemplate,
+        query_text: str,
+        context: PharmaceuticalContext,
+        additional_context: Optional[Dict[str, Any]],
+    ) -> str:
         """Build optimized user message with pharmaceutical formatting."""
 
         # Start with template
@@ -697,9 +739,7 @@ Consider population-specific factors, dosing adjustments, and safety considerati
 
         return user_message
 
-    def get_model_configuration(self,
-                              context: PharmaceuticalContext,
-                              model_type: str = "chat") -> Dict[str, Any]:
+    def get_model_configuration(self, context: PharmaceuticalContext, model_type: str = "chat") -> Dict[str, Any]:
         """
         Get optimized model configuration for pharmaceutical context.
 
@@ -715,35 +755,43 @@ Consider population-specific factors, dosing adjustments, and safety considerati
             "max_tokens": 1000,
             "top_p": 0.9,
             "frequency_penalty": 0.0,
-            "presence_penalty": 0.0
+            "presence_penalty": 0.0,
         }
 
         # Adjust based on pharmaceutical context
         if context.safety_urgency.value <= 2:  # Critical or High urgency
-            base_config.update({
-                "temperature": 0.05,  # Very conservative for safety
-                "max_tokens": 1200,   # More detail for safety info
-            })
+            base_config.update(
+                {
+                    "temperature": 0.05,  # Very conservative for safety
+                    "max_tokens": 1200,  # More detail for safety info
+                }
+            )
 
         if context.domain == PharmaceuticalDomain.CLINICAL_TRIALS:
-            base_config.update({
-                "max_tokens": 1500,   # More space for detailed analysis
-                "temperature": 0.15   # Slightly higher for analysis
-            })
+            base_config.update(
+                {
+                    "max_tokens": 1500,  # More space for detailed analysis
+                    "temperature": 0.15,  # Slightly higher for analysis
+                }
+            )
 
         if context.domain == PharmaceuticalDomain.REGULATORY_COMPLIANCE:
-            base_config.update({
-                "temperature": 0.05,  # Very conservative for regulations
-                "max_tokens": 1200    # Detailed regulatory guidance
-            })
+            base_config.update(
+                {
+                    "temperature": 0.05,  # Very conservative for regulations
+                    "max_tokens": 1200,  # Detailed regulatory guidance
+                }
+            )
 
         return base_config
 
+
 # Convenience functions for pharmaceutical model optimization
 
-def optimize_pharmaceutical_query(query_text: str,
-                                 context: PharmaceuticalContext,
-                                 model_type: str = "chat") -> Tuple[str, Dict[str, Any]]:
+
+def optimize_pharmaceutical_query(
+    query_text: str, context: PharmaceuticalContext, model_type: str = "chat"
+) -> Tuple[str, Dict[str, Any]]:
     """
     Optimize query and get model configuration for pharmaceutical research.
 
@@ -766,6 +814,7 @@ def optimize_pharmaceutical_query(query_text: str,
         model_config = optimizer.get_model_configuration(context, "chat")
         return messages, model_config
 
+
 def create_pharmaceutical_model_optimizer() -> PharmaceuticalModelOptimizer:
     """
     Create pharmaceutical model optimizer with optimal configuration.
@@ -775,6 +824,7 @@ def create_pharmaceutical_model_optimizer() -> PharmaceuticalModelOptimizer:
     """
     config = EnhancedRAGConfig.from_env()
     return PharmaceuticalModelOptimizer(config=config)
+
 
 if __name__ == "__main__":
     # Test pharmaceutical model optimization
@@ -786,7 +836,7 @@ if __name__ == "__main__":
         "What are the contraindications for metformin in elderly patients?",
         "Explain the Phase III clinical trial results for atorvastatin",
         "Drug interaction between warfarin and aspirin - urgent safety concern",
-        "FDA regulatory requirements for cardiovascular outcome trials"
+        "FDA regulatory requirements for cardiovascular outcome trials",
     ]
 
     for query in test_queries:

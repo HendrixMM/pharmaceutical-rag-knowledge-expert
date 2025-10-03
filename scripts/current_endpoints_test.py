@@ -12,13 +12,12 @@ Usage:
 Prerequisites:
   - .env with a valid NVIDIA_API_KEY
 """
-
 import os
 import sys
-import json
 import time
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
+from typing import Dict
 
 import requests
 
@@ -30,9 +29,11 @@ for p in (ROOT,):
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     print("Warning: python-dotenv not installed. Using environment variables directly.")
+
 
 def test_current_embedding_endpoint(api_key: str) -> Dict[str, Any]:
     """Test the current ai.api.nvidia.com embedding endpoint."""
@@ -42,14 +43,14 @@ def test_current_embedding_endpoint(api_key: str) -> Dict[str, Any]:
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "User-Agent": "Current-Endpoint-Test/1.0"
+        "User-Agent": "Current-Endpoint-Test/1.0",
     }
 
     # Test with current configured model
     payload = {
         "input": ["This is a test for pharmaceutical research applications"],
         "model": "nvidia/nv-embedqa-e5-v5",
-        "encoding_format": "float"
+        "encoding_format": "float",
     }
 
     start_time = time.time()
@@ -63,7 +64,7 @@ def test_current_embedding_endpoint(api_key: str) -> Dict[str, Any]:
             "response_time_ms": int((end_time - start_time) * 1000),
             "error": None if response.status_code == 200 else response.text,
             "endpoint": url,
-            "model": "nvidia/nv-embedqa-e5-v5"
+            "model": "nvidia/nv-embedqa-e5-v5",
         }
     except Exception as e:
         return {
@@ -72,8 +73,9 @@ def test_current_embedding_endpoint(api_key: str) -> Dict[str, Any]:
             "response_time_ms": None,
             "error": str(e),
             "endpoint": url,
-            "model": "nvidia/nv-embedqa-e5-v5"
+            "model": "nvidia/nv-embedqa-e5-v5",
         }
+
 
 def test_nv_embed_v1_on_current_endpoint(api_key: str) -> Dict[str, Any]:
     """Test nvidia/nv-embed-v1 on current endpoint."""
@@ -83,13 +85,13 @@ def test_nv_embed_v1_on_current_endpoint(api_key: str) -> Dict[str, Any]:
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "User-Agent": "Current-Endpoint-Test/1.0"
+        "User-Agent": "Current-Endpoint-Test/1.0",
     }
 
     payload = {
         "input": ["This is a test for pharmaceutical research applications"],
         "model": "nvidia/nv-embed-v1",
-        "encoding_format": "float"
+        "encoding_format": "float",
     }
 
     start_time = time.time()
@@ -103,7 +105,7 @@ def test_nv_embed_v1_on_current_endpoint(api_key: str) -> Dict[str, Any]:
             "response_time_ms": int((end_time - start_time) * 1000),
             "error": None if response.status_code == 200 else response.text,
             "endpoint": url,
-            "model": "nvidia/nv-embed-v1"
+            "model": "nvidia/nv-embed-v1",
         }
     except Exception as e:
         return {
@@ -112,8 +114,9 @@ def test_nv_embed_v1_on_current_endpoint(api_key: str) -> Dict[str, Any]:
             "response_time_ms": None,
             "error": str(e),
             "endpoint": url,
-            "model": "nvidia/nv-embed-v1"
+            "model": "nvidia/nv-embed-v1",
         }
+
 
 def test_alternative_llm_endpoint(api_key: str) -> Dict[str, Any]:
     """Test LLM on different possible endpoints."""
@@ -123,25 +126,20 @@ def test_alternative_llm_endpoint(api_key: str) -> Dict[str, Any]:
     endpoints_to_try = [
         "https://ai.api.nvidia.com/v1/chat/completions",
         "https://api.nvidia.com/v1/chat/completions",
-        "https://integrate.api.nvidia.com/v1/chat/completions"
+        "https://integrate.api.nvidia.com/v1/chat/completions",
     ]
 
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "User-Agent": "Current-Endpoint-Test/1.0"
+        "User-Agent": "Current-Endpoint-Test/1.0",
     }
 
     payload = {
         "model": "meta/llama-3.1-8b-instruct",
-        "messages": [
-            {
-                "role": "user",
-                "content": "What are pharmaceutical drug interactions?"
-            }
-        ],
+        "messages": [{"role": "user", "content": "What are pharmaceutical drug interactions?"}],
         "max_tokens": 50,
-        "temperature": 0.1
+        "temperature": 0.1,
     }
 
     for url in endpoints_to_try:
@@ -159,7 +157,7 @@ def test_alternative_llm_endpoint(api_key: str) -> Dict[str, Any]:
                     "error": None,
                     "endpoint": url,
                     "model": "meta/llama-3.1-8b-instruct",
-                    "sample_output": response.json()
+                    "sample_output": response.json(),
                 }
             else:
                 print(f"    Failed: {response.status_code} - {response.text[:100]}")
@@ -172,8 +170,9 @@ def test_alternative_llm_endpoint(api_key: str) -> Dict[str, Any]:
         "response_time_ms": None,
         "error": "All endpoints failed",
         "endpoint": "Multiple tried",
-        "model": "meta/llama-3.1-8b-instruct"
+        "model": "meta/llama-3.1-8b-instruct",
     }
+
 
 def print_test_results(test_name: str, results: Dict[str, Any]) -> None:
     """Print formatted test results."""
@@ -194,6 +193,7 @@ def print_test_results(test_name: str, results: Dict[str, Any]) -> None:
         print("❌ FAILED")
         print(f"Status Code: {results['status_code']}")
         print(f"Error: {results['error']}")
+
 
 def main():
     print("Current NVIDIA Endpoint Verification Test")
@@ -242,6 +242,7 @@ def main():
     print(f"\nConclusion: Your API key appears to work with {current_embedding['endpoint'].split('/')[2]} domain")
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

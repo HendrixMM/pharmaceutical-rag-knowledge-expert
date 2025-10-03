@@ -1,4 +1,3 @@
-import os
 from types import SimpleNamespace
 
 import pytest
@@ -113,11 +112,7 @@ def test_normalize_item_preserves_title_from_fallbacks(scraper):
     assert normalized2["title"] == "Study with articleTitle"
 
     # Test fallback to citation
-    item3 = {
-        "citation": {
-            "title": "Study from citation"
-        }
-    }
+    item3 = {"citation": {"title": "Study from citation"}}
     normalized3 = scraper._normalize_item(item3)
     assert normalized3["title"] == "Study from citation"
 
@@ -138,7 +133,7 @@ def test_to_documents_uses_title_as_content_when_abstract_missing(scraper):
             "title": "  Study with title and empty abstract  ",
             "abstract": "",
             "pmid": "67890",
-        }
+        },
     ]
 
     documents = scraper.to_documents(results)
@@ -166,7 +161,7 @@ def test_to_documents_handles_preserve_order_without_abstracts(scraper, monkeypa
             "title": "Another Study",
             "abstract": "This has an abstract",
             "pmid": "67890",
-        }
+        },
     ]
 
     documents = scraper.to_documents(results)
@@ -211,7 +206,7 @@ def test_ranking_forces_include_abstract_even_when_disabled(monkeypatch, scraper
 
     monkeypatch.setattr(scraper, "_get_cache_key", capture_get_cache_key.__get__(scraper, PubMedScraper))
 
-    def fake_call_actor(run_input, schema='searchUrls'):
+    def fake_call_actor(run_input, schema="searchUrls"):
         captured["run_input_call"] = run_input
         return {"defaultDatasetId": "dataset-1"}
 

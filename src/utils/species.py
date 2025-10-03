@@ -1,21 +1,24 @@
 """Species utilities for consistent species matching across modules."""
-
 import re
-from typing import Dict, Iterable, List, Optional, Set
+from typing import Dict
+from typing import Iterable
+from typing import List
+from typing import Optional
+from typing import Set
 
 
 def tokenize_species_string(text: str) -> Set[str]:
     """Normalize species strings by tokenizing on non-alphanumeric characters."""
     if not text:
         return set()
-    return set(re.findall(r'\b[a-zA-Z]+\b', text.lower()))
+    return set(re.findall(r"\b[a-zA-Z]+\b", text.lower()))
 
 
 def infer_species_from_text(
     paper_or_metadata: Dict[str, any],
     mesh_terms: Optional[Iterable[str]] = None,
     *,
-    strict_species_inference: bool = True
+    strict_species_inference: bool = True,
 ) -> List[str]:
     """
     Infer species from text using consistent logic across modules.
@@ -38,20 +41,34 @@ def infer_species_from_text(
     }
 
     _CLINICAL_STUDY_TAGS = {
-        "clinical trial", "randomized controlled trial", "controlled clinical trial",
-        "phase i", "phase ii", "phase iii", "phase iv", "rct", "clinical study",
-        "human study", "patient study", "clinical investigation"
+        "clinical trial",
+        "randomized controlled trial",
+        "controlled clinical trial",
+        "phase i",
+        "phase ii",
+        "phase iii",
+        "phase iv",
+        "rct",
+        "clinical study",
+        "human study",
+        "patient study",
+        "clinical investigation",
     }
 
     _NEGATION_TERMS = {
-        "in vitro", "cell culture", "cultured cells", "tissue culture",
-        "cell line", "isolated cells", "artificial"
+        "in vitro",
+        "cell culture",
+        "cultured cells",
+        "tissue culture",
+        "cell line",
+        "isolated cells",
+        "artificial",
     }
 
     combined_sources = [
         paper_or_metadata.get("title"),
         paper_or_metadata.get("abstract"),
-        paper_or_metadata.get("summary")
+        paper_or_metadata.get("summary"),
     ]
     if mesh_terms is None:
         mesh_terms = paper_or_metadata.get("mesh_terms") or []

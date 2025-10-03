@@ -43,4 +43,3 @@ if [[ "$fail" == true ]]; then
 fi
 
 exit 0
-

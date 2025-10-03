@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-
 pytestmark = pytest.mark.integration
 
 
@@ -54,7 +53,9 @@ def test_real_nemo_extraction_end_to_end(tmp_path):
     # Import loader via package path
 # Provide minimal stubs for langchain modules if not installed.
 if not _require("langchain_core") or not _require("langchain_community") or not _require("langchain"):
-    import sys, types
+    import sys
+    import types
+
     # langchain_core
     if not _require("langchain_core"):
         lc_core = types.ModuleType("langchain_core"); lc_core.__path__ = []

@@ -1,13 +1,11 @@
 """Unit tests for MinHash dependency guards in ranking filter."""
-
-import unittest
-from unittest.mock import patch, MagicMock
-import sys
 import os
+import unittest
+from unittest.mock import patch
 
 # Import the module after potentially mocking dependencies
-with patch.dict('sys.modules', {'numpy': None, 'datasketch': None}):
-    from src.ranking_filter import StudyRankingFilter, ENABLE_MINHASH_DIVERSITY, HAS_DATASKETCH, HAS_NUMPY
+with patch.dict("sys.modules", {"numpy": None, "datasketch": None}):
+    from src.ranking_filter import StudyRankingFilter
 
 
 class TestMinHashDependencyGuards(unittest.TestCase):
@@ -20,10 +18,12 @@ class TestMinHashDependencyGuards(unittest.TestCase):
     def test_missing_datasketch_fallback(self):
         """Test that missing datasketch falls back to pure Python implementation."""
         # Mock datasketch as missing
-        with patch.dict('sys.modules', {'datasketch': None}):
+        with patch.dict("sys.modules", {"datasketch": None}):
             # Reload module to trigger missing import
             import importlib
+
             import src.ranking_filter
+
             importlib.reload(src.ranking_filter)
 
             # Verify flags are set correctly
@@ -45,9 +45,11 @@ class TestMinHashDependencyGuards(unittest.TestCase):
     def test_missing_numpy_fallback(self):
         """Test that missing numpy falls back to pure Python implementation."""
         # Mock both as missing
-        with patch.dict('sys.modules', {'numpy': None, 'datasketch': None}):
+        with patch.dict("sys.modules", {"numpy": None, "datasketch": None}):
             import importlib
+
             import src.ranking_filter
+
             importlib.reload(src.ranking_filter)
 
             # Verify flags
@@ -67,15 +69,13 @@ class TestMinHashDependencyGuards(unittest.TestCase):
 
     def test_enable_minhash_disabled(self):
         """Test behavior when ENABLE_MINHASH_DIVERSITY is disabled."""
-        with patch('src.ranking_filter.ENABLE_MINHASH_DIVERSITY', False):
+        with patch("src.ranking_filter.ENABLE_MINHASH_DIVERSITY", False):
             papers = [
                 {"title": "Study 1", "abstract": "This is about drugs"},
                 {"title": "Study 2", "abstract": "This is also about drugs"},
             ]
 
-            result = self.filter.apply_diversity_filter(
-                papers, method="minhash", threshold=0.8
-            )
+            result = self.filter.apply_diversity_filter(papers, method="minhash", threshold=0.8)
             # Should fall back to signature method
             self.assertEqual(len(result), 2)
 
@@ -87,10 +87,8 @@ class TestMinHashDependencyGuards(unittest.TestCase):
         ]
 
         # Mock datasketch to raise an exception
-        with patch.object(self.filter, '_apply_minhash_datasketch', side_effect=Exception("Test error")):
-            result = self.filter.apply_diversity_filter(
-                papers, method="minhash", threshold=0.8
-            )
+        with patch.object(self.filter, "_apply_minhash_datasketch", side_effect=Exception("Test error")):
+            result = self.filter.apply_diversity_filter(papers, method="minhash", threshold=0.8)
             # Should fall back successfully
             self.assertEqual(len(result), 2)
 
@@ -101,10 +99,8 @@ class TestMinHashDependencyGuards(unittest.TestCase):
         ]
 
         # Even with MinHash enabled, small input should use pure Python
-        with patch.object(self.filter, '_apply_minhash_datasketch') as mock_minhash:
-            result = self.filter.apply_diversity_filter(
-                papers, method="minhash", threshold=0.8
-            )
+        with patch.object(self.filter, "_apply_minhash_datasketch") as mock_minhash:
+            result = self.filter.apply_diversity_filter(papers, method="minhash", threshold=0.8)
             # Should not call MinHash implementation
             mock_minhash.assert_not_called()
             self.assertEqual(len(result), 1)
@@ -112,12 +108,17 @@ class TestMinHashDependencyGuards(unittest.TestCase):
     def test_configuration_validation(self):
         """Test that MinHash configuration values are validated with fallbacks."""
         # Test with invalid configuration
-        with patch.dict(os.environ, {
-            "MINHASH_NUM_PERMUTATIONS": "50",  # Below minimum
-            "MINHASH_LSH_THRESHOLD": "1.5",   # Above maximum
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "MINHASH_NUM_PERMUTATIONS": "50",  # Below minimum
+                "MINHASH_LSH_THRESHOLD": "1.5",  # Above maximum
+            },
+        ):
             import importlib
+
             import src.ranking_filter
+
             importlib.reload(src.ranking_filter)
 
             # Should fallback to defaults

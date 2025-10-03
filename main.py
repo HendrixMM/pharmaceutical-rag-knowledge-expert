@@ -2,12 +2,13 @@
 Main Application - Interactive RAG Agent Interface
 Provides CLI interface for interacting with the RAG agent
 """
-
 import os
 import sys
-import time
-from typing import Any, Dict, Tuple
 from pathlib import Path
+from typing import Any
+from typing import Dict
+from typing import Tuple
+
 from dotenv import load_dotenv
 
 # Add src to path
@@ -49,7 +50,7 @@ def print_stats(agent: EnhancedRAGAgent):
     """Print knowledge base statistics"""
     print("\n📊 Knowledge Base Statistics:")
     stats = agent.base_agent.get_knowledge_base_stats()
-    
+
     for key, value in stats.items():
         if key == "status":
             status_emoji = "✅" if value == "Index loaded" else "❌"
@@ -111,7 +112,7 @@ def format_response(response: Dict[str, Any]) -> None:
             preview = content[:150]
             if len(content) > 150:
                 preview += "..."
-            print(f"      \"{preview}\"")
+            print(f'      "{preview}"')
 
     processing_time = response.get("processing_time") or 0.0
     print(f"\n⏱️  Processing time: {processing_time:.2f} seconds")
@@ -132,10 +133,10 @@ def format_response(response: Dict[str, Any]) -> None:
 def setup_rag_agent():
     """Initialize and setup the enhanced RAG agent"""
     print("🔧 Initializing Enhanced RAG Agent...")
-    
+
     # Load environment variables
     load_dotenv()
-    
+
     # Get configuration
     api_key = os.getenv("NVIDIA_API_KEY")
     docs_folder = os.getenv("DOCS_FOLDER", "Data/Docs")
@@ -144,18 +145,18 @@ def setup_rag_agent():
     enable_synthesis = os.getenv("ENABLE_SYNTHESIS", "true").strip().lower() in ("1", "true", "yes", "on")
     enable_ddi = os.getenv("ENABLE_DDI_ANALYSIS", "true").strip().lower() in ("1", "true", "yes", "on")
     safety_mode = os.getenv("ENHANCED_RAG_SAFETY_MODE", "balanced")
-    
+
     if not api_key:
         print("❌ Error: NVIDIA_API_KEY not found in environment variables")
         print("Please check your .env file and ensure the API key is set")
         return None
-    
+
     # Check if docs folder exists
     if not Path(docs_folder).exists():
         print(f"📁 Creating documents folder: {docs_folder}")
         Path(docs_folder).mkdir(parents=True, exist_ok=True)
         print(f"📝 Please add your PDF files to: {Path(docs_folder).absolute()}")
-    
+
     # Test NVIDIA API connection
     print("🔌 Testing NVIDIA API connection...")
     try:
@@ -167,7 +168,7 @@ def setup_rag_agent():
     except Exception as e:
         print(f"❌ NVIDIA API connection failed: {str(e)}")
         return None
-    
+
     # Initialize RAG agent
     try:
         rag_agent = EnhancedRAGAgent(
@@ -189,7 +190,7 @@ def setup_rag_agent():
 def main():
     """Main application loop"""
     print_banner()
-    
+
     # Setup RAG agent
     agent = setup_rag_agent()
     if not agent:
@@ -204,38 +205,38 @@ def main():
 
         # Ask if user wants to continue anyway
         response = input("\nWould you like to continue anyway? (y/n): ").lower().strip()
-        if response not in ['y', 'yes']:
+        if response not in ["y", "yes"]:
             return
     else:
         print("✅ Knowledge base setup completed!")
         print_stats(agent)
 
     print("\n🚀 RAG Agent is ready! Ask me anything about your documents.")
-    
+
     # Main interaction loop
     while True:
         try:
             # Get user input
-            print("\n" + "="*60)
+            print("\n" + "=" * 60)
             question = input("❓ Your question: ").strip()
-            
+
             if not question:
                 continue
-            
+
             # Handle commands
-            if question.lower() in ['quit', 'exit', 'q']:
+            if question.lower() in ["quit", "exit", "q"]:
                 print("\n👋 Thank you for using RAG Agent! Goodbye!")
                 break
-            
-            elif question.lower() == 'help':
+
+            elif question.lower() == "help":
                 print_help()
                 continue
-            
-            elif question.lower() == 'stats':
+
+            elif question.lower() == "stats":
                 print_stats(agent)
                 continue
-            
-            elif question.lower() == 'rebuild':
+
+            elif question.lower() == "rebuild":
                 print("\n🔨 Rebuilding knowledge base...")
                 if agent.base_agent.setup_knowledge_base(force_rebuild=True):
                     print("✅ Knowledge base rebuilt successfully!")
@@ -243,17 +244,17 @@ def main():
                 else:
                     print("❌ Failed to rebuild knowledge base")
                 continue
-            
-            elif question.lower() == 'clear':
-                os.system('cls' if os.name == 'nt' else 'clear')
+
+            elif question.lower() == "clear":
+                os.system("cls" if os.name == "nt" else "clear")
                 print_banner()
                 continue
-            
+
             # Process question
             print(f"\n🔍 Searching knowledge base...")
             response = agent.ask_question(question)
             format_response(response)
-            
+
         except KeyboardInterrupt:
             print("\n\n👋 Interrupted by user. Goodbye!")
             break
@@ -268,7 +269,9 @@ if __name__ == "__main__":
     app_env = (os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "").strip().lower()
     if app_env in ("production", "prod"):
         strategy = (os.getenv("NEMO_EXTRACTION_STRATEGY") or "nemo").strip().lower()
-        enable_nemo = (os.getenv("ENABLE_NEMO_EXTRACTION") or "true").strip().lower() in ("true","1","yes","on")
-        strict = (os.getenv("NEMO_EXTRACTION_STRICT") or "true").strip().lower() in ("true","1","yes","on")
+        enable_nemo = (os.getenv("ENABLE_NEMO_EXTRACTION") or "true").strip().lower() in ("true", "1", "yes", "on")
+        strict = (os.getenv("NEMO_EXTRACTION_STRICT") or "true").strip().lower() in ("true", "1", "yes", "on")
         if (strategy != "nemo") or (not enable_nemo) or (not strict):
-            print("⚠️  Production requires NeMo strict: ENABLE_NEMO_EXTRACTION=true, NEMO_EXTRACTION_STRATEGY=nemo, NEMO_EXTRACTION_STRICT=true")
+            print(
+                "⚠️  Production requires NeMo strict: ENABLE_NEMO_EXTRACTION=true, NEMO_EXTRACTION_STRATEGY=nemo, NEMO_EXTRACTION_STRICT=true"
+            )

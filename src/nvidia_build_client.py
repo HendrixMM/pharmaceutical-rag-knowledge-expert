@@ -34,32 +34,33 @@ Usage (DEPRECATED):
         model="meta/llama-3.1-8b-instruct"
     )
 """
-
-import os
-import time
 import logging
-from typing import List, Dict, Any, Optional, Union
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+import time
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 try:
-    from src.clients.openai_wrapper import OpenAIWrapper, NVIDIABuildConfig, NVIDIABuildError, OPENAI_AVAILABLE
+    from src.clients.openai_wrapper import OPENAI_AVAILABLE, NVIDIABuildConfig, NVIDIABuildError, OpenAIWrapper
 except ImportError:
     try:
-        from .clients.openai_wrapper import OpenAIWrapper, NVIDIABuildConfig, NVIDIABuildError, OPENAI_AVAILABLE
+        from .clients.openai_wrapper import OPENAI_AVAILABLE, NVIDIABuildConfig, NVIDIABuildError, OpenAIWrapper
     except ImportError:
         # If wrapper itself is not available, this is a real error
-        raise ImportError(
-            "OpenAIWrapper not available. Ensure src.clients.openai_wrapper is installed."
-        )
+        raise ImportError("OpenAIWrapper not available. Ensure src.clients.openai_wrapper is installed.")
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass  # dotenv is optional
 
 logger = logging.getLogger(__name__)
+
 
 # -----------------------------------------------------------------------------
 # Local enhanced NVIDIA Build free-tier credit monitor (pharma-aware)
@@ -97,17 +98,15 @@ class NVIDIABuildCreditsMonitor:
         self.credits_used += tokens
         self.credits_remaining = max(0, self.monthly_free_requests - self.credits_used)
         self._by_service[service] = self._by_service.get(service, 0) + 1
-        day_key = datetime.now().strftime('%Y-%m-%d')
+        day_key = datetime.now().strftime("%Y-%m-%d")
         self._daily_usage[day_key] = self._daily_usage.get(day_key, 0) + 1
         if self.credits_remaining <= 100:
             logger.warning("Low NVIDIA Build credits remaining: %s", self.credits_remaining)
         logger.info("Credits: service=%s used=%s remaining=%s", service, tokens, self.credits_remaining)
 
-    def log_api_call_pharma(self,
-                            service: str,
-                            tokens_used: int = 1,
-                            query_text: Optional[str] = None,
-                            query_type: Optional[str] = None) -> None:
+    def log_api_call_pharma(
+        self, service: str, tokens_used: int = 1, query_text: Optional[str] = None, query_type: Optional[str] = None
+    ) -> None:
         """Record a call with pharmaceutical context; derives query_type if absent."""
         self.log_api_call(service, tokens_used=tokens_used)
         qtype = query_type or self.classify_pharma_query(query_text or "")
@@ -131,7 +130,7 @@ class NVIDIABuildCreditsMonitor:
     def daily_burn_rate(self) -> Dict[str, Any]:
         """Return daily usage with burn_rate as fraction of monthly free limit (10k)."""
         monthly_limit = self.monthly_free_requests
-        today = datetime.now().strftime('%Y-%m-%d')
+        today = datetime.now().strftime("%Y-%m-%d")
         used_today = int(self._daily_usage.get(today, 0))
         return {
             "date": today,
@@ -167,6 +166,7 @@ class NVIDIABuildCreditsMonitor:
         except Exception:
             pass
 
+
 @dataclass
 class CreditUsageTracker:
     """Legacy credit tracker for backward compatibility."""
@@ -191,9 +191,9 @@ class CreditUsageTracker:
 
     def track_request(self) -> None:
         """Track a new API request and check thresholds."""
-        today = datetime.now().strftime('%Y-%m-%d')
-        this_week = datetime.now().strftime('%Y-W%U')
-        this_month = datetime.now().strftime('%Y-%m')
+        today = datetime.now().strftime("%Y-%m-%d")
+        this_week = datetime.now().strftime("%Y-W%U")
+        this_month = datetime.now().strftime("%Y-%m")
 
         # Reset counters if needed
         if self.last_reset_day != today:
@@ -223,16 +223,21 @@ class CreditUsageTracker:
         monthly_limit = self.monthly_free_requests * self.monthly_alert_threshold
 
         if self.requests_today >= daily_limit:
-            logger.warning(f"Daily credit usage alert: {self.requests_today} requests today "
-                         f"(>{daily_limit:.0f} threshold)")
+            logger.warning(
+                f"Daily credit usage alert: {self.requests_today} requests today " f"(>{daily_limit:.0f} threshold)"
+            )
 
         if self.requests_this_week >= weekly_limit:
-            logger.warning(f"Weekly credit usage alert: {self.requests_this_week} requests this week "
-                         f"(>{weekly_limit:.0f} threshold)")
+            logger.warning(
+                f"Weekly credit usage alert: {self.requests_this_week} requests this week "
+                f"(>{weekly_limit:.0f} threshold)"
+            )
 
         if self.requests_this_month >= monthly_limit:
-            logger.warning(f"Monthly credit usage alert: {self.requests_this_month} requests this month "
-                         f"(>{monthly_limit:.0f} threshold)")
+            logger.warning(
+                f"Monthly credit usage alert: {self.requests_this_month} requests this month "
+                f"(>{monthly_limit:.0f} threshold)"
+            )
 
     def get_usage_summary(self) -> Dict[str, Any]:
         """Get current usage summary with safe division for usage percent."""
@@ -246,8 +251,9 @@ class CreditUsageTracker:
             "daily_burn_rate": self.requests_today,
             "weekly_burn_rate": self.requests_this_week,
             "monthly_usage_percent": usage_pct,
-            "estimated_monthly_projection": self.requests_today * 30 if self.requests_today > 0 else 0
+            "estimated_monthly_projection": self.requests_today * 30 if self.requests_today > 0 else 0,
         }
+
 
 class NVIDBuildClient:
     """
@@ -268,11 +274,13 @@ class NVIDBuildClient:
 
     # Model catalog is sourced from OpenAIWrapper to avoid duplication
 
-    def __init__(self,
-                 api_key: Optional[str] = None,
-                 base_url: Optional[str] = None,
-                 enable_credit_monitoring: bool = True,
-                 pharmaceutical_optimized: bool = True):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        enable_credit_monitoring: bool = True,
+        pharmaceutical_optimized: bool = True,
+    ):
         """
         Initialize NVIDIA Build client (DEPRECATED).
 
@@ -292,7 +300,7 @@ class NVIDBuildClient:
             api_key=api_key,
             base_url=base_url or self.DEFAULT_BASE_URL,
             pharmaceutical_optimized=pharmaceutical_optimized,
-            enable_cost_per_query_tracking=enable_credit_monitoring
+            enable_cost_per_query_tracking=enable_credit_monitoring,
         )
 
         # Delegate to OpenAIWrapper
@@ -314,11 +322,9 @@ class NVIDBuildClient:
                 "Install OpenAI SDK for cloud functionality: pip install 'openai>=1.0.0,<2.0.0'"
             )
 
-    def create_embeddings(self,
-                         texts: List[str],
-                         model: str = "nvidia/nv-embed-v1",
-                         encoding_format: str = "float",
-                         **kwargs):
+    def create_embeddings(
+        self, texts: List[str], model: str = "nvidia/nv-embed-v1", encoding_format: str = "float", **kwargs
+    ):
         """
         Create embeddings using NVIDIA Build models (delegates to OpenAIWrapper).
 
@@ -347,14 +353,10 @@ class NVIDBuildClient:
 
         try:
             response = self.wrapper.create_embeddings(
-                texts=texts,
-                model=model,
-                encoding_format=encoding_format,
-                **kwargs
+                texts=texts, model=model, encoding_format=encoding_format, **kwargs
             )
 
-            logger.info(f"Embeddings created successfully via wrapper: {len(texts)} texts, "
-                       f"model: {model}")
+            logger.info(f"Embeddings created successfully via wrapper: {len(texts)} texts, " f"model: {model}")
 
             return response
 
@@ -365,12 +367,14 @@ class NVIDBuildClient:
             logger.error(f"Embedding creation failed: {str(e)}")
             raise
 
-    def create_chat_completion(self,
-                              messages: List[Dict[str, str]],
-                              model: str = "meta/llama-3.1-8b-instruct",
-                              max_tokens: int = 1000,
-                              temperature: float = 0.1,
-                              **kwargs):
+    def create_chat_completion(
+        self,
+        messages: List[Dict[str, str]],
+        model: str = "meta/llama-3.1-8b-instruct",
+        max_tokens: int = 1000,
+        temperature: float = 0.1,
+        **kwargs,
+    ):
         """
         Create chat completion using NVIDIA Build models (delegates to OpenAIWrapper).
 
@@ -394,11 +398,7 @@ class NVIDBuildClient:
 
         try:
             response = self.wrapper.create_chat_completion(
-                messages=messages,
-                model=model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                **kwargs
+                messages=messages, model=model, max_tokens=max_tokens, temperature=temperature, **kwargs
             )
 
             logger.info(f"Chat completion successful via wrapper: model: {model}")
@@ -427,7 +427,7 @@ class NVIDBuildClient:
             "success": False,
             "error": None,
             "response_time_ms": None,
-            "model_tested": None
+            "model_tested": None,
         }
 
         start_time = time.time()
@@ -435,10 +435,7 @@ class NVIDBuildClient:
         try:
             if model_type == "embedding":
                 model = "nvidia/nv-embed-v1"
-                response = self.create_embeddings(
-                    texts=["Test pharmaceutical research query"],
-                    model=model
-                )
+                response = self.create_embeddings(texts=["Test pharmaceutical research query"], model=model)
                 results["model_tested"] = model
                 results["dimensions"] = len(response.data[0].embedding) if response.data else 0
                 results["success"] = True
@@ -448,7 +445,7 @@ class NVIDBuildClient:
                 response = self.create_chat_completion(
                     messages=[{"role": "user", "content": "What are drug interactions? Answer in one sentence."}],
                     model=model,
-                    max_tokens=50
+                    max_tokens=50,
                 )
                 results["model_tested"] = model
                 results["response"] = response.choices[0].message.content if response.choices else ""
@@ -475,11 +472,7 @@ class NVIDBuildClient:
         legacy_summary = self.credit_tracker.get_usage_summary()
         wrapper_metrics = self.wrapper.get_cost_metrics()
 
-        return {
-            "credit_monitoring": "enabled",
-            **legacy_summary,
-            "wrapper_metrics": wrapper_metrics
-        }
+        return {"credit_monitoring": "enabled", **legacy_summary, "wrapper_metrics": wrapper_metrics}
 
     def get_available_models(self) -> Dict[str, Any]:
         """Get information about available pharmaceutical models."""
@@ -495,11 +488,13 @@ class NVIDBuildClient:
             "base_url": self.wrapper.config.base_url,
             "pharmaceutical_optimized": self.pharmaceutical_optimized,
             "models": catalog,
-            "wrapper_info": wrapper_info
+            "wrapper_info": wrapper_info,
         }
+
 
 # Backward-compatible alias for historical imports
 NVIDIABuildClient = NVIDBuildClient
+
 
 # Convenience function for quick testing
 def test_nvidia_build_access() -> Dict[str, Any]:
@@ -523,7 +518,7 @@ def test_nvidia_build_access() -> Dict[str, Any]:
             "embedding_test": embedding_results,
             "chat_test": chat_results,
             "usage_summary": client.get_usage_summary(),
-            "available_models": client.get_available_models()
+            "available_models": client.get_available_models(),
         }
 
     except Exception as e:
@@ -531,12 +526,14 @@ def test_nvidia_build_access() -> Dict[str, Any]:
             "client_initialized": False,
             "error": str(e),
             "embedding_test": {"success": False},
-            "chat_test": {"success": False}
+            "chat_test": {"success": False},
         }
+
 
 if __name__ == "__main__":
     # Quick test when run directly
     import json
+
     results = test_nvidia_build_access()
     print(json.dumps(results, indent=2))
 

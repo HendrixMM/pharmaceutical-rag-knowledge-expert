@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # Executive Brief: Universal Business Intelligence Platform
 
 ## Fast Facts for Recruiters
@@ -37,4 +43,10 @@ _Source: Optimization validation summary in repository._
 
 ## Next Step
 
-Record a five-minute walkthrough using the demo outline and share it with recruiters alongside internship applications.
+## Record a five-minute walkthrough using the demo outline and share it with recruiters alongside internship applications.
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

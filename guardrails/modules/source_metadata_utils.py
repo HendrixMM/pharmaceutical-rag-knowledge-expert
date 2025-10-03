@@ -4,10 +4,11 @@ Source metadata manipulation utilities.
 Provides functions for safely updating source metadata without
 in-place mutations, preserving pharmaceutical safety compliance.
 """
-
 import logging
-from typing import Any, Dict, List, Optional
 from copy import deepcopy
+from typing import Any
+from typing import Dict
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +20,8 @@ def _clone_source_for_update(source: Any) -> Any:
     except Exception:
         if isinstance(source, dict):
             cloned = dict(source)
-            if 'metadata' in source and isinstance(source['metadata'], dict):
-                cloned['metadata'] = dict(source['metadata'])
+            if "metadata" in source and isinstance(source["metadata"], dict):
+                cloned["metadata"] = dict(source["metadata"])
             return cloned
         return source
 
@@ -28,19 +29,19 @@ def _clone_source_for_update(source: Any) -> Any:
 def _ensure_metadata_dict(source: Any) -> Dict[str, Any]:
     """Ensure the source exposes a mutable metadata dictionary and return it."""
     if isinstance(source, dict):
-        metadata = dict(source.get('metadata', {}))
-        source['metadata'] = metadata
+        metadata = dict(source.get("metadata", {}))
+        source["metadata"] = metadata
         return metadata
 
-    metadata = getattr(source, 'metadata', None)
+    metadata = getattr(source, "metadata", None)
     if metadata is None:
         metadata = {}
     elif not isinstance(metadata, dict):
         try:
             metadata = dict(metadata)
         except Exception:
-            metadata = {'raw_metadata': metadata}
-    setattr(source, 'metadata', metadata)
+            metadata = {"raw_metadata": metadata}
+    setattr(source, "metadata", metadata)
     return metadata
 
 
@@ -49,20 +50,22 @@ def _get_source_value(source: Any, key: str, default: Any = None) -> Any:
     if isinstance(source, dict):
         if key in source:
             return source[key]
-        metadata = source.get('metadata', {})
+        metadata = source.get("metadata", {})
         if isinstance(metadata, dict):
             return metadata.get(key, default)
         return default
 
     if hasattr(source, key):
         return getattr(source, key)
-    metadata = getattr(source, 'metadata', {})
+    metadata = getattr(source, "metadata", {})
     if isinstance(metadata, dict):
         return metadata.get(key, default)
     return default
 
 
-async def update_source_metadata(source: Any, updates: Optional[Dict[str, Any]] = None, key: Optional[str] = None, value: Any = None) -> Any:
+async def update_source_metadata(
+    source: Any, updates: Optional[Dict[str, Any]] = None, key: Optional[str] = None, value: Any = None
+) -> Any:
     """Return a copy of the source with metadata updated without in-place mutation."""
     try:
         update_map: Dict[str, Any] = updates.copy() if updates else {}
@@ -107,20 +110,20 @@ async def append_source_warning(source: Any, warning: str) -> Any:
     try:
         updated_source = _clone_source_for_update(source)
 
-        if hasattr(updated_source, 'add_warning') and callable(getattr(updated_source, 'add_warning')):
-            existing_warnings = getattr(updated_source, 'warnings', None)
+        if hasattr(updated_source, "add_warning") and callable(getattr(updated_source, "add_warning")):
+            existing_warnings = getattr(updated_source, "warnings", None)
             if isinstance(existing_warnings, list) and warning in existing_warnings:
                 return updated_source
             updated_source.add_warning(warning)
             return updated_source
 
         metadata = _ensure_metadata_dict(updated_source)
-        warnings = metadata.get('warnings', [])
+        warnings = metadata.get("warnings", [])
         if not isinstance(warnings, list):
             warnings = [warnings]
         if warning not in warnings:
             warnings.append(warning)
-        metadata['warnings'] = warnings
+        metadata["warnings"] = warnings
         return updated_source
     except Exception as exc:
         logger.error(f"Error appending source warning: {exc}")

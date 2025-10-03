@@ -40,8 +40,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -53,23 +52,14 @@ try:
 except Exception:  # pragma: no cover
     load_dotenv = None
 
+from scripts.colab_persistence import ensure_drive_mounted, is_colab, persist_cache, save_env, save_run_summary
+from scripts.config_validator import validate_complete_configuration
+
 # Local imports
 from src.enhanced_config import EnhancedRAGConfig
-from src.nemo_retriever_client import (
-    NVIDIABuildCreditsMonitor,
-    create_nemo_client,
-)
-from src.pubmed_eutils_client import PubMedEutilsClient
+from src.nemo_retriever_client import NVIDIABuildCreditsMonitor, create_nemo_client
 from src.pharmaceutical_processor import PharmaceuticalProcessor
-from scripts.config_validator import validate_complete_configuration
-from scripts.colab_persistence import (
-    ensure_drive_mounted,
-    is_colab,
-    save_env,
-    persist_cache,
-    save_run_summary,
-)
-
+from src.pubmed_eutils_client import PubMedEutilsClient
 
 # -------------------------------
 # Utils
@@ -96,7 +86,7 @@ def _load_env() -> None:
         pass
 
 
-def _mask_key(key: Optional[str]) -> str:
+def _mask_key(key: str | None) -> str:
     if not key:
         return "(unset)"
     k = key.strip()
@@ -109,7 +99,7 @@ def _now_iso() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
-def _percentile(values: List[float], pct: float) -> float:
+def _percentile(values: list[float], pct: float) -> float:
     if not values:
         return 0.0
     xs = sorted(values)
@@ -119,7 +109,7 @@ def _percentile(values: List[float], pct: float) -> float:
 
 def _write_benchmark_row(
     out_csv: Path,
-    row: Dict[str, Any],
+    row: dict[str, Any],
 ) -> None:
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     write_header = not out_csv.exists()
@@ -130,7 +120,7 @@ def _write_benchmark_row(
         w.writerow(row)
 
 
-def _checksum_texts(texts: List[str]) -> str:
+def _checksum_texts(texts: list[str]) -> str:
     h = hashlib.sha256()
     for t in texts:
         h.update(t.encode("utf-8", errors="ignore"))
@@ -138,7 +128,7 @@ def _checksum_texts(texts: List[str]) -> str:
     return h.hexdigest()
 
 
-def _compact_markdown_table(rows: List[Tuple[str, str, str, str]]) -> str:
+def _compact_markdown_table(rows: list[tuple[str, str, str, str]]) -> str:
     # rows of (Service, Endpoint, Model, Status)
     lines = ["| Service | Endpoint | Model | Status |", "|---|---|---|---|"]
     for r in rows:
@@ -156,14 +146,14 @@ class PhaseResult:
     ok: bool
     latency_ms: float = 0.0
     credits: int = 0
-    details: Dict[str, Any] = None  # type: ignore
+    details: dict[str, Any] = None  # type: ignore
 
 
 async def phase_config_and_health(
     skip_health: bool,
     health_latency_ms: float,
-    credits_monitor: Optional[NVIDIABuildCreditsMonitor],
-) -> Tuple[PhaseResult, Dict[str, Any]]:
+    credits_monitor: NVIDIABuildCreditsMonitor | None,
+) -> tuple[PhaseResult, dict[str, Any]]:
     # Validate config
     cfg_result = validate_complete_configuration()
     if not cfg_result.valid:
@@ -176,8 +166,8 @@ async def phase_config_and_health(
     api_key = os.getenv("NVIDIA_API_KEY")
 
     # Perform health check unless skipped
-    health_rows: List[Tuple[str, str, str, str]] = []
-    health_detail: Dict[str, Any] = {}
+    health_rows: list[tuple[str, str, str, str]] = []
+    health_detail: dict[str, Any] = {}
     t0 = time.time()
     if skip_health:
         for svc in ("embedding", "reranking"):
@@ -206,7 +196,12 @@ async def phase_config_and_health(
             stat = f"unhealthy (latency {lat:.1f}ms > {health_latency_ms:.1f}ms)"
             ok = False
         health_rows.append((svc, endpoints.get(svc, ""), models.get(svc, ""), stat))
-        health_detail[svc] = {"status": stat, "latency_ms": lat, "endpoint": endpoints.get(svc), "model": models.get(svc)}
+        health_detail[svc] = {
+            "status": stat,
+            "latency_ms": lat,
+            "endpoint": endpoints.get(svc),
+            "model": models.get(svc),
+        }
 
     md = _compact_markdown_table(health_rows)
     print("=== CONFIG SUMMARY ===")
@@ -216,7 +211,9 @@ async def phase_config_and_health(
     if credits_monitor:
         credits_monitor.log_api_call("health", tokens_used=1)
 
-    return PhaseResult(ok, latency_ms=(time.time() - t0) * 1000, credits=1 if credits_monitor else 0, details=health_detail), {
+    return PhaseResult(
+        ok, latency_ms=(time.time() - t0) * 1000, credits=1 if credits_monitor else 0, details=health_detail
+    ), {
         "endpoints": endpoints,
         "models": models,
         "api_key_masked": _mask_key(api_key),
@@ -241,8 +238,8 @@ def phase_pubmed_fetch(query: str, max_items: int = 5) -> PhaseResult:
             return PhaseResult(False, details={"error": str(exc2)})
 
     # Fast-fail if malformed
-    texts: List[str] = []
-    meta: List[Dict[str, Any]] = []
+    texts: list[str] = []
+    meta: list[dict[str, Any]] = []
     for it in items:
         title = (it.get("title") or "").strip()
         abstract = (it.get("abstract") or "").strip()
@@ -259,11 +256,11 @@ def phase_pubmed_fetch(query: str, max_items: int = 5) -> PhaseResult:
 
 async def phase_embed_and_rerank(
     query: str,
-    texts: List[str],
+    texts: list[str],
     batch_size: int,
     top_k: int,
-    credits_monitor: Optional[NVIDIABuildCreditsMonitor],
-) -> Tuple[PhaseResult, PhaseResult]:
+    credits_monitor: NVIDIABuildCreditsMonitor | None,
+) -> tuple[PhaseResult, PhaseResult]:
     client = await create_nemo_client(credits_monitor=credits_monitor)
     # Embedding
     t0 = time.time()
@@ -292,7 +289,9 @@ async def phase_embed_and_rerank(
             # Deduct exactly one request per API call
             credits_monitor.log_api_call("reranking", tokens_used=1)
     except Exception as exc:
-        return PhaseResult(True, latency_ms=embed_latency, details={"embeddings": True}), PhaseResult(False, details={"error": f"Rerank error: {exc}"})
+        return PhaseResult(True, latency_ms=embed_latency, details={"embeddings": True}), PhaseResult(
+            False, details={"error": f"Rerank error: {exc}"}
+        )
 
     return (
         PhaseResult(embed_ok, latency_ms=embed_latency, details={"count": len(texts[:batch_size])}),
@@ -300,13 +299,19 @@ async def phase_embed_and_rerank(
     )
 
 
-def phase_overlay_summary(texts: List[str]) -> PhaseResult:
+def phase_overlay_summary(texts: list[str]) -> PhaseResult:
     overlay_on = os.getenv("PHARMA_DOMAIN_OVERLAY", "false").strip().lower() in {"1", "true", "yes", "on"}
     if not overlay_on:
         return PhaseResult(True, details={"overlay": False})
     t0 = time.time()
     proc = PharmaceuticalProcessor()
-    drug_canon = set(); reg_tags = set(); agencies = set(); evidence = set(); species = set(); pk = set(); risks = []
+    drug_canon = set()
+    reg_tags = set()
+    agencies = set()
+    evidence = set()
+    species = set()
+    pk = set()
+    risks = []
     for text in texts[:3]:
         meta = proc.enhance_document_metadata({"page_content": text, "metadata": {}})["metadata"]
         drug_canon.update([str(n) for n in (meta.get("drug_canonical_names") or [])])
@@ -326,6 +331,7 @@ def phase_overlay_summary(texts: List[str]) -> PhaseResult:
     print(f"Agencies: {sorted(agencies) if agencies else []}")
     if risks:
         from collections import Counter
+
         print(f"CYP risk: {Counter(risks).most_common(1)[0][0]}")
     print(f"Evidence: {sorted(evidence) if evidence else []}")
     print(f"Species: {sorted(species) if species else []}")
@@ -336,9 +342,9 @@ def phase_overlay_summary(texts: List[str]) -> PhaseResult:
 def _persist_outputs(
     base_dir: Path,
     query: str,
-    texts: List[str],
-    metadata: List[Dict[str, Any]],
-    summary: Dict[str, Any],
+    texts: list[str],
+    metadata: list[dict[str, Any]],
+    summary: dict[str, Any],
 ) -> None:
     base_dir.mkdir(parents=True, exist_ok=True)
     ts = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
@@ -350,13 +356,15 @@ def _persist_outputs(
         w = csv.DictWriter(f, fieldnames=["pmid", "doi", "title", "journal", "publication_date"])
         w.writeheader()
         for m in metadata:
-            w.writerow({
-                "pmid": m.get("pmid"),
-                "doi": m.get("doi"),
-                "title": m.get("title"),
-                "journal": m.get("journal"),
-                "publication_date": m.get("publication_date"),
-            })
+            w.writerow(
+                {
+                    "pmid": m.get("pmid"),
+                    "doi": m.get("doi"),
+                    "title": m.get("title"),
+                    "journal": m.get("journal"),
+                    "publication_date": m.get("publication_date"),
+                }
+            )
 
     # Write a manifest with checksum + preview
     manifest = {
@@ -386,10 +394,22 @@ async def main() -> int:
     parser.add_argument("--top-k", type=int, default=5, help="Top-K passages to rerank")
     parser.add_argument("--max-results", type=int, default=5, help="Max PubMed items to fetch")
     parser.add_argument("--skip-health", action="store_true", help="Bypass health gate")
-    parser.add_argument("--health-latency-ms", type=float, default=float(os.getenv("HEALTH_LATENCY_MS", "5000")), help="Max allowed p95 latency")
-    parser.add_argument("--credits-warn-pct", type=int, default=int(os.getenv("CREDITS_WARN_PCT", "10")), help="Warn when credits remaining < pct")
+    parser.add_argument(
+        "--health-latency-ms",
+        type=float,
+        default=float(os.getenv("HEALTH_LATENCY_MS", "5000")),
+        help="Max allowed p95 latency",
+    )
+    parser.add_argument(
+        "--credits-warn-pct",
+        type=int,
+        default=int(os.getenv("CREDITS_WARN_PCT", "10")),
+        help="Warn when credits remaining < pct",
+    )
     parser.add_argument("--output-dir", default=str(ROOT / "persist"), help="Directory for summaries/benchmarks")
-    parser.add_argument("--pubmed-only", action="store_true", help="Fetch PubMed + overlay + persist; skip NIM embed/rerank")
+    parser.add_argument(
+        "--pubmed-only", action="store_true", help="Fetch PubMed + overlay + persist; skip NIM embed/rerank"
+    )
     args = parser.parse_args()
 
     out_dir = Path(args.output_dir)
@@ -400,7 +420,7 @@ async def main() -> int:
     save_env(str(out_dir))
 
     # Optional credits monitoring
-    free_tier = os.getenv("NVIDIA_BUILD_FREE_TIER", "").strip().lower() in {"1","true","yes","on"}
+    free_tier = os.getenv("NVIDIA_BUILD_FREE_TIER", "").strip().lower() in {"1", "true", "yes", "on"}
     credits_monitor = NVIDIABuildCreditsMonitor(os.getenv("NVIDIA_API_KEY")) if free_tier else None
 
     # Phase 0-1: Config + Health
@@ -422,15 +442,15 @@ async def main() -> int:
     if not pubmed.ok:
         print("❌ PubMed fetch failed:", (pubmed.details or {}).get("error", "unknown"))
         return 3
-    texts: List[str] = (pubmed.details or {}).get("texts", [])
-    metadata: List[Dict[str, Any]] = (pubmed.details or {}).get("metadata", [])
+    texts: list[str] = (pubmed.details or {}).get("texts", [])
+    metadata: list[dict[str, Any]] = (pubmed.details or {}).get("metadata", [])
     if not texts:
         print("❌ No valid texts from PubMed")
         return 3
     print(f"Fetched {len(texts)} PubMed items (capped).")
 
     # Overlay
-    overlay = phase_overlay_summary(texts)
+    phase_overlay_summary(texts)
 
     # PubMed-only testing mode (skip NIM calls)
     if args.pubmed_only:
@@ -463,7 +483,9 @@ async def main() -> int:
         remaining = credits_monitor.credits_remaining
         pct_remaining = (remaining / (remaining + total_credits)) * 100 if (remaining + total_credits) > 0 else 100
         print("=== CREDITS SUMMARY ===")
-        print(f"Health: {per_phase['health']}  Embedding: {per_phase['embedding']}  Reranking: {per_phase['reranking']}")
+        print(
+            f"Health: {per_phase['health']}  Embedding: {per_phase['embedding']}  Reranking: {per_phase['reranking']}"
+        )
         print(f"Total used (approx): {total_credits}  Remaining (approx): {remaining} ({pct_remaining:.1f}%)")
         if pct_remaining < max(1, int(args.credits_warn_pct)):
             print(f"⚠️  Low free-tier credits (<{args.credits_warn_pct}%). Check NVIDIA Build console.")
@@ -507,7 +529,9 @@ async def main() -> int:
     print("=== PIPELINE SUMMARY ===")
     print(f"Query: {args.query}")
     print(f"Texts: {len(texts)}  Batch: {args.batch_size}  Top-K: {args.top_k}")
-    print(f"Latency(ms): health={cfg_health.latency_ms:.1f} pubmed={pubmed.latency_ms:.1f} embed={embed_res.latency_ms:.1f} rerank={rerank_res.latency_ms:.1f}")
+    print(
+        f"Latency(ms): health={cfg_health.latency_ms:.1f} pubmed={pubmed.latency_ms:.1f} embed={embed_res.latency_ms:.1f} rerank={rerank_res.latency_ms:.1f}"
+    )
     print("Done.")
     return 0
 

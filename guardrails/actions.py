@@ -1,21 +1,22 @@
 """
 Comprehensive medical safety actions for NVIDIA NeMo Guardrails integration.
 """
-
-import re
 import logging
-from typing import Any, Dict, List, Optional, Set
-from copy import deepcopy
-import asyncio
 import os
+import re
 from pathlib import Path
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Set
 
 # Optional Presidio imports for advanced PII/PHI detection
 PRESIDIO_AVAILABLE = False
 try:
     from presidio_analyzer import AnalyzerEngine
-    from presidio_anonymizer import AnonymizerEngine
     from presidio_analyzer.nlp_engine import NlpEngineProvider
+    from presidio_anonymizer import AnonymizerEngine
+
     PRESIDIO_AVAILABLE = True
     logger = logging.getLogger(__name__)
     logger.info("Presidio detected - will use for advanced PII/PHI detection when enabled")
@@ -25,24 +26,17 @@ except ImportError:
 
 
 # Import modular components for better maintainability
-from .modules.disclaimer_management import (
-    contains_medical_disclaimer,
-    insert_medical_disclaimer,
-    format_disclaimer_consistently
-)
 from .modules.source_metadata_utils import (
-    update_source_metadata,
-    set_source_flag,
-    append_source_warning,
     _get_source_value,
-    _clone_source_for_update,
-    _ensure_metadata_dict
+    append_source_warning,
+    set_source_flag,
+    update_source_metadata,
 )
 
 # Provide safe defaults for optional Presidio interfaces
-AnalyzerEngine = globals().get('AnalyzerEngine', None)
-AnonymizerEngine = globals().get('AnonymizerEngine', None)
-NlpEngineProvider = globals().get('NlpEngineProvider', None)
+AnalyzerEngine = globals().get("AnalyzerEngine", None)
+AnonymizerEngine = globals().get("AnonymizerEngine", None)
+NlpEngineProvider = globals().get("NlpEngineProvider", None)
 
 
 class MedicalSafetyActions:
@@ -54,30 +48,30 @@ class MedicalSafetyActions:
     def __init__(self):
         """Initialize medical safety actions."""
         self.medical_patterns = {
-            'mrn': r'\b(?:MRN|medical record|patient id)[:\s]*(\d{6,12})\b',
-            'patient_name': r'\bpatient\s+([A-Z][a-z]+\s+[A-Z][a-z]+)\b',
-            'dob': r'\b(?:DOB|date of birth)[:\s]*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b',
-            'ssn': r'\b\d{3}-?\d{2}-?\d{4}\b',
-            'phone': r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b',
-            'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+            "mrn": r"\b(?:MRN|medical record|patient id)[:\s]*(\d{6,12})\b",
+            "patient_name": r"\bpatient\s+([A-Z][a-z]+\s+[A-Z][a-z]+)\b",
+            "dob": r"\b(?:DOB|date of birth)[:\s]*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b",
+            "ssn": r"\b\d{3}-?\d{2}-?\d{4}\b",
+            "phone": r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b",
+            "email": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
         }
 
         self.jailbreak_patterns = [
-            r'ignore.*medical.*guidelines',
-            r'bypass.*safety.*protocols',
-            r'pretend.*not.*medical.*ai',
-            r'act.*as.*doctor',
-            r'provide.*medical.*advice',
-            r'diagnose.*patient',
-            r'recommend.*treatment.*for',
-            r'prescribe.*medication'
+            r"ignore.*medical.*guidelines",
+            r"bypass.*safety.*protocols",
+            r"pretend.*not.*medical.*ai",
+            r"act.*as.*doctor",
+            r"provide.*medical.*advice",
+            r"diagnose.*patient",
+            r"recommend.*treatment.*for",
+            r"prescribe.*medication",
         ]
 
         self.disclaimer_templates = {
-            'drug_information': "This information is for research purposes only. Consult healthcare professionals for medical advice.",
-            'drug_interactions': "Drug interaction information provided is for educational purposes. Always consult a healthcare provider before making medication changes.",
-            'clinical_research': "This analysis is based on published research and is not intended as medical advice. Clinical decisions should involve qualified healthcare professionals.",
-            'general_medical': "This content is for informational purposes only and does not constitute medical advice, diagnosis, or treatment recommendations."
+            "drug_information": "This information is for research purposes only. Consult healthcare professionals for medical advice.",
+            "drug_interactions": "Drug interaction information provided is for educational purposes. Always consult a healthcare provider before making medication changes.",
+            "clinical_research": "This analysis is based on published research and is not intended as medical advice. Clinical decisions should involve qualified healthcare professionals.",
+            "general_medical": "This content is for informational purposes only and does not constitute medical advice, diagnosis, or treatment recommendations.",
         }
 
     async def check_medical_context(self, query: str) -> Dict[str, Any]:
@@ -95,16 +89,33 @@ class MedicalSafetyActions:
 
             # Valid pharmaceutical research contexts
             valid_contexts = [
-                'drug interaction', 'pharmacokinetics', 'clinical trial', 'mechanism of action',
-                'adverse effects', 'efficacy', 'safety profile', 'literature review',
-                'meta-analysis', 'systematic review', 'research', 'study', 'pubmed'
+                "drug interaction",
+                "pharmacokinetics",
+                "clinical trial",
+                "mechanism of action",
+                "adverse effects",
+                "efficacy",
+                "safety profile",
+                "literature review",
+                "meta-analysis",
+                "systematic review",
+                "research",
+                "study",
+                "pubmed",
             ]
 
             # Invalid medical advice contexts
             invalid_contexts = [
-                'diagnose me', 'what medication should i take', 'medical advice',
-                'am i having', 'should i stop taking', 'prescribe', 'treat my',
-                'cure for', 'medical emergency', 'symptoms mean'
+                "diagnose me",
+                "what medication should i take",
+                "medical advice",
+                "am i having",
+                "should i stop taking",
+                "prescribe",
+                "treat my",
+                "cure for",
+                "medical emergency",
+                "symptoms mean",
             ]
 
             # Check for valid pharmaceutical research context
@@ -128,7 +139,7 @@ class MedicalSafetyActions:
                 "has_valid_context": has_valid_context,
                 "has_invalid_context": has_invalid_context,
                 "context_type": context_type,
-                "disclaimer_required": not has_valid_context or has_invalid_context
+                "disclaimer_required": not has_valid_context or has_invalid_context,
             }
 
         except Exception as e:
@@ -156,12 +167,12 @@ class MedicalSafetyActions:
 
             # Additional heuristics for medical jailbreaks
             jailbreak_indicators = [
-                ('ignore', 'medical'),
-                ('pretend', 'doctor'),
-                ('act as', 'physician'),
-                ('roleplay', 'medical'),
-                ('bypass', 'safety'),
-                ('override', 'guidelines')
+                ("ignore", "medical"),
+                ("pretend", "doctor"),
+                ("act as", "physician"),
+                ("roleplay", "medical"),
+                ("bypass", "safety"),
+                ("override", "guidelines"),
             ]
 
             for word1, word2 in jailbreak_indicators:
@@ -178,7 +189,7 @@ class MedicalSafetyActions:
     async def scan_medical_pii(self, text: str) -> Dict[str, Any]:
         """
         Scan for medical PII/PHI using healthcare identifier patterns.
-        
+
         Uses Presidio when available for advanced detection, otherwise falls back to regex patterns.
 
         Args:
@@ -194,7 +205,7 @@ class MedicalSafetyActions:
             except Exception as e:
                 logger.warning(f"Presidio PII/PHI scanning failed, falling back to regex: {e}")
                 # Fall back to regex-based scanning
-        
+
         # Regex-based scanning (fallback or when Presidio not available)
         try:
             detected_types = []
@@ -204,18 +215,15 @@ class MedicalSafetyActions:
                 matches = re.finditer(pattern, text, re.IGNORECASE)
                 for match in matches:
                     detected_types.append(pii_type)
-                    detections.append({
-                        "type": pii_type,
-                        "text": match.group(),
-                        "start": match.start(),
-                        "end": match.end()
-                    })
+                    detections.append(
+                        {"type": pii_type, "text": match.group(), "start": match.start(), "end": match.end()}
+                    )
 
             return {
                 "detected": len(detected_types) > 0,
                 "types": list(set(detected_types)),
                 "count": len(detections),
-                "detections": detections
+                "detections": detections,
             }
 
         except Exception as e:
@@ -226,51 +234,53 @@ class MedicalSafetyActions:
         """Scan for PII/PHI using Presidio analyzer."""
         try:
             # Initialize Presidio engines if not already done
-            if not hasattr(self, '_analyzer'):
+            if not hasattr(self, "_analyzer"):
                 # Create NLP engine provider
                 nlp_engine_provider = NlpEngineProvider()
                 nlp_engine = nlp_engine_provider.create_engine()
-                
+
                 # Initialize analyzer with the NLP engine
                 self._analyzer = AnalyzerEngine(nlp_engine=nlp_engine)
 
             # Analyze the text for PII/PHI entities
-            analyzer_results = self._analyzer.analyze(text=text, language='en')
-            
+            analyzer_results = self._analyzer.analyze(text=text, language="en")
+
             # Extract detected entities
             detected_types = []
             detections = []
             for result in analyzer_results:
                 # Map Presidio entity types to our internal types
                 entity_type_map = {
-                    'PERSON': 'patient_name',
-                    'PHONE_NUMBER': 'phone',
-                    'EMAIL_ADDRESS': 'email',
-                    'US_SSN': 'ssn',
-                    'DATE_TIME': 'dob',
-                    'LOCATION': 'location',
-                    'US_BANK_NUMBER': 'bank_account',
-                    'CREDIT_CARD': 'credit_card',
-                    'US_DRIVER_LICENSE': 'driver_license',
-                    'US_PASSPORT': 'passport'
+                    "PERSON": "patient_name",
+                    "PHONE_NUMBER": "phone",
+                    "EMAIL_ADDRESS": "email",
+                    "US_SSN": "ssn",
+                    "DATE_TIME": "dob",
+                    "LOCATION": "location",
+                    "US_BANK_NUMBER": "bank_account",
+                    "CREDIT_CARD": "credit_card",
+                    "US_DRIVER_LICENSE": "driver_license",
+                    "US_PASSPORT": "passport",
                 }
-                
+
                 internal_type = entity_type_map.get(result.entity_type, result.entity_type.lower())
                 detected_types.append(internal_type)
-                
-                detections.append({
-                    "type": internal_type,
-                    "text": text[result.start:result.end],
-                    "start": result.start,
-                    "end": result.end,
-                    "confidence": result.score
-                })
+
+                detections.append(
+                    {
+                        "type": internal_type,
+                        "text": text[result.start : result.end],
+                        "start": result.start,
+                        "end": result.end,
+                        "confidence": result.score,
+                    }
+                )
 
             return {
                 "detected": len(detected_types) > 0,
                 "types": list(set(detected_types)),
                 "count": len(detections),
-                "detections": detections
+                "detections": detections,
             }
 
         except Exception as e:
@@ -280,7 +290,7 @@ class MedicalSafetyActions:
     async def mask_medical_pii(self, text: str, detected_pii: List[str]) -> str:
         """
         Mask medical PII/PHI with appropriate placeholders.
-        
+
         Uses Presidio when available for advanced anonymization, otherwise falls back to regex patterns.
 
         Args:
@@ -297,25 +307,25 @@ class MedicalSafetyActions:
             except Exception as e:
                 logger.warning(f"Presidio PII/PHI masking failed, falling back to regex: {e}")
                 # Fall back to regex-based masking
-        
+
         # Regex-based masking (fallback or when Presidio not available)
         try:
             masked_text = text
 
             for pii_type, pattern in self.medical_patterns.items():
                 if pii_type in detected_pii:
-                    if pii_type == 'mrn':
-                        masked_text = re.sub(pattern, '[MEDICAL_RECORD_NUMBER]', masked_text, flags=re.IGNORECASE)
-                    elif pii_type == 'patient_name':
-                        masked_text = re.sub(pattern, '[PATIENT_NAME]', masked_text, flags=re.IGNORECASE)
-                    elif pii_type == 'dob':
-                        masked_text = re.sub(pattern, '[DATE_OF_BIRTH]', masked_text, flags=re.IGNORECASE)
-                    elif pii_type == 'ssn':
-                        masked_text = re.sub(pattern, '[SSN]', masked_text, flags=re.IGNORECASE)
-                    elif pii_type == 'phone':
-                        masked_text = re.sub(pattern, '[PHONE_NUMBER]', masked_text, flags=re.IGNORECASE)
-                    elif pii_type == 'email':
-                        masked_text = re.sub(pattern, '[EMAIL_ADDRESS]', masked_text, flags=re.IGNORECASE)
+                    if pii_type == "mrn":
+                        masked_text = re.sub(pattern, "[MEDICAL_RECORD_NUMBER]", masked_text, flags=re.IGNORECASE)
+                    elif pii_type == "patient_name":
+                        masked_text = re.sub(pattern, "[PATIENT_NAME]", masked_text, flags=re.IGNORECASE)
+                    elif pii_type == "dob":
+                        masked_text = re.sub(pattern, "[DATE_OF_BIRTH]", masked_text, flags=re.IGNORECASE)
+                    elif pii_type == "ssn":
+                        masked_text = re.sub(pattern, "[SSN]", masked_text, flags=re.IGNORECASE)
+                    elif pii_type == "phone":
+                        masked_text = re.sub(pattern, "[PHONE_NUMBER]", masked_text, flags=re.IGNORECASE)
+                    elif pii_type == "email":
+                        masked_text = re.sub(pattern, "[EMAIL_ADDRESS]", masked_text, flags=re.IGNORECASE)
 
             return masked_text
 
@@ -327,20 +337,20 @@ class MedicalSafetyActions:
         """Mask PII/PHI using Presidio anonymizer."""
         try:
             # Initialize Presidio engines if not already done
-            if not hasattr(self, '_analyzer') or not hasattr(self, '_anonymizer'):
+            if not hasattr(self, "_analyzer") or not hasattr(self, "_anonymizer"):
                 # Create NLP engine provider
                 nlp_engine_provider = NlpEngineProvider()
                 nlp_engine = nlp_engine_provider.create_engine()
-                
+
                 # Initialize analyzer with the NLP engine
                 self._analyzer = AnalyzerEngine(nlp_engine=nlp_engine)
-                
+
                 # Initialize anonymizer
                 self._anonymizer = AnonymizerEngine()
 
             # Analyze the text for PII/PHI entities
-            analyzer_results = self._analyzer.analyze(text=text, language='en')
-            
+            analyzer_results = self._analyzer.analyze(text=text, language="en")
+
             # Anonymize the text
             if analyzer_results:
                 anonymized_result = self._anonymizer.anonymize(text=text, analyzer_results=analyzer_results)
@@ -352,7 +362,9 @@ class MedicalSafetyActions:
             logger.error(f"Error in Presidio PII/PHI masking: {str(e)}")
             raise
 
-    async def get_medical_disclaimer(self, response_type: str = "general_medical", content_preview: str | None = None) -> str:
+    async def get_medical_disclaimer(
+        self, response_type: str = "general_medical", content_preview: str | None = None
+    ) -> str:
         """
         Get context-appropriate medical disclaimers.
 
@@ -378,7 +390,7 @@ class MedicalSafetyActions:
 
         except Exception as e:
             logger.error(f"Error getting medical disclaimer: {str(e)}")
-            return self.disclaimer_templates.get('general_medical', "")
+            return self.disclaimer_templates.get("general_medical", "")
 
     async def medical_hallucination_check(self, response: str, sources: List[Dict]) -> Dict[str, Any]:
         """
@@ -393,21 +405,25 @@ class MedicalSafetyActions:
         """
         try:
             # Extract specific claims (numbers, percentages, study names)
-            number_pattern = r'\b\d+\.?\d*%?\b'
-            study_pattern = r'\b[A-Z][a-z]+\s+et\s+al\.\s+\(\d{4}\)'
-            drug_pattern = r'\b[A-Z][a-z]+(?:in|ol|am|ex)\b'
+            number_pattern = r"\b\d+\.?\d*%?\b"
+            study_pattern = r"\b[A-Z][a-z]+\s+et\s+al\.\s+\(\d{4}\)"
+            drug_pattern = r"\b[A-Z][a-z]+(?:in|ol|am|ex)\b"
 
             response_numbers = set(re.findall(number_pattern, response))
             response_studies = set(re.findall(study_pattern, response))
             response_drugs = set(re.findall(drug_pattern, response))
 
             # Extract same patterns from sources
-            source_text = ' '.join([
-                source.get('page_content', '') + ' ' +
-                source.get('metadata', {}).get('abstract', '') + ' ' +
-                source.get('metadata', {}).get('title', '')
-                for source in sources
-            ])
+            source_text = " ".join(
+                [
+                    source.get("page_content", "")
+                    + " "
+                    + source.get("metadata", {}).get("abstract", "")
+                    + " "
+                    + source.get("metadata", {}).get("title", "")
+                    for source in sources
+                ]
+            )
 
             source_numbers = set(re.findall(number_pattern, source_text))
             source_studies = set(re.findall(study_pattern, source_text))
@@ -438,9 +454,9 @@ class MedicalSafetyActions:
                 "details": {
                     "unsupported_numbers": list(unsupported_numbers),
                     "unsupported_studies": list(unsupported_studies),
-                    "unsupported_drugs": list(unsupported_drugs)
+                    "unsupported_drugs": list(unsupported_drugs),
                 },
-                "confidence": 0.8 if hallucination_detected else 0.9
+                "confidence": 0.8 if hallucination_detected else 0.9,
             }
 
         except Exception as e:
@@ -451,21 +467,22 @@ class MedicalSafetyActions:
         """Classify the type of medical query."""
         query_lower = query.lower()
 
-        if any(term in query_lower for term in ['interaction', 'drug-drug', 'combination']):
-            return 'drug_interactions'
-        elif any(term in query_lower for term in ['pharmacokinetics', 'pk', 'absorption', 'metabolism']):
-            return 'pharmacokinetics'
-        elif any(term in query_lower for term in ['clinical trial', 'study', 'research']):
-            return 'clinical_research'
-        elif any(term in query_lower for term in ['side effects', 'adverse', 'safety']):
-            return 'safety_information'
+        if any(term in query_lower for term in ["interaction", "drug-drug", "combination"]):
+            return "drug_interactions"
+        elif any(term in query_lower for term in ["pharmacokinetics", "pk", "absorption", "metabolism"]):
+            return "pharmacokinetics"
+        elif any(term in query_lower for term in ["clinical trial", "study", "research"]):
+            return "clinical_research"
+        elif any(term in query_lower for term in ["side effects", "adverse", "safety"]):
+            return "safety_information"
         else:
-            return 'general_medical'
+            return "general_medical"
 
 
 # ---------------------------------------------------------------------------
 # Medical Content Evaluation Functions (using imported utilities)
 # ---------------------------------------------------------------------------
+
 
 async def ensure_disclaimer(response: str, response_type: str) -> str:
     """Ensure the response contains a single appropriate disclaimer and risk notices."""
@@ -571,16 +588,12 @@ async def evaluate_regulatory_compliance_flow(response: str) -> Dict[str, Any]:
         message = response
         violations = compliance.get("violations", [])
         if violations:
-            regulatory_notice = (
-                "⚠️ **Regulatory Note:** This information is for research purposes and does not constitute medical advice."
-            )
+            regulatory_notice = "⚠️ **Regulatory Note:** This information is for research purposes and does not constitute medical advice."
             if regulatory_notice.lower() not in message.lower():
                 message = f"{message}\n\n{regulatory_notice}"
 
         if any(term in lower_response for term in ["efficacy", "effectiveness"]):
-            disclaimer = (
-                "📋 **Regulatory Note:** Efficacy claims are based on published research and may not reflect FDA/EMA approved indications."
-            )
+            disclaimer = "📋 **Regulatory Note:** Efficacy claims are based on published research and may not reflect FDA/EMA approved indications."
             if disclaimer.lower() not in message.lower():
                 message = f"{message}\n\n{disclaimer}"
 
@@ -745,17 +758,33 @@ async def validate_pharmaceutical_context(query: str) -> Dict[str, Any]:
 
         # Research-focused indicators
         research_indicators = [
-            "literature review", "clinical trial", "pharmacokinetics",
-            "drug interaction", "mechanism of action", "adverse effects",
-            "systematic review", "meta-analysis", "pubmed", "research",
-            "study", "efficacy", "safety profile"
+            "literature review",
+            "clinical trial",
+            "pharmacokinetics",
+            "drug interaction",
+            "mechanism of action",
+            "adverse effects",
+            "systematic review",
+            "meta-analysis",
+            "pubmed",
+            "research",
+            "study",
+            "efficacy",
+            "safety profile",
         ]
 
         # Medical advice indicators (to reject)
         advice_indicators = [
-            "diagnose me", "what should I take", "medical advice",
-            "treat my", "cure for", "am I having", "symptoms mean",
-            "should I stop", "prescribe me", "medical emergency"
+            "diagnose me",
+            "what should I take",
+            "medical advice",
+            "treat my",
+            "cure for",
+            "am I having",
+            "symptoms mean",
+            "should I stop",
+            "prescribe me",
+            "medical emergency",
         ]
 
         has_research_context = any(indicator in query_lower for indicator in research_indicators)
@@ -765,7 +794,7 @@ async def validate_pharmaceutical_context(query: str) -> Dict[str, Any]:
             "valid": has_research_context and not seeks_medical_advice,
             "research_focused": has_research_context,
             "seeks_advice": seeks_medical_advice,
-            "context_type": await classify_medical_query_type(query)
+            "context_type": await classify_medical_query_type(query),
         }
 
     except Exception as e:
@@ -788,14 +817,25 @@ async def assess_medical_toxicity(text: str) -> float:
 
         # High toxicity indicators
         high_toxicity_terms = [
-            'self-harm', 'suicide', 'overdose', 'kill myself', 'end my life',
-            'dangerous drug', 'illegal substance', 'poison', 'toxic dose'
+            "self-harm",
+            "suicide",
+            "overdose",
+            "kill myself",
+            "end my life",
+            "dangerous drug",
+            "illegal substance",
+            "poison",
+            "toxic dose",
         ]
 
         # Moderate toxicity indicators
         moderate_toxicity_terms = [
-            'recreational drug', 'get high', 'abuse', 'addiction',
-            'street drug', 'controlled substance'
+            "recreational drug",
+            "get high",
+            "abuse",
+            "addiction",
+            "street drug",
+            "controlled substance",
         ]
 
         toxicity_score = 0.0
@@ -831,11 +871,11 @@ async def validate_against_pubmed_sources(claims: str, sources: List[Dict]) -> D
     try:
         # Extract factual claims from response
         claim_patterns = [
-            r'studies show[s]?\s+([^.]+)',
-            r'research indicates?\s+([^.]+)',
-            r'evidence suggests?\s+([^.]+)',
-            r'trials demonstrated?\s+([^.]+)',
-            r'analysis found\s+([^.]+)'
+            r"studies show[s]?\s+([^.]+)",
+            r"research indicates?\s+([^.]+)",
+            r"evidence suggests?\s+([^.]+)",
+            r"trials demonstrated?\s+([^.]+)",
+            r"analysis found\s+([^.]+)",
         ]
 
         extracted_claims = []
@@ -844,11 +884,9 @@ async def validate_against_pubmed_sources(claims: str, sources: List[Dict]) -> D
             extracted_claims.extend(matches)
 
         # Validate claims against sources
-        source_abstracts = ' '.join([
-            source.get('metadata', {}).get('abstract', '') +
-            source.get('page_content', '')
-            for source in sources
-        ]).lower()
+        source_abstracts = " ".join(
+            [source.get("metadata", {}).get("abstract", "") + source.get("page_content", "") for source in sources]
+        ).lower()
 
         supported_claims = []
         unsupported_claims = []
@@ -874,7 +912,7 @@ async def validate_against_pubmed_sources(claims: str, sources: List[Dict]) -> D
             "supported_claims": supported_claims,
             "unsupported_claims": unsupported_claims,
             "support_ratio": len(supported_claims) / len(extracted_claims) if extracted_claims else 1.0,
-            "sources_count": len(sources)
+            "sources_count": len(sources),
         }
 
     except Exception as e:
@@ -900,8 +938,12 @@ async def assess_regulatory_compliance(response: str) -> Dict[str, Any]:
 
         # FDA compliance checks
         fda_violations = [
-            'guaranteed cure', 'miracle drug', 'completely safe',
-            'no side effects', 'fda approved for all', 'always effective'
+            "guaranteed cure",
+            "miracle drug",
+            "completely safe",
+            "no side effects",
+            "fda approved for all",
+            "always effective",
         ]
 
         for violation in fda_violations:
@@ -910,8 +952,12 @@ async def assess_regulatory_compliance(response: str) -> Dict[str, Any]:
 
         # Medical advice warnings
         advice_patterns = [
-            'you should take', 'i recommend', 'stop taking',
-            'increase dose', 'this will cure', 'definitely effective'
+            "you should take",
+            "i recommend",
+            "stop taking",
+            "increase dose",
+            "this will cure",
+            "definitely effective",
         ]
 
         for pattern in advice_patterns:
@@ -922,7 +968,7 @@ async def assess_regulatory_compliance(response: str) -> Dict[str, Any]:
             "compliant": len(violations) == 0,
             "violations": violations,
             "warnings": warnings,
-            "compliance_score": 1.0 - (len(violations) * 0.3) - (len(warnings) * 0.1)
+            "compliance_score": 1.0 - (len(violations) * 0.3) - (len(warnings) * 0.1),
         }
 
     except Exception as e:
@@ -932,21 +978,22 @@ async def assess_regulatory_compliance(response: str) -> Dict[str, Any]:
 
 # Additional missing actions for rails flows
 
+
 async def classify_medical_response_type(response: str) -> str:
     """Classify medical response type for appropriate disclaimer."""
     try:
         response_lower = response.lower()
-        if 'drug interaction' in response_lower or 'interaction' in response_lower:
-            return 'drug_interactions'
-        elif 'clinical trial' in response_lower or 'study' in response_lower:
-            return 'clinical_research'
-        elif 'efficacy' in response_lower or 'effectiveness' in response_lower:
-            return 'drug_information'
+        if "drug interaction" in response_lower or "interaction" in response_lower:
+            return "drug_interactions"
+        elif "clinical trial" in response_lower or "study" in response_lower:
+            return "clinical_research"
+        elif "efficacy" in response_lower or "effectiveness" in response_lower:
+            return "drug_information"
         else:
-            return 'general_medical'
+            return "general_medical"
     except Exception as e:
         logger.error(f"Error classifying response type: {str(e)}")
-        return 'general_medical'
+        return "general_medical"
 
 
 async def filter_sensitive_medical_info(response: str) -> str:
@@ -955,9 +1002,9 @@ async def filter_sensitive_medical_info(response: str) -> str:
         # Remove any remaining PII patterns
         filtered = response
         pii_patterns = {
-            r'\b(?:MRN|medical record)[:\s]*\d{6,12}\b': '[MEDICAL_RECORD]',
-            r'\bpatient\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b': '[PATIENT_NAME]',
-            r'\b\d{3}-?\d{2}-?\d{4}\b': '[SSN]'
+            r"\b(?:MRN|medical record)[:\s]*\d{6,12}\b": "[MEDICAL_RECORD]",
+            r"\bpatient\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b": "[PATIENT_NAME]",
+            r"\b\d{3}-?\d{2}-?\d{4}\b": "[SSN]",
         }
 
         for pattern, replacement in pii_patterns.items():
@@ -971,7 +1018,7 @@ async def filter_sensitive_medical_info(response: str) -> str:
 
 async def assess_evidence_levels(sources: List[Dict]) -> Dict[str, Any]:
     """Assess evidence levels of provided sources with granular detail.
-    
+
     Returns:
         Dict with consistent structure containing:
         - quality counts (int): high_quality, moderate_quality, low_quality, unclassified
@@ -981,86 +1028,88 @@ async def assess_evidence_levels(sources: List[Dict]) -> Dict[str, Any]:
     """
     # Default return structure with all expected keys
     default_return = {
-        'high_quality': 0,
-        'moderate_quality': 0,
-        'low_quality': 0,
-        'unclassified': 0,
-        'high_quality_ratio': 0.0,
-        'details': [],
-        'notes': []
+        "high_quality": 0,
+        "moderate_quality": 0,
+        "low_quality": 0,
+        "unclassified": 0,
+        "high_quality_ratio": 0.0,
+        "details": [],
+        "notes": [],
     }
-    
+
     try:
         if not sources:
-            return {**default_return, 'notes': ['No sources provided']}
+            return {**default_return, "notes": ["No sources provided"]}
 
         quality_mapping = {
-            'systematic_review': ('high', 'Level 1'),
-            'meta_analysis': ('high', 'Level 1'),
-            'randomized_controlled_trial': ('high', 'Level 2'),
-            'clinical_trial': ('high', 'Level 2'),
-            'cohort_study': ('moderate', 'Level 3'),
-            'case_control_study': ('moderate', 'Level 3'),
-            'observational_study': ('moderate', 'Level 4'),
-            'case_report': ('low', 'Level 5'),
-            'case_series': ('low', 'Level 5'),
-            'in_vitro': ('low', 'Level 6')
+            "systematic_review": ("high", "Level 1"),
+            "meta_analysis": ("high", "Level 1"),
+            "randomized_controlled_trial": ("high", "Level 2"),
+            "clinical_trial": ("high", "Level 2"),
+            "cohort_study": ("moderate", "Level 3"),
+            "case_control_study": ("moderate", "Level 3"),
+            "observational_study": ("moderate", "Level 4"),
+            "case_report": ("low", "Level 5"),
+            "case_series": ("low", "Level 5"),
+            "in_vitro": ("low", "Level 6"),
         }
 
-        quality_counts = {'high': 0, 'moderate': 0, 'low': 0, 'unclassified': 0}
+        quality_counts = {"high": 0, "moderate": 0, "low": 0, "unclassified": 0}
         details: List[Dict[str, Any]] = []
 
         for source in sources:
-            metadata = source.get('metadata', {})
-            content = (metadata.get('abstract', '') + ' ' + source.get('page_content', '')).lower()
-            study_type = metadata.get('study_type')
+            metadata = source.get("metadata", {})
+            content = (metadata.get("abstract", "") + " " + source.get("page_content", "")).lower()
+            study_type = metadata.get("study_type")
 
             if not study_type:
                 study_type = await classify_study_type(content)
 
-            quality_label, evidence_level = quality_mapping.get(study_type, ('unclassified', 'Level 6'))
+            quality_label, evidence_level = quality_mapping.get(study_type, ("unclassified", "Level 6"))
             quality_counts[quality_label] = quality_counts.get(quality_label, 0) + 1
 
-            journal = metadata.get('journal', '')
+            journal = metadata.get("journal", "")
             journal_quality = {}
             if journal:
                 journal_quality = await assess_journal_quality(journal=journal)
 
-            details.append({
-                'title': metadata.get('title', 'Unknown title'),
-                'study_type': study_type,
-                'evidence_level': evidence_level,
-                'quality_label': quality_label,
-                'journal_quality': journal_quality,
-                'pmid': metadata.get('pmid')
-            })
+            details.append(
+                {
+                    "title": metadata.get("title", "Unknown title"),
+                    "study_type": study_type,
+                    "evidence_level": evidence_level,
+                    "quality_label": quality_label,
+                    "journal_quality": journal_quality,
+                    "pmid": metadata.get("pmid"),
+                }
+            )
 
         total_sources = len(sources)
-        high_quality_ratio = quality_counts['high'] / total_sources if total_sources else 0.0
+        high_quality_ratio = quality_counts["high"] / total_sources if total_sources else 0.0
 
         notes = []
         if high_quality_ratio < 0.5:
-            notes.append('Less than half of the sources are high-evidence studies')
-        if quality_counts['unclassified']:
-            notes.append('Some sources could not be classified based on available metadata')
+            notes.append("Less than half of the sources are high-evidence studies")
+        if quality_counts["unclassified"]:
+            notes.append("Some sources could not be classified based on available metadata")
 
         return {
-            'high_quality': quality_counts['high'],
-            'moderate_quality': quality_counts['moderate'],
-            'low_quality': quality_counts['low'],
-            'unclassified': quality_counts['unclassified'],
-            'high_quality_ratio': round(high_quality_ratio, 2),
-            'details': details,
-            'notes': notes
+            "high_quality": quality_counts["high"],
+            "moderate_quality": quality_counts["moderate"],
+            "low_quality": quality_counts["low"],
+            "unclassified": quality_counts["unclassified"],
+            "high_quality_ratio": round(high_quality_ratio, 2),
+            "details": details,
+            "notes": notes,
         }
     except Exception as e:
         logger.error(f"Error assessing evidence levels: {str(e)}")
-        return {**default_return, 'notes': [f'Assessment failed: {str(e)}']}
+        return {**default_return, "notes": [f"Assessment failed: {str(e)}"]}
 
 
 async def format_source_citations(sources: List[Dict]) -> str:
     """Format source citations for responses.
-    
+
     Returns:
         str: Formatted citations as a string, one per line, or error message
     """
@@ -1070,32 +1119,32 @@ async def format_source_citations(sources: List[Dict]) -> str:
 
         citations = []
         for i, source in enumerate(sources[:5], 1):  # Limit to 5 citations
-            metadata = source.get('metadata', {})
-            title = metadata.get('title', 'Unknown title').strip()
-            journal = metadata.get('journal', '').strip()
-            year = metadata.get('year') or metadata.get('publication_year') or ''
-            pmid = metadata.get('pmid')
-            doi = metadata.get('doi')
-            authors = metadata.get('authors')
+            metadata = source.get("metadata", {})
+            title = metadata.get("title", "Unknown title").strip()
+            journal = metadata.get("journal", "").strip()
+            year = metadata.get("year") or metadata.get("publication_year") or ""
+            pmid = metadata.get("pmid")
+            doi = metadata.get("doi")
+            authors = metadata.get("authors")
 
             if isinstance(authors, list):
                 if not authors:
-                    author_str = 'Anonymous'
+                    author_str = "Anonymous"
                 elif len(authors) == 1:
                     author_str = authors[0]
                 elif len(authors) == 2:
-                    author_str = ' & '.join(authors)
+                    author_str = " & ".join(authors)
                 else:
                     author_str = f"{authors[0]} et al."
             elif isinstance(authors, str) and authors.strip():
                 author_str = authors.strip()
             else:
-                author_str = 'Anonymous'
+                author_str = "Anonymous"
 
             fragments = [f"{i}. {author_str}"]
             if year:
                 fragments[-1] = f"{fragments[-1]} ({year})"
-            fragments.append(title[:140] + ('...' if len(title) > 140 else ''))
+            fragments.append(title[:140] + ("..." if len(title) > 140 else ""))
             if journal:
                 fragments.append(journal)
             if pmid:
@@ -1106,12 +1155,12 @@ async def format_source_citations(sources: List[Dict]) -> str:
             # Filter out empty fragments and join
             filtered_fragments = [fragment for fragment in fragments if fragment]
             if filtered_fragments:
-                citations.append(' - '.join(filtered_fragments))
+                citations.append(" - ".join(filtered_fragments))
 
         if not citations:
             return "No valid citations could be formatted."
-        
-        return '\n'.join(citations)
+
+        return "\n".join(citations)
     except Exception as e:
         logger.error(f"Error formatting citations: {str(e)}")
         return "Citations unavailable due to formatting error."
@@ -1119,7 +1168,7 @@ async def format_source_citations(sources: List[Dict]) -> str:
 
 async def validate_citations(response: str, sources: List[Dict]) -> Dict[str, Any]:
     """Validate citations in response against provided sources.
-    
+
     Returns:
         Dict with consistent structure containing:
         - invalid_citations (List[str]): List of invalid PMIDs found in response
@@ -1127,21 +1176,17 @@ async def validate_citations(response: str, sources: List[Dict]) -> Dict[str, An
         - all_valid (bool): Whether all citations are valid
     """
     # Default return structure with all expected keys
-    default_return = {
-        'invalid_citations': [],
-        'valid_citations': [],
-        'all_valid': True
-    }
-    
+    default_return = {"invalid_citations": [], "valid_citations": [], "all_valid": True}
+
     try:
         # Extract PMIDs from response
-        pmid_pattern = r'PMID:?\s*(\d{7,8})'
+        pmid_pattern = r"PMID:?\s*(\d{7,8})"
         response_pmids = set(re.findall(pmid_pattern, response, re.IGNORECASE))
 
         # Extract PMIDs from sources
         source_pmids = set()
         for source in sources:
-            pmid = source.get('metadata', {}).get('pmid', '')
+            pmid = source.get("metadata", {}).get("pmid", "")
             if pmid:
                 source_pmids.add(str(pmid))
 
@@ -1149,13 +1194,13 @@ async def validate_citations(response: str, sources: List[Dict]) -> Dict[str, An
         valid_citations = list(response_pmids & source_pmids)
 
         return {
-            'invalid_citations': invalid_citations,
-            'valid_citations': valid_citations,
-            'all_valid': len(invalid_citations) == 0
+            "invalid_citations": invalid_citations,
+            "valid_citations": valid_citations,
+            "all_valid": len(invalid_citations) == 0,
         }
     except Exception as e:
         logger.error(f"Error validating citations: {str(e)}")
-        return {**default_return, 'all_valid': False, 'invalid_citations': [f'Validation error: {str(e)}']}
+        return {**default_return, "all_valid": False, "invalid_citations": [f"Validation error: {str(e)}"]}
 
 
 async def comprehensive_safety_check(response: str) -> Dict[str, Any]:
@@ -1167,34 +1212,30 @@ async def comprehensive_safety_check(response: str) -> Dict[str, Any]:
         response_lower = response.lower()
 
         # Check for medical advice language
-        advice_patterns = ['you should', 'i recommend', 'take this drug', 'stop taking']
+        advice_patterns = ["you should", "i recommend", "take this drug", "stop taking"]
         for pattern in advice_patterns:
             if pattern in response_lower:
                 warnings.append(f"Contains potential medical advice: '{pattern}'")
                 safety_score -= 0.2
 
         # Check for diagnostic language
-        diagnostic_patterns = ['you have', 'diagnosis is', 'you are suffering from']
+        diagnostic_patterns = ["you have", "diagnosis is", "you are suffering from"]
         for pattern in diagnostic_patterns:
             if pattern in response_lower:
                 warnings.append(f"Contains diagnostic language: '{pattern}'")
                 safety_score -= 0.3
 
         # Check for guarantee claims
-        guarantee_patterns = ['guaranteed cure', 'always works', 'definitely effective']
+        guarantee_patterns = ["guaranteed cure", "always works", "definitely effective"]
         for pattern in guarantee_patterns:
             if pattern in response_lower:
                 warnings.append(f"Contains inappropriate guarantee: '{pattern}'")
                 safety_score -= 0.4
 
-        return {
-            'safe': safety_score > 0.5,
-            'safety_score': max(safety_score, 0.0),
-            'warnings': warnings
-        }
+        return {"safe": safety_score > 0.5, "safety_score": max(safety_score, 0.0), "warnings": warnings}
     except Exception as e:
         logger.error(f"Error in comprehensive safety check: {str(e)}")
-        return {'safe': False, 'safety_score': 0.0, 'warnings': ['Safety check failed']}
+        return {"safe": False, "safety_score": 0.0, "warnings": ["Safety check failed"]}
 
 
 async def log_safety_event(event_type: str, details: Any) -> None:
@@ -1206,15 +1247,17 @@ async def log_safety_event(event_type: str, details: Any) -> None:
         logger.error(f"Error logging safety event: {str(e)}")
 
 
-async def log_medical_response(response: str, safety_score: float, disclaimers_added: bool, compliance_status: bool) -> None:
+async def log_medical_response(
+    response: str, safety_score: float, disclaimers_added: bool, compliance_status: bool
+) -> None:
     """Log medical responses for audit trails."""
     try:
         log_data = {
-            'response_length': len(response),
-            'safety_score': safety_score,
-            'disclaimers_added': disclaimers_added,
-            'compliance_status': compliance_status,
-            'timestamp': 'current_timestamp'  # Would use actual timestamp in production
+            "response_length": len(response),
+            "safety_score": safety_score,
+            "disclaimers_added": disclaimers_added,
+            "compliance_status": compliance_status,
+            "timestamp": "current_timestamp",  # Would use actual timestamp in production
         }
         logger.info(f"MEDICAL_RESPONSE_LOG: {log_data}")
         # In production, this would log to a structured audit system
@@ -1223,6 +1266,7 @@ async def log_medical_response(response: str, safety_score: float, disclaimers_a
 
 
 # Additional retrieval and processing actions
+
 
 async def request_additional_sources() -> None:
     """Request additional sources when insufficient valid sources are found."""
@@ -1254,11 +1298,13 @@ async def process_pubmed_sources(sources: List[Dict]) -> Dict[str, Any]:
         if detail.get("authentic"):
             filtered_sources.append(source)
         else:
-            suspicious_sources.append({
-                "source": source,
-                "reasons": detail.get("reasons", []),
-                "title": detail.get("title"),
-            })
+            suspicious_sources.append(
+                {
+                    "source": source,
+                    "reasons": detail.get("reasons", []),
+                    "title": detail.get("title"),
+                }
+            )
 
     insufficient_valid = len(filtered_sources) < 2
 
@@ -1274,32 +1320,32 @@ async def process_pubmed_sources(sources: List[Dict]) -> Dict[str, Any]:
 async def assess_pharmaceutical_relevance(source: Dict, query: str) -> Dict[str, Any]:
     """Assess pharmaceutical relevance of a source to the query using weighted heuristics."""
     try:
-        content = source.get('page_content', '').lower()
-        metadata = source.get('metadata', {})
-        title = metadata.get('title', '').lower()
-        abstract = metadata.get('abstract', '').lower()
-        combined_text = ' '.join(filter(None, [title, abstract, content]))
+        content = source.get("page_content", "").lower()
+        metadata = source.get("metadata", {})
+        title = metadata.get("title", "").lower()
+        abstract = metadata.get("abstract", "").lower()
+        combined_text = " ".join(filter(None, [title, abstract, content]))
 
         query_terms = [term for term in re.findall(r"[a-zA-Z0-9-]+", query.lower()) if len(term) > 2]
         total_terms = len(query_terms)
 
         if total_terms == 0:
-            return {'score': 0, 'medical_context': False, 'matches': 0, 'total_terms': 0}
+            return {"score": 0, "medical_context": False, "matches": 0, "total_terms": 0}
 
         matched_terms = [term for term in query_terms if term in combined_text]
         overlap_score = len(matched_terms) / total_terms if total_terms else 0
 
         pharma_keywords = {
-            'pharmacokinetic': 1.0,
-            'pharmacodynamic': 1.0,
-            'drug interaction': 1.0,
-            'clinical trial': 0.8,
-            'adverse effect': 0.6,
-            'dosage': 0.6,
-            'bioavailability': 0.7,
-            'metabolism': 0.5,
-            'therapeutic': 0.4,
-            'cyp': 0.7
+            "pharmacokinetic": 1.0,
+            "pharmacodynamic": 1.0,
+            "drug interaction": 1.0,
+            "clinical trial": 0.8,
+            "adverse effect": 0.6,
+            "dosage": 0.6,
+            "bioavailability": 0.7,
+            "metabolism": 0.5,
+            "therapeutic": 0.4,
+            "cyp": 0.7,
         }
 
         keyword_score = 0.0
@@ -1308,7 +1354,7 @@ async def assess_pharmaceutical_relevance(source: Dict, query: str) -> Dict[str,
                 keyword_score += weight
         keyword_score = min(keyword_score / max(len(pharma_keywords), 1), 1.0)
 
-        drug_indicators = ['drug', 'medication', 'pharmaco', 'cyp', 'enzyme', 'metabolite']
+        drug_indicators = ["drug", "medication", "pharmaco", "cyp", "enzyme", "metabolite"]
         medical_context = keyword_score > 0 or any(indicator in combined_text for indicator in drug_indicators)
 
         relevance_penalty = 0.0 if medical_context else 0.3
@@ -1317,16 +1363,23 @@ async def assess_pharmaceutical_relevance(source: Dict, query: str) -> Dict[str,
         missing_terms = [term for term in query_terms if term not in combined_text]
 
         return {
-            'score': round(score, 2),
-            'medical_context': medical_context,
-            'matches': len(matched_terms),
-            'total_terms': total_terms,
-            'missing_terms': missing_terms,
-            'keyword_score': round(keyword_score, 2)
+            "score": round(score, 2),
+            "medical_context": medical_context,
+            "matches": len(matched_terms),
+            "total_terms": total_terms,
+            "missing_terms": missing_terms,
+            "keyword_score": round(keyword_score, 2),
         }
     except Exception as e:
         logger.error(f"Error assessing pharmaceutical relevance: {str(e)}")
-        return {'score': 0, 'medical_context': False, 'matches': 0, 'total_terms': 0, 'missing_terms': [], 'error': str(e)}
+        return {
+            "score": 0,
+            "medical_context": False,
+            "matches": 0,
+            "total_terms": 0,
+            "missing_terms": [],
+            "error": str(e),
+        }
 
 
 async def filter_pharmaceutical_relevance_batch(sources: List[Dict], query: str) -> Dict[str, Any]:
@@ -1384,14 +1437,14 @@ async def filter_pharmaceutical_relevance_batch(sources: List[Dict], query: str)
 async def identify_pharmaceutical_indicators(source: Dict) -> List[str]:
     """Identify pharmaceutical indicators in a source."""
     try:
-        content = source.get('page_content', '').lower()
+        content = source.get("page_content", "").lower()
 
         indicators = []
         pharma_patterns = {
-            'drug_names': r'\b[A-Z][a-z]+(?:in|ol|am|ex|ide)\b',
-            'pk_parameters': r'\b(?:auc|cmax|tmax|clearance|half-life)\b',
-            'drug_interactions': r'\b(?:interaction|inhibit|induce|substrate)\b',
-            'clinical_endpoints': r'\b(?:efficacy|safety|adverse|side effects)\b'
+            "drug_names": r"\b[A-Z][a-z]+(?:in|ol|am|ex|ide)\b",
+            "pk_parameters": r"\b(?:auc|cmax|tmax|clearance|half-life)\b",
+            "drug_interactions": r"\b(?:interaction|inhibit|induce|substrate)\b",
+            "clinical_endpoints": r"\b(?:efficacy|safety|adverse|side effects)\b",
         }
 
         for indicator_type, pattern in pharma_patterns.items():
@@ -1487,40 +1540,50 @@ async def assess_journal_quality(journal: str) -> Dict[str, Any]:
 
         # Tier 1 high-impact journals
         tier1_journals = [
-            'nature', 'science', 'cell', 'lancet', 'new england journal of medicine',
-            'jama', 'nature medicine', 'nature biotechnology'
+            "nature",
+            "science",
+            "cell",
+            "lancet",
+            "new england journal of medicine",
+            "jama",
+            "nature medicine",
+            "nature biotechnology",
         ]
 
         # Tier 2 specialized journals
         tier2_journals = [
-            'clinical pharmacology', 'drug metabolism', 'pharmaceutical research',
-            'journal of medicinal chemistry', 'pharmacology', 'toxicology'
+            "clinical pharmacology",
+            "drug metabolism",
+            "pharmaceutical research",
+            "journal of medicinal chemistry",
+            "pharmacology",
+            "toxicology",
         ]
 
         # Predatory journal indicators (simplified)
-        predatory_indicators = ['predatory', 'fake', 'bogus']
+        predatory_indicators = ["predatory", "fake", "bogus"]
 
         if any(t1 in journal_lower for t1 in tier1_journals):
-            quality_tier = 'high'
+            quality_tier = "high"
             impact_factor = 10.0  # Simulated
         elif any(t2 in journal_lower for t2 in tier2_journals):
-            quality_tier = 'moderate'
+            quality_tier = "moderate"
             impact_factor = 5.0  # Simulated
         else:
-            quality_tier = 'standard'
+            quality_tier = "standard"
             impact_factor = 2.0  # Simulated
 
         predatory_indicator = any(pred in journal_lower for pred in predatory_indicators)
 
         return {
-            'quality_tier': quality_tier,
-            'impact_factor': impact_factor,
-            'reputation_score': impact_factor / 10.0,
-            'predatory_indicator': predatory_indicator
+            "quality_tier": quality_tier,
+            "impact_factor": impact_factor,
+            "reputation_score": impact_factor / 10.0,
+            "predatory_indicator": predatory_indicator,
         }
     except Exception as e:
         logger.error(f"Error assessing journal quality: {str(e)}")
-        return {'quality_tier': 'unknown', 'impact_factor': 0, 'reputation_score': 0, 'predatory_indicator': False}
+        return {"quality_tier": "unknown", "impact_factor": 0, "reputation_score": 0, "predatory_indicator": False}
 
 
 async def calculate_quality_distribution(sources: List[Dict]) -> Dict[str, Any]:
@@ -1531,26 +1594,26 @@ async def calculate_quality_distribution(sources: List[Dict]) -> Dict[str, Any]:
         low_quality = 0
 
         for source in sources:
-            quality_flag = _get_source_value(source, 'quality_flag', 'STANDARD')
-            if quality_flag == 'HIGH_QUALITY':
+            quality_flag = _get_source_value(source, "quality_flag", "STANDARD")
+            if quality_flag == "HIGH_QUALITY":
                 high_quality += 1
-            elif quality_flag == 'LOW_QUALITY':
+            elif quality_flag == "LOW_QUALITY":
                 low_quality += 1
             else:
                 moderate_quality += 1
 
         total = len(sources)
         return {
-            'high_quality_count': high_quality,
-            'moderate_quality_count': moderate_quality,
-            'low_quality_count': low_quality,
-            'high_quality_ratio': high_quality / total if total > 0 else 0,
-            'moderate_quality_ratio': moderate_quality / total if total > 0 else 0,
-            'low_quality_ratio': low_quality / total if total > 0 else 0
+            "high_quality_count": high_quality,
+            "moderate_quality_count": moderate_quality,
+            "low_quality_count": low_quality,
+            "high_quality_ratio": high_quality / total if total > 0 else 0,
+            "moderate_quality_ratio": moderate_quality / total if total > 0 else 0,
+            "low_quality_ratio": low_quality / total if total > 0 else 0,
         }
     except Exception as e:
         logger.error(f"Error calculating quality distribution: {str(e)}")
-        return {'high_quality_ratio': 0, 'moderate_quality_ratio': 0, 'low_quality_ratio': 0}
+        return {"high_quality_ratio": 0, "moderate_quality_ratio": 0, "low_quality_ratio": 0}
 
 
 async def enrich_sources_with_quality(sources: List[Dict]) -> Dict[str, Any]:
@@ -1568,11 +1631,13 @@ async def enrich_sources_with_quality(sources: List[Dict]) -> Dict[str, Any]:
         journal = metadata.get("journal", "")
         assessment = await assess_journal_quality(journal)
 
-        metadata.update({
-            "journal_quality": assessment.get("quality_tier"),
-            "impact_factor": assessment.get("impact_factor"),
-            "journal_reputation": assessment.get("reputation_score"),
-        })
+        metadata.update(
+            {
+                "journal_quality": assessment.get("quality_tier"),
+                "impact_factor": assessment.get("impact_factor"),
+                "journal_reputation": assessment.get("reputation_score"),
+            }
+        )
 
         quality_flag = "HIGH_QUALITY" if assessment.get("quality_tier") == "high" else "STANDARD"
         if assessment.get("predatory_indicator"):
@@ -1583,10 +1648,13 @@ async def enrich_sources_with_quality(sources: List[Dict]) -> Dict[str, Any]:
         enriched_source["metadata"] = metadata
 
         if quality_flag == "LOW_QUALITY":
-            enriched_source = await append_source_warning(
-                source=enriched_source,
-                warning="Potential predatory journal",
-            ) or enriched_source
+            enriched_source = (
+                await append_source_warning(
+                    source=enriched_source,
+                    warning="Potential predatory journal",
+                )
+                or enriched_source
+            )
 
         enriched_sources.append(enriched_source)
 
@@ -1605,11 +1673,21 @@ async def get_medical_journal_database() -> List[str]:
     """Get database of known medical journals."""
     try:
         return [
-            'Nature Medicine', 'The Lancet', 'New England Journal of Medicine',
-            'JAMA', 'BMJ', 'Cell', 'Science', 'Clinical Pharmacology & Therapeutics',
-            'Journal of Clinical Investigation', 'Nature Biotechnology',
-            'Drug Metabolism and Disposition', 'Pharmaceutical Research',
-            'Journal of Medicinal Chemistry', 'PLoS Medicine', 'Cochrane Database'
+            "Nature Medicine",
+            "The Lancet",
+            "New England Journal of Medicine",
+            "JAMA",
+            "BMJ",
+            "Cell",
+            "Science",
+            "Clinical Pharmacology & Therapeutics",
+            "Journal of Clinical Investigation",
+            "Nature Biotechnology",
+            "Drug Metabolism and Disposition",
+            "Pharmaceutical Research",
+            "Journal of Medicinal Chemistry",
+            "PLoS Medicine",
+            "Cochrane Database",
         ]
     except Exception as e:
         logger.error(f"Error getting medical journal database: {str(e)}")
@@ -1618,28 +1696,29 @@ async def get_medical_journal_database() -> List[str]:
 
 # Enhanced processing actions
 
+
 async def classify_study_type(content: str) -> str:
     """Classify study type from content."""
     try:
         content_lower = content.lower()
 
-        if 'systematic review' in content_lower or 'meta-analysis' in content_lower:
-            return 'systematic_review'
-        elif 'randomized controlled trial' in content_lower or 'rct' in content_lower:
-            return 'randomized_controlled_trial'
-        elif 'clinical trial' in content_lower:
-            return 'clinical_trial'
-        elif 'cohort study' in content_lower or 'prospective' in content_lower:
-            return 'cohort_study'
-        elif 'case-control' in content_lower:
-            return 'case_control_study'
-        elif 'case report' in content_lower or 'case series' in content_lower:
-            return 'case_report'
+        if "systematic review" in content_lower or "meta-analysis" in content_lower:
+            return "systematic_review"
+        elif "randomized controlled trial" in content_lower or "rct" in content_lower:
+            return "randomized_controlled_trial"
+        elif "clinical trial" in content_lower:
+            return "clinical_trial"
+        elif "cohort study" in content_lower or "prospective" in content_lower:
+            return "cohort_study"
+        elif "case-control" in content_lower:
+            return "case_control_study"
+        elif "case report" in content_lower or "case series" in content_lower:
+            return "case_report"
         else:
-            return 'observational_study'
+            return "observational_study"
     except Exception as e:
         logger.error(f"Error classifying study type: {str(e)}")
-        return 'unknown'
+        return "unknown"
 
 
 async def extract_drug_entities(content: str) -> List[str]:
@@ -1647,8 +1726,8 @@ async def extract_drug_entities(content: str) -> List[str]:
     try:
         # Simple drug name patterns
         drug_patterns = [
-            r'\b[A-Z][a-z]+(?:in|ol|am|ex|ide|one|ine)\b',  # Common drug suffixes
-            r'\b(?:aspirin|warfarin|metformin|atorvastatin|lisinopril)\b'  # Common drugs
+            r"\b[A-Z][a-z]+(?:in|ol|am|ex|ide|one|ine)\b",  # Common drug suffixes
+            r"\b(?:aspirin|warfarin|metformin|atorvastatin|lisinopril)\b",  # Common drugs
         ]
 
         drugs = []
@@ -1665,7 +1744,7 @@ async def extract_drug_entities(content: str) -> List[str]:
 async def extract_cyp_enzymes(content: str) -> List[str]:
     """Extract CYP enzyme mentions from content."""
     try:
-        cyp_pattern = r'\bCYP\s*\d+[A-Z]\d*\b'
+        cyp_pattern = r"\bCYP\s*\d+[A-Z]\d*\b"
         cyp_enzymes = re.findall(cyp_pattern, content, re.IGNORECASE)
         return list(set(cyp_enzymes))
     except Exception as e:
@@ -1679,22 +1758,22 @@ async def extract_pk_parameters(content: str) -> Dict[str, Any]:
         pk_params = {}
 
         # AUC pattern
-        auc_pattern = r'AUC[^0-9]*([0-9.,]+(?:\s*(?:ng|μg|mg)\s*[•*×]?\s*h/mL)?)'
+        auc_pattern = r"AUC[^0-9]*([0-9.,]+(?:\s*(?:ng|μg|mg)\s*[•*×]?\s*h/mL)?)"
         auc_matches = re.findall(auc_pattern, content, re.IGNORECASE)
         if auc_matches:
-            pk_params['auc'] = auc_matches[0]
+            pk_params["auc"] = auc_matches[0]
 
         # Cmax pattern
-        cmax_pattern = r'Cmax[^0-9]*([0-9.,]+(?:\s*(?:ng|μg|mg)/mL)?)'
+        cmax_pattern = r"Cmax[^0-9]*([0-9.,]+(?:\s*(?:ng|μg|mg)/mL)?)"
         cmax_matches = re.findall(cmax_pattern, content, re.IGNORECASE)
         if cmax_matches:
-            pk_params['cmax'] = cmax_matches[0]
+            pk_params["cmax"] = cmax_matches[0]
 
         # Half-life pattern
-        halflife_pattern = r'half-life[^0-9]*([0-9.,]+(?:\s*h(?:ours?)?)?)'
+        halflife_pattern = r"half-life[^0-9]*([0-9.,]+(?:\s*h(?:ours?)?)?)"
         halflife_matches = re.findall(halflife_pattern, content, re.IGNORECASE)
         if halflife_matches:
-            pk_params['half_life'] = halflife_matches[0]
+            pk_params["half_life"] = halflife_matches[0]
 
         return pk_params
     except Exception as e:
@@ -1706,15 +1785,15 @@ async def assess_evidence_level(study_type: str) -> int:
     """Assess evidence level based on study type."""
     try:
         evidence_levels = {
-            'systematic_review': 10,
-            'meta_analysis': 10,
-            'randomized_controlled_trial': 8,
-            'clinical_trial': 7,
-            'cohort_study': 6,
-            'case_control_study': 5,
-            'case_report': 2,
-            'observational_study': 4,
-            'unknown': 1
+            "systematic_review": 10,
+            "meta_analysis": 10,
+            "randomized_controlled_trial": 8,
+            "clinical_trial": 7,
+            "cohort_study": 6,
+            "case_control_study": 5,
+            "case_report": 2,
+            "observational_study": 4,
+            "unknown": 1,
         }
 
         return evidence_levels.get(study_type, 1)
@@ -1729,36 +1808,32 @@ async def comprehensive_quality_assessment(source: Dict) -> Dict[str, Any]:
         issues = []
         meets_standards = True
 
-        metadata = source.get('metadata', {})
-        content = source.get('page_content', '')
+        metadata = source.get("metadata", {})
+        content = source.get("page_content", "")
 
         # Check for required metadata
-        if not metadata.get('title'):
-            issues.append('Missing title')
+        if not metadata.get("title"):
+            issues.append("Missing title")
             meets_standards = False
 
-        if not metadata.get('pmid') and not metadata.get('doi'):
-            issues.append('Missing PMID/DOI')
+        if not metadata.get("pmid") and not metadata.get("doi"):
+            issues.append("Missing PMID/DOI")
             meets_standards = False
 
         # Check content quality
         if len(content) < 100:
-            issues.append('Content too short')
+            issues.append("Content too short")
             meets_standards = False
 
         # Check for pharmaceutical relevance
-        pharma_terms = ['drug', 'medication', 'pharmaceutical', 'clinical', 'pharmacokinetics']
+        pharma_terms = ["drug", "medication", "pharmaceutical", "clinical", "pharmacokinetics"]
         if not any(term in content.lower() for term in pharma_terms):
-            issues.append('Low pharmaceutical relevance')
+            issues.append("Low pharmaceutical relevance")
 
-        return {
-            'meets_standards': meets_standards,
-            'issues': issues,
-            'quality_score': 1.0 - (len(issues) * 0.2)
-        }
+        return {"meets_standards": meets_standards, "issues": issues, "quality_score": 1.0 - (len(issues) * 0.2)}
     except Exception as e:
         logger.error(f"Error in comprehensive quality assessment: {str(e)}")
-        return {'meets_standards': False, 'issues': ['Assessment failed'], 'quality_score': 0.0}
+        return {"meets_standards": False, "issues": ["Assessment failed"], "quality_score": 0.0}
 
 
 async def escalate_source_quality_issue() -> None:
@@ -1772,14 +1847,15 @@ async def escalate_source_quality_issue() -> None:
 
 # Response formatting actions
 
+
 async def structure_moa_information(response: str) -> str:
     """Structure mechanism of action information."""
     try:
-        if 'mechanism of action' in response.lower() or 'moa' in response.lower():
+        if "mechanism of action" in response.lower() or "moa" in response.lower():
             # Add structure if not already present
-            if '**Mechanism of Action:**' not in response:
-                response = response.replace('mechanism of action', '**Mechanism of Action:**')
-                response = response.replace('MOA', '**Mechanism of Action:**')
+            if "**Mechanism of Action:**" not in response:
+                response = response.replace("mechanism of action", "**Mechanism of Action:**")
+                response = response.replace("MOA", "**Mechanism of Action:**")
         return response
     except Exception as e:
         logger.error(f"Error structuring MOA information: {str(e)}")
@@ -1789,11 +1865,11 @@ async def structure_moa_information(response: str) -> str:
 async def structure_interaction_information(response: str) -> str:
     """Structure drug interaction information."""
     try:
-        if 'interaction' in response.lower():
+        if "interaction" in response.lower():
             # Add structure if not already present
-            if '**Drug Interaction:**' not in response:
-                response = response.replace('drug interaction', '**Drug Interaction:**')
-                response = response.replace('interaction', '**Interaction:**')
+            if "**Drug Interaction:**" not in response:
+                response = response.replace("drug interaction", "**Drug Interaction:**")
+                response = response.replace("interaction", "**Interaction:**")
         return response
     except Exception as e:
         logger.error(f"Error structuring interaction information: {str(e)}")
@@ -1803,12 +1879,12 @@ async def structure_interaction_information(response: str) -> str:
 async def structure_pk_information(response: str) -> str:
     """Structure pharmacokinetic information."""
     try:
-        pk_terms = ['pharmacokinetic', 'absorption', 'distribution', 'metabolism', 'excretion']
+        pk_terms = ["pharmacokinetic", "absorption", "distribution", "metabolism", "excretion"]
         if any(term in response.lower() for term in pk_terms):
             # Add structure if not already present
-            if '**Pharmacokinetics:**' not in response:
-                response = response.replace('pharmacokinetics', '**Pharmacokinetics:**')
-                response = response.replace('pharmacokinetic', '**Pharmacokinetic:**')
+            if "**Pharmacokinetics:**" not in response:
+                response = response.replace("pharmacokinetics", "**Pharmacokinetics:**")
+                response = response.replace("pharmacokinetic", "**Pharmacokinetic:**")
         return response
     except Exception as e:
         logger.error(f"Error structuring PK information: {str(e)}")
@@ -1820,12 +1896,12 @@ async def sort_sources_by_quality(sources: List[Dict]) -> List[Dict]:
     try:
         # Simple sorting by impact factor (simulated)
         def get_quality_score(source):
-            quality_flag = _get_source_value(source, 'quality_flag', 'STANDARD')
-            impact_factor = _get_source_value(source, 'impact_factor', 0)
+            quality_flag = _get_source_value(source, "quality_flag", "STANDARD")
+            impact_factor = _get_source_value(source, "impact_factor", 0)
 
-            if quality_flag == 'HIGH_QUALITY':
+            if quality_flag == "HIGH_QUALITY":
                 return impact_factor + 10
-            elif quality_flag == 'LOW_QUALITY':
+            elif quality_flag == "LOW_QUALITY":
                 return impact_factor - 5
             else:
                 return impact_factor
@@ -1839,16 +1915,17 @@ async def sort_sources_by_quality(sources: List[Dict]) -> List[Dict]:
 
 # Source validation actions for retrieval rails
 
+
 async def validate_source_authenticity(sources: List[Dict]) -> Dict[str, Any]:
     """Validate authenticity of retrieved sources."""
     try:
         if not sources:
             return {
-                'authentic_sources': 0,
-                'suspicious_sources': 0,
-                'authenticity_ratio': 0,
-                'details': [],
-                'issues': ['No sources provided for validation']
+                "authentic_sources": 0,
+                "suspicious_sources": 0,
+                "authenticity_ratio": 0,
+                "details": [],
+                "issues": ["No sources provided for validation"],
             }
 
         authentic_count = 0
@@ -1858,43 +1935,43 @@ async def validate_source_authenticity(sources: List[Dict]) -> Dict[str, Any]:
         known_journals = {journal.lower() for journal in await get_medical_journal_database()}
 
         for source in sources:
-            metadata = source.get('metadata', {})
-            pmid = str(metadata.get('pmid', '')).strip()
-            doi = str(metadata.get('doi', '')).strip()
-            journal = metadata.get('journal', '').strip().lower()
-            url = metadata.get('source_url', '') or metadata.get('url', '')
+            metadata = source.get("metadata", {})
+            pmid = str(metadata.get("pmid", "")).strip()
+            doi = str(metadata.get("doi", "")).strip()
+            journal = metadata.get("journal", "").strip().lower()
+            url = metadata.get("source_url", "") or metadata.get("url", "")
 
             reasons = []
 
             if pmid:
-                if not re.match(r'^\d{7,8}$', pmid):
-                    reasons.append('Invalid PMID format')
+                if not re.match(r"^\d{7,8}$", pmid):
+                    reasons.append("Invalid PMID format")
             else:
-                reasons.append('Missing PMID')
+                reasons.append("Missing PMID")
 
             if doi:
-                if not re.match(r'^10\.\d{4,}/.+', doi, re.IGNORECASE):
-                    reasons.append('Invalid DOI format')
+                if not re.match(r"^10\.\d{4,}/.+", doi, re.IGNORECASE):
+                    reasons.append("Invalid DOI format")
             else:
-                reasons.append('Missing DOI')
+                reasons.append("Missing DOI")
 
             if journal:
                 matched_journal = any(journal == known for known in known_journals)
                 if not matched_journal:
-                    reasons.append('Journal not found in trusted medical list')
+                    reasons.append("Journal not found in trusted medical list")
             else:
-                reasons.append('Missing journal information')
+                reasons.append("Missing journal information")
 
-            if url and any(term in url.lower() for term in ['blog', 'wordpress', 'medium.com', 'wikipedia']):
-                reasons.append('Source URL appears non-scholarly')
+            if url and any(term in url.lower() for term in ["blog", "wordpress", "medium.com", "wikipedia"]):
+                reasons.append("Source URL appears non-scholarly")
 
             detail_entry = {
-                'title': metadata.get('title', 'Unknown title'),
-                'pmid': pmid or None,
-                'doi': doi or None,
-                'journal': metadata.get('journal', 'Unknown journal'),
-                'authentic': len(reasons) == 0,
-                'reasons': reasons
+                "title": metadata.get("title", "Unknown title"),
+                "pmid": pmid or None,
+                "doi": doi or None,
+                "journal": metadata.get("journal", "Unknown journal"),
+                "authentic": len(reasons) == 0,
+                "reasons": reasons,
             }
             details.append(detail_entry)
 
@@ -1907,65 +1984,69 @@ async def validate_source_authenticity(sources: List[Dict]) -> Dict[str, Any]:
         authenticity_ratio = authentic_count / len(sources) if sources else 0
 
         return {
-            'authentic_sources': authentic_count,
-            'suspicious_sources': suspicious_count,
-            'authenticity_ratio': round(authenticity_ratio, 2),
-            'details': details,
-            'issues': issues
+            "authentic_sources": authentic_count,
+            "suspicious_sources": suspicious_count,
+            "authenticity_ratio": round(authenticity_ratio, 2),
+            "details": details,
+            "issues": issues,
         }
     except Exception as e:
         logger.error(f"Error validating source authenticity: {str(e)}")
         return {
-            'authentic_sources': 0,
-            'suspicious_sources': len(sources),
-            'authenticity_ratio': 0,
-            'details': [],
-            'issues': [f'Validation error: {str(e)}']
+            "authentic_sources": 0,
+            "suspicious_sources": len(sources),
+            "authenticity_ratio": 0,
+            "details": [],
+            "issues": [f"Validation error: {str(e)}"],
         }
 
 
 async def verify_pmid(source: Dict) -> Dict[str, Any]:
     """Verify PMID format and validity."""
     try:
-        pmid = source.get('metadata', {}).get('pmid', '')
+        pmid = source.get("metadata", {}).get("pmid", "")
 
         if not pmid:
-            return {'valid': False, 'reason': 'No PMID provided'}
+            return {"valid": False, "reason": "No PMID provided"}
 
         # PMID format validation
-        if re.match(r'^\d{7,8}$', str(pmid)):
-            return {'valid': True, 'pmid': pmid}
+        if re.match(r"^\d{7,8}$", str(pmid)):
+            return {"valid": True, "pmid": pmid}
         else:
-            return {'valid': False, 'reason': 'Invalid PMID format'}
+            return {"valid": False, "reason": "Invalid PMID format"}
     except Exception as e:
         logger.error(f"Error verifying PMID: {str(e)}")
-        return {'valid': False, 'reason': 'PMID verification failed'}
+        return {"valid": False, "reason": "PMID verification failed"}
 
 
 async def verify_journal_authenticity(source: Dict) -> Dict[str, Any]:
     """Verify journal authenticity."""
     try:
-        journal = source.get('metadata', {}).get('journal', '').lower()
+        journal = source.get("metadata", {}).get("journal", "").lower()
 
         if not journal:
-            return {'valid': False, 'reason': 'No journal provided'}
+            return {"valid": False, "reason": "No journal provided"}
 
         # Known reputable medical journals (simplified list)
         reputable_journals = [
-            'nature', 'science', 'cell', 'lancet', 'new england journal of medicine',
-            'jama', 'bmj', 'plos', 'cochrane', 'clinical pharmacology'
+            "nature",
+            "science",
+            "cell",
+            "lancet",
+            "new england journal of medicine",
+            "jama",
+            "bmj",
+            "plos",
+            "cochrane",
+            "clinical pharmacology",
         ]
 
         is_reputable = any(rep_journal in journal for rep_journal in reputable_journals)
 
-        return {
-            'valid': True,  # Assume valid unless clearly predatory
-            'reputable': is_reputable,
-            'journal': journal
-        }
+        return {"valid": True, "reputable": is_reputable, "journal": journal}  # Assume valid unless clearly predatory
     except Exception as e:
         logger.error(f"Error verifying journal: {str(e)}")
-        return {'valid': False, 'reason': 'Journal verification failed'}
+        return {"valid": False, "reason": "Journal verification failed"}
 
 
 _COLANG_ACTION_PATTERN = re.compile(r"\bexecute\s+([a-zA-Z_][\w]*)")
@@ -2035,7 +2116,7 @@ def init(app):
         "wrapped_actions": [],
         "registration_errors": [],
         "colang_referenced_actions": set(),
-        "actions_status": {}
+        "actions_status": {},
     }
 
     try:
@@ -2083,7 +2164,6 @@ def init(app):
             ("append_evidence_quality_summary", append_evidence_quality_summary),
             ("ensure_citation_block", ensure_citation_block),
             ("enhance_response_quality_format", enhance_response_quality_format),
-
             # Additional missing actions
             ("classify_medical_response_type", classify_medical_response_type),
             ("filter_sensitive_medical_info", filter_sensitive_medical_info),
@@ -2096,7 +2176,6 @@ def init(app):
             ("validate_source_authenticity", validate_source_authenticity),
             ("verify_pmid", verify_pmid),
             ("verify_journal_authenticity", verify_journal_authenticity),
-
             # Retrieval and processing actions
             ("update_source_metadata", update_source_metadata),
             ("set_source_flag", set_source_flag),
@@ -2110,7 +2189,6 @@ def init(app):
             ("calculate_quality_distribution", calculate_quality_distribution),
             ("get_medical_journal_database", get_medical_journal_database),
             ("ensure_disclaimer", ensure_disclaimer),
-
             # Processing actions
             ("classify_study_type", classify_study_type),
             ("extract_drug_entities", extract_drug_entities),
@@ -2119,13 +2197,11 @@ def init(app):
             ("assess_evidence_level", assess_evidence_level),
             ("comprehensive_quality_assessment", comprehensive_quality_assessment),
             ("escalate_source_quality_issue", escalate_source_quality_issue),
-
             # Formatting actions
             ("structure_moa_information", structure_moa_information),
             ("structure_interaction_information", structure_interaction_information),
             ("structure_pk_information", structure_pk_information),
             ("sort_sources_by_quality", sort_sources_by_quality),
-
             # Journal quality database
             ("get_medical_journal_database", get_medical_journal_database),
         ]
@@ -2146,7 +2222,7 @@ def init(app):
                 registration_status["actions_status"][action_name] = {
                     "status": "registered",
                     "type": "direct",
-                    "error": None
+                    "error": None,
                 }
             except Exception as e:
                 error_msg = f"Failed to register action '{action_name}': {e}"
@@ -2156,7 +2232,7 @@ def init(app):
                 registration_status["actions_status"][action_name] = {
                     "status": "failed",
                     "type": "direct",
-                    "error": str(e)
+                    "error": str(e),
                 }
 
         # Log registry status
@@ -2171,14 +2247,16 @@ def init(app):
         # Add a catch-all error wrapper for unregistered actions
         def create_safe_action_wrapper(action_name):
             """Create a safe wrapper that returns a default payload for unregistered actions."""
+
             async def safe_wrapper(*args, **kwargs):
                 logger.warning(f"Unregistered action called: {action_name}")
                 # Return a safe default payload
                 return {
                     "error": f"Action '{action_name}' is not registered",
                     "safe_default": True,
-                    "payload": "Action execution skipped due to missing registration"
+                    "payload": "Action execution skipped due to missing registration",
                 }
+
             return safe_wrapper
 
         registered_set = set(registered_actions)
@@ -2219,7 +2297,7 @@ def init(app):
                 registration_status["actions_status"][action_name] = {
                     "status": "wrapped",
                     "type": "fallback",
-                    "error": None
+                    "error": None,
                 }
                 logger.info(f"Registered safe wrapper for unregistered action: {action_name}")
             except Exception as e:
@@ -2228,16 +2306,16 @@ def init(app):
                 registration_status["actions_status"][action_name] = {
                     "status": "failed",
                     "type": "wrapper",
-                    "error": str(e)
+                    "error": str(e),
                 }
 
         logger.info("Medical safety actions registered successfully")
 
         # Store registration status on the app object for retrieval
-        if hasattr(app, 'actions_registration_status'):
+        if hasattr(app, "actions_registration_status"):
             app.actions_registration_status = registration_status
         else:
-            setattr(app, 'actions_registration_status', registration_status)
+            setattr(app, "actions_registration_status", registration_status)
 
         return registration_status
 
@@ -2264,6 +2342,7 @@ def get_medical_journal_database() -> Dict[str, Any]:
         if journals_file.exists():
             try:
                 import yaml
+
                 with journals_file.open("r", encoding="utf-8") as f:
                     journal_data = yaml.safe_load(f)
                     if journal_data and "journals" in journal_data:
@@ -2281,48 +2360,64 @@ def get_medical_journal_database() -> Dict[str, Any]:
         return {
             "journals": {
                 "tier1": [
-                    "Nature Medicine", "New England Journal of Medicine", "The Lancet",
-                    "Science", "Nature", "Cell", "JAMA", "British Medical Journal",
-                    "Clinical Pharmacology & Therapeutics", "Nature Reviews Drug Discovery"
+                    "Nature Medicine",
+                    "New England Journal of Medicine",
+                    "The Lancet",
+                    "Science",
+                    "Nature",
+                    "Cell",
+                    "JAMA",
+                    "British Medical Journal",
+                    "Clinical Pharmacology & Therapeutics",
+                    "Nature Reviews Drug Discovery",
                 ],
                 "tier2": [
-                    "Journal of Medicinal Chemistry", "Pharmaceutical Research",
-                    "Clinical Pharmacokinetics", "European Journal of Pharmaceutical Sciences",
-                    "Drug Discovery Today", "Journal of Pharmacology and Experimental Therapeutics",
-                    "Molecular Pharmaceutics", "AAPS Journal"
+                    "Journal of Medicinal Chemistry",
+                    "Pharmaceutical Research",
+                    "Clinical Pharmacokinetics",
+                    "European Journal of Pharmaceutical Sciences",
+                    "Drug Discovery Today",
+                    "Journal of Pharmacology and Experimental Therapeutics",
+                    "Molecular Pharmaceutics",
+                    "AAPS Journal",
                 ],
                 "tier3": [
-                    "European Journal of Clinical Pharmacology", "Journal of Clinical Pharmacy and Therapeutics",
+                    "European Journal of Clinical Pharmacology",
+                    "Journal of Clinical Pharmacy and Therapeutics",
                     "International Journal of Clinical Pharmacology and Therapeutics",
-                    "Pharmacotherapy", "Journal of Pharmaceutical Sciences"
+                    "Pharmacotherapy",
+                    "Journal of Pharmaceutical Sciences",
                 ],
                 "tier4": [
-                    "Indian Journal of Pharmaceutical Sciences", "Current Pharmaceutical Design",
-                    "Open Access journals (various)"
-                ]
+                    "Indian Journal of Pharmaceutical Sciences",
+                    "Current Pharmaceutical Design",
+                    "Open Access journals (various)",
+                ],
             },
             "impact_factor_ranges": {
                 "tier1": "Usually > 15",
                 "tier2": "Usually 3-15",
                 "tier3": "Usually 1-3",
-                "tier4": "Usually < 1 or unranked"
+                "tier4": "Usually < 1 or unranked",
             },
             "quality_indicators": {
                 "positive": [
-                    "peer-reviewed", "indexed in PubMed", "indexed in MEDLINE",
-                    "impact factor available", "published by reputable publisher"
+                    "peer-reviewed",
+                    "indexed in PubMed",
+                    "indexed in MEDLINE",
+                    "impact factor available",
+                    "published by reputable publisher",
                 ],
                 "negative": [
-                    "predatory journal", "pay-to-publish without peer review",
-                    "not indexed in major databases", "unclear editorial process"
-                ]
+                    "predatory journal",
+                    "pay-to-publish without peer review",
+                    "not indexed in major databases",
+                    "unclear editorial process",
+                ],
             },
-            "source": "built-in defaults"
+            "source": "built-in defaults",
         }
 
     except Exception as e:
         logger.error(f"Error in get_medical_journal_database: {e}")
-        return {
-            "journals": {"tier1": [], "tier2": [], "tier3": [], "tier4": []},
-            "error": str(e)
-        }
+        return {"journals": {"tier1": [], "tier2": [], "tier3": [], "tier4": []}, "error": str(e)}

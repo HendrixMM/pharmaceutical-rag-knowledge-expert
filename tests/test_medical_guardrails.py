@@ -1,10 +1,13 @@
 """Unit tests for medical guardrails module."""
+import json
+from unittest.mock import mock_open
+from unittest.mock import patch
 
 import pytest
-from unittest.mock import Mock, patch, mock_open
-from pathlib import Path
-import json
-from src.medical_guardrails import MedicalGuardrails, ValidationResult, PIIDetectionResult
+
+from src.medical_guardrails import MedicalGuardrails
+from src.medical_guardrails import PIIDetectionResult
+from src.medical_guardrails import ValidationResult
 
 
 class TestMedicalGuardrails:
@@ -20,12 +23,9 @@ class TestMedicalGuardrails:
             "regulatory_compliance_checks": True,
             "disclaimer_requirements": {
                 "always_include": False,
-                "conditional_triggers": ["medication", "dosage", "treatment"]
+                "conditional_triggers": ["medication", "dosage", "treatment"],
             },
-            "logging": {
-                "audit_enabled": True,
-                "log_level": "INFO"
-            }
+            "logging": {"audit_enabled": True, "log_level": "INFO"},
         }
 
     @pytest.fixture
@@ -38,10 +38,10 @@ class TestMedicalGuardrails:
     def test_initialization(self, guardrails):
         """Test MedicalGuardrails initialization."""
         assert guardrails is not None
-        assert hasattr(guardrails, 'config')
-        assert hasattr(guardrails, 'medical_patterns')
-        assert hasattr(guardrails, 'pii_patterns')
-        assert hasattr(guardrails, 'jailbreak_patterns')
+        assert hasattr(guardrails, "config")
+        assert hasattr(guardrails, "medical_patterns")
+        assert hasattr(guardrails, "pii_patterns")
+        assert hasattr(guardrails, "jailbreak_patterns")
 
     def test_validate_medical_query_valid_pharmaceutical(self, guardrails):
         """Test validation of valid pharmaceutical research query."""
@@ -85,9 +85,7 @@ class TestMedicalGuardrails:
     def test_validate_medical_response_success(self, guardrails):
         """Test successful medical response validation."""
         response = "Based on published research, warfarin and fluconazole may interact through CYP2C9 inhibition."
-        sources = [
-            {"metadata": {"pmid": "12345678", "journal": "Clinical Pharmacology"}}
-        ]
+        sources = [{"metadata": {"pmid": "12345678", "journal": "Clinical Pharmacology"}}]
 
         result = guardrails.validate_medical_response(response, sources)
 
@@ -170,12 +168,8 @@ class TestMedicalGuardrails:
         claims = "Study shows 50% reduction in cardiovascular events"
         sources = [
             {
-                "metadata": {
-                    "pmid": "12345678",
-                    "journal": "New England Journal of Medicine",
-                    "year": "2023"
-                },
-                "page_content": "cardiovascular events reduced significantly"
+                "metadata": {"pmid": "12345678", "journal": "New England Journal of Medicine", "year": "2023"},
+                "page_content": "cardiovascular events reduced significantly",
             }
         ]
 
@@ -187,14 +181,7 @@ class TestMedicalGuardrails:
     def test_validate_non_medical_sources(self, guardrails):
         """Test validation of non-medical sources."""
         claims = "Drug efficacy demonstrated"
-        sources = [
-            {
-                "metadata": {
-                    "journal": "Popular Magazine",
-                    "year": "2023"
-                }
-            }
-        ]
+        sources = [{"metadata": {"journal": "Popular Magazine", "year": "2023"}}]
 
         result = guardrails._validate_against_pubmed_sources(claims, sources)
 
@@ -273,7 +260,9 @@ class TestMedicalGuardrails:
     def test_check_medical_disclaimers(self, guardrails):
         """Test medical disclaimer checking."""
         # Test response with disclaimer
-        response_with_disclaimer = "Drug information provided for educational purposes only. Consult healthcare professionals."
+        response_with_disclaimer = (
+            "Drug information provided for educational purposes only. Consult healthcare professionals."
+        )
         result = guardrails._check_medical_disclaimers(response_with_disclaimer)
 
         assert result["has_disclaimer"] == True
@@ -335,7 +324,7 @@ class TestValidationResult:
             severity="low",
             issues=[],
             recommendations=["Include medical disclaimer"],
-            metadata={"timestamp": "2023-01-01T00:00:00"}
+            metadata={"timestamp": "2023-01-01T00:00:00"},
         )
 
         assert result.is_valid == True
@@ -350,15 +339,13 @@ class TestPIIDetectionResult:
 
     def test_pii_detection_result_creation(self):
         """Test PIIDetectionResult instance creation."""
-        entities = [
-            {"type": "mrn", "text": "123456789", "start": 0, "end": 9, "confidence": 0.9}
-        ]
+        entities = [{"type": "mrn", "text": "123456789", "start": 0, "end": 9, "confidence": 0.9}]
 
         result = PIIDetectionResult(
             detected=True,
             entities=entities,
             masked_text="Patient MRN: [MEDICAL_RECORD_NUMBER] needs review",
-            confidence=0.9
+            confidence=0.9,
         )
 
         assert result.detected == True

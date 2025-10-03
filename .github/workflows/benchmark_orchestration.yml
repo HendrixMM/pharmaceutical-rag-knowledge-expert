@@ -78,7 +78,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Orchestrate Benchmarks (smoke: preflight → run)
+      - name: "Orchestrate Benchmarks (smoke: preflight → run)"
         run: |
           PRESET_ARG=""; if [ -n "${{ matrix.preset }}" ]; then PRESET_ARG="--preset ${{ matrix.preset }}"; fi
           python scripts/orchestrate_benchmarks.py \

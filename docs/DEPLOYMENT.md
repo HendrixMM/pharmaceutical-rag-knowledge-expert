@@ -7,6 +7,7 @@ Review Cadence: Monthly
 # Deployment Guide (Consolidated)
 
 <!-- TOC -->
+
 - [Overview and Philosophy](#overview-and-philosophy)
 - [Quick Deployment Options](#quick-deployment-options)
 - [Prerequisites](#prerequisites)

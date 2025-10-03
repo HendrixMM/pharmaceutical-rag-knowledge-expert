@@ -11,28 +11,32 @@ Advanced test automation system for pharmaceutical RAG platform with:
 
 This framework ensures system reliability and pharmaceutical research accuracy.
 """
-
-import os
-import sys
-import asyncio
-import subprocess
-import json
-import time
-import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
-from pathlib import Path
 import argparse
-from dataclasses import dataclass, asdict
+import asyncio
+import json
+import logging
+import sys
+import time
+from dataclasses import asdict
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+
 import yaml
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
+
 @dataclass
 class TestConfig:
     """Test automation configuration."""
+
     test_suites: List[str]
     performance_thresholds: Dict[str, float]
     pharmaceutical_validation: bool
@@ -41,9 +45,11 @@ class TestConfig:
     continuous_mode: bool
     notification_channels: List[str]
 
+
 @dataclass
 class TestResult:
     """Test execution result."""
+
     suite_name: str
     status: str
     duration_seconds: float
@@ -54,6 +60,7 @@ class TestResult:
     performance_metrics: Dict[str, Any]
     pharmaceutical_metrics: Dict[str, Any]
     timestamp: datetime
+
 
 class PharmaceuticalTestAutomation:
     """Advanced test automation system for pharmaceutical RAG platform."""
@@ -66,19 +73,19 @@ class PharmaceuticalTestAutomation:
 
         # Pharmaceutical test validation settings
         self.pharmaceutical_thresholds = {
-            "drug_safety_accuracy": 0.95,      # 95% accuracy for drug safety
-            "interaction_detection": 0.90,     # 90% for drug interactions
-            "contraindication_detection": 0.92, # 92% for contraindications
-            "clinical_research_relevance": 0.85, # 85% for clinical research
-            "cost_optimization_efficiency": 0.80 # 80% cost efficiency
+            "drug_safety_accuracy": 0.95,  # 95% accuracy for drug safety
+            "interaction_detection": 0.90,  # 90% for drug interactions
+            "contraindication_detection": 0.92,  # 92% for contraindications
+            "clinical_research_relevance": 0.85,  # 85% for clinical research
+            "cost_optimization_efficiency": 0.80,  # 80% cost efficiency
         }
 
         # Performance benchmarks
         self.performance_benchmarks = {
-            "query_response_time_ms": 2000,    # 2 second max response time
-            "batch_processing_efficiency": 0.85, # 85% batch efficiency
-            "memory_usage_mb": 512,            # 512MB memory limit
-            "api_call_success_rate": 0.95      # 95% API success rate
+            "query_response_time_ms": 2000,  # 2 second max response time
+            "batch_processing_efficiency": 0.85,  # 85% batch efficiency
+            "memory_usage_mb": 512,  # 512MB memory limit
+            "api_call_success_rate": 0.95,  # 95% API success rate
         }
 
     def _load_config(self, config_path: Optional[str]) -> TestConfig:
@@ -90,18 +97,14 @@ class PharmaceuticalTestAutomation:
                 "batch_processing",
                 "query_classification",
                 "safety_alert_integration",
-                "nvidia_build_compatibility"
+                "nvidia_build_compatibility",
             ],
-            performance_thresholds={
-                "response_time_ms": 2000,
-                "memory_usage_mb": 512,
-                "cpu_usage_percent": 80
-            },
+            performance_thresholds={"response_time_ms": 2000, "memory_usage_mb": 512, "cpu_usage_percent": 80},
             pharmaceutical_validation=True,
             cost_monitoring=True,
             safety_checks=True,
             continuous_mode=False,
-            notification_channels=["console", "file"]
+            notification_channels=["console", "file"],
         )
 
         if config_path and Path(config_path).exists():
@@ -118,9 +121,7 @@ class PharmaceuticalTestAutomation:
 
         # Console handler
         console_handler = logging.StreamHandler()
-        console_formatter = logging.Formatter(
-            '%(asctime)s [%(levelname)8s] %(name)s: %(message)s'
-        )
+        console_formatter = logging.Formatter("%(asctime)s [%(levelname)8s] %(name)s: %(message)s")
         console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
 
@@ -128,12 +129,8 @@ class PharmaceuticalTestAutomation:
         log_dir = self.project_root / "logs"
         log_dir.mkdir(exist_ok=True)
 
-        file_handler = logging.FileHandler(
-            log_dir / f"test_automation_{datetime.now().strftime('%Y%m%d')}.log"
-        )
-        file_formatter = logging.Formatter(
-            '%(asctime)s [%(levelname)8s] %(name)s: %(message)s'
-        )
+        file_handler = logging.FileHandler(log_dir / f"test_automation_{datetime.now().strftime('%Y%m%d')}.log")
+        file_formatter = logging.Formatter("%(asctime)s [%(levelname)8s] %(name)s: %(message)s")
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
 
@@ -180,7 +177,9 @@ class PharmaceuticalTestAutomation:
 
         # Build pytest command with appropriate markers and options
         pytest_cmd = [
-            "python", "-m", "pytest",
+            "python",
+            "-m",
+            "pytest",
             f"tests/test_{suite_name}.py",
             "-v",
             "--tb=short",
@@ -188,7 +187,7 @@ class PharmaceuticalTestAutomation:
             "--cov=src",
             "--cov-report=json",
             "--json-report",
-            f"--json-report-file=test_results_{suite_name}.json"
+            f"--json-report-file=test_results_{suite_name}.json",
         ]
 
         # Add pharmaceutical-specific markers
@@ -201,10 +200,7 @@ class PharmaceuticalTestAutomation:
 
         # Execute tests
         process = await asyncio.create_subprocess_exec(
-            *pytest_cmd,
-            cwd=self.project_root,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            *pytest_cmd, cwd=self.project_root, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
 
         stdout, stderr = await process.communicate()
@@ -236,7 +232,7 @@ class PharmaceuticalTestAutomation:
             coverage_percentage=coverage_data.get("coverage_percent", 0.0),
             performance_metrics=performance_metrics,
             pharmaceutical_metrics=pharmaceutical_metrics,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
     def _parse_pytest_results(self, result_file: Path) -> Dict[str, Any]:
@@ -254,7 +250,7 @@ class PharmaceuticalTestAutomation:
                 "tests_passed": summary.get("passed", 0),
                 "tests_failed": summary.get("failed", 0),
                 "tests_skipped": summary.get("skipped", 0),
-                "tests_error": summary.get("error", 0)
+                "tests_error": summary.get("error", 0),
             }
         except Exception as e:
             self.logger.warning(f"Could not parse test results: {e}")
@@ -273,7 +269,7 @@ class PharmaceuticalTestAutomation:
             return {
                 "coverage_percent": totals.get("percent_covered", 0.0),
                 "lines_covered": totals.get("covered_lines", 0),
-                "lines_total": totals.get("num_statements", 0)
+                "lines_total": totals.get("num_statements", 0),
             }
         except Exception as e:
             self.logger.warning(f"Could not parse coverage results: {e}")
@@ -286,25 +282,21 @@ class PharmaceuticalTestAutomation:
 
         base_metrics = {
             "memory_usage_mb": 128 + (len(suite_name) * 10),  # Simulate memory usage
-            "cpu_usage_percent": 15 + (len(suite_name) % 20), # Simulate CPU usage
-            "api_calls_made": 10 + (len(suite_name) % 50),    # Simulate API calls
-            "response_time_avg_ms": 150 + (len(suite_name) * 20), # Simulate response time
+            "cpu_usage_percent": 15 + (len(suite_name) % 20),  # Simulate CPU usage
+            "api_calls_made": 10 + (len(suite_name) % 50),  # Simulate API calls
+            "response_time_avg_ms": 150 + (len(suite_name) * 20),  # Simulate response time
         }
 
         # Suite-specific performance characteristics
         if "batch_processing" in suite_name:
-            base_metrics.update({
-                "batch_efficiency": 0.85,
-                "throughput_requests_per_second": 25.0,
-                "queue_processing_time_ms": 250
-            })
+            base_metrics.update(
+                {"batch_efficiency": 0.85, "throughput_requests_per_second": 25.0, "queue_processing_time_ms": 250}
+            )
 
         if "query_classification" in suite_name:
-            base_metrics.update({
-                "classification_accuracy": 0.92,
-                "classification_time_ms": 50,
-                "confidence_score_avg": 0.78
-            })
+            base_metrics.update(
+                {"classification_accuracy": 0.92, "classification_time_ms": 50, "confidence_score_avg": 0.78}
+            )
 
         return base_metrics
 
@@ -315,26 +307,30 @@ class PharmaceuticalTestAutomation:
             "safety_checks_performed": 0,
             "drug_interactions_detected": 0,
             "contraindications_flagged": 0,
-            "clinical_relevance_score": 0.0
+            "clinical_relevance_score": 0.0,
         }
 
         # Suite-specific pharmaceutical metrics
         if "safety" in suite_name:
-            base_metrics.update({
-                "pharmaceutical_queries_processed": 25,
-                "safety_checks_performed": 25,
-                "drug_interactions_detected": 8,
-                "contraindications_flagged": 5,
-                "clinical_relevance_score": 0.91,
-                "safety_alert_accuracy": 0.94
-            })
+            base_metrics.update(
+                {
+                    "pharmaceutical_queries_processed": 25,
+                    "safety_checks_performed": 25,
+                    "drug_interactions_detected": 8,
+                    "contraindications_flagged": 5,
+                    "clinical_relevance_score": 0.91,
+                    "safety_alert_accuracy": 0.94,
+                }
+            )
 
         if "pharmaceutical_credit_tracking" in suite_name:
-            base_metrics.update({
-                "cost_optimization_score": 0.87,
-                "free_tier_utilization": 0.92,
-                "pharmaceutical_query_percentage": 0.78
-            })
+            base_metrics.update(
+                {
+                    "cost_optimization_score": 0.87,
+                    "free_tier_utilization": 0.92,
+                    "pharmaceutical_query_percentage": 0.78,
+                }
+            )
 
         return base_metrics
 
@@ -363,13 +359,9 @@ class PharmaceuticalTestAutomation:
         max_response_time = self.performance_benchmarks["query_response_time_ms"]
 
         if response_time > max_response_time:
-            validation_results.append(
-                f"❌ Response time ({response_time}ms) exceeds benchmark ({max_response_time}ms)"
-            )
+            validation_results.append(f"❌ Response time ({response_time}ms) exceeds benchmark ({max_response_time}ms)")
         else:
-            validation_results.append(
-                f"✅ Response time ({response_time}ms) within benchmark ({max_response_time}ms)"
-            )
+            validation_results.append(f"✅ Response time ({response_time}ms) within benchmark ({max_response_time}ms)")
 
         # Log validation results
         for result_msg in validation_results:
@@ -391,7 +383,9 @@ class PharmaceuticalTestAutomation:
         # Log pharmaceutical metrics if available
         pharma = result.pharmaceutical_metrics
         if pharma.get("pharmaceutical_queries_processed", 0) > 0:
-            self.logger.info(f"   Pharmaceutical: {pharma.get('pharmaceutical_queries_processed', 0)} queries processed")
+            self.logger.info(
+                f"   Pharmaceutical: {pharma.get('pharmaceutical_queries_processed', 0)} queries processed"
+            )
 
     def _generate_comprehensive_report(self, results: Dict[str, TestResult], overall_duration: float) -> Dict[str, Any]:
         """Generate comprehensive test report."""
@@ -403,14 +397,10 @@ class PharmaceuticalTestAutomation:
 
         # Calculate pharmaceutical-specific metrics
         total_pharma_queries = sum(
-            r.pharmaceutical_metrics.get("pharmaceutical_queries_processed", 0)
-            for r in results.values()
+            r.pharmaceutical_metrics.get("pharmaceutical_queries_processed", 0) for r in results.values()
         )
 
-        total_safety_checks = sum(
-            r.pharmaceutical_metrics.get("safety_checks_performed", 0)
-            for r in results.values()
-        )
+        total_safety_checks = sum(r.pharmaceutical_metrics.get("safety_checks_performed", 0) for r in results.values())
 
         report = {
             "timestamp": datetime.now().isoformat(),
@@ -423,7 +413,7 @@ class PharmaceuticalTestAutomation:
                 "tests_passed": total_passed,
                 "tests_failed": total_failed,
                 "success_rate": (total_passed / total_tests * 100) if total_tests > 0 else 0,
-                "average_coverage": avg_coverage
+                "average_coverage": avg_coverage,
             },
             "pharmaceutical_metrics": {
                 "total_pharmaceutical_queries": total_pharma_queries,
@@ -432,21 +422,13 @@ class PharmaceuticalTestAutomation:
             },
             "performance_summary": {
                 "average_response_time_ms": sum(
-                    r.performance_metrics.get("response_time_avg_ms", 0)
-                    for r in results.values()
-                ) / len(results),
-                "total_api_calls": sum(
-                    r.performance_metrics.get("api_calls_made", 0)
-                    for r in results.values()
-                ),
-                "peak_memory_usage_mb": max(
-                    r.performance_metrics.get("memory_usage_mb", 0)
-                    for r in results.values()
+                    r.performance_metrics.get("response_time_avg_ms", 0) for r in results.values()
                 )
+                / len(results),
+                "total_api_calls": sum(r.performance_metrics.get("api_calls_made", 0) for r in results.values()),
+                "peak_memory_usage_mb": max(r.performance_metrics.get("memory_usage_mb", 0) for r in results.values()),
             },
-            "detailed_results": {
-                suite_name: asdict(result) for suite_name, result in results.items()
-            }
+            "detailed_results": {suite_name: asdict(result) for suite_name, result in results.items()},
         }
 
         return report
@@ -459,7 +441,7 @@ class PharmaceuticalTestAutomation:
 
         # Save detailed report
         report_file = results_dir / f"test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(report_file, 'w') as f:
+        with open(report_file, "w") as f:
             json.dump(report, f, indent=2, default=str)
 
         # Save summary report
@@ -469,10 +451,10 @@ class PharmaceuticalTestAutomation:
             "success_rate": report["summary"]["success_rate"],
             "total_tests": report["summary"]["total_tests"],
             "pharmaceutical_queries": report["pharmaceutical_metrics"]["total_pharmaceutical_queries"],
-            "average_coverage": report["summary"]["average_coverage"]
+            "average_coverage": report["summary"]["average_coverage"],
         }
 
-        with open(summary_file, 'w') as f:
+        with open(summary_file, "w") as f:
             json.dump(summary, f, indent=2)
 
         self.logger.info(f"💾 Test results saved to {report_file}")
@@ -489,9 +471,9 @@ class PharmaceuticalTestAutomation:
         """Send console notification with test summary."""
         summary = report["summary"]
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("🧪 PHARMACEUTICAL TEST AUTOMATION SUMMARY")
-        print("="*80)
+        print("=" * 80)
         print(f"📊 Test Suites: {summary['suites_passed']}/{summary['total_test_suites']} passed")
         print(f"🧪 Individual Tests: {summary['tests_passed']}/{summary['total_tests']} passed")
         print(f"📈 Success Rate: {summary['success_rate']:.1f}%")
@@ -499,11 +481,11 @@ class PharmaceuticalTestAutomation:
         print(f"💊 Pharmaceutical Queries: {report['pharmaceutical_metrics']['total_pharmaceutical_queries']}")
         print(f"🛡️  Safety Checks: {report['pharmaceutical_metrics']['total_safety_checks']}")
         print(f"⏱️  Duration: {report['overall_duration_seconds']:.1f}s")
-        print("="*80)
+        print("=" * 80)
 
-        if summary['success_rate'] >= 90:
+        if summary["success_rate"] >= 90:
             print("✅ ALL SYSTEMS OPERATIONAL - Pharmaceutical RAG system validated")
-        elif summary['success_rate'] >= 75:
+        elif summary["success_rate"] >= 75:
             print("⚠️  MINOR ISSUES DETECTED - Review failed tests")
         else:
             print("❌ CRITICAL ISSUES DETECTED - Immediate attention required")
@@ -518,10 +500,10 @@ class PharmaceuticalTestAutomation:
             "status": "success" if report["summary"]["success_rate"] >= 90 else "failure",
             "timestamp": report["timestamp"],
             "summary": report["summary"],
-            "pharmaceutical_validation": report["pharmaceutical_metrics"]
+            "pharmaceutical_validation": report["pharmaceutical_metrics"],
         }
 
-        with open(notification_file, 'w') as f:
+        with open(notification_file, "w") as f:
             json.dump(notification, f, indent=2)
 
     def _cleanup_temp_files(self, files: List[Path]):

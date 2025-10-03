@@ -2,18 +2,18 @@ name: Pharmaceutical RAG System Testing
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   schedule:
     # Run comprehensive tests daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
   workflow_dispatch:
     inputs:
       test_suite:
-        description: 'Specific test suite to run'
+        description: "Specific test suite to run"
         required: false
-        default: 'all'
+        default: "all"
         type: choice
         options:
           - all
@@ -30,44 +30,44 @@ jobs:
     timeout-minutes: 15
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov pytest-asyncio pytest-xdist
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio pytest-xdist
 
-    - name: Run unit tests
-      run: |
-        python -m pytest tests/ \
-          -m "unit and not requires_api" \
-          --cov=src \
-          --cov-report=xml \
-          --cov-report=term-missing \
-          --junit-xml=junit-unit.xml \
-          -x -v
+      - name: Run unit tests
+        run: |
+          python -m pytest tests/ \
+            -m "unit and not requires_api" \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junit-xml=junit-unit.xml \
+            -x -v
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unit-tests
-        name: unit-test-coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unit-tests
+          name: unit-test-coverage
 
-    - name: Upload test results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: unit-test-results
-        path: junit-unit.xml
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: unit-test-results
+          path: junit-unit.xml
 
   # Pharmaceutical domain-specific tests
   pharmaceutical-tests:
@@ -86,51 +86,51 @@ jobs:
           - safety_alert_integration
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov pytest-asyncio pytest-timeout
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio pytest-timeout
 
-    - name: Create test environment
-      run: |
-        # Create test configuration
-        mkdir -p config/test
-        echo "TESTING=true" > .env.test
-        echo "ENVIRONMENT=test" >> .env.test
-        echo "ENABLE_PHARMACEUTICAL_VALIDATION=true" >> .env.test
+      - name: Create test environment
+        run: |
+          # Create test configuration
+          mkdir -p config/test
+          echo "TESTING=true" > .env.test
+          echo "ENVIRONMENT=test" >> .env.test
+          echo "ENABLE_PHARMACEUTICAL_VALIDATION=true" >> .env.test
 
-    - name: Run pharmaceutical tests
-      run: |
-        python -m pytest tests/test_${{ matrix.test-suite }}.py \
-          -m "pharmaceutical" \
-          --cov=src \
-          --cov-report=xml \
-          --junit-xml=junit-${{ matrix.test-suite }}.xml \
-          --timeout=300 \
-          -v
+      - name: Run pharmaceutical tests
+        run: |
+          python -m pytest tests/test_${{ matrix.test-suite }}.py \
+            -m "pharmaceutical" \
+            --cov=src \
+            --cov-report=xml \
+            --junit-xml=junit-${{ matrix.test-suite }}.xml \
+            --timeout=300 \
+            -v
 
-    - name: Validate pharmaceutical requirements
-      run: |
-        python scripts/test_automation.py --suites ${{ matrix.test-suite }}
+      - name: Validate pharmaceutical requirements
+        run: |
+          python scripts/test_automation.py --suites ${{ matrix.test-suite }}
 
-    - name: Upload test results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: pharmaceutical-test-results-${{ matrix.test-suite }}
-        path: |
-          junit-${{ matrix.test-suite }}.xml
-          coverage.xml
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: pharmaceutical-test-results-${{ matrix.test-suite }}
+          path: |
+            junit-${{ matrix.test-suite }}.xml
+            coverage.xml
 
   # Drug safety and interaction tests
   safety-validation:
@@ -140,58 +140,58 @@ jobs:
     needs: unit-tests
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-asyncio pytest-timeout
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-timeout
 
-    - name: Run safety validation tests
-      run: |
-        python -m pytest tests/ \
-          -m "safety" \
-          --junit-xml=junit-safety.xml \
-          --timeout=300 \
-          -v
+      - name: Run safety validation tests
+        run: |
+          python -m pytest tests/ \
+            -m "safety" \
+            --junit-xml=junit-safety.xml \
+            --timeout=300 \
+            -v
 
-    - name: Validate drug safety accuracy
-      run: |
-        python -c "
-        import json
-        import sys
+      - name: Validate drug safety accuracy
+        run: |
+          python -c "
+          import json
+          import sys
 
-        # Load test results and validate safety thresholds
-        try:
-            with open('test_results.json') as f:
-                results = json.load(f)
+          # Load test results and validate safety thresholds
+          try:
+              with open('test_results.json') as f:
+                  results = json.load(f)
 
-            safety_accuracy = results.get('safety_metrics', {}).get('accuracy', 0)
-            min_required = 0.95  # 95% minimum for drug safety
+              safety_accuracy = results.get('safety_metrics', {}).get('accuracy', 0)
+              min_required = 0.95  # 95% minimum for drug safety
 
-            if safety_accuracy < min_required:
-                print(f'❌ Drug safety accuracy {safety_accuracy:.2%} below required {min_required:.2%}')
-                sys.exit(1)
-            else:
-                print(f'✅ Drug safety accuracy {safety_accuracy:.2%} meets requirements')
-        except FileNotFoundError:
-            print('⚠️  No safety results found, skipping validation')
-        "
+              if safety_accuracy < min_required:
+                  print(f'❌ Drug safety accuracy {safety_accuracy:.2%} below required {min_required:.2%}')
+                  sys.exit(1)
+              else:
+                  print(f'✅ Drug safety accuracy {safety_accuracy:.2%} meets requirements')
+          except FileNotFoundError:
+              print('⚠️  No safety results found, skipping validation')
+          "
 
-    - name: Upload safety test results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: safety-validation-results
-        path: junit-safety.xml
+      - name: Upload safety test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: safety-validation-results
+          path: junit-safety.xml
 
   # Performance and load testing
   performance-tests:
@@ -201,66 +201,66 @@ jobs:
     needs: [unit-tests, pharmaceutical-tests]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-benchmark pytest-asyncio locust
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-benchmark pytest-asyncio locust
 
-    - name: Run performance benchmarks
-      run: |
-        python -m pytest tests/ \
-          -m "performance" \
-          --benchmark-only \
-          --benchmark-json=benchmark_results.json \
-          --junit-xml=junit-performance.xml \
-          -v
+      - name: Run performance benchmarks
+        run: |
+          python -m pytest tests/ \
+            -m "performance" \
+            --benchmark-only \
+            --benchmark-json=benchmark_results.json \
+            --junit-xml=junit-performance.xml \
+            -v
 
-    - name: Validate performance benchmarks
-      run: |
-        python -c "
-        import json
-        import sys
+      - name: Validate performance benchmarks
+        run: |
+          python -c "
+          import json
+          import sys
 
-        with open('benchmark_results.json') as f:
-            results = json.load(f)
+          with open('benchmark_results.json') as f:
+              results = json.load(f)
 
-        # Check response time benchmarks
-        benchmarks = results.get('benchmarks', [])
-        max_response_time = 2.0  # 2 seconds max
+          # Check response time benchmarks
+          benchmarks = results.get('benchmarks', [])
+          max_response_time = 2.0  # 2 seconds max
 
-        failed_benchmarks = []
-        for benchmark in benchmarks:
-            mean_time = benchmark['stats']['mean']
-            if mean_time > max_response_time:
-                failed_benchmarks.append(f\"{benchmark['name']}: {mean_time:.2f}s\")
+          failed_benchmarks = []
+          for benchmark in benchmarks:
+              mean_time = benchmark['stats']['mean']
+              if mean_time > max_response_time:
+                  failed_benchmarks.append(f\"{benchmark['name']}: {mean_time:.2f}s\")
 
-        if failed_benchmarks:
-            print('❌ Performance benchmarks failed:')
-            for failure in failed_benchmarks:
-                print(f'   {failure}')
-            sys.exit(1)
-        else:
-            print('✅ All performance benchmarks passed')
-        "
+          if failed_benchmarks:
+              print('❌ Performance benchmarks failed:')
+              for failure in failed_benchmarks:
+                  print(f'   {failure}')
+              sys.exit(1)
+          else:
+              print('✅ All performance benchmarks passed')
+          "
 
-    - name: Upload performance results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: performance-test-results
-        path: |
-          benchmark_results.json
-          junit-performance.xml
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-test-results
+          path: |
+            benchmark_results.json
+            junit-performance.xml
 
   # Integration tests with API services
   integration-tests:
@@ -271,39 +271,39 @@ jobs:
     if: github.event_name == 'schedule' || github.event.inputs.test_suite == 'integration' || github.event.inputs.test_suite == 'all'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-asyncio pytest-timeout
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-timeout
 
-    - name: Run integration tests
-      env:
-        NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      run: |
-        python -m pytest tests/ \
-          -m "integration" \
-          --junit-xml=junit-integration.xml \
-          --timeout=600 \
-          -v
-      continue-on-error: true  # API keys might not be available in forks
+      - name: Run integration tests
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python -m pytest tests/ \
+            -m "integration" \
+            --junit-xml=junit-integration.xml \
+            --timeout=600 \
+            -v
+        continue-on-error: true # API keys might not be available in forks
 
-    - name: Upload integration test results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: integration-test-results
-        path: junit-integration.xml
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: integration-test-results
+          path: junit-integration.xml
 
   # Comprehensive test automation
   comprehensive-validation:
@@ -314,64 +314,64 @@ jobs:
     if: github.event_name == 'schedule' || github.event.inputs.test_suite == 'all'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov pytest-asyncio pytest-timeout
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio pytest-timeout
 
-    - name: Run comprehensive test automation
-      env:
-        NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      run: |
-        python scripts/test_automation.py \
-          --config config/test_automation.yml
-      continue-on-error: true
+      - name: Run comprehensive test automation
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python scripts/test_automation.py \
+            --config config/test_automation.yml
+        continue-on-error: true
 
-    - name: Generate test report
-      run: |
-        python -c "
-        import json
-        import os
-        from datetime import datetime
+      - name: Generate test report
+        run: |
+          python -c "
+          import json
+          import os
+          from datetime import datetime
 
-        # Generate comprehensive test report
-        report = {
-            'timestamp': datetime.now().isoformat(),
-            'repository': os.environ.get('GITHUB_REPOSITORY'),
-            'commit_sha': os.environ.get('GITHUB_SHA'),
-            'workflow_run_id': os.environ.get('GITHUB_RUN_ID'),
-            'pharmaceutical_validation': 'completed',
-            'safety_checks': 'passed',
-            'performance_benchmarks': 'validated',
-            'ngc_independence': 'verified'
-        }
+          # Generate comprehensive test report
+          report = {
+              'timestamp': datetime.now().isoformat(),
+              'repository': os.environ.get('GITHUB_REPOSITORY'),
+              'commit_sha': os.environ.get('GITHUB_SHA'),
+              'workflow_run_id': os.environ.get('GITHUB_RUN_ID'),
+              'pharmaceutical_validation': 'completed',
+              'safety_checks': 'passed',
+              'performance_benchmarks': 'validated',
+              'ngc_independence': 'verified'
+          }
 
-        with open('comprehensive_report.json', 'w') as f:
-            json.dump(report, f, indent=2)
+          with open('comprehensive_report.json', 'w') as f:
+              json.dump(report, f, indent=2)
 
-        print('✅ Comprehensive pharmaceutical validation completed')
-        "
+          print('✅ Comprehensive pharmaceutical validation completed')
+          "
 
-    - name: Upload comprehensive results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: comprehensive-validation-results
-        path: |
-          comprehensive_report.json
-          test_results/
-          logs/
+      - name: Upload comprehensive results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: comprehensive-validation-results
+          path: |
+            comprehensive_report.json
+            test_results/
+            logs/
 
   # Security and compliance checks
   security-validation:
@@ -380,70 +380,70 @@ jobs:
     timeout-minutes: 20
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Run security scan
-      uses: github/super-linter@v4
-      env:
-        DEFAULT_BRANCH: main
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        VALIDATE_PYTHON_PYLINT: true
-        VALIDATE_PYTHON_BANDIT: true
+      - name: Run security scan
+        uses: github/super-linter@v4
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_PYTHON_PYLINT: true
+          VALIDATE_PYTHON_BANDIT: true
 
-    - name: Check for sensitive data
-      run: |
-        # Check for potential API keys or sensitive data in code
-        if grep -r "sk-" --include="*.py" --include="*.md" .; then
-          echo "❌ Potential API keys found in code"
-          exit 1
-        fi
+      - name: Check for sensitive data
+        run: |
+          # Check for potential API keys or sensitive data in code
+          if grep -r "sk-" --include="*.py" --include="*.md" .; then
+            echo "❌ Potential API keys found in code"
+            exit 1
+          fi
 
-        if grep -r "NVIDIA_API_KEY\s*=" --include="*.py" .; then
-          echo "❌ Hardcoded API key references found"
-          exit 1
-        fi
+          if grep -r "NVIDIA_API_KEY\s*=" --include="*.py" .; then
+            echo "❌ Hardcoded API key references found"
+            exit 1
+          fi
 
-        echo "✅ No sensitive data detected"
+          echo "✅ No sensitive data detected"
 
-    - name: Validate pharmaceutical compliance
-      run: |
-        python -c "
-        import os
-        import sys
-        from pathlib import Path
+      - name: Validate pharmaceutical compliance
+        run: |
+          python -c "
+          import os
+          import sys
+          from pathlib import Path
 
-        # Check for required pharmaceutical compliance markers
-        compliance_markers = [
-            'drug_safety_validation',
-            'clinical_research_standards',
-            'regulatory_compliance',
-            'data_privacy_protection'
-        ]
+          # Check for required pharmaceutical compliance markers
+          compliance_markers = [
+              'drug_safety_validation',
+              'clinical_research_standards',
+              'regulatory_compliance',
+              'data_privacy_protection'
+          ]
 
-        missing_markers = []
-        for marker in compliance_markers:
-            if not any(Path('.').rglob('*.py')):
-                continue  # Skip if no Python files found
+          missing_markers = []
+          for marker in compliance_markers:
+              if not any(Path('.').rglob('*.py')):
+                  continue  # Skip if no Python files found
 
-            found = False
-            for py_file in Path('.').rglob('*.py'):
-                try:
-                    content = py_file.read_text()
-                    if marker in content.lower():
-                        found = True
-                        break
-                except:
-                    continue
+              found = False
+              for py_file in Path('.').rglob('*.py'):
+                  try:
+                      content = py_file.read_text()
+                      if marker in content.lower():
+                          found = True
+                          break
+                  except:
+                      continue
 
-            if not found:
-                missing_markers.append(marker)
+              if not found:
+                  missing_markers.append(marker)
 
-        if missing_markers:
-            print(f'⚠️  Missing compliance markers: {missing_markers}')
-        else:
-            print('✅ All pharmaceutical compliance markers present')
-        "
+          if missing_markers:
+              print(f'⚠️  Missing compliance markers: {missing_markers}')
+          else:
+              print('✅ All pharmaceutical compliance markers present')
+          "
 
   # Notification and reporting
   notify-results:
@@ -453,48 +453,48 @@ jobs:
     if: always()
 
     steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
 
-    - name: Generate final report
-      run: |
-        echo "# 🧪 Pharmaceutical RAG Testing Results" > test_summary.md
-        echo "" >> test_summary.md
-        echo "**Timestamp:** $(date -u)" >> test_summary.md
-        echo "**Repository:** ${{ github.repository }}" >> test_summary.md
-        echo "**Commit:** ${{ github.sha }}" >> test_summary.md
-        echo "**Workflow:** ${{ github.workflow }}" >> test_summary.md
-        echo "" >> test_summary.md
+      - name: Generate final report
+        run: |
+          echo "# 🧪 Pharmaceutical RAG Testing Results" > test_summary.md
+          echo "" >> test_summary.md
+          echo "**Timestamp:** $(date -u)" >> test_summary.md
+          echo "**Repository:** ${{ github.repository }}" >> test_summary.md
+          echo "**Commit:** ${{ github.sha }}" >> test_summary.md
+          echo "**Workflow:** ${{ github.workflow }}" >> test_summary.md
+          echo "" >> test_summary.md
 
-        echo "## Test Results Summary" >> test_summary.md
-        echo "" >> test_summary.md
+          echo "## Test Results Summary" >> test_summary.md
+          echo "" >> test_summary.md
 
-        # Check job results
-        if [ "${{ needs.comprehensive-validation.result }}" == "success" ]; then
-          echo "✅ Comprehensive pharmaceutical validation: **PASSED**" >> test_summary.md
-        else
-          echo "❌ Comprehensive pharmaceutical validation: **FAILED**" >> test_summary.md
-        fi
+          # Check job results
+          if [ "${{ needs.comprehensive-validation.result }}" == "success" ]; then
+            echo "✅ Comprehensive pharmaceutical validation: **PASSED**" >> test_summary.md
+          else
+            echo "❌ Comprehensive pharmaceutical validation: **FAILED**" >> test_summary.md
+          fi
 
-        if [ "${{ needs.security-validation.result }}" == "success" ]; then
-          echo "✅ Security & compliance validation: **PASSED**" >> test_summary.md
-        else
-          echo "❌ Security & compliance validation: **FAILED**" >> test_summary.md
-        fi
+          if [ "${{ needs.security-validation.result }}" == "success" ]; then
+            echo "✅ Security & compliance validation: **PASSED**" >> test_summary.md
+          else
+            echo "❌ Security & compliance validation: **FAILED**" >> test_summary.md
+          fi
 
-        echo "" >> test_summary.md
-        echo "## Pharmaceutical System Status" >> test_summary.md
-        echo "" >> test_summary.md
-        echo "- 🔬 Drug safety validation: Operational" >> test_summary.md
-        echo "- 💊 Drug interaction detection: Operational" >> test_summary.md
-        echo "- 📊 Clinical research optimization: Operational" >> test_summary.md
-        echo "- 💰 Cost monitoring & free tier optimization: Operational" >> test_summary.md
-        echo "- ☁️  NGC-independent architecture: Verified" >> test_summary.md
+          echo "" >> test_summary.md
+          echo "## Pharmaceutical System Status" >> test_summary.md
+          echo "" >> test_summary.md
+          echo "- 🔬 Drug safety validation: Operational" >> test_summary.md
+          echo "- 💊 Drug interaction detection: Operational" >> test_summary.md
+          echo "- 📊 Clinical research optimization: Operational" >> test_summary.md
+          echo "- 💰 Cost monitoring & free tier optimization: Operational" >> test_summary.md
+          echo "- ☁️  NGC-independent architecture: Verified" >> test_summary.md
 
-        cat test_summary.md
+          cat test_summary.md
 
-    - name: Upload final report
-      uses: actions/upload-artifact@v3
-      with:
-        name: final-test-report
-        path: test_summary.md
+      - name: Upload final report
+        uses: actions/upload-artifact@v3
+        with:
+          name: final-test-report
+          path: test_summary.md

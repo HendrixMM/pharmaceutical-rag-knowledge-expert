@@ -4,22 +4,17 @@ Unit tests for NeMo Extraction Service
 Tests the NVIDIA NeMo Extraction Service with VLM-based OCR,
 structured data extraction, and pharmaceutical document processing.
 """
-
-import asyncio
 import os
-import tempfile
-from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
-from typing import List, Dict, Any
+from unittest.mock import AsyncMock
+from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
 from langchain_core.documents import Document
 
-from src.nemo_extraction_service import (
-    NeMoExtractionService,
-    ExtractionResult,
-    ExtractionMethod
-)
+from src.nemo_extraction_service import ExtractionMethod
+from src.nemo_extraction_service import ExtractionResult
+from src.nemo_extraction_service import NeMoExtractionService
 
 
 class TestExtractionResult:
@@ -28,13 +23,11 @@ class TestExtractionResult:
     def test_successful_result(self):
         documents = [
             Document(page_content="Test content", metadata={"page": 1}),
-            Document(page_content="More content", metadata={"page": 2})
+            Document(page_content="More content", metadata={"page": 2}),
         ]
 
         result = ExtractionResult(
-            success=True,
-            documents=documents,
-            metadata={"total_pages": 2, "extraction_method": "nemo_vlm"}
+            success=True, documents=documents, metadata={"total_pages": 2, "extraction_method": "nemo_vlm"}
         )
 
         assert result.success is True
@@ -43,11 +36,7 @@ class TestExtractionResult:
         assert result.metadata["extraction_method"] == "nemo_vlm"
 
     def test_failed_result(self):
-        result = ExtractionResult(
-            success=False,
-            documents=[],
-            metadata={"error": "PDF parsing failed"}
-        )
+        result = ExtractionResult(success=False, documents=[], metadata={"error": "PDF parsing failed"})
 
         assert result.success is False
         assert len(result.documents) == 0
@@ -98,7 +87,7 @@ class TestNeMoExtractionService:
             "NVIDIA_API_KEY": "test-key",
             "ENABLE_NEMO_EXTRACTION": "false",
             "NEMO_EXTRACTION_STRATEGY": "unstructured",
-            "NEMO_PHARMACEUTICAL_ANALYSIS": "false"
+            "NEMO_PHARMACEUTICAL_ANALYSIS": "false",
         }
 
         with patch.dict(os.environ, custom_env):
@@ -114,15 +103,13 @@ class TestNeMoExtractionService:
         mock_documents = [
             Document(
                 page_content="Pharmaceutical research document content",
-                metadata={"page": 1, "extraction_method": "nemo_vlm"}
+                metadata={"page": 1, "extraction_method": "nemo_vlm"},
             )
         ]
 
-        with patch.object(mock_service, '_extract_with_nemo_vlm') as mock_extract:
+        with patch.object(mock_service, "_extract_with_nemo_vlm") as mock_extract:
             mock_extract.return_value = ExtractionResult(
-                success=True,
-                documents=mock_documents,
-                metadata={"extraction_method": "nemo_vlm", "pages_processed": 1}
+                success=True, documents=mock_documents, metadata={"extraction_method": "nemo_vlm", "pages_processed": 1}
             )
 
             result = await mock_service.extract_from_pdf(sample_pdf_path)
@@ -138,20 +125,18 @@ class TestNeMoExtractionService:
         """Test fallback to unstructured when NeMo VLM fails."""
         mock_service.strategy = "auto"  # Enable fallback
 
-        with patch.object(mock_service, '_extract_with_nemo_vlm') as mock_nemo:
-            with patch.object(mock_service, '_extract_with_unstructured') as mock_unstructured:
+        with patch.object(mock_service, "_extract_with_nemo_vlm") as mock_nemo:
+            with patch.object(mock_service, "_extract_with_unstructured") as mock_unstructured:
                 # NeMo VLM fails
                 mock_nemo.return_value = ExtractionResult(
-                    success=False,
-                    documents=[],
-                    metadata={"error": "VLM service unavailable"}
+                    success=False, documents=[], metadata={"error": "VLM service unavailable"}
                 )
 
                 # Unstructured succeeds
                 mock_unstructured.return_value = ExtractionResult(
                     success=True,
                     documents=[Document(page_content="Fallback content")],
-                    metadata={"extraction_method": "unstructured"}
+                    metadata={"extraction_method": "unstructured"},
                 )
 
                 result = await mock_service.extract_from_pdf(sample_pdf_path)
@@ -166,13 +151,11 @@ class TestNeMoExtractionService:
         """Test strict mode prevents fallback to non-NVIDIA methods."""
         mock_service.strict_mode = True
 
-        with patch.object(mock_service, '_extract_with_nemo_vlm') as mock_nemo:
-            with patch.object(mock_service, '_extract_with_unstructured') as mock_unstructured:
+        with patch.object(mock_service, "_extract_with_nemo_vlm") as mock_nemo:
+            with patch.object(mock_service, "_extract_with_unstructured") as mock_unstructured:
                 # NeMo VLM fails
                 mock_nemo.return_value = ExtractionResult(
-                    success=False,
-                    documents=[],
-                    metadata={"error": "VLM service unavailable"}
+                    success=False, documents=[], metadata={"error": "VLM service unavailable"}
                 )
 
                 result = await mock_service.extract_from_pdf(sample_pdf_path)
@@ -193,19 +176,12 @@ class TestNeMoExtractionService:
         CONTRAINDICATIONS: Severe renal impairment
         """
 
-        mock_documents = [
-            Document(
-                page_content=pharmaceutical_content,
-                metadata={"page": 1}
-            )
-        ]
+        mock_documents = [Document(page_content=pharmaceutical_content, metadata={"page": 1})]
 
-        with patch.object(mock_service, '_extract_with_nemo_vlm') as mock_extract:
-            with patch.object(mock_service, '_apply_pharmaceutical_analysis') as mock_pharma:
+        with patch.object(mock_service, "_extract_with_nemo_vlm") as mock_extract:
+            with patch.object(mock_service, "_apply_pharmaceutical_analysis") as mock_pharma:
                 mock_extract.return_value = ExtractionResult(
-                    success=True,
-                    documents=mock_documents,
-                    metadata={"extraction_method": "nemo_vlm"}
+                    success=True, documents=mock_documents, metadata={"extraction_method": "nemo_vlm"}
                 )
 
                 mock_pharma.return_value = mock_documents  # Enhanced documents
@@ -230,24 +206,15 @@ class TestNeMoExtractionService:
         mock_documents = [
             Document(
                 page_content=table_content,
-                metadata={
-                    "page": 1,
-                    "has_tables": True,
-                    "table_count": 1,
-                    "has_images": False
-                }
+                metadata={"page": 1, "has_tables": True, "table_count": 1, "has_images": False},
             )
         ]
 
-        with patch.object(mock_service, '_extract_with_nemo_vlm') as mock_extract:
+        with patch.object(mock_service, "_extract_with_nemo_vlm") as mock_extract:
             mock_extract.return_value = ExtractionResult(
                 success=True,
                 documents=mock_documents,
-                metadata={
-                    "extraction_method": "nemo_vlm",
-                    "tables_preserved": True,
-                    "images_extracted": True
-                }
+                metadata={"extraction_method": "nemo_vlm", "tables_preserved": True, "images_extracted": True},
             )
 
             result = await mock_service.extract_from_pdf(sample_pdf_path)
@@ -321,7 +288,7 @@ class TestNeMoVLMExtraction:
             "extracted_text": "Clinical trial results for pharmaceutical compound",
             "tables": [{"headers": ["Drug", "Efficacy"], "rows": [["Compound A", "85%"]]}],
             "images": [],
-            "metadata": {"pages": 1}
+            "metadata": {"pages": 1},
         }
         mock_client.extract_document.return_value = mock_response
 
@@ -377,7 +344,7 @@ class TestNeMoVLMExtraction:
             """,
             "tables": [],
             "images": [],
-            "metadata": {"pages": 1, "document_type": "prescribing_information"}
+            "metadata": {"pages": 1, "document_type": "prescribing_information"},
         }
         mock_client.extract_document.return_value = mock_response
 
@@ -404,11 +371,11 @@ class TestUnstructuredFallback:
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"%PDF-1.4\nSample content")
 
-        with patch('unstructured.partition.auto.partition') as mock_partition:
+        with patch("unstructured.partition.auto.partition") as mock_partition:
             mock_elements = [
                 Mock(text="Document title", category="Title"),
                 Mock(text="Document content paragraph", category="NarrativeText"),
-                Mock(text="Table data", category="Table")
+                Mock(text="Table data", category="Table"),
             ]
             mock_partition.return_value = mock_elements
 
@@ -424,7 +391,7 @@ class TestUnstructuredFallback:
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"Invalid PDF")
 
-        with patch('unstructured.partition.auto.partition') as mock_partition:
+        with patch("unstructured.partition.auto.partition") as mock_partition:
             mock_partition.side_effect = Exception("Parsing failed")
 
             result = await mock_service._extract_with_unstructured(pdf_path)
@@ -454,16 +421,16 @@ class TestPharmaceuticalAnalysis:
                 Frequency: Once daily
                 Contraindications: Pregnancy, angioedema
                 """,
-                metadata={"page": 1}
+                metadata={"page": 1},
             )
         ]
 
-        with patch.object(mock_service, '_extract_pharmaceutical_entities') as mock_extract:
+        with patch.object(mock_service, "_extract_pharmaceutical_entities") as mock_extract:
             mock_extract.return_value = {
                 "drug_names": ["Lisinopril"],
                 "dosages": ["10mg"],
                 "indications": ["Hypertension"],
-                "contraindications": ["Pregnancy", "angioedema"]
+                "contraindications": ["Pregnancy", "angioedema"],
             }
 
             entities = mock_service._extract_pharmaceutical_entities(documents[0])
@@ -474,17 +441,11 @@ class TestPharmaceuticalAnalysis:
 
     def test_regulatory_document_classification(self, mock_service):
         """Test classification of regulatory document types."""
-        prescribing_info = Document(
-            page_content="PRESCRIBING INFORMATION - FDA Approved",
-            metadata={"page": 1}
-        )
+        prescribing_info = Document(page_content="PRESCRIBING INFORMATION - FDA Approved", metadata={"page": 1})
 
-        clinical_trial = Document(
-            page_content="CLINICAL STUDY PROTOCOL - Phase III Trial",
-            metadata={"page": 1}
-        )
+        clinical_trial = Document(page_content="CLINICAL STUDY PROTOCOL - Phase III Trial", metadata={"page": 1})
 
-        with patch.object(mock_service, '_classify_document_type') as mock_classify:
+        with patch.object(mock_service, "_classify_document_type") as mock_classify:
             mock_classify.side_effect = ["prescribing_information", "clinical_study_protocol"]
 
             doc_type_1 = mock_service._classify_document_type(prescribing_info)
@@ -506,14 +467,14 @@ class TestPharmaceuticalAnalysis:
             WARNINGS AND PRECAUTIONS
             Monitor for signs of hepatotoxicity.
             """,
-            metadata={"page": 1}
+            metadata={"page": 1},
         )
 
-        with patch.object(mock_service, '_prioritize_safety_content') as mock_prioritize:
+        with patch.object(mock_service, "_prioritize_safety_content") as mock_prioritize:
             mock_prioritize.return_value = {
                 "black_box_warnings": ["Increased risk of serious cardiovascular events"],
                 "contraindications": ["Do not use in patients with severe liver impairment"],
-                "warnings": ["Monitor for signs of hepatotoxicity"]
+                "warnings": ["Monitor for signs of hepatotoxicity"],
             }
 
             safety_info = mock_service._prioritize_safety_content(safety_document)
@@ -531,10 +492,7 @@ class TestEnvironmentIntegration:
         strategies = ["auto", "nemo", "unstructured"]
 
         for strategy in strategies:
-            test_env = {
-                "NVIDIA_API_KEY": "test-key",
-                "NEMO_EXTRACTION_STRATEGY": strategy
-            }
+            test_env = {"NVIDIA_API_KEY": "test-key", "NEMO_EXTRACTION_STRATEGY": strategy}
 
             with patch.dict(os.environ, test_env):
                 service = NeMoExtractionService()
@@ -542,10 +500,7 @@ class TestEnvironmentIntegration:
 
     def test_environment_pharmaceutical_analysis(self):
         """Test pharmaceutical analysis environment control."""
-        test_env = {
-            "NVIDIA_API_KEY": "test-key",
-            "NEMO_PHARMACEUTICAL_ANALYSIS": "false"
-        }
+        test_env = {"NVIDIA_API_KEY": "test-key", "NEMO_PHARMACEUTICAL_ANALYSIS": "false"}
 
         with patch.dict(os.environ, test_env):
             service = NeMoExtractionService()
@@ -553,10 +508,7 @@ class TestEnvironmentIntegration:
 
     def test_environment_strict_mode(self):
         """Test strict mode environment control."""
-        test_env = {
-            "NVIDIA_API_KEY": "test-key",
-            "NEMO_EXTRACTION_STRICT": "true"
-        }
+        test_env = {"NVIDIA_API_KEY": "test-key", "NEMO_EXTRACTION_STRICT": "true"}
 
         with patch.dict(os.environ, test_env):
             service = NeMoExtractionService()
@@ -567,7 +519,7 @@ class TestEnvironmentIntegration:
         test_env = {
             "NVIDIA_API_KEY": "test-key",
             "APP_ENV": "production",
-            "NEMO_EXTRACTION_STRICT": "false"  # Should be overridden
+            "NEMO_EXTRACTION_STRICT": "false",  # Should be overridden
         }
 
         with patch.dict(os.environ, test_env):

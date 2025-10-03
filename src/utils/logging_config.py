@@ -4,13 +4,13 @@ Centralized logging configuration for pharmaceutical RAG system.
 Provides standardized logging setup with appropriate levels and formatting
 for production medical applications.
 """
-
-import logging
 import logging.config
 import os
 import sys
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
+from typing import Dict
+from typing import Optional
 
 
 def get_log_level() -> int:
@@ -20,9 +20,7 @@ def get_log_level() -> int:
 
 
 def setup_logging(
-    log_level: Optional[int] = None,
-    log_file: Optional[str] = None,
-    include_medical_context: bool = True
+    log_level: Optional[int] = None, log_file: Optional[str] = None, include_medical_context: bool = True
 ) -> None:
     """
     Setup centralized logging configuration.
@@ -41,10 +39,7 @@ def setup_logging(
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Medical compliance format includes timestamps and source tracking
-    medical_format = (
-        "%(asctime)s | %(levelname)-8s | %(name)-20s | "
-        "%(funcName)-15s:%(lineno)-4d | %(message)s"
-    )
+    medical_format = "%(asctime)s | %(levelname)-8s | %(name)-20s | " "%(funcName)-15s:%(lineno)-4d | %(message)s"
 
     simple_format = "%(levelname)-8s | %(name)-20s | %(message)s"
 
@@ -54,64 +49,34 @@ def setup_logging(
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
-            "standard": {
-                "format": format_string,
-                "datefmt": "%Y-%m-%d %H:%M:%S"
-            },
+            "standard": {"format": format_string, "datefmt": "%Y-%m-%d %H:%M:%S"},
             "detailed": {
                 "format": (
                     "%(asctime)s | %(levelname)-8s | %(name)-30s | "
                     "%(pathname)s:%(lineno)d | %(funcName)s() | %(message)s"
                 ),
-                "datefmt": "%Y-%m-%d %H:%M:%S"
-            }
+                "datefmt": "%Y-%m-%d %H:%M:%S",
+            },
         },
         "handlers": {
             "console": {
                 "class": "logging.StreamHandler",
                 "level": log_level,
                 "formatter": "standard",
-                "stream": sys.stdout
+                "stream": sys.stdout,
             }
         },
         "loggers": {
             # Pharmaceutical RAG system loggers
-            "src": {
-                "level": log_level,
-                "handlers": ["console"],
-                "propagate": False
-            },
-            "guardrails": {
-                "level": log_level,
-                "handlers": ["console"],
-                "propagate": False
-            },
+            "src": {"level": log_level, "handlers": ["console"], "propagate": False},
+            "guardrails": {"level": log_level, "handlers": ["console"], "propagate": False},
             # Third-party library loggers (quieter)
-            "requests": {
-                "level": logging.WARNING,
-                "handlers": ["console"],
-                "propagate": False
-            },
-            "urllib3": {
-                "level": logging.WARNING,
-                "handlers": ["console"],
-                "propagate": False
-            },
-            "faiss": {
-                "level": logging.WARNING,
-                "handlers": ["console"],
-                "propagate": False
-            },
-            "langchain": {
-                "level": logging.WARNING,
-                "handlers": ["console"],
-                "propagate": False
-            }
+            "requests": {"level": logging.WARNING, "handlers": ["console"], "propagate": False},
+            "urllib3": {"level": logging.WARNING, "handlers": ["console"], "propagate": False},
+            "faiss": {"level": logging.WARNING, "handlers": ["console"], "propagate": False},
+            "langchain": {"level": logging.WARNING, "handlers": ["console"], "propagate": False},
         },
-        "root": {
-            "level": log_level,
-            "handlers": ["console"]
-        }
+        "root": {"level": log_level, "handlers": ["console"]},
     }
 
     # Add file handler if log file specified
@@ -123,7 +88,7 @@ def setup_logging(
             "filename": log_file,
             "maxBytes": 10485760,  # 10MB
             "backupCount": 5,
-            "encoding": "utf8"
+            "encoding": "utf8",
         }
 
         # Add file handler to all loggers

@@ -1,7 +1,7 @@
 ---
-Last Updated: YYYY-MM-DD
+Last Updated: 2025-10-03
 Owner: Team Name
-Review Cadence: Weekly|Bi-weekly|Monthly|Quarterly|Annually
+Review Cadence: Monthly
 ---
 
 # Document Title

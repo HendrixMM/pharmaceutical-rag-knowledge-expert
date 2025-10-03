@@ -4,10 +4,10 @@ Test Regression Detector Division-by-Zero Fix
 Validates Comment 1 fix: regression detector should handle zero baseline costs
 without division-by-zero errors (self-hosted baselines have cost_per_query = 0).
 """
-
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -27,24 +27,12 @@ class TestRegressionDetectorDivisionByZero:
         Self-hosted baselines have cost_per_query = 0.0 (no credits).
         Should skip percentage calculation instead of dividing by zero.
         """
-        detector = RegressionDetector(
-            accuracy_threshold=0.05,
-            cost_threshold=0.20,
-            latency_threshold=0.50
-        )
+        detector = RegressionDetector(accuracy_threshold=0.05, cost_threshold=0.20, latency_threshold=0.50)
 
         # Self-hosted baseline (cost = 0) vs cloud current (cost > 0)
-        baseline_metrics = {
-            "accuracy": 0.85,
-            "cost_per_query": 0.0,  # Self-hosted: free
-            "latency_ms": 850.0
-        }
+        baseline_metrics = {"accuracy": 0.85, "cost_per_query": 0.0, "latency_ms": 850.0}  # Self-hosted: free
 
-        current_metrics = {
-            "accuracy": 0.86,
-            "cost_per_query": 12.5,  # Cloud: paid
-            "latency_ms": 450.0
-        }
+        current_metrics = {"accuracy": 0.86, "cost_per_query": 12.5, "latency_ms": 450.0}  # Cloud: paid
 
         # Should NOT raise ZeroDivisionError
         regressions = detector.detect_regression(current_metrics, baseline_metrics)
@@ -58,23 +46,15 @@ class TestRegressionDetectorDivisionByZero:
 
     def test_cost_regression_with_nonzero_baseline(self):
         """Test that cost regression works normally with non-zero baseline."""
-        detector = RegressionDetector(
-            accuracy_threshold=0.05,
-            cost_threshold=0.20,
-            latency_threshold=0.50
-        )
+        detector = RegressionDetector(accuracy_threshold=0.05, cost_threshold=0.20, latency_threshold=0.50)
 
         # Cloud baseline (cost > 0) vs higher cloud current (cost increase > 20%)
-        baseline_metrics = {
-            "accuracy": 0.85,
-            "cost_per_query": 10.0,
-            "latency_ms": 450.0
-        }
+        baseline_metrics = {"accuracy": 0.85, "cost_per_query": 10.0, "latency_ms": 450.0}
 
         current_metrics = {
             "accuracy": 0.86,
             "cost_per_query": 15.0,  # 50% increase (exceeds 20% threshold)
-            "latency_ms": 450.0
+            "latency_ms": 450.0,
         }
 
         regressions = detector.detect_regression(current_metrics, baseline_metrics)
@@ -88,24 +68,12 @@ class TestRegressionDetectorDivisionByZero:
 
     def test_latency_regression_with_zero_baseline(self):
         """Test that latency regression handles zero baseline (edge case)."""
-        detector = RegressionDetector(
-            accuracy_threshold=0.05,
-            cost_threshold=0.20,
-            latency_threshold=0.50
-        )
+        detector = RegressionDetector(accuracy_threshold=0.05, cost_threshold=0.20, latency_threshold=0.50)
 
         # Zero latency baseline (unlikely but possible edge case)
-        baseline_metrics = {
-            "accuracy": 0.85,
-            "cost_per_query": 10.0,
-            "latency_ms": 0.0  # Edge case: instant response
-        }
+        baseline_metrics = {"accuracy": 0.85, "cost_per_query": 10.0, "latency_ms": 0.0}  # Edge case: instant response
 
-        current_metrics = {
-            "accuracy": 0.86,
-            "cost_per_query": 10.0,
-            "latency_ms": 450.0
-        }
+        current_metrics = {"accuracy": 0.86, "cost_per_query": 10.0, "latency_ms": 450.0}
 
         # Should NOT raise ZeroDivisionError
         regressions = detector.detect_regression(current_metrics, baseline_metrics)
@@ -116,23 +84,15 @@ class TestRegressionDetectorDivisionByZero:
 
     def test_latency_regression_with_nonzero_baseline(self):
         """Test that latency regression works normally with non-zero baseline."""
-        detector = RegressionDetector(
-            accuracy_threshold=0.05,
-            cost_threshold=0.20,
-            latency_threshold=0.50
-        )
+        detector = RegressionDetector(accuracy_threshold=0.05, cost_threshold=0.20, latency_threshold=0.50)
 
         # Normal latency baseline vs doubled latency (100% increase > 50% threshold)
-        baseline_metrics = {
-            "accuracy": 0.85,
-            "cost_per_query": 10.0,
-            "latency_ms": 450.0
-        }
+        baseline_metrics = {"accuracy": 0.85, "cost_per_query": 10.0, "latency_ms": 450.0}
 
         current_metrics = {
             "accuracy": 0.86,
             "cost_per_query": 10.0,
-            "latency_ms": 900.0  # 100% increase (exceeds 50% threshold)
+            "latency_ms": 900.0,  # 100% increase (exceeds 50% threshold)
         }
 
         regressions = detector.detect_regression(current_metrics, baseline_metrics)
@@ -152,25 +112,13 @@ class TestRegressionDetectorDivisionByZero:
         - Cloud current: cost_per_query = 12.5
         - Should NOT crash with division-by-zero
         """
-        detector = RegressionDetector(
-            accuracy_threshold=0.05,
-            cost_threshold=0.20,
-            latency_threshold=0.50
-        )
+        detector = RegressionDetector(accuracy_threshold=0.05, cost_threshold=0.20, latency_threshold=0.50)
 
         # From sample_baseline_metadata fixture
-        baseline_metrics = {
-            "accuracy": 0.82,
-            "cost_per_query": 0.0,  # self_hosted baseline
-            "latency_ms": 850.0
-        }
+        baseline_metrics = {"accuracy": 0.82, "cost_per_query": 0.0, "latency_ms": 850.0}  # self_hosted baseline
 
         # Cloud current metrics
-        current_metrics = {
-            "accuracy": 0.85,
-            "cost_per_query": 12.5,  # cloud current
-            "latency_ms": 450.0
-        }
+        current_metrics = {"accuracy": 0.85, "cost_per_query": 12.5, "latency_ms": 450.0}  # cloud current
 
         # Should NOT raise ZeroDivisionError
         regressions = detector.detect_regression(current_metrics, baseline_metrics)

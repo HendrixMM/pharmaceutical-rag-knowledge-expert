@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # MCP Integrations (Claude)
 
 This repo ships with turnkey wiring for Claude MCP servers to enrich your agent with live context. It includes:
@@ -513,4 +519,10 @@ This MCP integration follows the same license as the main RAG template project.
 
 **Ready to integrate live documentation into your NeMo Retriever workflow!** 🚀
 
-Start with the usage examples and gradually integrate the components that best fit your use case.
+## Start with the usage examples and gradually integrate the components that best fit your use case.
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

@@ -1,9 +1,11 @@
 """Unit tests for synthesis engine module."""
+from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
-import asyncio
-from unittest.mock import Mock, patch, MagicMock
-from src.synthesis_engine import SynthesisEngine, KeyFinding
+
+from src.synthesis_engine import KeyFinding
+from src.synthesis_engine import SynthesisEngine
 
 
 class TestSynthesisEngine:
@@ -27,8 +29,8 @@ class TestSynthesisEngine:
                     "authors": ["Smith J", "Jones A"],
                     "journal": "Clinical Pharmacology",
                     "year": "2023",
-                    "abstract": "A study of drug interactions between warfarin and fluconazole showing significant pharmacokinetic changes."
-                }
+                    "abstract": "A study of drug interactions between warfarin and fluconazole showing significant pharmacokinetic changes.",
+                },
             },
             {
                 "id": "paper_2",
@@ -38,16 +40,16 @@ class TestSynthesisEngine:
                     "title": "Meta-analysis of Cardiovascular Safety",
                     "authors": ["Brown K", "Davis M", "Wilson P"],
                     "journal": "Cardiology Research",
-                    "year": "2022"
-                }
-            }
+                    "year": "2022",
+                },
+            },
         ]
 
     def test_initialization(self, engine):
         """Test SynthesisEngine initialization."""
         assert engine is not None
-        assert hasattr(engine, 'study_type_patterns')
-        assert hasattr(engine, 'evidence_levels')
+        assert hasattr(engine, "study_type_patterns")
+        assert hasattr(engine, "evidence_levels")
 
     def test_generate_meta_summary_success(self, engine, sample_papers):
         """Test successful meta-summary generation."""
@@ -138,7 +140,7 @@ class TestSynthesisEngine:
                 confidence=0.9,
                 drug_entities=["warfarin"],
                 pk_parameters={},
-                study_type="clinical_trial"
+                study_type="clinical_trial",
             ),
             KeyFinding(
                 paper_id="test_2",
@@ -147,8 +149,8 @@ class TestSynthesisEngine:
                 confidence=0.8,
                 drug_entities=["fluconazole"],
                 pk_parameters={},
-                study_type="meta_analysis"
-            )
+                study_type="meta_analysis",
+            ),
         ]
 
         comparative_analysis = {"convergent_findings": [], "dose_response_patterns": []}
@@ -222,14 +224,10 @@ class TestSynthesisEngine:
         convergent_findings = [
             "Drug X shows significant efficacy in clinical trials",
             "Clinical trials demonstrate Drug X efficacy and safety",
-            "Studies show Drug X is effective and well-tolerated"
+            "Studies show Drug X is effective and well-tolerated",
         ]
 
-        divergent_findings = [
-            "Drug A shows efficacy",
-            "Drug B has safety concerns",
-            "Different mechanism of action"
-        ]
+        divergent_findings = ["Drug A shows efficacy", "Drug B has safety concerns", "Different mechanism of action"]
 
         assert engine._are_findings_convergent(convergent_findings) == True
         assert engine._are_findings_convergent(divergent_findings) == False
@@ -239,7 +237,7 @@ class TestSynthesisEngine:
         findings = [
             "Long finding about drug efficacy in clinical trials",
             "Short finding",
-            "Medium length finding about safety"
+            "Medium length finding about safety",
         ]
 
         synthesized = engine._synthesize_convergent_finding(findings)
@@ -247,36 +245,28 @@ class TestSynthesisEngine:
 
     def test_extract_dose_response_data(self, engine, sample_papers):
         """Test dose-response data extraction."""
-        with patch.object(engine, 'pharma_processor') as mock_processor:
+        with patch.object(engine, "pharma_processor") as mock_processor:
             mock_processor.extract_dosage_information.return_value = [
                 {"amount": 10, "unit": "mg"},
-                {"amount": 20, "unit": "mg"}
+                {"amount": 20, "unit": "mg"},
             ]
 
             dose_data = engine._extract_dose_response_data(sample_papers, "warfarin")
 
             assert isinstance(dose_data, list)
 
-    @patch('src.synthesis_engine.PharmaceuticalProcessor')
+    @patch("src.synthesis_engine.PharmaceuticalProcessor")
     def test_with_pharmaceutical_processor(self, mock_processor_class):
         """Test SynthesisEngine with PharmaceuticalProcessor."""
         mock_processor = Mock()
-        mock_processor.extract_drug_names.return_value = [
-            {"name": "warfarin", "confidence": 0.9}
-        ]
-        mock_processor.extract_pharmacokinetic_parameters.return_value = {
-            "clearance": {"value": 10, "unit": "L/h"}
-        }
+        mock_processor.extract_drug_names.return_value = [{"name": "warfarin", "confidence": 0.9}]
+        mock_processor.extract_pharmacokinetic_parameters.return_value = {"clearance": {"value": 10, "unit": "L/h"}}
 
         engine = SynthesisEngine(pharma_processor=mock_processor)
 
-        papers = [{
-            "id": "test",
-            "page_content": "warfarin study results",
-            "metadata": {"pmid": "12345"}
-        }]
+        papers = [{"id": "test", "page_content": "warfarin study results", "metadata": {"pmid": "12345"}}]
 
-        findings = engine._extract_key_findings(papers)
+        engine._extract_key_findings(papers)
 
         # Should have called the pharmaceutical processor
         mock_processor.extract_drug_names.assert_called()
@@ -299,7 +289,7 @@ class TestSynthesisEngine:
         # Test with mock findings for drug and evidence counting
         mock_findings = [
             KeyFinding("1", "test", "Level 1", 0.8, ["drug1"], {}, "clinical_trial"),
-            KeyFinding("2", "test", "Level 2", 0.9, ["drug1", "drug2"], {}, "meta_analysis")
+            KeyFinding("2", "test", "Level 2", 0.9, ["drug1", "drug2"], {}, "meta_analysis"),
         ]
 
         drug_counts = engine._count_drug_mentions(mock_findings)
@@ -323,7 +313,7 @@ class TestKeyFinding:
             confidence=0.85,
             drug_entities=["drug1", "drug2"],
             pk_parameters={"clearance": 10},
-            study_type="clinical_trial"
+            study_type="clinical_trial",
         )
 
         assert finding.paper_id == "test_id"

@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # Verification Comments Implementation Summary
 
 This document summarizes the implementation of all nine verification comments for the RAG Template for NVIDIA NemoRetriever project.
@@ -128,4 +134,10 @@ All changes have been tested and verified:
 
 ## Benefits
 
-These changes improve the robustness, reliability, and usability of the pharmaceutical analysis system by ensuring proper configuration, consistent formatting, comprehensive error handling, and reliable fallback mechanisms.
+## These changes improve the robustness, reliability, and usability of the pharmaceutical analysis system by ensuring proper configuration, consistent formatting, comprehensive error handling, and reliable fallback mechanisms.
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

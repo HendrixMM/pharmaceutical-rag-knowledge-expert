@@ -2,15 +2,20 @@
 Vector Database for RAG Agent
 Handles local vector storage using FAISS for document embeddings
 """
-
 import hashlib
-import os
-import pickle
 import logging
+import os
 import re
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any
+from typing import Dict
+from typing import Iterable
+from typing import List
+from typing import Optional
+from typing import Set
+from typing import Tuple
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -20,20 +25,18 @@ except ImportError:
     faiss = None
     print("DEBUG: faiss import failed, some functionality may be limited")
 
-import numpy as np
-from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
 
-from .nvidia_embeddings import NVIDIAEmbeddings
-from .pharmaceutical_processor import PharmaceuticalProcessor
 from . import pharma_utils
-from .pharma_utils import (
-    _tokenize_species_string,
-    normalize_text,
-)
+from .nvidia_embeddings import NVIDIAEmbeddings
+from .pharma_utils import _tokenize_species_string
+from .pharmaceutical_processor import PharmaceuticalProcessor
 
 # Enable species filtering without pharmaceutical enrichment
-ALLOW_SPECIES_FILTER_WITHOUT_ENRICHMENT = os.getenv("ALLOW_SPECIES_FILTER_WITHOUT_ENRICHMENT", "false").lower() == "true"
+ALLOW_SPECIES_FILTER_WITHOUT_ENRICHMENT = (
+    os.getenv("ALLOW_SPECIES_FILTER_WITHOUT_ENRICHMENT", "false").lower() == "true"
+)
 
 # Maximum iterations for stats collection
 VECTOR_DB_STATS_MAX_ITERATIONS = int(os.getenv("VECTOR_DB_STATS_MAX_ITERATIONS", "10000"))
@@ -51,8 +54,6 @@ VECTOR_DB_MAX_OVERSAMPLE_MULTIPLIER = int(os.getenv("VECTOR_DB_MAX_OVERSAMPLE_MU
 VECTOR_DB_MIN_TARGET_RESULTS = int(os.getenv("VECTOR_DB_MIN_TARGET_RESULTS", "10"))
 
 
-
-
 _PHARMA_FILTER_KEYS = {
     "drug_names",
     "drug_annotations",
@@ -67,14 +68,14 @@ _PHARMA_FILTER_KEYS = {
 
 class VectorDatabase:
     """Local vector database using FAISS for efficient similarity search"""
-    
+
     def __init__(
         self,
         embeddings: NVIDIAEmbeddings,
         db_path: str = "./vector_db",
         index_name: str = "faiss_index",
         *,
-        pharmaceutical_processor: Optional[PharmaceuticalProcessor] = None
+        pharmaceutical_processor: Optional[PharmaceuticalProcessor] = None,
     ):
         """
         Initialize vector database
@@ -103,11 +104,11 @@ class VectorDatabase:
 
         # Create database directory
         self.db_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Paths for saving/loading
         self.index_path = self.db_path / f"{index_name}.faiss"
         self.docstore_path = self.db_path / f"{index_name}.pkl"
-        
+
         logger.info(f"Initialized vector database at: {self.db_path}")
 
         # Startup validation: check index dimension compatibility when not per-model
@@ -116,7 +117,7 @@ class VectorDatabase:
                 if self.index_path.exists() and faiss is not None:
                     # Load FAISS index header to read dimension
                     faiss_index = faiss.read_index(str(self.index_path))
-                    faiss_dim = int(getattr(faiss_index, 'd', 0))
+                    faiss_dim = int(getattr(faiss_index, "d", 0))
                     embed_dim = int(self.embeddings.get_embedding_dimension())
                     if faiss_dim and embed_dim and faiss_dim != embed_dim:
                         msg = (
@@ -144,17 +145,17 @@ class VectorDatabase:
     ) -> bool:
         """
         Create vector index from documents
-        
+
         Args:
             documents: List of documents to index
-            
+
         Returns:
             True if successful, False otherwise
         """
         if not documents:
             logger.warning("No documents provided for indexing")
             return False
-        
+
         try:
             logger.info(f"Creating vector index from {len(documents)} documents...")
 
@@ -166,23 +167,17 @@ class VectorDatabase:
 
             texts = [doc.page_content for doc in processed_docs]
             metadatas = [doc.metadata for doc in processed_docs]
-            
+
             # Create FAISS vectorstore
-            self.vectorstore = FAISS.from_texts(
-                texts=texts,
-                embedding=self.embeddings,
-                metadatas=metadatas
-            )
+            self.vectorstore = FAISS.from_texts(texts=texts, embedding=self.embeddings, metadatas=metadatas)
             self._capture_doc_ids()
-            self._pharma_metadata_enabled = (
-                self._pharma_metadata_enabled or extract_pharmaceutical_metadata
-            )
+            self._pharma_metadata_enabled = self._pharma_metadata_enabled or extract_pharmaceutical_metadata
             if not self._pharma_metadata_enabled:
                 self._pharma_metadata_enabled = self._detect_pharma_metadata()
 
             logger.info("✅ Vector index created successfully!")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to create vector index: {str(e)}")
             return False
@@ -191,31 +186,31 @@ class VectorDatabase:
         """Create an index with enriched pharmaceutical metadata."""
         logger.info("Creating pharmaceutical-aware vector index...")
         return self.create_index(documents, extract_pharmaceutical_metadata=True)
-    
+
     def save_index(self) -> bool:
         """
         Save the vector index to disk
-        
+
         Returns:
             True if successful, False otherwise
         """
         if not self.vectorstore:
             logger.error("No vector index to save")
             return False
-        
+
         try:
             logger.info("Saving vector index to disk...")
-            
+
             # Save FAISS index
             self.vectorstore.save_local(str(self.db_path), self.index_name)
-            
+
             logger.info(f"✅ Vector index saved to: {self.db_path}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to save vector index: {str(e)}")
             return False
-    
+
     def load_index(self, *, allow_dangerous_deserialization: bool = False) -> bool:
         """
         Load vector index from disk.
@@ -231,9 +226,9 @@ class VectorDatabase:
             if not self.index_path.exists():
                 logger.warning(f"No saved index found at: {self.index_path}")
                 return False
-            
+
             logger.info("Loading vector index from disk...")
-            
+
             # Load FAISS index
             self.vectorstore = FAISS.load_local(
                 str(self.db_path),
@@ -248,12 +243,13 @@ class VectorDatabase:
             try:
                 vs = self.vectorstore
                 if vs is not None:
-                    faiss_dim = getattr(getattr(vs, 'index', None), 'd', None)
+                    faiss_dim = getattr(getattr(vs, "index", None), "d", None)
                     embed_dim = self.embeddings.get_embedding_dimension()
                     if isinstance(faiss_dim, int) and isinstance(embed_dim, int) and faiss_dim != embed_dim:
                         logger.warning(
                             "FAISS index dimension %s != active embedder dimension %s; load failed.",
-                            faiss_dim, embed_dim,
+                            faiss_dim,
+                            embed_dim,
                         )
                         return False
             except Exception as dim_err:
@@ -261,11 +257,11 @@ class VectorDatabase:
 
             logger.info("✅ Vector index loaded successfully!")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to load vector index: {str(e)}")
             return False
-    
+
     def add_documents(self, documents: List[Document], *, auto_enrich_on_add: bool = True) -> bool:
         """
         Add new documents to existing index
@@ -274,14 +270,14 @@ class VectorDatabase:
             documents: List of documents to add
             auto_enrich_on_add: When pharmaceutical metadata enrichment is enabled,
                 automatically extract metadata for newly added documents (default: True).
-            
+
         Returns:
             True if successful, False otherwise
         """
         if not documents:
             logger.warning("No documents provided to add")
             return False
-        
+
         try:
             if not self.vectorstore:
                 logger.info("No existing index, creating new one...")
@@ -289,9 +285,9 @@ class VectorDatabase:
                     documents,
                     extract_pharmaceutical_metadata=self._pharma_metadata_enabled and auto_enrich_on_add,
                 )
-            
+
             logger.info(f"Adding {len(documents)} documents to existing index...")
-            
+
             enrich_on_add = self._pharma_metadata_enabled and auto_enrich_on_add
             if self._pharma_metadata_enabled and not auto_enrich_on_add:
                 logger.warning(
@@ -306,16 +302,16 @@ class VectorDatabase:
 
             texts = [doc.page_content for doc in prepared_docs]
             metadatas = [doc.metadata for doc in prepared_docs]
-            
+
             # Add to vectorstore
             new_ids = self.vectorstore.add_texts(texts=texts, metadatas=metadatas)
             self._record_doc_ids(new_ids)
             if not self._pharma_metadata_enabled:
                 self._pharma_metadata_enabled = self._detect_pharma_metadata()
-            
+
             logger.info("✅ Documents added successfully!")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to add documents: {str(e)}")
             return False
@@ -344,13 +340,8 @@ class VectorDatabase:
         except Exception as e:
             logger.error(f"Failed to add pharmaceutical documents: {str(e)}")
             return False
-    
-    def similarity_search(
-        self,
-        query: str,
-        k: int = 4,
-        score_threshold: Optional[float] = None
-    ) -> List[Document]:
+
+    def similarity_search(self, query: str, k: int = 4, score_threshold: Optional[float] = None) -> List[Document]:
         """Search for similar documents.
 
         Args:
@@ -366,17 +357,14 @@ class VectorDatabase:
         if not self.vectorstore:
             logger.error("No vector index available for search")
             return []
-        
+
         try:
             logger.debug(f"Searching for: '{query}' (k={k})")
-            
+
             if score_threshold is not None:
                 # Search with score threshold
                 results = self.vectorstore.similarity_search_with_score(query, k=k)
-                filtered_results = [
-                    doc for doc, score in results
-                    if score <= score_threshold
-                ]
+                filtered_results = [doc for doc, score in results if score <= score_threshold]
                 logger.debug(
                     "Found %s results within distance threshold %s",
                     len(filtered_results),
@@ -388,7 +376,7 @@ class VectorDatabase:
                 results = self.vectorstore.similarity_search(query, k=k)
                 logger.debug(f"Found {len(results)} results")
                 return results
-                
+
         except Exception as e:
             logger.error(f"Search failed: {str(e)}")
             return []
@@ -438,14 +426,14 @@ class VectorDatabase:
         effective_filters = dict(filters)
 
         # Handle species alias for backward compatibility
-        if effective_filters.get('species') and not effective_filters.get('species_preference'):
-            effective_filters['species_preference'] = effective_filters['species']
+        if effective_filters.get("species") and not effective_filters.get("species_preference"):
+            effective_filters["species_preference"] = effective_filters["species"]
 
         # Check if we should allow species filtering without enrichment
         species_only_filter = (
-            ALLOW_SPECIES_FILTER_WITHOUT_ENRICHMENT and
-            effective_filters.get('species_preference') and
-            not self._pharma_metadata_enabled
+            ALLOW_SPECIES_FILTER_WITHOUT_ENRICHMENT
+            and effective_filters.get("species_preference")
+            and not self._pharma_metadata_enabled
         )
 
         # Remove pharma filters if metadata is not enabled, unless only species filtering
@@ -468,14 +456,11 @@ class VectorDatabase:
                 effective_filters = {
                     key: value
                     for key, value in effective_filters.items()
-                    if key in {'species_preference', 'include_unknown_species'} or
-                    key not in _PHARMA_FILTER_KEYS
+                    if key in {"species_preference", "include_unknown_species"} or key not in _PHARMA_FILTER_KEYS
                 }
             else:
                 effective_filters = {
-                    key: value
-                    for key, value in effective_filters.items()
-                    if key not in _PHARMA_FILTER_KEYS
+                    key: value for key, value in effective_filters.items() if key not in _PHARMA_FILTER_KEYS
                 }
         # Use configured oversample value if not provided
         if oversample is None:
@@ -530,10 +515,7 @@ class VectorDatabase:
             # Calculate next fetch size with exponential backoff cap
             # Use progressive oversampling to avoid excessive fetching
             iteration_multiplier = min(oversample ** (iteration + 1), VECTOR_DB_MAX_OVERSAMPLE_MULTIPLIER)
-            fetch_k = min(
-                max(current_k + k, current_k * iteration_multiplier),
-                max_candidates
-            )
+            fetch_k = min(max(current_k + k, current_k * iteration_multiplier), max_candidates)
 
             logger.debug(
                 f"Iteration {iteration}: fetched {current_k}, "
@@ -546,32 +528,28 @@ class VectorDatabase:
             f"{len(last_filtered)} final results (requested {k})"
         )
         return last_filtered[:k]
-    
-    def similarity_search_with_scores(
-        self,
-        query: str,
-        k: int = 4
-    ) -> List[Tuple[Document, float]]:
+
+    def similarity_search_with_scores(self, query: str, k: int = 4) -> List[Tuple[Document, float]]:
         """
         Search for similar documents with similarity scores
-        
+
         Args:
             query: Search query
             k: Number of results to return
-            
+
         Returns:
             List of (document, score) tuples
         """
         if not self.vectorstore:
             logger.error("No vector index available for search")
             return []
-        
+
         try:
             logger.debug(f"Searching with scores for: '{query}' (k={k})")
             results = self.vectorstore.similarity_search_with_score(query, k=k)
             logger.debug(f"Found {len(results)} results with scores")
             return results
-            
+
         except Exception as e:
             logger.error(f"Search with scores failed: {str(e)}")
             return []
@@ -588,7 +566,9 @@ class VectorDatabase:
         )
         return results[:k]
 
-    def search_with_info(self, query: str, k: int = 4, filters: Optional[Dict[str, Any]] = None) -> Tuple[List[Document], Dict[str, Any]]:
+    def search_with_info(
+        self, query: str, k: int = 4, filters: Optional[Dict[str, Any]] = None
+    ) -> Tuple[List[Document], Dict[str, Any]]:
         """Search with additional information about pharmaceutical metadata status.
 
         Args:
@@ -611,7 +591,9 @@ class VectorDatabase:
         }
 
         if filters and not self.is_pharma_metadata_enabled():
-            info["warning"] = "Pharmaceutical filters provided but metadata extraction is disabled. Filters will be ignored."
+            info[
+                "warning"
+            ] = "Pharmaceutical filters provided but metadata extraction is disabled. Filters will be ignored."
             # Track which filters would be ignored
             ignored = []
             for key in filters:
@@ -660,14 +642,14 @@ class VectorDatabase:
             ignored_filters.add((key, reason))
 
         # Handle species alias for backward compatibility
-        if effective_filters.get('species') and not effective_filters.get('species_preference'):
-            effective_filters['species_preference'] = effective_filters['species']
+        if effective_filters.get("species") and not effective_filters.get("species_preference"):
+            effective_filters["species_preference"] = effective_filters["species"]
 
         # Check if we should allow species filtering without enrichment
         species_only_filter = (
-            ALLOW_SPECIES_FILTER_WITHOUT_ENRICHMENT and
-            effective_filters.get('species_preference') and
-            not self._pharma_metadata_enabled
+            ALLOW_SPECIES_FILTER_WITHOUT_ENRICHMENT
+            and effective_filters.get("species_preference")
+            and not self._pharma_metadata_enabled
         )
 
         # Remove pharma filters if metadata is not enabled, unless only species filtering
@@ -696,14 +678,11 @@ class VectorDatabase:
                 effective_filters = {
                     key: value
                     for key, value in effective_filters.items()
-                    if key in {'species_preference', 'include_unknown_species'} or
-                    key not in _PHARMA_FILTER_KEYS
+                    if key in {"species_preference", "include_unknown_species"} or key not in _PHARMA_FILTER_KEYS
                 }
             else:
                 effective_filters = {
-                    key: value
-                    for key, value in effective_filters.items()
-                    if key not in _PHARMA_FILTER_KEYS
+                    key: value for key, value in effective_filters.items() if key not in _PHARMA_FILTER_KEYS
                 }
 
         # Track PK filtering ignored when disabled
@@ -733,10 +712,7 @@ class VectorDatabase:
 
             total_before_filter += len(base_results)
             filtered_results = self._apply_pharmaceutical_filters_with_info(
-                base_results,
-                effective_filters,
-                ignored_filters,
-                track_ignored_filter
+                base_results, effective_filters, ignored_filters, track_ignored_filter
             )
             total_after_filter += len(filtered_results)
 
@@ -750,10 +726,12 @@ class VectorDatabase:
                     "filter_stats": {
                         "documents_before_filter": total_before_filter,
                         "documents_after_filter": total_after_filter,
-                        "filter_effectiveness": round(total_after_filter / total_before_filter, 3) if total_before_filter > 0 else 0.0,
+                        "filter_effectiveness": round(total_after_filter / total_before_filter, 3)
+                        if total_before_filter > 0
+                        else 0.0,
                         "oversample_iterations": _ + 1,
                         "final_fetch_k": current_k,
-                    }
+                    },
                 }
                 return filtered_results[:k], info
 
@@ -774,24 +752,26 @@ class VectorDatabase:
             "filter_stats": {
                 "documents_before_filter": total_before_filter,
                 "documents_after_filter": total_after_filter,
-                "filter_effectiveness": round(total_after_filter / total_before_filter, 3) if total_before_filter > 0 else 0.0,
+                "filter_effectiveness": round(total_after_filter / total_before_filter, 3)
+                if total_before_filter > 0
+                else 0.0,
                 "oversample_iterations": max_iterations,
                 "final_fetch_k": fetch_k,
-                "note": "Reached maximum iterations or candidate limit"
-            }
+                "note": "Reached maximum iterations or candidate limit",
+            },
         }
         return last_filtered[:k], info
 
     def get_stats(self) -> Dict[str, Any]:
         """
         Get statistics about the vector database
-        
+
         Returns:
             Dictionary with database statistics
         """
         if not self.vectorstore:
             return {"status": "No index loaded", "document_count": 0}
-        
+
         try:
             # Get document count from FAISS index
             doc_count = self.vectorstore.index.ntotal
@@ -799,12 +779,12 @@ class VectorDatabase:
                 "status": "Index loaded",
                 "document_count": doc_count,
                 "index_path": str(self.index_path),
-                "index_exists": self.index_path.exists()
+                "index_exists": self.index_path.exists(),
             }
             if self._pharma_metadata_enabled:
                 stats["pharmaceutical"] = self.get_pharmaceutical_stats()
             return stats
-            
+
         except Exception as e:
             logger.error(f"Failed to get stats: {str(e)}")
             return {"status": "Error getting stats", "error": str(e)}
@@ -833,7 +813,8 @@ class VectorDatabase:
             logger.warning(
                 "Stats collection limited to %d documents (total: %d). "
                 "Adjust VECTOR_DB_STATS_MAX_ITERATIONS to process more.",
-                iterations, total_docs
+                iterations,
+                total_docs,
             )
 
         for i, doc in enumerate(documents):
@@ -852,7 +833,9 @@ class VectorDatabase:
 
             therapeutic_counter.update(self._ensure_string_list(metadata.get("therapeutic_areas", [])))
             species_meta = metadata.get("species")
-            species_values = self._ensure_string_list(species_meta if isinstance(species_meta, (list, tuple, set)) else [species_meta])
+            species_values = self._ensure_string_list(
+                species_meta if isinstance(species_meta, (list, tuple, set)) else [species_meta]
+            )
             species_counter.update(species_values)
 
             cyp_counter.update(self._ensure_string_list(metadata.get("cyp_enzymes", [])))
@@ -882,7 +865,9 @@ class VectorDatabase:
 
         # Add sampling warning if not all documents were processed
         if iterations < total_docs:
-            result["sampling_warning"] = f"Stats based on sample of {iterations:,} documents out of {total_docs:,} total"
+            result[
+                "sampling_warning"
+            ] = f"Stats based on sample of {iterations:,} documents out of {total_docs:,} total"
             result["sampling_ratio"] = round(iterations / total_docs, 4)
 
         return result
@@ -893,11 +878,10 @@ class VectorDatabase:
 
     def _has_pharma_filter(self, filters: Dict[str, Any]) -> bool:
         # When species-only filtering is enabled, don't count species as a pharma filter
-        if ALLOW_SPECIES_FILTER_WITHOUT_ENRICHMENT and filters.get('species_preference'):
+        if ALLOW_SPECIES_FILTER_WITHOUT_ENRICHMENT and filters.get("species_preference"):
             # Check if filters contain only species-related keys
             non_species_keys = [
-                key for key in filters.keys()
-                if key not in {'species_preference', 'include_unknown_species', 'species'}
+                key for key in filters.keys() if key not in {"species_preference", "include_unknown_species", "species"}
             ]
             # If only species filters are present, return False
             if not non_species_keys:
@@ -1210,17 +1194,18 @@ class VectorDatabase:
 
         # Use word-boundary regex for more accurate species matching
         import re
+
         species_patterns = [
-            r'\bhuman\b',
-            r'\bhumans\b',
-            r'\bmouse\b',
-            r'\bmice\b',
-            r'\brat\b',
-            r'\brats\b',
-            r'\bdog\b',
-            r'\bdogs\b',
-            r'\bin vitro\b',
-            r'\bnon-?human\b'  # Handles both 'non-human' and 'nonhuman'
+            r"\bhuman\b",
+            r"\bhumans\b",
+            r"\bmouse\b",
+            r"\bmice\b",
+            r"\brat\b",
+            r"\brats\b",
+            r"\bdog\b",
+            r"\bdogs\b",
+            r"\bin vitro\b",
+            r"\bnon-?human\b",  # Handles both 'non-human' and 'nonhuman'
         ]
 
         for pattern in species_patterns:
@@ -1228,8 +1213,8 @@ class VectorDatabase:
             if match:
                 species = match.group()
                 # Normalize 'non-human' variants to 'nonhuman'
-                if species.startswith('non'):
-                    return 'nonhuman'
+                if species.startswith("non"):
+                    return "nonhuman"
                 return species
         return None
 
@@ -1360,10 +1345,7 @@ class VectorDatabase:
         metadata["pharmacokinetic_values"] = normalized_pk
 
         # Normalize study types
-        study_type_data = {
-            "study_type": metadata.get("study_type"),
-            "study_types": metadata.get("study_types")
-        }
+        study_type_data = {"study_type": metadata.get("study_type"), "study_types": metadata.get("study_types")}
         normalized_study_types = processor.normalize_study_types(study_type_data)
         metadata["study_types"] = normalized_study_types
         # Set study_type to the first normalized type for backward compatibility
@@ -1461,9 +1443,7 @@ class VectorDatabase:
             if documents:
                 return self._deduplicate_documents(documents)
 
-        logger.warning(
-            "Unable to iterate documents from vectorstore; consider rebuilding or re-saving the index."
-        )
+        logger.warning("Unable to iterate documents from vectorstore; consider rebuilding or re-saving the index.")
         return []
 
     def _capture_doc_ids(self) -> None:
@@ -1566,11 +1546,11 @@ class VectorDatabase:
             ):
                 return True
         return False
-    
+
     def delete_index(self) -> bool:
         """
         Delete the vector index from disk
-        
+
         Returns:
             True if successful, False otherwise
         """
@@ -1578,15 +1558,15 @@ class VectorDatabase:
             if self.index_path.exists():
                 self.index_path.unlink()
                 logger.info("Vector index deleted from disk")
-            
+
             if self.docstore_path.exists():
                 self.docstore_path.unlink()
                 logger.info("Docstore file deleted from disk")
-            
+
             self.vectorstore = None
             self._pharma_metadata_enabled = False
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to delete index: {str(e)}")
             return False
@@ -1595,34 +1575,35 @@ class VectorDatabase:
 def main():
     """Test the vector database"""
     from dotenv import load_dotenv
+
     load_dotenv()
-    
+
     # Initialize components
     embeddings = NVIDIAEmbeddings()
     vector_db = VectorDatabase(embeddings)
-    
+
     # Test documents
     test_docs = [
         Document(
             page_content="Artificial intelligence is the simulation of human intelligence in machines.",
-            metadata={"source": "test1.pdf", "page": 1}
+            metadata={"source": "test1.pdf", "page": 1},
         ),
         Document(
             page_content="Machine learning is a subset of AI that enables computers to learn without explicit programming.",
-            metadata={"source": "test2.pdf", "page": 1}
-        )
+            metadata={"source": "test2.pdf", "page": 1},
+        ),
     ]
-    
+
     # Create and save index
     if vector_db.create_index(test_docs):
         vector_db.save_index()
-        
+
         # Test search
         results = vector_db.similarity_search("What is AI?", k=2)
         print(f"Search results: {len(results)}")
         for i, doc in enumerate(results):
             print(f"  {i+1}. {doc.page_content[:100]}...")
-        
+
         # Get stats
         stats = vector_db.get_stats()
         print(f"Database stats: {stats}")

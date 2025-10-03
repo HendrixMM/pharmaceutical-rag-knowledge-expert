@@ -4,13 +4,14 @@ Agent Integration Module for MCP-Enhanced RAG System
 This module provides integration between your existing Claude-Code agent
 and the Microsoft Learn MCP server for up-to-date documentation.
 """
-
 import logging
-import os
-from typing import Optional, Dict, Any, List
-from pathlib import Path
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
-from mcp_client import NeMoMCPClient, create_mcp_client
+from mcp_client import create_mcp_client
+from mcp_client import NeMoMCPClient
 from prompt_generator import MCPPromptGenerator
 
 logger = logging.getLogger(__name__)
@@ -22,9 +23,7 @@ class MCPEnhancedAgent:
     with your existing Claude-Code workflow.
     """
 
-    def __init__(self,
-                 mcp_client: Optional[NeMoMCPClient] = None,
-                 enable_auto_context: bool = True):
+    def __init__(self, mcp_client: Optional[NeMoMCPClient] = None, enable_auto_context: bool = True):
         """
         Initialize the MCP-enhanced agent.
 
@@ -38,10 +37,7 @@ class MCPEnhancedAgent:
 
         logger.info("MCP-Enhanced Agent initialized")
 
-    def ask_with_context(self,
-                        query: str,
-                        context_type: str = "auto",
-                        max_context_docs: int = 3) -> str:
+    def ask_with_context(self, query: str, context_type: str = "auto", max_context_docs: int = 3) -> str:
         """
         Process a query with automatically fetched context.
 
@@ -110,9 +106,9 @@ class MCPEnhancedAgent:
         for i, doc in enumerate(docs, 1):
             context_section += f"{i}. **{doc['title']}**\n"
             context_section += f"   URL: {doc['url']}\n"
-            if doc.get('content'):
+            if doc.get("content"):
                 # Include a snippet of content
-                content_snippet = doc['content'][:250].strip()
+                content_snippet = doc["content"][:250].strip()
                 context_section += f"   Summary: {content_snippet}...\n"
             context_section += "\n"
 
@@ -127,9 +123,7 @@ Ensure all code examples and recommendations align with current NVIDIA NeMo Retr
 
         return mcp_header + context_section + user_query_section + instruction_section
 
-    def generate_migration_code(self,
-                              source_system: str,
-                              target_requirements: Optional[str] = None) -> str:
+    def generate_migration_code(self, source_system: str, target_requirements: Optional[str] = None) -> str:
         """
         Generate migration code with up-to-date documentation.
 
@@ -194,7 +188,7 @@ Ensure all code examples and recommendations align with current NVIDIA NeMo Retr
             "mcp_client_active": False,
             "server_registered": False,
             "documentation_accessible": False,
-            "last_error": None
+            "last_error": None,
         }
 
         try:
@@ -272,20 +266,16 @@ if __name__ == "__main__":
 
     # Example 3: Ask with context
     enhanced_query = agent.ask_with_context(
-        "How do I optimize embedding performance for large document collections?",
-        context_type="auto"
+        "How do I optimize embedding performance for large document collections?", context_type="auto"
     )
     print(f"Enhanced Query Length: {len(enhanced_query)} characters")
 
     # Example 4: Generate migration code
     migration_prompt = agent.generate_migration_code(
-        "LangChain with FAISS",
-        "Need to handle 10M documents with custom preprocessing"
+        "LangChain with FAISS", "Need to handle 10M documents with custom preprocessing"
     )
     print(f"Migration Prompt Length: {len(migration_prompt)} characters")
 
     # Example 5: Debug with context
-    debug_prompt = agent.debug_with_context(
-        "Getting CUDA out of memory errors when processing large batches"
-    )
+    debug_prompt = agent.debug_with_context("Getting CUDA out of memory errors when processing large batches")
     print(f"Debug Prompt Length: {len(debug_prompt)} characters")

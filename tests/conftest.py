@@ -1,8 +1,7 @@
-import os
-import pytest
 from pathlib import Path
-from unittest.mock import Mock, MagicMock
-from typing import Dict, Any, List
+from unittest.mock import Mock
+
+import pytest
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -26,6 +25,7 @@ def load_dotenv_if_available():
 
 # Pharmaceutical Benchmarking Test Fixtures
 
+
 @pytest.fixture
 def mock_enhanced_nemo_client():
     """Mock EnhancedNeMoClient for testing."""
@@ -33,7 +33,9 @@ def mock_enhanced_nemo_client():
     mock_response = Mock()
     mock_response.success = True
     mock_response.data = {
-        "choices": [{"message": {"content": "This is a test response with interaction mechanism and clinical significance."}}]
+        "choices": [
+            {"message": {"content": "This is a test response with interaction mechanism and clinical significance."}}
+        ]
     }
     mock_response.endpoint_type = "cloud"
     mock_response.cost_tier = "infrastructure"
@@ -61,11 +63,7 @@ def mock_cost_analyzer():
     """Mock PharmaceuticalCostAnalyzer for testing."""
     mock_analyzer = Mock()
     mock_analyzer.record_pharmaceutical_query.return_value = None
-    mock_analyzer.get_metrics.return_value = {
-        "total_queries": 10,
-        "total_cost": 125.0,
-        "average_cost_per_query": 12.5
-    }
+    mock_analyzer.get_metrics.return_value = {"total_queries": 10, "total_cost": 125.0, "average_cost_per_query": 12.5}
     return mock_analyzer
 
 
@@ -85,21 +83,21 @@ def sample_benchmark_data():
                     "success_rate": 0.98,
                     "average_cost_per_query": 12.5,
                     "average_accuracy": 0.85,
-                    "notes": "Test cloud baseline"
+                    "notes": "Test cloud baseline",
                 },
                 "self_hosted": {
                     "average_latency_ms": 850.0,
                     "success_rate": 0.95,
                     "average_cost_per_query": 0.0,
                     "average_accuracy": 0.82,
-                    "notes": "Test self-hosted baseline"
+                    "notes": "Test self-hosted baseline",
                 },
                 "regression_thresholds": {
                     "accuracy_drop_percent": 5,
                     "cost_increase_percent": 20,
-                    "latency_increase_percent": 50
-                }
-            }
+                    "latency_increase_percent": 50,
+                },
+            },
         },
         "queries": [
             {
@@ -107,14 +105,10 @@ def sample_benchmark_data():
                 "query": "Test query about drug interactions",
                 "expected_type": "comparison",
                 "expected_content": ["interaction mechanism", "clinical significance"],
-                "evaluation_criteria": {
-                    "accuracy_weight": 0.4,
-                    "completeness_weight": 0.3,
-                    "relevance_weight": 0.3
-                },
-                "tags": ["test", "interaction"]
+                "evaluation_criteria": {"accuracy_weight": 0.4, "completeness_weight": 0.3, "relevance_weight": 0.3},
+                "tags": ["test", "interaction"],
             }
-        ]
+        ],
     }
 
 
@@ -127,47 +121,33 @@ def sample_baseline_metadata():
             "success_rate": 0.98,
             "average_cost_per_query": 12.5,
             "average_accuracy": 0.85,
-            "notes": "Based on NVIDIA Build cloud endpoints"
+            "notes": "Based on NVIDIA Build cloud endpoints",
         },
         "self_hosted": {
             "average_latency_ms": 850.0,
             "success_rate": 0.95,
             "average_cost_per_query": 0.0,
             "average_accuracy": 0.82,
-            "notes": "Based on local NIM containers"
+            "notes": "Based on local NIM containers",
         },
         "regression_thresholds": {
             "accuracy_drop_percent": 5,
             "cost_increase_percent": 20,
-            "latency_increase_percent": 50
-        }
+            "latency_increase_percent": 50,
+        },
     }
 
 
 @pytest.fixture
 def sample_client_response_openai_format():
     """Sample OpenAI-style response format."""
-    return {
-        "choices": [
-            {
-                "message": {
-                    "content": "This is a test response with drug interaction details."
-                }
-            }
-        ]
-    }
+    return {"choices": [{"message": {"content": "This is a test response with drug interaction details."}}]}
 
 
 @pytest.fixture
 def sample_client_response_custom_format():
     """Sample custom response format."""
-    return {
-        "text": "This is a test response in custom format.",
-        "metadata": {
-            "model": "test-model",
-            "tokens": 50
-        }
-    }
+    return {"text": "This is a test response in custom format.", "metadata": {"model": "test-model", "tokens": 50}}
 
 
 @pytest.fixture
@@ -180,4 +160,3 @@ def benchmarks_directory():
 def test_fixtures_directory():
     """Path to test fixtures directory."""
     return Path(__file__).parent / "fixtures"
-

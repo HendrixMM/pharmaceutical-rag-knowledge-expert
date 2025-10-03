@@ -1,15 +1,14 @@
 """Drug-drug interaction and pharmacokinetic analysis processor for pharmaceutical research."""
-
 from __future__ import annotations
 
 import copy
 import json
 import logging
 import re
+from dataclasses import asdict
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
-from collections import defaultdict, Counter
-from dataclasses import dataclass, asdict
+from typing import Any
 
 try:
     from .pharmaceutical_processor import PharmaceuticalProcessor
@@ -37,25 +36,27 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PKParameter:
     """Structured pharmacokinetic parameter data with provenance tracking."""
+
     parameter: str
-    value: Optional[float]
+    value: float | None
     unit: str
-    confidence_interval: Optional[Tuple[float, float]]
-    p_value: Optional[float]
+    confidence_interval: tuple[float, float] | None
+    p_value: float | None
     study_id: str
-    value_numeric: Optional[float] = None
-    unit_canonical: Optional[str] = None
-    original_text: Optional[str] = None
+    value_numeric: float | None = None
+    unit_canonical: str | None = None
+    original_text: str | None = None
     # Provenance tracking fields
-    original_value: Optional[float] = None
-    original_unit: Optional[str] = None
-    conversion_factor: Optional[float] = None
-    normalization_notes: Optional[str] = None
+    original_value: float | None = None
+    original_unit: str | None = None
+    conversion_factor: float | None = None
+    normalization_notes: str | None = None
 
 
 @dataclass
 class DrugInteraction:
     """Structured drug interaction data."""
+
     primary_drug: str
     secondary_drug: str
     interaction_type: str
@@ -68,22 +69,27 @@ class DrugInteraction:
 
 class InteractionReport(BaseModel):
     """Structured representation of a comprehensive drug interaction analysis report."""
+
     primary_drug: str = Field(..., description="Primary drug being analyzed")
     analyzed_papers: int = Field(..., description="Number of papers analyzed")
-    secondary_drugs_analyzed: List[str] = Field(default_factory=list, description="Secondary drugs analyzed for interactions")
-    pk_parameters: Dict[str, Any] = Field(default_factory=dict, description="Pharmacokinetic parameters extracted")
+    secondary_drugs_analyzed: list[str] = Field(
+        default_factory=list, description="Secondary drugs analyzed for interactions"
+    )
+    pk_parameters: dict[str, Any] = Field(default_factory=dict, description="Pharmacokinetic parameters extracted")
     pk_parameter_source: str = Field(default="text_parsing", description="Source of PK parameter data")
-    cyp_interactions: Dict[str, Any] = Field(default_factory=dict, description="CYP enzyme interaction analysis")
-    auc_cmax_changes: List[Dict[str, Any]] = Field(default_factory=list, description="AUC/Cmax changes identified")
-    pk_pd_summary: Dict[str, Any] = Field(default_factory=dict, description="Pharmacokinetic/pharmacodynamic summary")
-    clinical_recommendations: List[Dict[str, Any]] = Field(default_factory=list, description="Clinical recommendations (research-only)")
-    interaction_severities: Dict[str, str] = Field(default_factory=dict, description="Interaction severity assessments")
+    cyp_interactions: dict[str, Any] = Field(default_factory=dict, description="CYP enzyme interaction analysis")
+    auc_cmax_changes: list[dict[str, Any]] = Field(default_factory=list, description="AUC/Cmax changes identified")
+    pk_pd_summary: dict[str, Any] = Field(default_factory=dict, description="Pharmacokinetic/pharmacodynamic summary")
+    clinical_recommendations: list[dict[str, Any]] = Field(
+        default_factory=list, description="Clinical recommendations (research-only)"
+    )
+    interaction_severities: dict[str, str] = Field(default_factory=dict, description="Interaction severity assessments")
     formatted_report: str = Field(default="", description="Formatted text report")
-    summary_statistics: Dict[str, Any] = Field(default_factory=dict, description="Summary statistics")
-    error: Optional[str] = Field(default=None, description="Error message if analysis failed")
+    summary_statistics: dict[str, Any] = Field(default_factory=dict, description="Summary statistics")
+    error: str | None = Field(default=None, description="Error message if analysis failed")
 
 
-DEFAULT_DDI_CONFIG: Dict[str, Any] = {
+DEFAULT_DDI_CONFIG: dict[str, Any] = {
     "severity_thresholds": {
         "increase": {"major": 5.0, "moderate": 2.0, "minor": 1.25},
         "decrease": {"major": 0.2, "moderate": 0.5, "minor": 0.8},
@@ -92,34 +98,43 @@ DEFAULT_DDI_CONFIG: Dict[str, Any] = {
     "keyword_groups": {
         "textual": {
             "contraindicated": [
-                "contraindicated", "contraindication", "should not", "must not",
-                "avoid", "prohibited", "black box", "severe"
+                "contraindicated",
+                "contraindication",
+                "should not",
+                "must not",
+                "avoid",
+                "prohibited",
+                "black box",
+                "severe",
             ],
             "major": [
-                "major", "significant", "serious", "important", "clinically significant",
-                "substantial", "pronounced", "marked"
+                "major",
+                "significant",
+                "serious",
+                "important",
+                "clinically significant",
+                "substantial",
+                "pronounced",
+                "marked",
             ],
-            "moderate": [
-                "moderate", "modest", "noticeable", "measurable", "clinically relevant"
-            ],
-            "minor": [
-                "minor", "slight", "small", "minimal", "negligible", "weak"
-            ],
+            "moderate": ["moderate", "modest", "noticeable", "measurable", "clinically relevant"],
+            "minor": ["minor", "slight", "small", "minimal", "negligible", "weak"],
         },
         "mechanistic": {
             "major": [
-                "strong inhibitor", "potent inhibitor", "strong inducer",
-                "marked inhibition", "pronounced induction"
+                "strong inhibitor",
+                "potent inhibitor",
+                "strong inducer",
+                "marked inhibition",
+                "pronounced induction",
             ],
-            "moderate": [
-                "moderate inhibitor", "moderate inducer", "significant inhibitor"
-            ],
+            "moderate": ["moderate inhibitor", "moderate inducer", "significant inhibitor"],
         },
     },
 }
 
 
-def _deep_merge_dicts(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+def _deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     """Recursively merge two dictionaries without mutating the originals."""
     result = copy.deepcopy(base)
 
@@ -145,9 +160,9 @@ class DDIPKProcessor:
 
     def __init__(
         self,
-        pharma_processor: Optional[PharmaceuticalProcessor] = None,
-        config: Optional[Dict[str, Any]] = None,
-        config_path: Optional[Union[str, Path]] = None,
+        pharma_processor: PharmaceuticalProcessor | None = None,
+        config: dict[str, Any] | None = None,
+        config_path: str | Path | None = None,
     ):
         """Initialize DDI/PK processor with optional pharmaceutical processor and configuration.
 
@@ -173,17 +188,27 @@ class DDIPKProcessor:
         # CYP enzyme patterns and classifications
         self.cyp_patterns = {
             "substrate": [
-                r"substrate.*cyp", r"metabolized.*by.*cyp", r"cyp.*substrate",
-                r"primarily.*metabolized.*cyp", r"cyp.*mediated.*metabolism"
+                r"substrate.*cyp",
+                r"metabolized.*by.*cyp",
+                r"cyp.*substrate",
+                r"primarily.*metabolized.*cyp",
+                r"cyp.*mediated.*metabolism",
             ],
             "inhibitor": [
-                r"inhibit.*cyp", r"cyp.*inhibitor", r"inhibition.*cyp",
-                r"cyp.*inhibition", r"blocks.*cyp", r"cyp.*blocking"
+                r"inhibit.*cyp",
+                r"cyp.*inhibitor",
+                r"inhibition.*cyp",
+                r"cyp.*inhibition",
+                r"blocks.*cyp",
+                r"cyp.*blocking",
             ],
             "inducer": [
-                r"(induce|induces|inducing|induction).*cyp", r"cyp.*(induce|induces|inducing|induction)", r"(upregulate|upregulates|upregulating|upregulation).*cyp",
-                r"cyp.*(upregulate|upregulates|upregulating|upregulation)", r"(increase|increases|increasing).*cyp.*activity"
-            ]
+                r"(induce|induces|inducing|induction).*cyp",
+                r"cyp.*(induce|induces|inducing|induction)",
+                r"(upregulate|upregulates|upregulating|upregulation).*cyp",
+                r"cyp.*(upregulate|upregulates|upregulating|upregulation)",
+                r"(increase|increases|increasing).*cyp.*activity",
+            ],
         }
 
         # PK parameter patterns with units and statistical indicators
@@ -192,40 +217,40 @@ class DDIPKProcessor:
                 "patterns": [
                     r"auc.*?(\d+(?:\.\d+)?)\s*([%]?)\s*(increase|decrease|chang|fold)",
                     r"area.*under.*curve.*?(\d+(?:\.\d+)?)\s*([%]?)",
-                    r"auc.*ratio.*?(\d+(?:\.\d+)?)"
+                    r"auc.*ratio.*?(\d+(?:\.\d+)?)",
                 ],
-                "units": ["ng⋅h/mL", "µg⋅h/mL", "mg⋅h/L", "fold", "%"]
+                "units": ["ng⋅h/mL", "µg⋅h/mL", "mg⋅h/L", "fold", "%"],
             },
             "cmax": {
                 "patterns": [
                     r"cmax.*?(\d+(?:\.\d+)?)\s*([%]?)\s*(increase|decrease|chang|fold)",
                     r"maximum.*concentration.*?(\d+(?:\.\d+)?)\s*([%]?)",
-                    r"peak.*concentration.*?(\d+(?:\.\d+)?)\s*([%]?)"
+                    r"peak.*concentration.*?(\d+(?:\.\d+)?)\s*([%]?)",
                 ],
-                "units": ["ng/mL", "µg/mL", "mg/L", "fold", "%"]
+                "units": ["ng/mL", "µg/mL", "mg/L", "fold", "%"],
             },
             "clearance": {
                 "patterns": [
                     r"clearance.*?(\d+(?:\.\d+)?)\s*([%]?)\s*(increase|decrease|chang)",
-                    r"cl/f.*?(\d+(?:\.\d+)?)\s*([%]?)"
+                    r"cl/f.*?(\d+(?:\.\d+)?)\s*([%]?)",
                 ],
-                "units": ["L/h", "mL/min", "L/h/kg", "%"]
+                "units": ["L/h", "mL/min", "L/h/kg", "%"],
             },
             "half_life": {
                 "patterns": [
                     r"half.*life.*?(\d+(?:\.\d+)?)\s*(h|hr|hours?|min|minutes?)",
-                    r"t1/2.*?(\d+(?:\.\d+)?)\s*(h|hr|hours?|min|minutes?)"
+                    r"t1/2.*?(\d+(?:\.\d+)?)\s*(h|hr|hours?|min|minutes?)",
                 ],
-                "units": ["h", "hr", "hours", "min", "minutes"]
+                "units": ["h", "hr", "hours", "min", "minutes"],
             },
             "volume_distribution": {
                 "patterns": [
                     r"volume.*distribution.*?(\d+(?:\.\d+)?)\s*(L|L/kg)",
                     r"\bvd\b.*?(\d+(?:\.\d+)?)\s*(L|L/kg)",
-                    r"\bv_d\b.*?(\d+(?:\.\d+)?)\s*(L|L/kg)"
+                    r"\bv_d\b.*?(\d+(?:\.\d+)?)\s*(L|L/kg)",
                 ],
-                "units": ["L", "L/kg"]
-            }
+                "units": ["L", "L/kg"],
+            },
         }
 
         # Clinical recommendation patterns
@@ -234,14 +259,14 @@ class DDIPKProcessor:
             r"suggest.*?(monitor|avoid|adjust|reduce|reducing|reduction|increase|increasing|elevation|caution)",
             r"advise.*?(monitor|avoid|adjust|reduce|reducing|reduction|increase|increasing|elevation|caution)",
             r"clinical.*?(monitor|avoid|adjust|reduce|reducing|reduction|increase|increasing|elevation|caution)",
-            r"should.*?(monitor|avoid|adjust|reduce|reducing|reduction|increase|increasing|elevation|caution)"
+            r"should.*?(monitor|avoid|adjust|reduce|reducing|reduction|increase|increasing|elevation|caution)",
         ]
 
     def _build_config(
         self,
-        config: Optional[Dict[str, Any]],
-        config_path: Optional[Union[str, Path]],
-    ) -> Dict[str, Any]:
+        config: dict[str, Any] | None,
+        config_path: str | Path | None,
+    ) -> dict[str, Any]:
         """Merge default configuration with optional overrides."""
         merged = copy.deepcopy(DEFAULT_DDI_CONFIG)
 
@@ -258,7 +283,7 @@ class DDIPKProcessor:
 
         return merged
 
-    def _load_config_file(self, path: Path) -> Dict[str, Any]:
+    def _load_config_file(self, path: Path) -> dict[str, Any]:
         """Load configuration overrides from a JSON or YAML file."""
         if not path.exists():
             raise FileNotFoundError(f"Configuration file not found: {path}")
@@ -275,11 +300,11 @@ class DDIPKProcessor:
 
         raise ValueError(f"Unsupported configuration file format: {path.suffix}")
 
-    def _prepare_papers(self, papers: List[Any]) -> List[Dict[str, Any]]:
+    def _prepare_papers(self, papers: list[Any]) -> list[dict[str, Any]]:
         """Validate paper payloads using the shared Paper schema."""
         if not papers:
             return []
-        prepared: List[Dict[str, Any]] = []
+        prepared: list[dict[str, Any]] = []
 
         for index, paper in enumerate(papers):
             try:
@@ -292,7 +317,7 @@ class DDIPKProcessor:
 
         return prepared
 
-    def _ensure_prepared_papers(self, papers: List[Any]) -> List[Dict[str, Any]]:
+    def _ensure_prepared_papers(self, papers: list[Any]) -> list[dict[str, Any]]:
         """Return schema-prepared papers, coercing raw inputs when necessary."""
         if not papers:
             return []
@@ -301,19 +326,14 @@ class DDIPKProcessor:
         return self._prepare_papers(papers)
 
     def _normalize_pk_measurement(
-        self,
-        parameter: str,
-        value: Optional[float],
-        unit: Optional[str]
-    ) -> Tuple[Optional[float], Optional[str], Optional[float], Optional[str]]:
+        self, parameter: str, value: float | None, unit: str | None
+    ) -> tuple[float | None, str | None, float | None, str | None]:
         """Normalize PK units to canonical representations with provenance tracking.
 
         Returns:
             Tuple of (normalized_value, canonical_unit, conversion_factor, normalization_notes)
         """
         # Store original values for provenance
-        original_value = value
-        original_unit = unit
 
         if value is None:
             return None, unit, None, None
@@ -323,12 +343,7 @@ class DDIPKProcessor:
 
         unit_clean = unit.strip().replace("−", "-")
         unit_key = (
-            unit_clean.replace("μ", "u")
-            .replace("µ", "u")
-            .replace("⋅", "")
-            .replace("·", "")
-            .replace(" ", "")
-            .lower()
+            unit_clean.replace("μ", "u").replace("µ", "u").replace("⋅", "").replace("·", "").replace(" ", "").lower()
         )
 
         unit_key = re.sub(r"ml\^-?1", "perml", unit_key)
@@ -339,9 +354,9 @@ class DDIPKProcessor:
         unit_key = re.sub(r"h-?1", "perh", unit_key)
 
         normalized_value = value
-        canonical_unit: Optional[str] = None
-        conversion_factor: Optional[float] = None
-        normalization_notes: Optional[str] = None
+        canonical_unit: str | None = None
+        conversion_factor: float | None = None
+        normalization_notes: str | None = None
 
         if "geometricmeanratio" in unit_key or unit_key == "gmr":
             canonical_unit = "fold"
@@ -396,7 +411,7 @@ class DDIPKProcessor:
                 normalization_notes = "Already in canonical hours unit"
             elif unit_key in {"min", "mins", "minute", "minutes"}:
                 canonical_unit = "hours"
-                conversion_factor = 1/60.0
+                conversion_factor = 1 / 60.0
                 normalized_value = value / 60
                 normalization_notes = f"Converted from minutes to hours (×{conversion_factor})"
 
@@ -428,14 +443,14 @@ class DDIPKProcessor:
 
         return normalized_value, canonical_unit, conversion_factor, normalization_notes
 
-    def _build_drug_synonym_map(self, papers: List[Dict]) -> Dict[str, str]:
+    def _build_drug_synonym_map(self, papers: list[dict]) -> dict[str, str]:
         """Build a map of drug names to their canonical generic names.
-        
+
         Returns:
             Dict mapping lowercase drug names to their canonical generic names
         """
-        canonical_for: Dict[str, str] = {}
-        
+        canonical_for: dict[str, str] = {}
+
         # First, try to use drug annotations from papers if available
         for paper in papers:
             metadata = paper.get("metadata", {})
@@ -459,7 +474,7 @@ class DDIPKProcessor:
                                 "nexium": "esomeprazole",  # Note: esomeprazole is the generic for nexium
                                 "prilosec": "omeprazole",
                                 "xarelto": "rivaroxaban",
-                                "zyrtec": "cetirizine"
+                                "zyrtec": "cetirizine",
                             }
                             generic_name = brand_to_generic.get(name)
                             if generic_name:
@@ -467,7 +482,7 @@ class DDIPKProcessor:
                             # If no known mapping, use the brand name itself
                             else:
                                 canonical_for[name] = name
-        
+
         # If no annotations available, use the pharmaceutical processor to extract drug names
         if not canonical_for and self.pharma_processor:
             # Concatenate content from all papers to extract drug names
@@ -475,7 +490,7 @@ class DDIPKProcessor:
             for paper in papers:
                 content = paper.get("page_content") or paper.get("content", "")
                 all_content += content + " "
-            
+
             if all_content:
                 drug_entities = self.pharma_processor.extract_drug_names(all_content)
                 for entity in drug_entities:
@@ -495,7 +510,7 @@ class DDIPKProcessor:
                                 "nexium": "esomeprazole",  # Note: esomeprazole is the generic for nexium
                                 "prilosec": "omeprazole",
                                 "xarelto": "rivaroxaban",
-                                "zyrtec": "cetirizine"
+                                "zyrtec": "cetirizine",
                             }
                             generic_name = brand_to_generic.get(name)
                             if generic_name:
@@ -503,7 +518,7 @@ class DDIPKProcessor:
                             # If no known mapping, use the brand name itself
                             else:
                                 canonical_for[name] = name
-        
+
         # Add default mappings for known brand/generic pairs
         default_mappings = {
             "coumadin": "warfarin",
@@ -512,23 +527,20 @@ class DDIPKProcessor:
             "nexium": "esomeprazole",
             "prilosec": "omeprazole",
             "xarelto": "rivaroxaban",
-            "zyrtec": "cetirizine"
+            "zyrtec": "cetirizine",
         }
-        
+
         for brand, generic in default_mappings.items():
             if brand not in canonical_for:
                 canonical_for[brand] = generic
             if generic not in canonical_for:
                 canonical_for[generic] = generic
-                
+
         return canonical_for
 
     def analyze_drug_interactions(
-        self,
-        papers: List[Dict],
-        primary_drug: str,
-        secondary_drugs: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        self, papers: list[dict], primary_drug: str, secondary_drugs: list[str] | None = None
+    ) -> dict[str, Any]:
         """Analyze drug interactions focusing on a primary drug with potential interacting drugs.
 
         Args:
@@ -539,7 +551,7 @@ class DDIPKProcessor:
         Returns:
             Comprehensive interaction analysis dictionary
         """
-        prepared_papers: List[Dict[str, Any]] = []
+        prepared_papers: list[dict[str, Any]] = []
 
         try:
             prepared_papers = self._prepare_papers(papers)
@@ -551,11 +563,11 @@ class DDIPKProcessor:
 
             # Build synonym map for canonicalization
             canonical_for = self._build_drug_synonym_map(prepared_papers)
-            
+
             # Normalize inputs to canonical forms
             primary_drug_canon = canonical_for.get(primary_drug.lower(), primary_drug.lower())
             secondary_drugs_canon = [canonical_for.get(d.lower(), d.lower()) for d in (secondary_drugs or [])]
-            
+
             # Create display names mapping for reporting
             display_names = {}
             for name in [primary_drug] + (secondary_drugs or []):
@@ -570,7 +582,9 @@ class DDIPKProcessor:
             cyp_interactions = self._analyze_cyp_interactions(prepared_papers, primary_drug_canon)
 
             # Extract AUC/Cmax changes
-            auc_cmax_changes = self._extract_auc_cmax_changes(prepared_papers, primary_drug_canon, secondary_drugs_canon)
+            auc_cmax_changes = self._extract_auc_cmax_changes(
+                prepared_papers, primary_drug_canon, secondary_drugs_canon
+            )
 
             # Generate PK/PD summary
             pk_pd_summary = self._generate_pk_pd_summary(prepared_papers, primary_drug_canon)
@@ -582,11 +596,13 @@ class DDIPKProcessor:
             interaction_severities = {}
             if secondary_drugs_canon:
                 for secondary_drug_canon in secondary_drugs_canon:
-                    severity = self._calculate_interaction_severity({
-                        "primary_drug": primary_drug_canon,
-                        "secondary_drug": secondary_drug_canon,
-                        "papers": prepared_papers
-                    })
+                    severity = self._calculate_interaction_severity(
+                        {
+                            "primary_drug": primary_drug_canon,
+                            "secondary_drug": secondary_drug_canon,
+                            "papers": prepared_papers,
+                        }
+                    )
                     # Map back to original display name for reporting
                     display_name = display_names.get(secondary_drug_canon, secondary_drug_canon)
                     interaction_severities[display_name] = severity
@@ -597,7 +613,7 @@ class DDIPKProcessor:
 
             # Ensure all data is JSON-serializable before returning while preserving structure
             def _serialize_pk_entry(entry: Any) -> Any:
-                if hasattr(entry, '__dataclass_fields__'):
+                if hasattr(entry, "__dataclass_fields__"):
                     return asdict(entry)
                 if isinstance(entry, dict):
                     return {key: _serialize_pk_entry(value) for key, value in entry.items()}
@@ -605,8 +621,8 @@ class DDIPKProcessor:
                     return [_serialize_pk_entry(value) for value in entry]
                 return entry
 
-            def _serialize_pk_parameter_map(pk_map: Dict[str, Any]) -> Dict[str, Any]:
-                serialized: Dict[str, Any] = {}
+            def _serialize_pk_parameter_map(pk_map: dict[str, Any]) -> dict[str, Any]:
+                serialized: dict[str, Any] = {}
                 for param_name, param_data in pk_map.items():
                     if isinstance(param_data, dict):
                         param_serialized = {}
@@ -627,17 +643,19 @@ class DDIPKProcessor:
             # Map secondary drugs back to display names
             secondary_drugs_display = [display_names.get(d, d) for d in secondary_drugs_canon]
 
-            interaction_report = self._format_interaction_report({
-                "primary_drug": display_names.get(primary_drug_canon, primary_drug_canon),
-                "secondary_drugs": secondary_drugs_display,
-                "pk_parameters": pk_parameters,
-                "pk_parameter_source": "text_parsing",
-                "cyp_interactions": cyp_interactions,
-                "auc_cmax_changes": auc_cmax_changes,
-                "pk_pd_summary": pk_pd_summary,
-                "clinical_recommendations": clinical_recommendations,
-                "interaction_severities": interaction_severities
-            })
+            interaction_report = self._format_interaction_report(
+                {
+                    "primary_drug": display_names.get(primary_drug_canon, primary_drug_canon),
+                    "secondary_drugs": secondary_drugs_display,
+                    "pk_parameters": pk_parameters,
+                    "pk_parameter_source": "text_parsing",
+                    "cyp_interactions": cyp_interactions,
+                    "auc_cmax_changes": auc_cmax_changes,
+                    "pk_pd_summary": pk_pd_summary,
+                    "clinical_recommendations": clinical_recommendations,
+                    "interaction_severities": interaction_severities,
+                }
+            )
 
             analysis_result = {
                 "primary_drug": display_names.get(primary_drug_canon, primary_drug_canon),
@@ -656,9 +674,11 @@ class DDIPKProcessor:
                     "significant_pk_changes": sig_count,
                     "nonsignificant_pk_changes": non_sig_count,
                     "cyp_enzymes_involved": len(cyp_interactions.get("enzymes_identified", [])),
-                    "high_severity_interactions": sum(1 for s in interaction_severities.values() if s == "major" or s == "contraindicated"),
-                    "pk_parameters_quantified": len([p for p in pk_parameters.values() if p])
-                }
+                    "high_severity_interactions": sum(
+                        1 for s in interaction_severities.values() if s == "major" or s == "contraindicated"
+                    ),
+                    "pk_parameters_quantified": len([p for p in pk_parameters.values() if p]),
+                },
             }
 
             # Validate the analysis result against the InteractionReport schema
@@ -674,8 +694,11 @@ class DDIPKProcessor:
                 # Add schema validation status to the result
                 analysis_result["schema_validation"] = {
                     "validated": False,
-                    "errors": [{"field": err["loc"], "message": err["msg"], "type": err["type"]} for err in schema_error.errors()],
-                    "note": "Analysis completed but failed schema validation - review field compatibility"
+                    "errors": [
+                        {"field": err["loc"], "message": err["msg"], "type": err["type"]}
+                        for err in schema_error.errors()
+                    ],
+                    "note": "Analysis completed but failed schema validation - review field compatibility",
                 }
                 return analysis_result
 
@@ -688,19 +711,13 @@ class DDIPKProcessor:
                 "pk_parameters": {},
                 "cyp_interactions": {},
                 "auc_cmax_changes": [],
-                "clinical_recommendations": []
+                "clinical_recommendations": [],
             }
 
-    def _extract_pk_parameters(self, papers: List[Dict], drug_name: str) -> Dict[str, Any]:
+    def _extract_pk_parameters(self, papers: list[dict], drug_name: str) -> dict[str, Any]:
         """Extract pharmacokinetic parameters with units and confidence intervals."""
         papers = self._ensure_prepared_papers(papers)
-        pk_data = {
-            "auc": [],
-            "cmax": [],
-            "clearance": [],
-            "half_life": [],
-            "volume_distribution": []
-        }
+        pk_data = {"auc": [], "cmax": [], "clearance": [], "half_life": [], "volume_distribution": []}
 
         try:
             for paper in papers:
@@ -721,17 +738,18 @@ class DDIPKProcessor:
                                 raw_unit = unit or param_info["units"][0]
                                 original_text = match.group(0).strip()
 
-                                value_numeric, unit_canonical, conversion_factor, normalization_notes = self._normalize_pk_measurement(
-                                    param_name,
-                                    value,
-                                    raw_unit
-                                )
+                                (
+                                    value_numeric,
+                                    unit_canonical,
+                                    conversion_factor,
+                                    normalization_notes,
+                                ) = self._normalize_pk_measurement(param_name, value, raw_unit)
 
                                 # Extract confidence intervals if present
                                 ci_pattern = r"95%.*?ci.*?(\d+(?:\.\d+)?)[^\d]*(\d+(?:\.\d+)?)"
                                 ci_match = re.search(
                                     ci_pattern,
-                                    content[max(0, match.start() - 100):match.end() + 100],
+                                    content[max(0, match.start() - 100) : match.end() + 100],
                                     re.IGNORECASE,
                                 )
                                 confidence_interval = None
@@ -742,7 +760,7 @@ class DDIPKProcessor:
                                 p_pattern = r"p\s*[=<>]\s*(\d+(?:\.\d+)?)"
                                 p_match = re.search(
                                     p_pattern,
-                                    content[max(0, match.start() - 50):match.end() + 50],
+                                    content[max(0, match.start() - 50) : match.end() + 50],
                                     re.IGNORECASE,
                                 )
                                 p_value = float(p_match.group(1)) if p_match else None
@@ -778,12 +796,10 @@ class DDIPKProcessor:
                 raw_values = [p.value for p in parameters if p.value is not None]
                 normalized_values = [p.value_numeric for p in parameters if p.value_numeric is not None]
 
-                mean_normalized = (
-                    sum(normalized_values) / len(normalized_values) if normalized_values else None
-                )
+                mean_normalized = sum(normalized_values) / len(normalized_values) if normalized_values else None
                 mean_raw = sum(raw_values) / len(raw_values) if raw_values else None
 
-                def _build_range(values: List[float]) -> List[float]:
+                def _build_range(values: list[float]) -> list[float]:
                     if not values:
                         return []
                     if len(values) == 1:
@@ -817,7 +833,7 @@ class DDIPKProcessor:
                             "normalization_notes": p.normalization_notes,
                         }
                         for p in parameters
-                    ]
+                    ],
                 }
 
             return summary
@@ -826,7 +842,7 @@ class DDIPKProcessor:
             logger.error(f"Error extracting PK parameters: {e}")
             return {}
 
-    def _analyze_cyp_interactions(self, papers: List[Dict], drug_name: str) -> Dict[str, Any]:
+    def _analyze_cyp_interactions(self, papers: list[dict], drug_name: str) -> dict[str, Any]:
         """Analyze CYP enzyme interactions (substrate/inhibitor/inducer classification)."""
         papers = self._ensure_prepared_papers(papers)
         cyp_analysis = {
@@ -834,7 +850,7 @@ class DDIPKProcessor:
             "substrate_relationships": [],
             "inhibitor_relationships": [],
             "inducer_relationships": [],
-            "strength_classifications": {}
+            "strength_classifications": {},
         }
 
         try:
@@ -864,7 +880,7 @@ class DDIPKProcessor:
                                     "drug": drug_name,
                                     "enzyme": enzyme,
                                     "relationship": relationship_type,
-                                    "study_id": paper_id
+                                    "study_id": paper_id,
                                 }
 
                                 # Determine strength (strong/moderate/weak)
@@ -891,7 +907,7 @@ class DDIPKProcessor:
             logger.error(f"Error analyzing CYP interactions: {e}")
             return {"error": str(e)}
 
-    def _calculate_interaction_severity(self, interaction_data: Dict[str, Any]) -> str:
+    def _calculate_interaction_severity(self, interaction_data: dict[str, Any]) -> str:
         """Calculate interaction severity based on available data."""
         try:
             primary_drug = interaction_data["primary_drug"]
@@ -904,7 +920,8 @@ class DDIPKProcessor:
             # Quantitative assessment using PK changes (AUC, Cmax, clearance)
             quantitative_changes = self._extract_auc_cmax_changes(papers, primary_drug, [secondary_drug])
             quantitative_changes = [
-                change for change in quantitative_changes
+                change
+                for change in quantitative_changes
                 if change.get("interacting_drug") in (None, secondary_drug)
                 and secondary_lower in change.get("context", "").lower()
                 and change.get("direction") not in (None, "unknown")
@@ -920,7 +937,7 @@ class DDIPKProcessor:
             default_thresholds = {
                 "increase": {"major": 5.0, "moderate": 2.0, "minor": 1.25},
                 "decrease": {"major": 0.2, "moderate": 0.5, "minor": 0.8},
-                "clearance_decrease": {"major": 0.2, "moderate": 0.5}
+                "clearance_decrease": {"major": 0.2, "moderate": 0.5},
             }
 
             # Ensure all required thresholds have values
@@ -933,19 +950,19 @@ class DDIPKProcessor:
                     current = clearance_thresholds
                 else:
                     continue
-                
+
                 for level, default_val in defaults.items():
                     if level not in current or current[level] is None:
                         current[level] = default_val
 
-            def upgrade_severity(current: Optional[str], candidate: Optional[str]) -> Optional[str]:
+            def upgrade_severity(current: str | None, candidate: str | None) -> str | None:
                 if not candidate:
                     return current
                 if current is None:
                     return candidate
                 return candidate if severity_rank.get(candidate, 0) > severity_rank.get(current, 0) else current
 
-            severity_from_quant: Optional[str] = None
+            severity_from_quant: str | None = None
             for change in quantitative_changes:
                 direction = change.get("direction")
                 parameter = (change.get("parameter") or "").lower()
@@ -964,7 +981,11 @@ class DDIPKProcessor:
                         if direction == "increase":
                             ratio = change_value
                         elif change_value and direction == "decrease":
-                            ratio = change_value if 0 < change_value < 1 else (1 / change_value if change_value > 0 else None)
+                            ratio = (
+                                change_value
+                                if 0 < change_value < 1
+                                else (1 / change_value if change_value > 0 else None)
+                            )
 
                 if not ratio or ratio <= 0:
                     continue
@@ -1002,7 +1023,7 @@ class DDIPKProcessor:
             mechanistic_keywords_major = self.mechanistic_keywords.get("major", [])
             mechanistic_keywords_moderate = self.mechanistic_keywords.get("moderate", [])
 
-            textual_severity: Set[str] = set()
+            textual_severity: set[str] = set()
 
             for paper in papers:
                 content = paper.get("page_content") or paper.get("content", "")
@@ -1051,11 +1072,8 @@ class DDIPKProcessor:
             return "unknown"
 
     def _extract_auc_cmax_changes(
-        self,
-        papers: List[Dict],
-        primary_drug: str,
-        drug_pairs: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+        self, papers: list[dict], primary_drug: str, drug_pairs: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """Extract AUC/Cmax changes with percent changes and significance."""
         papers = self._ensure_prepared_papers(papers)
         changes = []
@@ -1085,7 +1103,7 @@ class DDIPKProcessor:
                     r"(?:increased?|decreased?|changed?).*?(?:auc|cmax|clearance).*?(\d+(?:\.\d+)?)\s*[-–—to]\s*(\d+(?:\.\d+)?)\s*([%]|fold)",
                     # Relative percentage changes
                     r"(\d+(?:\.\d+)?)\s*([%])\s*(?:reduction|decrease|decline).*?(?:auc|cmax|clearance)",
-                    r"(\d+(?:\.\d+)?)\s*([%])\s*(?:increase|elevation|rise).*?(?:auc|cmax|clearance)"
+                    r"(\d+(?:\.\d+)?)\s*([%])\s*(?:increase|elevation|rise).*?(?:auc|cmax|clearance)",
                 ]
 
                 for pattern in change_patterns:
@@ -1106,14 +1124,39 @@ class DDIPKProcessor:
                                 unit = groups[1] if len(groups) > 1 else ""
 
                             # Enhanced direction detection with negative symbols and relative phrasing
-                            context = content[max(0, match.start()-50):match.end()+50].lower()
-                            increase_markers = ["increase", "increased", "higher", "elevated", "raised", "greater", "↑", "rise", "elevation"]
-                            decrease_markers = ["decrease", "decreased", "lower", "reduced", "diminished", "less", "↓", "reduction", "decline", "lowered"]
+                            context = content[max(0, match.start() - 50) : match.end() + 50].lower()
+                            increase_markers = [
+                                "increase",
+                                "increased",
+                                "higher",
+                                "elevated",
+                                "raised",
+                                "greater",
+                                "↑",
+                                "rise",
+                                "elevation",
+                            ]
+                            decrease_markers = [
+                                "decrease",
+                                "decreased",
+                                "lower",
+                                "reduced",
+                                "diminished",
+                                "less",
+                                "↓",
+                                "reduction",
+                                "decline",
+                                "lowered",
+                            ]
 
                             # Check for explicit direction indicators in the matched text
                             matched_text = match.group(0).lower()
-                            has_increase = any(word in context for word in increase_markers) or any(word in matched_text for word in increase_markers)
-                            has_decrease = any(word in context for word in decrease_markers) or any(word in matched_text for word in decrease_markers)
+                            has_increase = any(word in context for word in increase_markers) or any(
+                                word in matched_text for word in increase_markers
+                            )
+                            has_decrease = any(word in context for word in decrease_markers) or any(
+                                word in matched_text for word in decrease_markers
+                            )
 
                             if has_increase and not has_decrease:
                                 direction = "increase"
@@ -1163,11 +1206,11 @@ class DDIPKProcessor:
                             # Looser p-value patterns
                             p_value_patterns = [
                                 r"p\s*[=<>]\s*(\d+(?:\.\d+)?)",  # Original pattern
-                                r"p\s*[=<>]\s*0?\.(\d+)",       # p=.05, p<.001
+                                r"p\s*[=<>]\s*0?\.(\d+)",  # p=.05, p<.001
                                 r"p[-\s]*value\s*[=<>]\s*(\d+(?:\.\d+)?)",  # p-value=0.05
-                                r"p[-\s]*val\s*[=<>]\s*(\d+(?:\.\d+)?)",    # p-val=0.05
-                                r"\bp\s*(\d+(?:\.\d+)?)",       # Just p followed by number
-                                r"significance.*?(\d+(?:\.\d+)?)"  # significance level
+                                r"p[-\s]*val\s*[=<>]\s*(\d+(?:\.\d+)?)",  # p-val=0.05
+                                r"\bp\s*(\d+(?:\.\d+)?)",  # Just p followed by number
+                                r"significance.*?(\d+(?:\.\d+)?)",  # significance level
                             ]
 
                             p_value = None
@@ -1191,7 +1234,7 @@ class DDIPKProcessor:
                                 r"ci\s*95%?[\s:]*(\d+(?:\.\d+)?)\s*[-–—to]\s*(\d+(?:\.\d+)?)",
                                 r"\[(\d+(?:\.\d+)?)\s*[-–—to,]\s*(\d+(?:\.\d+)?)\]",  # [1.2-2.5] or [1.2, 2.5]
                                 r"\((\d+(?:\.\d+)?)\s*[-–—to,]\s*(\d+(?:\.\d+)?)\)",  # (1.2-2.5) or (1.2, 2.5)
-                                r"confidence\s*interval[\s:]*(\d+(?:\.\d+)?)\s*[-–—to]\s*(\d+(?:\.\d+)?)"
+                                r"confidence\s*interval[\s:]*(\d+(?:\.\d+)?)\s*[-–—to]\s*(\d+(?:\.\d+)?)",
                             ]
 
                             confidence_interval = None
@@ -1253,7 +1296,7 @@ class DDIPKProcessor:
             logger.error(f"Error extracting AUC/Cmax changes: {e}")
             return []
 
-    def _generate_pk_pd_summary(self, papers: List[Dict], drug_name: str) -> Dict[str, Any]:
+    def _generate_pk_pd_summary(self, papers: list[dict], drug_name: str) -> dict[str, Any]:
         """Generate pharmacokinetic/pharmacodynamic summary."""
         papers = self._ensure_prepared_papers(papers)
         summary = {
@@ -1261,16 +1304,12 @@ class DDIPKProcessor:
             "distribution": {},
             "metabolism": {},
             "elimination": {},
-            "pharmacodynamics": {
-                "metrics": [],
-                "therapeutic_windows": [],
-                "dose_response_patterns": []
-            }
+            "pharmacodynamics": {"metrics": [], "therapeutic_windows": [], "dose_response_patterns": []},
         }
 
-        pd_metric_seen: Set[Tuple[str, str, int]] = set()
-        therapeutic_seen: Set[Tuple[str, str, int]] = set()
-        dose_response_recorded: Set[str] = set()
+        pd_metric_seen: set[tuple[str, str, int]] = set()
+        therapeutic_seen: set[tuple[str, str, int]] = set()
+        dose_response_recorded: set[str] = set()
 
         try:
             for paper in papers:
@@ -1285,27 +1324,27 @@ class DDIPKProcessor:
                 absorption_patterns = [
                     r"bioavailability.*?(\d+(?:\.\d+)?)\s*[%]",
                     r"absorption.*?(\d+(?:\.\d+)?)\s*[%]",
-                    r"tmax.*?(\d+(?:\.\d+)?)\s*(h|hr|hours?|min)"
+                    r"tmax.*?(\d+(?:\.\d+)?)\s*(h|hr|hours?|min)",
                 ]
 
                 # Distribution patterns
                 distribution_patterns = [
                     r"volume.*distribution.*?(\d+(?:\.\d+)?)\s*(l|l/kg)",
                     r"protein.*binding.*?(\d+(?:\.\d+)?)\s*[%]",
-                    r"vd.*?(\d+(?:\.\d+)?)\s*(l|l/kg)"
+                    r"vd.*?(\d+(?:\.\d+)?)\s*(l|l/kg)",
                 ]
 
                 # Metabolism patterns
                 metabolism_patterns = [
                     r"metabolized.*?(\d+(?:\.\d+)?)\s*[%]",
-                    r"hepatic.*metabolism.*?(\d+(?:\.\d+)?)\s*[%]"
+                    r"hepatic.*metabolism.*?(\d+(?:\.\d+)?)\s*[%]",
                 ]
 
                 # Elimination patterns
                 elimination_patterns = [
                     r"renal.*elimination.*?(\d+(?:\.\d+)?)\s*[%]",
                     r"excreted.*unchanged.*?(\d+(?:\.\d+)?)\s*[%]",
-                    r"elimination.*half.*life.*?(\d+(?:\.\d+)?)\s*(h|hr|hours?)"
+                    r"elimination.*half.*life.*?(\d+(?:\.\d+)?)\s*(h|hr|hours?)",
                 ]
 
                 # Extract data for each category
@@ -1313,7 +1352,7 @@ class DDIPKProcessor:
                     "absorption": absorption_patterns,
                     "distribution": distribution_patterns,
                     "metabolism": metabolism_patterns,
-                    "elimination": elimination_patterns
+                    "elimination": elimination_patterns,
                 }
 
                 for category, patterns in categories.items():
@@ -1327,12 +1366,9 @@ class DDIPKProcessor:
                                 if category not in summary:
                                     summary[category] = []
 
-                                summary[category].setdefault("values", []).append({
-                                    "value": value,
-                                    "unit": unit,
-                                    "pattern_matched": pattern,
-                                    "study_id": study_id
-                                })
+                                summary[category].setdefault("values", []).append(
+                                    {"value": value, "unit": unit, "pattern_matched": pattern, "study_id": study_id}
+                                )
                             except (ValueError, IndexError):
                                 continue
 
@@ -1342,7 +1378,7 @@ class DDIPKProcessor:
                     ("EC50", r"\bEC50\b[^\d]*(\d+(?:\.\d+)?)\s*([a-zA-Z/%µμ]+)?"),
                     ("IC50", r"\bIC50\b[^\d]*(\d+(?:\.\d+)?)\s*([a-zA-Z/%µμ]+)?"),
                     ("Emax", r"\bEmax\b[^\d]*(\d+(?:\.\d+)?)\s*([a-zA-Z/%µμ]+)?"),
-                    ("ED50", r"\bED50\b[^\d]*(\d+(?:\.\d+)?)\s*([a-zA-Z/%µμ]+)?")
+                    ("ED50", r"\bED50\b[^\d]*(\d+(?:\.\d+)?)\s*([a-zA-Z/%µμ]+)?"),
                 ]
 
                 for term, pattern in pd_patterns:
@@ -1356,15 +1392,11 @@ class DDIPKProcessor:
                         if key in pd_metric_seen:
                             continue
 
-                        context_window = content[max(0, match.start()-40):match.end()+40]
+                        context_window = content[max(0, match.start() - 40) : match.end() + 40]
                         context_clean = re.sub(r"\s+", " ", context_window).strip()
-                        pd_summary["metrics"].append({
-                            "term": term,
-                            "value": value,
-                            "unit": unit,
-                            "study_id": study_id,
-                            "context": context_clean
-                        })
+                        pd_summary["metrics"].append(
+                            {"term": term, "value": value, "unit": unit, "study_id": study_id, "context": context_clean}
+                        )
                         pd_metric_seen.add(key)
 
                 therapeutic_terms = ["therapeutic index", "therapeutic window"]
@@ -1373,20 +1405,22 @@ class DDIPKProcessor:
                         key = (study_id, term, match.start())
                         if key in therapeutic_seen:
                             continue
-                        snippet = content[max(0, match.start()-50):match.start()+120]
+                        snippet = content[max(0, match.start() - 50) : match.start() + 120]
                         snippet_clean = re.sub(r"\s+", " ", snippet).strip()
                         value_match = re.search(r"(\d+(?:\.\d+)?)", snippet_clean)
                         unit_match = re.search(r"(ng/ml|µg/ml|ug/ml|mg/l|%)", snippet_clean, re.IGNORECASE)
-                        pd_summary["therapeutic_windows"].append({
-                            "term": term,
-                            "value": float(value_match.group(1)) if value_match else None,
-                            "unit": unit_match.group(1) if unit_match else None,
-                            "study_id": study_id,
-                            "context": snippet_clean
-                        })
+                        pd_summary["therapeutic_windows"].append(
+                            {
+                                "term": term,
+                                "value": float(value_match.group(1)) if value_match else None,
+                                "unit": unit_match.group(1) if unit_match else None,
+                                "study_id": study_id,
+                                "context": snippet_clean,
+                            }
+                        )
                         therapeutic_seen.add(key)
 
-                dosage_entries: List[Dict[str, Any]] = []
+                dosage_entries: list[dict[str, Any]] = []
                 if self.pharma_processor:
                     try:
                         dosage_entries = self.pharma_processor.extract_dosage_information(content)
@@ -1396,15 +1430,17 @@ class DDIPKProcessor:
                 if re.search(r"dose[-\s]?response", content_lower) and study_id not in dose_response_recorded:
                     amounts = [entry["amount"] for entry in dosage_entries if entry.get("amount") is not None]
                     units = sorted({entry["unit"] for entry in dosage_entries if entry.get("unit")})
-                    pd_summary["dose_response_patterns"].append({
-                        "study_id": study_id,
-                        "dose_range": {
-                            "min": min(amounts) if amounts else None,
-                            "max": max(amounts) if amounts else None
-                        },
-                        "units": units,
-                        "notes": "Dose-response relationship described in study"
-                    })
+                    pd_summary["dose_response_patterns"].append(
+                        {
+                            "study_id": study_id,
+                            "dose_range": {
+                                "min": min(amounts) if amounts else None,
+                                "max": max(amounts) if amounts else None,
+                            },
+                            "units": units,
+                            "notes": "Dose-response relationship described in study",
+                        }
+                    )
                     dose_response_recorded.add(study_id)
 
             return summary
@@ -1413,7 +1449,7 @@ class DDIPKProcessor:
             logger.error(f"Error generating PK/PD summary: {e}")
             return {"error": str(e)}
 
-    def _identify_clinical_recommendations(self, papers: List[Dict], interaction_type: str) -> List[str]:
+    def _identify_clinical_recommendations(self, papers: list[dict], interaction_type: str) -> list[str]:
         """Identify clinical recommendations from papers."""
         papers = self._ensure_prepared_papers(papers)
         recommendations = []
@@ -1431,19 +1467,21 @@ class DDIPKProcessor:
                         recommendation_text = content[start:end].strip()
 
                         # Clean up the recommendation
-                        recommendation_text = re.sub(r'\s+', ' ', recommendation_text)
+                        recommendation_text = re.sub(r"\s+", " ", recommendation_text)
                         if len(recommendation_text) > 300:
                             recommendation_text = recommendation_text[:300] + "..."
 
                         # Wrap with research-only language to prevent advice leakage
                         safe_recommendation_text = self._make_recommendation_research_safe(recommendation_text)
 
-                        recommendations.append({
-                            "text": safe_recommendation_text,
-                            "action": match.group(1).lower(),
-                            "study_id": paper.get("metadata", {}).get("pmid", "unknown"),
-                            "recommendation_type": "research_recommendation"  # Flag indicating this is research data
-                        })
+                        recommendations.append(
+                            {
+                                "text": safe_recommendation_text,
+                                "action": match.group(1).lower(),
+                                "study_id": paper.get("metadata", {}).get("pmid", "unknown"),
+                                "recommendation_type": "research_recommendation",  # Flag indicating this is research data
+                            }
+                        )
 
             # Remove duplicates and group by action type
             unique_recommendations = []
@@ -1459,7 +1497,7 @@ class DDIPKProcessor:
             logger.error(f"Error identifying clinical recommendations: {e}")
             return []
 
-    def _format_interaction_report(self, analysis_results: Dict[str, Any]) -> str:
+    def _format_interaction_report(self, analysis_results: dict[str, Any]) -> str:
         """Format comprehensive interaction report."""
         try:
             primary_drug = analysis_results["primary_drug"]
@@ -1471,19 +1509,18 @@ class DDIPKProcessor:
                 f"## Summary",
                 f"Primary Drug: {primary_drug}",
                 f"Secondary Drugs Analyzed: {', '.join(secondary_drugs) if secondary_drugs else 'All identified interactions'}",
-                ""
+                "",
             ]
 
             # PK Parameters Summary
             pk_params = analysis_results.get("pk_parameters", {})
             if pk_params:
-                report_lines.extend([
-                    "## Pharmacokinetic Parameters",
-                    ""
-                ])
+                report_lines.extend(["## Pharmacokinetic Parameters", ""])
                 pk_source = analysis_results.get("pk_parameter_source")
                 if pk_source == "text_parsing":
-                    report_lines.append("- Note: PK metrics derived from text parsing heuristics; validate against study tables when available.")
+                    report_lines.append(
+                        "- Note: PK metrics derived from text parsing heuristics; validate against study tables when available."
+                    )
                 elif pk_source == "tabular_extraction":
                     report_lines.append("- Note: PK metrics normalized from structured tabular extractions.")
                 elif pk_source:
@@ -1512,7 +1549,7 @@ class DDIPKProcessor:
                     range_normalized = data.get("normalized_range") or []
                     range_raw = data.get("range_raw") or []
 
-                    def _format_range(values: List[float]) -> Optional[str]:
+                    def _format_range(values: list[float]) -> str | None:
                         if not values:
                             return None
                         if len(values) == 1:
@@ -1521,7 +1558,7 @@ class DDIPKProcessor:
 
                     range_text = _format_range(range_normalized) or _format_range(range_raw)
 
-                    stats_parts: List[str] = []
+                    stats_parts: list[str] = []
                     stats_parts.append(f"mean {mean_value:.2f}")
                     if range_text:
                         stats_parts.append(range_text)
@@ -1540,27 +1577,21 @@ class DDIPKProcessor:
             # CYP Interactions
             cyp_data = analysis_results.get("cyp_interactions", {})
             if cyp_data.get("enzymes_identified"):
-                report_lines.extend([
-                    "",
-                    "## CYP Enzyme Interactions",
-                    ""
-                ])
+                report_lines.extend(["", "## CYP Enzyme Interactions", ""])
                 enzymes = cyp_data["enzymes_identified"]
                 report_lines.append(f"- **Enzymes Involved**: {', '.join(enzymes)}")
 
                 for relationship_type in ["substrate", "inhibitor", "inducer"]:
                     relationships = cyp_data.get(f"{relationship_type}_relationships", [])
                     if relationships:
-                        report_lines.append(f"- **{relationship_type.title()} Relationships**: {len(relationships)} identified")
+                        report_lines.append(
+                            f"- **{relationship_type.title()} Relationships**: {len(relationships)} identified"
+                        )
 
             # AUC/Cmax Changes
             auc_cmax_changes = analysis_results.get("auc_cmax_changes", [])
             if auc_cmax_changes:
-                report_lines.extend([
-                    "",
-                    "## Pharmacokinetic Changes",
-                    ""
-                ])
+                report_lines.extend(["", "## Pharmacokinetic Changes", ""])
                 change_sources = sorted({change.get("source") for change in auc_cmax_changes if change.get("source")})
                 if change_sources:
                     human_sources = []
@@ -1580,7 +1611,7 @@ class DDIPKProcessor:
                     unit = (change.get("unit") or "").strip()
                     fold_change_ratio = change.get("fold_change_ratio")
 
-                    percent_value: Optional[float] = None
+                    percent_value: float | None = None
                     if unit == "%" and change_value is not None:
                         percent_value = change_value if direction == "increase" else -abs(change_value)
                     elif fold_change_ratio is not None and fold_change_ratio > 0:
@@ -1605,7 +1636,7 @@ class DDIPKProcessor:
                     interacting_drug = change.get("interacting_drug") or "unspecified partner"
                     drug_pair = f"{primary_drug} + {interacting_drug}"
 
-                    detail_segments: List[str] = []
+                    detail_segments: list[str] = []
                     ci = change.get("confidence_interval")
                     if ci and len(ci) == 2:
                         detail_segments.append(f"95% CI {ci[0]:.2f}–{ci[1]:.2f}")
@@ -1626,29 +1657,19 @@ class DDIPKProcessor:
 
                     detail_text = f"; {'; '.join(detail_segments)}" if detail_segments else ""
 
-                    report_lines.append(
-                        f"- {drug_pair}: {parameter} {direction} {magnitude_display}{detail_text}"
-                    )
+                    report_lines.append(f"- {drug_pair}: {parameter} {direction} {magnitude_display}{detail_text}")
 
             # Clinical Recommendations
             recommendations = analysis_results.get("clinical_recommendations", [])
             if recommendations:
-                report_lines.extend([
-                    "",
-                    "## Clinical Recommendations",
-                    ""
-                ])
+                report_lines.extend(["", "## Clinical Recommendations", ""])
                 for rec in recommendations[:5]:  # Top 5 recommendations
                     report_lines.append(f"- {rec['text']}")
 
             # Interaction Severities
             severities = analysis_results.get("interaction_severities", {})
             if severities:
-                report_lines.extend([
-                    "",
-                    "## Interaction Severity Assessment",
-                    ""
-                ])
+                report_lines.extend(["", "## Interaction Severity Assessment", ""])
                 for drug, severity in severities.items():
                     report_lines.append(f"- **{primary_drug} + {drug}**: {severity.title()}")
 
@@ -1684,18 +1705,18 @@ class DDIPKProcessor:
 
             # Replace second-person imperatives with research-only language
             imperative_replacements = {
-                r'\byou\s+should\b': 'literature reports suggest',
-                r'\byou\s+must\b': 'studies indicate the need to',
-                r'\byou\s+need\s+to\b': 'research suggests',
-                r'\bpatients?\s+should\b': 'literature recommends that patients',
-                r'\bpatients?\s+must\b': 'studies suggest patients may need to',
-                r'\bavoid\b': 'literature reports avoiding',
-                r'\bmonitor\b': 'studies recommend monitoring',
-                r'\badjust\b': 'research suggests adjusting',
-                r'\breduce\b': 'literature reports reducing',
-                r'\bincrease\b': 'studies suggest increasing',
-                r'\bdo\s+not\b': 'literature advises against',
-                r'\bdon\'t\b': 'research advises against',
+                r"\byou\s+should\b": "literature reports suggest",
+                r"\byou\s+must\b": "studies indicate the need to",
+                r"\byou\s+need\s+to\b": "research suggests",
+                r"\bpatients?\s+should\b": "literature recommends that patients",
+                r"\bpatients?\s+must\b": "studies suggest patients may need to",
+                r"\bavoid\b": "literature reports avoiding",
+                r"\bmonitor\b": "studies recommend monitoring",
+                r"\badjust\b": "research suggests adjusting",
+                r"\breduce\b": "literature reports reducing",
+                r"\bincrease\b": "studies suggest increasing",
+                r"\bdo\s+not\b": "literature advises against",
+                r"\bdon\'t\b": "research advises against",
             }
 
             for pattern, replacement in imperative_replacements.items():
@@ -1703,8 +1724,12 @@ class DDIPKProcessor:
 
             # Prefix with research context if not already present
             research_prefixes = [
-                'literature reports', 'studies suggest', 'research indicates',
-                'according to research', 'clinical studies report', 'published data suggest'
+                "literature reports",
+                "studies suggest",
+                "research indicates",
+                "according to research",
+                "clinical studies report",
+                "published data suggest",
             ]
 
             has_research_context = any(prefix in safe_text.lower() for prefix in research_prefixes)
@@ -1713,7 +1738,9 @@ class DDIPKProcessor:
                 safe_text = f"Literature reports suggest: {safe_text}"
 
             # Ensure it's clearly marked as research data, not clinical advice
-            if not safe_text.lower().startswith(('literature', 'studies', 'research', 'according to', 'clinical studies', 'published data')):
+            if not safe_text.lower().startswith(
+                ("literature", "studies", "research", "according to", "clinical studies", "published data")
+            ):
                 safe_text = f"Research findings indicate: {safe_text}"
 
             return safe_text

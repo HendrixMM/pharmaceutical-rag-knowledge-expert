@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # Verification Comments Implementation Summary (Round 2)
 
 This document summarizes the implementation of the four verification comments for the RAG Template for NVIDIA NemoRetriever project.
@@ -107,3 +113,11 @@ These changes improve the robustness, flexibility, and reliability of the pharma
 - Making guardrails configuration more flexible and robust
 - Ensuring consistent API contracts for helper methods
 - Maintaining backward compatibility with existing installations
+
+---
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

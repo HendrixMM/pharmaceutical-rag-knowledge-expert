@@ -2,36 +2,32 @@
 DIFC Legal RAG - Streamlit Web Interface
 Beautiful, user-friendly web interface for the DIFC Legal RAG system
 """
-
-import streamlit as st
-import sys
 import os
-import time
-from typing import Any, Dict
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
+from typing import Any
+from typing import Dict
+
 import plotly.express as px
-import plotly.graph_objects as go
+import streamlit as st
 from dotenv import load_dotenv
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
-from src.enhanced_rag_agent import EnhancedRAGAgent
 from src.enhanced_config import EnhancedRAGConfig
 from src.nvidia_embeddings import NVIDIAEmbeddings
 from src.pharmaceutical_query_adapter import build_enhanced_rag_agent
 
 # Page configuration
 st.set_page_config(
-    page_title="RAG Assistant - NVIDIA NemoRetriever",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="RAG Assistant - NVIDIA NemoRetriever", page_icon="🤖", layout="wide", initial_sidebar_state="expanded"
 )
 
 # Custom CSS for styling
-st.markdown("""
+st.markdown(
+    """
 <style>
     .main-header {
         background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%);
@@ -41,7 +37,7 @@ st.markdown("""
         color: white;
         text-align: center;
     }
-    
+
     .chat-message {
         padding: 1rem;
         border-radius: 10px;
@@ -49,17 +45,17 @@ st.markdown("""
         border-left: 4px solid #2a5298;
         background-color: #f8f9fa;
     }
-    
+
     .user-message {
         background-color: #e3f2fd;
         border-left-color: #1976d2;
     }
-    
+
     .assistant-message {
         background-color: #f3e5f5;
         border-left-color: #7b1fa2;
     }
-    
+
     .source-card {
         background-color: #fff3e0;
         border: 1px solid #ffb74d;
@@ -67,7 +63,7 @@ st.markdown("""
         padding: 0.8rem;
         margin: 0.5rem 0;
     }
-    
+
     .metric-card {
         background-color: #f5f5f5;
         padding: 1rem;
@@ -75,7 +71,7 @@ st.markdown("""
         text-align: center;
         margin: 0.5rem;
     }
-    
+
     .status-indicator {
         display: inline-block;
         width: 10px;
@@ -83,16 +79,19 @@ st.markdown("""
         border-radius: 50%;
         margin-right: 8px;
     }
-    
+
     .status-online {
         background-color: #4caf50;
     }
-    
+
     .status-offline {
         background-color: #f44336;
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
+
 
 @st.cache_resource
 def initialize_rag_agent():
@@ -115,10 +114,12 @@ def initialize_rag_agent():
         app_env = (os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "").strip().lower()
         if app_env in ("production", "prod"):
             strategy = (os.getenv("NEMO_EXTRACTION_STRATEGY") or "nemo").strip().lower()
-            enable_nemo = (os.getenv("ENABLE_NEMO_EXTRACTION") or "true").strip().lower() in ("true","1","yes","on")
-            strict = (os.getenv("NEMO_EXTRACTION_STRICT") or "true").strip().lower() in ("true","1","yes","on")
+            enable_nemo = (os.getenv("ENABLE_NEMO_EXTRACTION") or "true").strip().lower() in ("true", "1", "yes", "on")
+            strict = (os.getenv("NEMO_EXTRACTION_STRICT") or "true").strip().lower() in ("true", "1", "yes", "on")
             if (strategy != "nemo") or (not enable_nemo) or (not strict):
-                st.warning("Production requires NeMo strict: ENABLE_NEMO_EXTRACTION=true, NEMO_EXTRACTION_STRATEGY=nemo, NEMO_EXTRACTION_STRICT=true")
+                st.warning(
+                    "Production requires NeMo strict: ENABLE_NEMO_EXTRACTION=true, NEMO_EXTRACTION_STRATEGY=nemo, NEMO_EXTRACTION_STRICT=true"
+                )
 
         if not api_key:
             st.error("❌ NVIDIA_API_KEY not found in environment variables")
@@ -173,6 +174,7 @@ def get_shared_credit_tracker():
     """Return a shared PharmaceuticalCreditTracker instance (cached)."""
     try:
         from src.monitoring.credit_tracker import PharmaceuticalCreditTracker
+
         return PharmaceuticalCreditTracker()
     except Exception:
         return None
@@ -214,35 +216,43 @@ def fetch_credit_burn_snapshot():
     except Exception:
         return {}
 
+
 def display_header():
     """Display the main header"""
-    st.markdown("""
+    st.markdown(
+        """
     <div class="main-header">
         <h1>🤖 RAG Assistant - NVIDIA NemoRetriever</h1>
         <p>AI-Powered Document Q&A System with Advanced Retrieval</p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
+
 
 def display_sidebar(rag_agent):
     """Display the sidebar with system information"""
     st.sidebar.markdown("## 📊 System Status")
-    
+
     if rag_agent:
         # System status
-        st.sidebar.markdown("""
+        st.sidebar.markdown(
+            """
         <div style="display: flex; align-items: center;">
             <span class="status-indicator status-online"></span>
             <strong>System Online</strong>
         </div>
-        """, unsafe_allow_html=True)
-        
+        """,
+            unsafe_allow_html=True,
+        )
+
         # Get knowledge base stats
         stats = rag_agent.base_agent.get_knowledge_base_stats()
-        
+
         st.sidebar.markdown("### 📚 Knowledge Base")
-        st.sidebar.metric("Documents", stats.get('document_count', 0))
-        st.sidebar.metric("PDF Files", stats.get('pdf_files_available', 0))
-        
+        st.sidebar.metric("Documents", stats.get("document_count", 0))
+        st.sidebar.metric("PDF Files", stats.get("pdf_files_available", 0))
+
         # Model information
         st.sidebar.markdown("### 🤖 AI Models")
         st.sidebar.info("**Embedding**: nvidia/nv-embed-v1\n**LLM**: meta/llama-3.1-8b-instruct")
@@ -339,23 +349,35 @@ def display_sidebar(rag_agent):
         # Document types supported
         st.sidebar.markdown("### 📖 Document Types Supported")
         doc_types = [
-            "PDF Documents", "Research Papers", "Legal Documents",
-            "Technical Manuals", "Corporate Policies", "Academic Papers",
-            "Training Materials", "Compliance Documents", "Reports",
-            "Contracts", "Specifications", "User Guides"
+            "PDF Documents",
+            "Research Papers",
+            "Legal Documents",
+            "Technical Manuals",
+            "Corporate Policies",
+            "Academic Papers",
+            "Training Materials",
+            "Compliance Documents",
+            "Reports",
+            "Contracts",
+            "Specifications",
+            "User Guides",
         ]
 
         for doc_type in doc_types:
             st.sidebar.markdown(f"• {doc_type}")
-            
+
     else:
-        st.sidebar.markdown("""
+        st.sidebar.markdown(
+            """
         <div style="display: flex; align-items: center;">
             <span class="status-indicator status-offline"></span>
             <strong>System Offline</strong>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
         st.sidebar.error("RAG system not available")
+
 
 def display_chat_interface(rag_agent):
     """Display the main chat interface"""
@@ -367,12 +389,9 @@ def display_chat_interface(rag_agent):
         initial_message = "Hello! I'm your RAG Assistant powered by NVIDIA NemoRetriever. I can help you find information from your document collection."
         if rag_agent and rag_agent.config.should_enable_pubmed():
             initial_message += "\n\n🔬 **PubMed Integration Available**\nI can also search PubMed for the latest medical research. Try asking about recent studies or clinical trials!"
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": initial_message,
-            "sources": [],
-            "processing_time": 0
-        })
+        st.session_state.messages.append(
+            {"role": "assistant", "content": initial_message, "sources": [], "processing_time": 0}
+        )
 
     # Query mode selection (only if PubMed is enabled)
     if rag_agent and rag_agent.config.should_enable_pubmed():
@@ -382,7 +401,7 @@ def display_chat_interface(rag_agent):
                 "🔍 Search Mode:",
                 ["Auto (Hybrid)", "Local Documents Only", "PubMed Only"],
                 index=0,
-                help="Auto: Intelligently combines local documents with PubMed research\nPubMed Only: Searches only PubMed, optionally in strict mode (no fallback to local documents)"
+                help="Auto: Intelligently combines local documents with PubMed research\nPubMed Only: Searches only PubMed, optionally in strict mode (no fallback to local documents)",
             )
         with col2:
             if query_mode != "Local Documents Only":
@@ -391,7 +410,7 @@ def display_chat_interface(rag_agent):
                     min_value=1,
                     max_value=20,
                     value=5,
-                    help="Maximum number of PubMed articles to include"
+                    help="Maximum number of PubMed articles to include",
                 )
             else:
                 max_pubmed_results = 0
@@ -403,24 +422,30 @@ def display_chat_interface(rag_agent):
     else:
         query_mode = "Local Documents Only"
         max_pubmed_results = 0
-    
+
     # Display chat history
     for message in st.session_state.messages:
         if message["role"] == "user":
-            st.markdown(f"""
+            st.markdown(
+                f"""
             <div class="chat-message user-message">
                 <strong>👤 You:</strong><br>
                 {message["content"]}
             </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
         else:
-            st.markdown(f"""
+            st.markdown(
+                f"""
             <div class="chat-message assistant-message">
                 <strong>🤖 AI Assistant:</strong><br>
                 {message["content"]}
             </div>
-            """, unsafe_allow_html=True)
-            
+            """,
+                unsafe_allow_html=True,
+            )
+
             # Display sources if available
             if message.get("sources"):
                 display_sources(
@@ -428,20 +453,23 @@ def display_chat_interface(rag_agent):
                     message.get("processing_time", 0),
                     message.get("confidence_scores"),
                 )
-    
+
     # Chat input
     if prompt := st.chat_input("Ask a question about your documents..."):
         # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
-        
+
         # Display user message immediately
-        st.markdown(f"""
+        st.markdown(
+            f"""
         <div class="chat-message user-message">
             <strong>👤 You:</strong><br>
             {prompt}
         </div>
-        """, unsafe_allow_html=True)
-        
+        """,
+            unsafe_allow_html=True,
+        )
+
         if rag_agent:
             try:
                 # Show loading spinner with mode-specific text
@@ -456,14 +484,11 @@ def display_chat_interface(rag_agent):
                     # Choose the appropriate query method based on mode
                     if query_mode == "PubMed Only":
                         response_payload = rag_agent.ask_question_pubmed_only(
-                            prompt,
-                            max_external_results=max_pubmed_results
+                            prompt, max_external_results=max_pubmed_results
                         )
                     elif query_mode == "Auto (Hybrid)":
                         response_payload = rag_agent.ask_question_hybrid(
-                            prompt,
-                            k=5,
-                            max_external_results=max_pubmed_results
+                            prompt, k=5, max_external_results=max_pubmed_results
                         )
                     else:
                         response_payload = rag_agent.ask_question_safe_sync(prompt, k=5)
@@ -492,12 +517,14 @@ def display_chat_interface(rag_agent):
                         issues = [str(error)]
 
                     st.warning("⚠️ " + " ".join(issues))
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": "\n".join(issues),
-                        "sources": [],
-                        "processing_time": 0,
-                    })
+                    st.session_state.messages.append(
+                        {
+                            "role": "assistant",
+                            "content": "\n".join(issues),
+                            "sources": [],
+                            "processing_time": 0,
+                        }
+                    )
 
                     # Only show recommendations for guardrails-style errors
                     if isinstance(error, dict) and "recommendations" in error:
@@ -513,21 +540,26 @@ def display_chat_interface(rag_agent):
                 safety_warnings = response_payload.get("safety", {}).get("output_validation", {}).get("warnings")
 
                 # Add assistant response (answer already includes disclaimer when append_disclaimer_in_answer=True)
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": answer,
-                    "sources": sources,
-                    "processing_time": processing_time,
-                    "confidence_scores": confidence_scores,
-                })
+                st.session_state.messages.append(
+                    {
+                        "role": "assistant",
+                        "content": answer,
+                        "sources": sources,
+                        "processing_time": processing_time,
+                        "confidence_scores": confidence_scores,
+                    }
+                )
 
                 # Display assistant response
-                st.markdown(f"""
+                st.markdown(
+                    f"""
                 <div class="chat-message assistant-message">
                     <strong>🤖 AI Assistant:</strong><br>
                     {answer}
                 </div>
-                """, unsafe_allow_html=True)
+                """,
+                    unsafe_allow_html=True,
+                )
 
                 if safety_warnings:
                     st.warning("\n".join(safety_warnings))
@@ -537,16 +569,19 @@ def display_chat_interface(rag_agent):
 
             except Exception as e:
                 st.error(f"❌ Error processing your question: {str(e)}")
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": f"I apologize, but I encountered an error while processing your question: {str(e)}",
-                    "sources": [],
-                    "processing_time": 0
-                })
+                st.session_state.messages.append(
+                    {
+                        "role": "assistant",
+                        "content": f"I apologize, but I encountered an error while processing your question: {str(e)}",
+                        "sources": [],
+                        "processing_time": 0,
+                    }
+                )
 
         else:
             st.error("❌ RAG system not available. Please check the system status.")
             st.info("Try refreshing the page or contact support if the issue persists.")
+
 
 def _normalise_source_document(source: Any) -> Dict[str, Any]:
     """Return a unified dictionary describing the source document."""
@@ -573,16 +608,22 @@ def display_sources(source_documents, processing_time, confidence_scores=None):
 
     # Check if we have PubMed articles
     has_pubmed = any(
-        any(key in doc["metadata"] for key in ("pubmed_id", "pmid", "id")) or
-        doc["metadata"].get("source_type") == "pubmed"
+        any(key in doc["metadata"] for key in ("pubmed_id", "pmid", "id"))
+        or doc["metadata"].get("source_type") == "pubmed"
         for doc in normalised_docs
     )
-    local_docs = [doc for doc in normalised_docs if not any(
-        key in doc["metadata"] for key in ("pubmed_id", "pmid", "id")
-    ) and doc["metadata"].get("source_type") != "pubmed"]
-    pubmed_docs = [doc for doc in normalised_docs if any(
-        key in doc["metadata"] for key in ("pubmed_id", "pmid", "id")
-    ) or doc["metadata"].get("source_type") == "pubmed"]
+    local_docs = [
+        doc
+        for doc in normalised_docs
+        if not any(key in doc["metadata"] for key in ("pubmed_id", "pmid", "id"))
+        and doc["metadata"].get("source_type") != "pubmed"
+    ]
+    pubmed_docs = [
+        doc
+        for doc in normalised_docs
+        if any(key in doc["metadata"] for key in ("pubmed_id", "pmid", "id"))
+        or doc["metadata"].get("source_type") == "pubmed"
+    ]
 
     # Create a container for sources
     with st.container():
@@ -628,7 +669,8 @@ def display_sources(source_documents, processing_time, confidence_scores=None):
                     url = metadata.get("url", f"https://pubmed.ncbi.nlm.nih.gov/{pubmed_id}")
 
                     # PubMed article display
-                    st.markdown(f"""
+                    st.markdown(
+                        f"""
                     <div class="source-card" style="border-left-color: #2e7d32;">
                         <h4>🔬 {title}</h4>
                         <p><strong>Authors:</strong> {', '.join(authors[:3])}{' et al.' if len(authors) > 3 else ''}</p>
@@ -636,7 +678,9 @@ def display_sources(source_documents, processing_time, confidence_scores=None):
                         <p><strong>PubMed ID:</strong> {pubmed_id}</p>
                         <a href="{url}" target="_blank">View on PubMed →</a>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """,
+                        unsafe_allow_html=True,
+                    )
 
                     # Show abstract if available
                     abstract = metadata.get("abstract", "")
@@ -718,7 +762,7 @@ def display_sources(source_documents, processing_time, confidence_scores=None):
                                 x=pages,
                                 title="📄 Page Distribution of Local Sources",
                                 labels={"x": "Page Number", "y": "Number of Sources"},
-                                color_discrete_sequence=['#2a5298'],
+                                color_discrete_sequence=["#2a5298"],
                             )
                             st.plotly_chart(fig_bar, use_container_width=True)
                 else:
@@ -755,7 +799,7 @@ def display_sources(source_documents, processing_time, confidence_scores=None):
                             x=years,
                             title="📅 Publication Years",
                             labels={"x": "Year", "y": "Number of Articles"},
-                            color_discrete_sequence=['#2e7d32'],
+                            color_discrete_sequence=["#2e7d32"],
                         )
                         st.plotly_chart(fig_years, use_container_width=True)
 
@@ -845,7 +889,7 @@ def display_sources(source_documents, processing_time, confidence_scores=None):
                             x=pages,
                             title="📄 Page Distribution of Sources",
                             labels={"x": "Page Number", "y": "Number of Sources"},
-                            color_discrete_sequence=['#2a5298'],
+                            color_discrete_sequence=["#2a5298"],
                         )
                         st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -886,6 +930,7 @@ def display_sources(source_documents, processing_time, confidence_scores=None):
                     else:
                         st.info(f"No matches found for '{search_term}' in the source documents.")
 
+
 def display_document_stats(rag_agent):
     """Display detailed document statistics"""
     if not rag_agent:
@@ -899,13 +944,13 @@ def display_document_stats(rag_agent):
     # Overview metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("📄 Total Documents", stats.get('document_count', 0))
+        st.metric("📄 Total Documents", stats.get("document_count", 0))
     with col2:
-        st.metric("📁 PDF Files", stats.get('pdf_files_available', 0))
+        st.metric("📁 PDF Files", stats.get("pdf_files_available", 0))
     with col3:
-        st.metric("🔍 Searchable Chunks", stats.get('document_count', 0))
+        st.metric("🔍 Searchable Chunks", stats.get("document_count", 0))
     with col4:
-        st.metric("💾 Index Size", "Ready" if stats.get('index_exists') else "Not Found")
+        st.metric("💾 Index Size", "Ready" if stats.get("index_exists") else "Not Found")
 
     # Document types breakdown
     st.markdown("### 📖 Document Types & Use Cases")
@@ -921,7 +966,7 @@ def display_document_stats(rag_agent):
         "Contracts & Agreements": "📝",
         "Specifications": "🔍",
         "Academic Papers": "🎓",
-        "Reference Materials": "📚"
+        "Reference Materials": "📚",
     }
 
     cols = st.columns(3)
@@ -948,6 +993,7 @@ def display_document_stats(rag_agent):
         st.info("🚀 Average Query Time: 2-8 seconds")
         st.info("💾 Storage: Local FAISS Index")
 
+
 def main():
     """Main application function"""
     # Display header
@@ -969,11 +1015,12 @@ def main():
         with col1:
             # Chat interface
             display_chat_interface(rag_agent)
-    
+
     with col2:
         # Quick actions and tips
         st.markdown("### 💡 Quick Tips")
-        st.info("""
+        st.info(
+            """
         **Sample Questions:**
         • What is the main topic of the documents?
         • Summarize the key points
@@ -981,7 +1028,8 @@ def main():
         • How does [concept A] relate to [concept B]?
         • What are the benefits described?
         • Explain the process for [specific topic]
-        """)
+        """
+        )
 
         # Advanced features
         st.markdown("### 🛠️ Actions")
@@ -991,21 +1039,24 @@ def main():
             if st.session_state.messages:
                 chat_export = []
                 for msg in st.session_state.messages:
-                    chat_export.append({
-                        "timestamp": datetime.now().isoformat(),
-                        "role": msg["role"],
-                        "content": msg["content"],
-                        "sources_count": len(msg.get("sources", [])),
-                        "processing_time": msg.get("processing_time", 0)
-                    })
+                    chat_export.append(
+                        {
+                            "timestamp": datetime.now().isoformat(),
+                            "role": msg["role"],
+                            "content": msg["content"],
+                            "sources_count": len(msg.get("sources", [])),
+                            "processing_time": msg.get("processing_time", 0),
+                        }
+                    )
 
                 import json
+
                 export_data = json.dumps(chat_export, indent=2)
                 st.download_button(
                     label="💾 Download Chat History",
                     data=export_data,
                     file_name=f"difc_legal_chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                    mime="application/json"
+                    mime="application/json",
                 )
             else:
                 st.warning("No chat history to export")
@@ -1023,8 +1074,9 @@ def main():
         # Pharma capability checks
         if st.button("🧪 Run Pharma Benchmark"):
             try:
-                from src.enhanced_config import EnhancedRAGConfig
                 from src.clients.nemo_client_enhanced import EnhancedNeMoClient
+                from src.enhanced_config import EnhancedRAGConfig
+
                 cfg = EnhancedRAGConfig.from_env()
                 api_key = os.getenv("NVIDIA_API_KEY")
                 with st.spinner("Running pharmaceutical capability checks..."):
@@ -1048,13 +1100,15 @@ def main():
 
         # System information
         st.markdown("### ℹ️ About")
-        st.markdown("""
+        st.markdown(
+            """
         This AI assistant is powered by:
         - **NVIDIA** embedding models
         - **Meta LLaMA** language model
         - **FAISS** vector database
         - **1,869** legal document chunks
-        """)
+        """
+        )
 
         # Chat statistics
         if st.session_state.messages:
@@ -1072,6 +1126,7 @@ def main():
     with tab2:
         # Document statistics page
         display_document_stats(rag_agent)
+
 
 if __name__ == "__main__":
     main()

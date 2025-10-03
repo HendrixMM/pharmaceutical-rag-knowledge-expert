@@ -6,14 +6,13 @@ Focus areas:
 - Latency instrumentation in embed_texts
 - Safe division in CreditUsageTracker monthly usage percent
 """
-
 import os
-import time
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
 import pytest
 
-from src.nemo_retriever_client import NeMoClientWrapper, NeMoAPIResponse
+from src.nemo_retriever_client import NeMoAPIResponse
+from src.nemo_retriever_client import NeMoClientWrapper
 
 
 @pytest.mark.asyncio
@@ -63,11 +62,15 @@ async def test_wrapper_rerank_legacy_shape():
 
         async def fake_rerank_async(query, passages, model=None, top_n=None):
             # Mimic ClientResponse shape expected by wrapper
-            return type("CR", (), {
-                "success": True,
-                "data": {"reranked_passages": [{"text": passages[0], "score": 0.9, "index": 0}]},
-                "error": None
-            })()
+            return type(
+                "CR",
+                (),
+                {
+                    "success": True,
+                    "data": {"reranked_passages": [{"text": passages[0], "score": 0.9, "index": 0}]},
+                    "error": None,
+                },
+            )()
 
         wrapper._enhanced.rerank_passages_async = fake_rerank_async  # type: ignore[attr-defined]
 
@@ -80,17 +83,26 @@ async def test_wrapper_rerank_legacy_shape():
 
 def test_credit_usage_tracker_safe_division(monkeypatch):
     # Inject a dummy openai wrapper module to satisfy import-time dependency
-    import types, sys
-    dummy = types.ModuleType('src.clients.openai_wrapper')
+    import sys
+    import types
+
+    dummy = types.ModuleType("src.clients.openai_wrapper")
     dummy.OpenAIWrapper = object
-    class DummyCfg: pass
+
+    class DummyCfg:
+        pass
+
     dummy.NVIDIABuildConfig = DummyCfg
-    class DummyErr(Exception): pass
+
+    class DummyErr(Exception):
+        pass
+
     dummy.NVIDIABuildError = DummyErr
-    sys.modules['src.clients.openai_wrapper'] = dummy
-    sys.modules['.clients.openai_wrapper'] = dummy
+    sys.modules["src.clients.openai_wrapper"] = dummy
+    sys.modules[".clients.openai_wrapper"] = dummy
 
     from src.nvidia_build_client import CreditUsageTracker
+
     tracker = CreditUsageTracker(monthly_free_requests=0)
     # Simulate some prior usage
     tracker.requests_this_month = 5

@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # Updated Migration & Build Plan - PubMed Pharmaceutical Expert RAG Chatbot
 
 ## Current Codebase State Summary
@@ -171,3 +177,11 @@
 - **Estimated Total Timeline**: 20-25 development days
 - **Dependencies**: NVIDIA API access, GPU resources for optimal performance
 - **Risk Mitigation**: Comprehensive fallback systems ensure continuous operation
+
+---
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

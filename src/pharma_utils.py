@@ -17,15 +17,13 @@ Common Functions:
     normalize_text: Shared text normalization for consistent handling of Unicode,
         diacritics, and case across modules
 """
-
 from __future__ import annotations
 
 import os
 import re
 import unicodedata
-from typing import Any, Dict, List, Optional, Set, Union
 from dataclasses import dataclass
-
+from typing import Any
 
 # Module-level constants for PK filtering
 _PK_FILTERING_ENABLED = os.getenv("ENABLE_PK_FILTERING", "false").lower() == "true"
@@ -46,36 +44,68 @@ _SPECIES_KEYWORDS = {
 }
 
 _CLINICAL_STUDY_TAGS = {
-    "clinical trial", "randomized controlled trial", "controlled clinical trial",
-    "phase i", "phase ii", "phase iii", "phase iv", "rct", "clinical study",
-    "human study", "patient study", "clinical investigation"
+    "clinical trial",
+    "randomized controlled trial",
+    "controlled clinical trial",
+    "phase i",
+    "phase ii",
+    "phase iii",
+    "phase iv",
+    "rct",
+    "clinical study",
+    "human study",
+    "patient study",
+    "clinical investigation",
 }
 
 _NEGATION_TERMS = {
-    "in vitro", "cell culture", "cultured cells", "tissue culture",
-    "cell line", "isolated cells", "artificial"
+    "in vitro",
+    "cell culture",
+    "cultured cells",
+    "tissue culture",
+    "cell line",
+    "isolated cells",
+    "artificial",
 }
 
 # Drug suffix patterns for fast detection
 _DRUG_SUFFIXES = {
     "-azole",  # Antifungals
     "-statin",  # Lipid-lowering
-    "-pril",    # ACE inhibitors
+    "-pril",  # ACE inhibitors
     "-sartan",  # ARBs
-    "-vir",     # Antivirals
+    "-vir",  # Antivirals
     "-cillin",  # Penicillins
-    "-mycin",   # Macrolides
-    "-oxetine", # SSRIs
-    "-prazole", # PPIs
+    "-mycin",  # Macrolides
+    "-oxetine",  # SSRIs
+    "-prazole",  # PPIs
 }
 
 # Common drug names for lightweight checking
 _COMMON_DRUG_NAMES = {
-    "aspirin", "ibuprofen", "acetaminophen", "paracetamol", "warfarin",
-    "lisinopril", "metoprolol", "atorvastatin", "simvastatin", "amlodipine",
-    "metformin", "insulin", "glipizide", "sertraline", "escitalopram",
-    "losartan", "valsartan", "hydrochlorothiazide", "furosemide",
-    "omeprazole", "pantoprazole", "prednisone", "levothyroxine",
+    "aspirin",
+    "ibuprofen",
+    "acetaminophen",
+    "paracetamol",
+    "warfarin",
+    "lisinopril",
+    "metoprolol",
+    "atorvastatin",
+    "simvastatin",
+    "amlodipine",
+    "metformin",
+    "insulin",
+    "glipizide",
+    "sertraline",
+    "escitalopram",
+    "losartan",
+    "valsartan",
+    "hydrochlorothiazide",
+    "furosemide",
+    "omeprazole",
+    "pantoprazole",
+    "prednisone",
+    "levothyroxine",
 }
 
 
@@ -106,17 +136,14 @@ def normalize_text(text: str, *, remove_diacritics: bool = True, lowercase: bool
         return ""
 
     # First normalize Unicode form (NFKC for compatibility)
-    text = unicodedata.normalize('NFKC', text)
+    text = unicodedata.normalize("NFKC", text)
 
     # Remove diacritics if requested
     if remove_diacritics:
-        text = ''.join(
-            c for c in text
-            if not unicodedata.combining(c)
-        )
+        text = "".join(c for c in text if not unicodedata.combining(c))
 
     # Normalize whitespace
-    text = re.sub(r'\s+', ' ', text).strip()
+    text = re.sub(r"\s+", " ", text).strip()
 
     # Convert to lowercase if requested
     if lowercase:
@@ -125,7 +152,7 @@ def normalize_text(text: str, *, remove_diacritics: bool = True, lowercase: bool
     return text
 
 
-def _tokenize_species_string(text: str) -> Set[str]:
+def _tokenize_species_string(text: str) -> set[str]:
     """Normalize species strings by tokenizing on non-alphanumeric characters.
 
     Handles special cases like 'non-human' → 'nonhuman' and ensures consistent
@@ -149,12 +176,12 @@ def _tokenize_species_string(text: str) -> Set[str]:
         return set()
 
     # Handle 'non-human' as a special case
-    text = text.replace('non-human', 'nonhuman')
-    tokens = set(re.findall(r'\b[a-zA-Z]+\b', text.lower()))
+    text = text.replace("non-human", "nonhuman")
+    tokens = set(re.findall(r"\b[a-zA-Z]+\b", text.lower()))
 
     # Also add 'nonhuman' if 'non' and 'human' are both present
-    if 'non' in tokens and 'human' in tokens:
-        tokens.add('nonhuman')
+    if "non" in tokens and "human" in tokens:
+        tokens.add("nonhuman")
 
     return tokens
 
@@ -162,6 +189,7 @@ def _tokenize_species_string(text: str) -> Set[str]:
 @dataclass
 class CacheSizeConfig:
     """Configuration for cache size management."""
+
     max_size_mb: int = int(os.getenv("QUERY_ENGINE_MAX_CACHE_MB", "1000"))
     cleanup_threshold_mb: int = int(os.getenv("QUERY_ENGINE_CACHE_CLEANUP_THRESHOLD_MB", "900"))
     check_frequency: int = int(os.getenv("QUERY_ENGINE_CACHE_CHECK_FREQUENCY", "50"))
@@ -177,11 +205,8 @@ class DrugNameChecker:
 
     def __init__(self) -> None:
         # Compile regex patterns for performance
-        self.cyp_pattern = re.compile(r'\bCYP\d+[A-Z]*\b', re.IGNORECASE)
-        self.suffix_patterns = [
-            re.compile(r'\w+' + re.escape(suffix), re.IGNORECASE)
-            for suffix in _DRUG_SUFFIXES
-        ]
+        self.cyp_pattern = re.compile(r"\bCYP\d+[A-Z]*\b", re.IGNORECASE)
+        self.suffix_patterns = [re.compile(r"\w+" + re.escape(suffix), re.IGNORECASE) for suffix in _DRUG_SUFFIXES]
 
     def is_drug_like(self, text: str) -> bool:
         """Check if text contains drug-like terms.
@@ -204,13 +229,13 @@ class DrugNameChecker:
                 return True
 
         # Check common drug names
-        words = set(re.findall(r'\b\w+\b', text_lower))
+        words = set(re.findall(r"\b\w+\b", text_lower))
         if any(drug in words for drug in _COMMON_DRUG_NAMES):
             return True
 
         return False
 
-    def extract_drug_signals(self, text: str) -> Dict[str, Any]:
+    def extract_drug_signals(self, text: str) -> dict[str, Any]:
         """Extract drug-related signals from text.
 
         Args:
@@ -219,12 +244,7 @@ class DrugNameChecker:
         Returns:
             Dictionary with signal counts and detected terms
         """
-        signals = {
-            "cyp_enzymes": [],
-            "drug_suffix_matches": [],
-            "common_drug_names": [],
-            "signal_count": 0
-        }
+        signals = {"cyp_enzymes": [], "drug_suffix_matches": [], "common_drug_names": [], "signal_count": 0}
 
         # Find CYP enzymes
         cyp_matches = self.cyp_pattern.findall(text)
@@ -237,7 +257,7 @@ class DrugNameChecker:
         for suffix in _DRUG_SUFFIXES:
             if suffix in text_lower:
                 # Find words ending with this suffix
-                pattern = re.compile(r'\b\w+' + re.escape(suffix) + r'\b')
+                pattern = re.compile(r"\b\w+" + re.escape(suffix) + r"\b")
                 matches = pattern.findall(text)
                 if matches:
                     signals["drug_suffix_matches"].extend(matches)
@@ -246,7 +266,7 @@ class DrugNameChecker:
             signals["signal_count"] += len(set(signals["drug_suffix_matches"]))
 
         # Find common drug names
-        words = set(re.findall(r'\b\w+\b', text_lower))
+        words = set(re.findall(r"\b\w+\b", text_lower))
         found_drugs = [drug for drug in _COMMON_DRUG_NAMES if drug in words]
         if found_drugs:
             signals["common_drug_names"] = found_drugs
@@ -255,7 +275,7 @@ class DrugNameChecker:
         return signals
 
 
-def get_cache_dir_size_mb(cache_dir_path: Union[str, os.PathLike]) -> float:
+def get_cache_dir_size_mb(cache_dir_path: str | os.PathLike) -> float:
     """Calculate total size of cache directory in megabytes.
 
     Args:
@@ -278,8 +298,7 @@ def get_cache_dir_size_mb(cache_dir_path: Union[str, os.PathLike]) -> float:
     return total_size / (1024 * 1024)
 
 
-def cleanup_oldest_cache_files(cache_dir_path: Union[str, os.PathLike],
-                            target_size_mb: float) -> Dict[str, int]:
+def cleanup_oldest_cache_files(cache_dir_path: str | os.PathLike, target_size_mb: float) -> dict[str, int]:
     """Remove oldest cache files to meet size target.
 
     Args:
@@ -323,11 +342,7 @@ def cleanup_oldest_cache_files(cache_dir_path: Union[str, os.PathLike],
         except OSError:
             continue
 
-    return {
-        "files_removed": files_removed,
-        "bytes_freed": bytes_freed,
-        "final_size_mb": current_size / (1024 * 1024)
-    }
+    return {"files_removed": files_removed, "bytes_freed": bytes_freed, "final_size_mb": current_size / (1024 * 1024)}
 
 
 __all__ = [

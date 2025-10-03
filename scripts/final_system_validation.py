@@ -12,26 +12,30 @@ Comprehensive end-to-end validation of the pharmaceutical RAG system with:
 
 This script validates the entire system is ready for pharmaceutical research production use.
 """
-
-import os
-import sys
 import asyncio
 import json
-import time
 import logging
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, asdict
 import statistics
+import sys
+import time
+from dataclasses import asdict
+from dataclasses import dataclass
+from datetime import datetime
+from datetime import timedelta
+from pathlib import Path
+from typing import Any
+from typing import Dict
+from typing import List
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
+
 @dataclass
 class WorkflowValidationResult:
     """Result of pharmaceutical workflow validation."""
+
     workflow_name: str
     total_steps: int
     completed_steps: int
@@ -45,9 +49,11 @@ class WorkflowValidationResult:
     status: str  # "passed", "failed", "warning"
     timestamp: datetime
 
+
 @dataclass
 class SystemHealthMetrics:
     """Comprehensive system health metrics."""
+
     overall_health_score: float
     component_health: Dict[str, float]
     performance_metrics: Dict[str, float]
@@ -56,6 +62,7 @@ class SystemHealthMetrics:
     integration_status: Dict[str, bool]
     ngc_independence_verified: bool
     production_readiness_score: float
+
 
 class PharmaceuticalWorkflowValidator:
     """Comprehensive pharmaceutical workflow validation system."""
@@ -67,13 +74,13 @@ class PharmaceuticalWorkflowValidator:
 
         # Production readiness criteria
         self.production_criteria = {
-            "min_success_rate": 0.90,           # 90% minimum success rate
-            "max_response_time_ms": 2000,       # 2 second max response time
-            "min_accuracy_score": 0.92,         # 92% minimum accuracy
-            "min_safety_coverage": 0.95,        # 95% safety check coverage
-            "max_cost_per_query": 2.0,          # 2 credits max per query
-            "min_system_health": 0.85,          # 85% minimum system health
-            "ngc_independence_required": True    # NGC independence mandatory
+            "min_success_rate": 0.90,  # 90% minimum success rate
+            "max_response_time_ms": 2000,  # 2 second max response time
+            "min_accuracy_score": 0.92,  # 92% minimum accuracy
+            "min_safety_coverage": 0.95,  # 95% safety check coverage
+            "max_cost_per_query": 2.0,  # 2 credits max per query
+            "min_system_health": 0.85,  # 85% minimum system health
+            "ngc_independence_required": True,  # NGC independence mandatory
         }
 
     def _setup_logging(self) -> logging.Logger:
@@ -83,9 +90,7 @@ class PharmaceuticalWorkflowValidator:
 
         # Console handler with detailed formatting
         console_handler = logging.StreamHandler()
-        console_formatter = logging.Formatter(
-            '%(asctime)s [FINAL] %(levelname)s: %(message)s'
-        )
+        console_formatter = logging.Formatter("%(asctime)s [FINAL] %(levelname)s: %(message)s")
         console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
 
@@ -93,12 +98,8 @@ class PharmaceuticalWorkflowValidator:
         log_dir = self.project_root / "validation_logs"
         log_dir.mkdir(exist_ok=True)
 
-        file_handler = logging.FileHandler(
-            log_dir / f"final_validation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-        )
-        file_formatter = logging.Formatter(
-            '%(asctime)s [FINAL] %(levelname)s: %(message)s'
-        )
+        file_handler = logging.FileHandler(log_dir / f"final_validation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+        file_formatter = logging.Formatter("%(asctime)s [FINAL] %(levelname)s: %(message)s")
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
 
@@ -116,7 +117,7 @@ class PharmaceuticalWorkflowValidator:
             "Analyze contraindications",
             "Generate safety recommendations",
             "Trigger safety alerts if needed",
-            "Log safety assessment results"
+            "Log safety assessment results",
         ]
 
         completed_steps = 0
@@ -132,7 +133,6 @@ class PharmaceuticalWorkflowValidator:
 
             # Step 2: Process drug safety query
             self.logger.info("   Step 2: Process drug safety query")
-            safety_query = "What are the contraindications for warfarin in patients with active bleeding?"
 
             # Simulate enhanced query processing with pharmaceutical optimization
             query_start = time.time()
@@ -156,7 +156,9 @@ class PharmaceuticalWorkflowValidator:
 
             # Step 4: Contraindication analysis
             self.logger.info("   Step 4: Analyze contraindications")
-            contraindication_result = await self._simulate_contraindication_analysis("warfarin", ["active_bleeding", "pregnancy"])
+            contraindication_result = await self._simulate_contraindication_analysis(
+                "warfarin", ["active_bleeding", "pregnancy"]
+            )
 
             if contraindication_result["absolute_contraindications_found"]:
                 safety_checks_passed += 1
@@ -203,10 +205,12 @@ class PharmaceuticalWorkflowValidator:
                 performance_score=performance_score,
                 issues_detected=issues_detected,
                 status="passed" if success_rate >= 0.9 and not issues_detected else "warning",
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
 
-            self.logger.info(f"   ✅ Drug Safety Workflow: {success_rate:.1%} success, {workflow_duration:.2f}s, {cost_accumulator:.1f} credits")
+            self.logger.info(
+                f"   ✅ Drug Safety Workflow: {success_rate:.1%} success, {workflow_duration:.2f}s, {cost_accumulator:.1f} credits"
+            )
             return result
 
         except Exception as e:
@@ -224,7 +228,7 @@ class PharmaceuticalWorkflowValidator:
                 performance_score=0.0,
                 issues_detected=issues_detected + [str(e)],
                 status="failed",
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
 
     async def validate_clinical_research_workflow(self) -> WorkflowValidationResult:
@@ -239,7 +243,7 @@ class PharmaceuticalWorkflowValidator:
             "Apply pharmaceutical filters",
             "Rank and prioritize results",
             "Generate research summary",
-            "Validate clinical evidence quality"
+            "Validate clinical evidence quality",
         ]
 
         completed_steps = 0
@@ -255,12 +259,11 @@ class PharmaceuticalWorkflowValidator:
 
             # Step 2: Process clinical research query
             self.logger.info("   Step 2: Process clinical research query")
-            research_query = "Phase III clinical trial results for SGLT-2 inhibitors in cardiovascular outcomes"
 
             query_start = time.time()
             # Simulate optimized clinical research processing
             await asyncio.sleep(0.2)  # More complex processing for research
-            query_time = time.time() - query_start
+            time.time() - query_start
 
             cost_accumulator += 1.5  # Higher cost for comprehensive research
             completed_steps += 1
@@ -324,10 +327,12 @@ class PharmaceuticalWorkflowValidator:
                 performance_score=performance_score,
                 issues_detected=issues_detected,
                 status="passed" if success_rate >= 0.9 and len(issues_detected) < 2 else "warning",
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
 
-            self.logger.info(f"   ✅ Clinical Research Workflow: {success_rate:.1%} success, {workflow_duration:.2f}s, {cost_accumulator:.1f} credits")
+            self.logger.info(
+                f"   ✅ Clinical Research Workflow: {success_rate:.1%} success, {workflow_duration:.2f}s, {cost_accumulator:.1f} credits"
+            )
             return result
 
         except Exception as e:
@@ -345,7 +350,7 @@ class PharmaceuticalWorkflowValidator:
                 performance_score=0.0,
                 issues_detected=issues_detected + [str(e)],
                 status="failed",
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
 
     async def validate_cost_optimization_workflow(self) -> WorkflowValidationResult:
@@ -360,7 +365,7 @@ class PharmaceuticalWorkflowValidator:
             "Implement result caching",
             "Optimize query routing",
             "Monitor free tier utilization",
-            "Generate cost efficiency report"
+            "Generate cost efficiency report",
         ]
 
         completed_steps = 0
@@ -444,10 +449,12 @@ class PharmaceuticalWorkflowValidator:
                 performance_score=performance_score,
                 issues_detected=issues_detected,
                 status="passed" if success_rate >= 0.9 and cost_accumulator <= 2.0 else "warning",
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
 
-            self.logger.info(f"   ✅ Cost Optimization Workflow: {success_rate:.1%} success, {workflow_duration:.2f}s, {cost_accumulator:.1f} credits")
+            self.logger.info(
+                f"   ✅ Cost Optimization Workflow: {success_rate:.1%} success, {workflow_duration:.2f}s, {cost_accumulator:.1f} credits"
+            )
             return result
 
         except Exception as e:
@@ -465,7 +472,7 @@ class PharmaceuticalWorkflowValidator:
                 performance_score=0.0,
                 issues_detected=issues_detected + [str(e)],
                 status="failed",
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
 
     async def validate_ngc_independence_workflow(self) -> WorkflowValidationResult:
@@ -480,7 +487,7 @@ class PharmaceuticalWorkflowValidator:
             "Check fallback mechanisms",
             "Verify zero NGC dependencies",
             "Test feature flag system",
-            "Validate March 2026 readiness"
+            "Validate March 2026 readiness",
         ]
 
         completed_steps = 0
@@ -571,7 +578,7 @@ class PharmaceuticalWorkflowValidator:
                 performance_score=performance_score,
                 issues_detected=issues_detected,
                 status="passed" if success_rate >= 0.95 and len(issues_detected) == 0 else "failed",
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
 
             self.logger.info(f"   ✅ NGC Independence Workflow: {success_rate:.1%} success, {workflow_duration:.2f}s")
@@ -592,7 +599,7 @@ class PharmaceuticalWorkflowValidator:
                 performance_score=0.0,
                 issues_detected=issues_detected + [str(e)],
                 status="failed",
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
 
     # Simulation helper methods
@@ -603,7 +610,7 @@ class PharmaceuticalWorkflowValidator:
             "primary_drug": primary_drug,
             "interacting_drugs": interacting_drugs,
             "critical_interactions_detected": len(interacting_drugs) > 0,
-            "interaction_severity": "critical" if "heparin" in interacting_drugs else "moderate"
+            "interaction_severity": "critical" if "heparin" in interacting_drugs else "moderate",
         }
 
     async def _simulate_contraindication_analysis(self, drug: str, conditions: List[str]) -> Dict[str, Any]:
@@ -613,7 +620,7 @@ class PharmaceuticalWorkflowValidator:
             "drug": drug,
             "conditions": conditions,
             "absolute_contraindications_found": "active_bleeding" in conditions or "pregnancy" in conditions,
-            "relative_contraindications_found": len(conditions) > 1
+            "relative_contraindications_found": len(conditions) > 1,
         }
 
     async def _simulate_safety_recommendations(self) -> List[str]:
@@ -623,7 +630,7 @@ class PharmaceuticalWorkflowValidator:
             "Monitor INR levels closely",
             "Avoid concurrent use with antiplatelet agents",
             "Consider alternative anticoagulation if bleeding risk high",
-            "Patient education on bleeding precautions"
+            "Patient education on bleeding precautions",
         ]
 
     async def _simulate_safety_alert_system(self) -> Dict[str, Any]:
@@ -632,17 +639,13 @@ class PharmaceuticalWorkflowValidator:
         return {
             "alerts_triggered": True,
             "alert_types": ["critical_interaction", "contraindication_warning"],
-            "notification_sent": True
+            "notification_sent": True,
         }
 
     async def _simulate_optimized_literature_search(self) -> Dict[str, Any]:
         """Simulate optimized literature search."""
         await asyncio.sleep(0.15)
-        return {
-            "relevant_papers_found": 25,
-            "search_precision": 0.85,
-            "search_recall": 0.78
-        }
+        return {"relevant_papers_found": 25, "search_precision": 0.85, "search_recall": 0.78}
 
     async def _simulate_pharmaceutical_filtering(self) -> Dict[str, Any]:
         """Simulate pharmaceutical filtering."""
@@ -650,152 +653,88 @@ class PharmaceuticalWorkflowValidator:
         return {
             "pharmaceutical_relevance_score": 0.92,
             "clinical_relevance_score": 0.88,
-            "evidence_quality_score": 0.85
+            "evidence_quality_score": 0.85,
         }
 
     async def _simulate_result_ranking(self) -> Dict[str, Any]:
         """Simulate result ranking."""
         await asyncio.sleep(0.05)
-        return {
-            "ranking_quality": 0.87,
-            "ranking_algorithm": "pharmaceutical_optimized",
-            "confidence_score": 0.91
-        }
+        return {"ranking_quality": 0.87, "ranking_algorithm": "pharmaceutical_optimized", "confidence_score": 0.91}
 
     async def _simulate_research_summary_generation(self) -> Dict[str, Any]:
         """Simulate research summary generation."""
         await asyncio.sleep(0.12)
-        return {
-            "summary_quality": 0.89,
-            "key_findings_extracted": 8,
-            "clinical_implications_identified": 5
-        }
+        return {"summary_quality": 0.89, "key_findings_extracted": 8, "clinical_implications_identified": 5}
 
     async def _simulate_evidence_quality_validation(self) -> Dict[str, Any]:
         """Simulate evidence quality validation."""
         await asyncio.sleep(0.06)
-        return {
-            "high_quality_evidence_percentage": 0.78,
-            "systematic_reviews_found": 3,
-            "randomized_trials_found": 12
-        }
+        return {"high_quality_evidence_percentage": 0.78, "systematic_reviews_found": 3, "randomized_trials_found": 12}
 
     async def _simulate_usage_pattern_analysis(self) -> Dict[str, Any]:
         """Simulate usage pattern analysis."""
         await asyncio.sleep(0.03)
-        return {
-            "optimization_opportunities": 5,
-            "current_efficiency": 0.72,
-            "potential_improvement": 0.35
-        }
+        return {"optimization_opportunities": 5, "current_efficiency": 0.72, "potential_improvement": 0.35}
 
     async def _simulate_batch_optimization(self) -> Dict[str, Any]:
         """Simulate batch processing optimization."""
         await asyncio.sleep(0.08)
-        return {
-            "efficiency_improvement": 0.42,
-            "batch_sizes_optimized": True,
-            "cost_reduction": 0.28
-        }
+        return {"efficiency_improvement": 0.42, "batch_sizes_optimized": True, "cost_reduction": 0.28}
 
     async def _simulate_result_caching(self) -> Dict[str, Any]:
         """Simulate result caching."""
         await asyncio.sleep(0.02)
-        return {
-            "cache_hit_rate": 0.73,
-            "cache_efficiency": 0.85,
-            "api_call_reduction": 0.45
-        }
+        return {"cache_hit_rate": 0.73, "cache_efficiency": 0.85, "api_call_reduction": 0.45}
 
     async def _simulate_query_routing_optimization(self) -> Dict[str, Any]:
         """Simulate query routing optimization."""
         await asyncio.sleep(0.04)
-        return {
-            "routing_efficiency": 0.88,
-            "optimal_routes_found": True,
-            "load_distribution": 0.91
-        }
+        return {"routing_efficiency": 0.88, "optimal_routes_found": True, "load_distribution": 0.91}
 
     async def _simulate_free_tier_monitoring(self) -> Dict[str, Any]:
         """Simulate free tier monitoring."""
         await asyncio.sleep(0.01)
-        return {
-            "utilization_rate": 0.92,
-            "monthly_capacity": 9200,
-            "remaining_credits": 800
-        }
+        return {"utilization_rate": 0.92, "monthly_capacity": 9200, "remaining_credits": 800}
 
     async def _simulate_cost_efficiency_reporting(self) -> Dict[str, Any]:
         """Simulate cost efficiency reporting."""
         await asyncio.sleep(0.03)
-        return {
-            "efficiency_score": 0.86,
-            "cost_per_query": 0.85,
-            "optimization_success": True
-        }
+        return {"efficiency_score": 0.86, "cost_per_query": 0.85, "optimization_success": True}
 
     async def _simulate_openai_sdk_verification(self) -> Dict[str, Any]:
         """Simulate OpenAI SDK verification."""
         await asyncio.sleep(0.05)
-        return {
-            "integration_status": "operational",
-            "sdk_version": "1.5.0",
-            "compatibility": "full"
-        }
+        return {"integration_status": "operational", "sdk_version": "1.5.0", "compatibility": "full"}
 
     async def _simulate_nvidia_build_connectivity(self) -> Dict[str, Any]:
         """Simulate NVIDIA Build connectivity test."""
         await asyncio.sleep(0.08)
-        return {
-            "connection_status": "healthy",
-            "endpoint": "integrate.api.nvidia.com",
-            "response_time_ms": 250
-        }
+        return {"connection_status": "healthy", "endpoint": "integrate.api.nvidia.com", "response_time_ms": 250}
 
     async def _simulate_cloud_first_routing(self) -> Dict[str, Any]:
         """Simulate cloud-first routing validation."""
         await asyncio.sleep(0.03)
-        return {
-            "cloud_first_active": True,
-            "primary_endpoint": "nvidia_build",
-            "fallback_configured": True
-        }
+        return {"cloud_first_active": True, "primary_endpoint": "nvidia_build", "fallback_configured": True}
 
     async def _simulate_fallback_testing(self) -> Dict[str, Any]:
         """Simulate fallback mechanism testing."""
         await asyncio.sleep(0.06)
-        return {
-            "fallback_operational": True,
-            "failover_time_ms": 150,
-            "fallback_success_rate": 0.98
-        }
+        return {"fallback_operational": True, "failover_time_ms": 150, "fallback_success_rate": 0.98}
 
     async def _simulate_ngc_dependency_scan(self) -> Dict[str, Any]:
         """Simulate NGC dependency scan."""
         await asyncio.sleep(0.04)
-        return {
-            "ngc_dependencies_found": 0,
-            "scan_coverage": 1.0,
-            "independence_verified": True
-        }
+        return {"ngc_dependencies_found": 0, "scan_coverage": 1.0, "independence_verified": True}
 
     async def _simulate_feature_flag_testing(self) -> Dict[str, Any]:
         """Simulate feature flag system testing."""
         await asyncio.sleep(0.02)
-        return {
-            "feature_flags_operational": True,
-            "active_flags": 8,
-            "configuration_valid": True
-        }
+        return {"feature_flags_operational": True, "active_flags": 8, "configuration_valid": True}
 
     async def _simulate_2026_readiness_check(self) -> Dict[str, Any]:
         """Simulate March 2026 readiness validation."""
         await asyncio.sleep(0.03)
-        return {
-            "march_2026_ready": True,
-            "ngc_deprecation_immune": True,
-            "architecture_future_proof": True
-        }
+        return {"march_2026_ready": True, "ngc_deprecation_immune": True, "architecture_future_proof": True}
 
     async def assess_system_health(self) -> SystemHealthMetrics:
         """Assess overall system health and readiness."""
@@ -809,7 +748,7 @@ class PharmaceuticalWorkflowValidator:
             "safety_monitoring": 0.94,
             "cost_optimization": 0.91,
             "pharmaceutical_accuracy": 0.96,
-            "ngc_independence": 1.0
+            "ngc_independence": 1.0,
         }
 
         # Performance metrics
@@ -826,7 +765,7 @@ class PharmaceuticalWorkflowValidator:
             "average_success_rate": avg_success_rate,
             "average_cost_per_workflow": avg_cost,
             "system_uptime": 0.999,
-            "api_availability": 0.995
+            "api_availability": 0.995,
         }
 
         # Safety metrics
@@ -835,7 +774,7 @@ class PharmaceuticalWorkflowValidator:
             "safety_checks_passed": total_safety_checks,
             "drug_interaction_coverage": 0.96,
             "contraindication_detection": 0.94,
-            "safety_alert_response_time": 0.5
+            "safety_alert_response_time": 0.5,
         }
 
         # Cost metrics
@@ -843,7 +782,7 @@ class PharmaceuticalWorkflowValidator:
             "average_cost_per_query": avg_cost / max(1, len(self.workflow_results)),
             "free_tier_utilization": 0.92,
             "cost_optimization_effectiveness": 0.85,
-            "monthly_cost_projection": avg_cost * 3000  # Rough monthly estimate
+            "monthly_cost_projection": avg_cost * 3000,  # Rough monthly estimate
         }
 
         # Integration status
@@ -853,20 +792,23 @@ class PharmaceuticalWorkflowValidator:
             "safety_system_integration": True,
             "cost_monitoring_integration": True,
             "batch_processing_integration": True,
-            "pharmaceutical_optimization": True
+            "pharmaceutical_optimization": True,
         }
 
         # Calculate overall health score
         overall_health_score = statistics.mean(list(component_health.values()))
 
         # Production readiness score
-        production_readiness_score = min(100, (
-            overall_health_score * 0.3 +
-            avg_success_rate * 0.25 +
-            avg_accuracy * 0.2 +
-            (0.95 if avg_cost < 2.0 else 0.7) * 0.15 +
-            (0.95 if avg_response_time < 2.0 else 0.7) * 0.1
-        ))
+        production_readiness_score = min(
+            100,
+            (
+                overall_health_score * 0.3
+                + avg_success_rate * 0.25
+                + avg_accuracy * 0.2
+                + (0.95 if avg_cost < 2.0 else 0.7) * 0.15
+                + (0.95 if avg_response_time < 2.0 else 0.7) * 0.1
+            ),
+        )
 
         return SystemHealthMetrics(
             overall_health_score=overall_health_score,
@@ -876,7 +818,7 @@ class PharmaceuticalWorkflowValidator:
             cost_metrics=cost_metrics,
             integration_status=integration_status,
             ngc_independence_verified=True,
-            production_readiness_score=production_readiness_score
+            production_readiness_score=production_readiness_score,
         )
 
     def generate_production_certification(self, health_metrics: SystemHealthMetrics) -> Dict[str, Any]:
@@ -884,13 +826,23 @@ class PharmaceuticalWorkflowValidator:
 
         # Check all production criteria
         criteria_met = {
-            "min_success_rate": all(r.success_rate >= self.production_criteria["min_success_rate"] for r in self.workflow_results),
-            "max_response_time": all(r.total_duration_seconds * 1000 <= self.production_criteria["max_response_time_ms"] for r in self.workflow_results),
-            "min_accuracy_score": all(r.accuracy_score >= self.production_criteria["min_accuracy_score"] for r in self.workflow_results),
-            "min_safety_coverage": sum(r.safety_checks_passed for r in self.workflow_results) >= len(self.workflow_results) * self.production_criteria["min_safety_coverage"],
-            "max_cost_per_query": all(r.cost_credits <= self.production_criteria["max_cost_per_query"] for r in self.workflow_results),
+            "min_success_rate": all(
+                r.success_rate >= self.production_criteria["min_success_rate"] for r in self.workflow_results
+            ),
+            "max_response_time": all(
+                r.total_duration_seconds * 1000 <= self.production_criteria["max_response_time_ms"]
+                for r in self.workflow_results
+            ),
+            "min_accuracy_score": all(
+                r.accuracy_score >= self.production_criteria["min_accuracy_score"] for r in self.workflow_results
+            ),
+            "min_safety_coverage": sum(r.safety_checks_passed for r in self.workflow_results)
+            >= len(self.workflow_results) * self.production_criteria["min_safety_coverage"],
+            "max_cost_per_query": all(
+                r.cost_credits <= self.production_criteria["max_cost_per_query"] for r in self.workflow_results
+            ),
             "min_system_health": health_metrics.overall_health_score >= self.production_criteria["min_system_health"],
-            "ngc_independence": health_metrics.ngc_independence_verified
+            "ngc_independence": health_metrics.ngc_independence_verified,
         }
 
         all_criteria_met = all(criteria_met.values())
@@ -908,10 +860,10 @@ class PharmaceuticalWorkflowValidator:
                 "Cloud-first architecture operational",
                 "Pharmaceutical optimization validated",
                 "Cost optimization maximizes free tier",
-                "Safety monitoring system operational"
+                "Safety monitoring system operational",
             ],
             "recommendations": self._generate_production_recommendations(criteria_met),
-            "next_validation_due": (datetime.now() + timedelta(days=30)).isoformat()
+            "next_validation_due": (datetime.now() + timedelta(days=30)).isoformat(),
         }
 
     def _generate_production_recommendations(self, criteria_met: Dict[str, bool]) -> List[str]:
@@ -937,7 +889,7 @@ class PharmaceuticalWorkflowValidator:
             recommendations = [
                 "System meets all production criteria",
                 "Continue monitoring and optimization",
-                "Plan for scaling and capacity management"
+                "Plan for scaling and capacity management",
             ]
 
         return recommendations
@@ -956,7 +908,7 @@ class PharmaceuticalWorkflowValidator:
             await self.validate_drug_safety_workflow(),
             await self.validate_clinical_research_workflow(),
             await self.validate_cost_optimization_workflow(),
-            await self.validate_ngc_independence_workflow()
+            await self.validate_ngc_independence_workflow(),
         ]
 
         # Assess system health
@@ -971,9 +923,7 @@ class PharmaceuticalWorkflowValidator:
         final_report = {
             "validation_timestamp": datetime.now().isoformat(),
             "validation_duration_seconds": validation_duration,
-            "workflow_validations": {
-                result.workflow_name: asdict(result) for result in self.workflow_results
-            },
+            "workflow_validations": {result.workflow_name: asdict(result) for result in self.workflow_results},
             "system_health": asdict(health_metrics),
             "production_certification": certification,
             "validation_summary": {
@@ -982,8 +932,8 @@ class PharmaceuticalWorkflowValidator:
                 "average_success_rate": statistics.mean(r.success_rate for r in self.workflow_results),
                 "total_cost": sum(r.cost_credits for r in self.workflow_results),
                 "average_accuracy": statistics.mean(r.accuracy_score for r in self.workflow_results),
-                "total_safety_checks": sum(r.safety_checks_passed for r in self.workflow_results)
-            }
+                "total_safety_checks": sum(r.safety_checks_passed for r in self.workflow_results),
+            },
         }
 
         # Save validation report
@@ -1001,12 +951,12 @@ class PharmaceuticalWorkflowValidator:
 
         report_file = reports_dir / f"final_validation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-        with open(report_file, 'w') as f:
+        with open(report_file, "w") as f:
             json.dump(report, f, indent=2, default=str)
 
         # Also save as latest report
         latest_file = reports_dir / "latest_final_validation.json"
-        with open(latest_file, 'w') as f:
+        with open(latest_file, "w") as f:
             json.dump(report, f, indent=2, default=str)
 
         self.logger.info(f"💾 Final validation report saved to {report_file}")
@@ -1033,17 +983,17 @@ class PharmaceuticalWorkflowValidator:
         print(f"🩺 Overall Health Score: {report['system_health']['overall_health_score']:.1%}")
 
         print("\n🎯 KEY ACHIEVEMENTS:")
-        for achievement in certification['key_achievements']:
+        for achievement in certification["key_achievements"]:
             print(f"   ✅ {achievement}")
 
-        if certification['recommendations']:
+        if certification["recommendations"]:
             print("\n📋 RECOMMENDATIONS:")
-            for rec in certification['recommendations']:
+            for rec in certification["recommendations"]:
                 print(f"   📌 {rec}")
 
         print("\n" + "=" * 80)
 
-        if certification['certification_level'] == "PRODUCTION READY":
+        if certification["certification_level"] == "PRODUCTION READY":
             print("🚀 SYSTEM IS READY FOR PHARMACEUTICAL RESEARCH PRODUCTION USE")
         else:
             print("⚠️  SYSTEM NEEDS REVIEW BEFORE PRODUCTION DEPLOYMENT")

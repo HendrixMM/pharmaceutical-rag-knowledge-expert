@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # Implementation Summary
 
 This document summarizes the implementation of the verification comments for the RAG Template for NVIDIA NemoRetriever project.
@@ -64,3 +70,11 @@ These changes improve the robustness and accuracy of the pharmaceutical analysis
 1. **Dependency Compatibility**: Ensures all packages work together without conflicts
 2. **Filtering Accuracy**: Ensures only relevant drug interactions are reported when specific secondary drugs are requested
 3. **Drug Name Handling**: Improves matching of drug names by handling brand/generic synonyms and case variations
+
+---
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

@@ -1,3 +1,9 @@
+---
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+---
+
 # EasyAPI PubMed Scraper - Best Practices & Optimization Guide
 
 ## **Comprehensive Query Optimization for Pharmaceutical Research**
@@ -915,3 +921,11 @@ By implementing these strategies, your pharmaceutical RAG system will deliver hi
 **Integration Target**: EasyAPI PubMed Search Scraper
 **Compliance**: NCBI E-utilities Guidelines
 **Focus**: Pharmaceutical Research Optimization
+
+---
+
+Last Updated: 2025-10-03
+Owner: Docs
+Review Cadence: Quarterly
+
+---

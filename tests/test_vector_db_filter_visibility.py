@@ -3,14 +3,11 @@
 Verifies that the search_with_info method and internal _similarity_search_with_pharmaceutical_filters_with_info
 method properly track and report which filters are ignored and why.
 """
+from unittest.mock import Mock
+from unittest.mock import patch
 
-import pytest
-from unittest.mock import Mock, patch
-from typing import Dict, Any, List
-
-from src.vector_database import VectorDatabase
-from src.pharma_utils import _PK_FILTERING_ENABLED
 from src.nvidia_embeddings import NVIDIAEmbeddings
+from src.vector_database import VectorDatabase
 
 
 class TestVectorDBFilterVisibility:
@@ -24,7 +21,7 @@ class TestVectorDBFilterVisibility:
         db.vectorstore = Mock()
         db.vectorstore.similarity_search.return_value = [
             Mock(page_content="doc1", metadata={}),
-            Mock(page_content="doc2", metadata={})
+            Mock(page_content="doc2", metadata={}),
         ]
         db._pharma_metadata_enabled = True
 
@@ -43,15 +40,10 @@ class TestVectorDBFilterVisibility:
         mock_embeddings = Mock(spec=NVIDIAEmbeddings)
         db = VectorDatabase(embeddings=mock_embeddings, db_path="./test_db")
         db.vectorstore = Mock()
-        db.vectorstore.similarity_search.return_value = [
-            Mock(page_content="doc1", metadata={})
-        ]
+        db.vectorstore.similarity_search.return_value = [Mock(page_content="doc1", metadata={})]
         db._pharma_metadata_enabled = False
 
-        filters = {
-            "drug_names": ["aspirin"],
-            "species_preference": "human"
-        }
+        filters = {"drug_names": ["aspirin"], "species_preference": "human"}
 
         # Execute
         results, info = db.search_with_info("test query", k=2, filters=filters)
@@ -63,7 +55,10 @@ class TestVectorDBFilterVisibility:
         assert info["ignored_filters"][0]["filter"] == "drug_names"
         assert "Pharmaceutical metadata not enabled" in info["ignored_filters"][0]["reason"]
         assert "warning" in info
-        assert info["warning"] == "Pharmaceutical filters provided but metadata extraction is disabled. Filters will be ignored."
+        assert (
+            info["warning"]
+            == "Pharmaceutical filters provided but metadata extraction is disabled. Filters will be ignored."
+        )
 
     def test_search_with_info_pk_filtering_disabled(self):
         """Test search_with_info when PK filtering is disabled."""
@@ -78,13 +73,10 @@ class TestVectorDBFilterVisibility:
         ]
         db._pharma_metadata_enabled = True
 
-        filters = {
-            "drug_names": ["aspirin"],
-            "pharmacokinetics": True
-        }
+        filters = {"drug_names": ["aspirin"], "pharmacokinetics": True}
 
         # Execute with PK filtering disabled
-        with patch('src.pharma_utils._PK_FILTERING_ENABLED', False):
+        with patch("src.pharma_utils._PK_FILTERING_ENABLED", False):
             results, info = db.search_with_info("test query", k=2, filters=filters)
 
         # Verify
@@ -116,10 +108,7 @@ class TestVectorDBFilterVisibility:
         db.vectorstore.similarity_search.return_value = [mock_doc1, mock_doc2]
         db._pharma_metadata_enabled = True
 
-        filters = {
-            "drug_names": ["aspirin"],
-            "species_preference": "human"
-        }
+        filters = {"drug_names": ["aspirin"], "species_preference": "human"}
 
         # Execute
         results, info = db.search_with_info("test query", k=2, filters=filters)
@@ -139,15 +128,10 @@ class TestVectorDBFilterVisibility:
         db.vectorstore.similarity_search.return_value = []
         db._pharma_metadata_enabled = False
 
-        filters = {
-            "drug_names": ["aspirin"],
-            "therapeutic_areas": ["pain"]
-        }
+        filters = {"drug_names": ["aspirin"], "therapeutic_areas": ["pain"]}
 
         # Execute
-        results, info = db._similarity_search_with_pharmaceutical_filters_with_info(
-            "test query", k=2, filters=filters
-        )
+        results, info = db._similarity_search_with_pharmaceutical_filters_with_info("test query", k=2, filters=filters)
 
         # Verify
         assert results == []
@@ -179,14 +163,10 @@ class TestVectorDBFilterVisibility:
         db.vectorstore.similarity_search.return_value = [mock_doc1, mock_doc2]
         db._pharma_metadata_enabled = True
 
-        filters = {
-            "drug_names": ["aspirin"]
-        }
+        filters = {"drug_names": ["aspirin"]}
 
         # Execute
-        results, info = db._similarity_search_with_pharmaceutical_filters_with_info(
-            "test query", k=2, filters=filters
-        )
+        results, info = db._similarity_search_with_pharmaceutical_filters_with_info("test query", k=2, filters=filters)
 
         # Verify filter stats
         assert "filter_stats" in info
@@ -216,7 +196,7 @@ class TestVectorDBFilterVisibility:
             ignored_filters.add((key, reason))
 
         # Execute
-        with patch.object(db, '_document_matches_pharma_filters_with_info', return_value=True):
+        with patch.object(db, "_document_matches_pharma_filters_with_info", return_value=True):
             results = db._apply_pharmaceutical_filters_with_info(
                 documents, filters, ignored_filters, track_ignored_filter
             )
@@ -238,10 +218,9 @@ class TestVectorDBFilterVisibility:
             ignored_filters.add((key, reason))
 
         # Execute with PK filtering disabled
-        with patch('src.pharma_utils._PK_FILTERING_ENABLED', False):
+        with patch("src.pharma_utils._PK_FILTERING_ENABLED", False):
             result = db._document_matches_pharma_filters_with_info(
-                metadata, filters, ignored_filters=ignored_filters,
-                track_ignored_filter=track_ignored_filter
+                metadata, filters, ignored_filters=ignored_filters, track_ignored_filter=track_ignored_filter
             )
 
         # Verify PK filter is tracked as ignored

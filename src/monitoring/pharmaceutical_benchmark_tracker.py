@@ -4,14 +4,16 @@ Pharmaceutical Benchmark Tracker
 Tracks benchmark performance metrics and integrates with PharmaceuticalCostAnalyzer.
 Monitors accuracy, cost efficiency, latency, and regression detection.
 """
-
+import json
 import logging
 import uuid
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-import json
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -33,36 +35,29 @@ class BenchmarkMetrics:
     def to_dict(self) -> Dict[str, Any]:
         """Convert metrics to dictionary."""
         return {
-            "accuracy_by_category": {k: sum(v)/len(v) if v else 0 for k, v in self.accuracy_by_category.items()},
-            "cost_by_category": {k: sum(v)/len(v) if v else 0 for k, v in self.cost_by_category.items()},
-            "cost_by_query_type": {k: sum(v)/len(v) if v else 0 for k, v in self.cost_by_query_type.items()},
-            "latency_by_category": {k: sum(v)/len(v) if v else 0 for k, v in self.latency_by_category.items()},
-            "tokens_by_category": {k: int(sum(v)/len(v)) if v else 0 for k, v in self.tokens_by_category.items()},
+            "accuracy_by_category": {k: sum(v) / len(v) if v else 0 for k, v in self.accuracy_by_category.items()},
+            "cost_by_category": {k: sum(v) / len(v) if v else 0 for k, v in self.cost_by_category.items()},
+            "cost_by_query_type": {k: sum(v) / len(v) if v else 0 for k, v in self.cost_by_query_type.items()},
+            "latency_by_category": {k: sum(v) / len(v) if v else 0 for k, v in self.latency_by_category.items()},
+            "tokens_by_category": {k: int(sum(v) / len(v)) if v else 0 for k, v in self.tokens_by_category.items()},
             "regression_flags": self.regression_flags,
             "total_queries": self.total_queries,
             "successful_queries": self.successful_queries,
             "failed_queries": self.failed_queries,
-            "success_rate": self.successful_queries / self.total_queries if self.total_queries > 0 else 0
+            "success_rate": self.successful_queries / self.total_queries if self.total_queries > 0 else 0,
         }
 
 
 class RegressionDetector:
     """Detects performance regressions in benchmarks."""
 
-    def __init__(
-        self,
-        accuracy_threshold: float = 0.05,
-        cost_threshold: float = 0.20,
-        latency_threshold: float = 0.50
-    ):
+    def __init__(self, accuracy_threshold: float = 0.05, cost_threshold: float = 0.20, latency_threshold: float = 0.50):
         self.accuracy_threshold = accuracy_threshold
         self.cost_threshold = cost_threshold
         self.latency_threshold = latency_threshold
 
     def detect_regression(
-        self,
-        current_metrics: Dict[str, float],
-        baseline_metrics: Dict[str, float]
+        self, current_metrics: Dict[str, float], baseline_metrics: Dict[str, float]
     ) -> List[Dict[str, Any]]:
         """Detect regressions by comparing current metrics to baseline."""
         regressions = []
@@ -71,14 +66,16 @@ class RegressionDetector:
         if "accuracy" in current_metrics and "accuracy" in baseline_metrics:
             accuracy_drop = baseline_metrics["accuracy"] - current_metrics["accuracy"]
             if accuracy_drop > self.accuracy_threshold:
-                regressions.append({
-                    "type": "accuracy_regression",
-                    "severity": "high",
-                    "baseline": baseline_metrics["accuracy"],
-                    "current": current_metrics["accuracy"],
-                    "drop_percent": accuracy_drop * 100,
-                    "threshold": self.accuracy_threshold * 100
-                })
+                regressions.append(
+                    {
+                        "type": "accuracy_regression",
+                        "severity": "high",
+                        "baseline": baseline_metrics["accuracy"],
+                        "current": current_metrics["accuracy"],
+                        "drop_percent": accuracy_drop * 100,
+                        "threshold": self.accuracy_threshold * 100,
+                    }
+                )
 
         # Check cost regression
         if "cost_per_query" in current_metrics and "cost_per_query" in baseline_metrics:
@@ -89,14 +86,16 @@ class RegressionDetector:
             if baseline_cost > 0:
                 cost_increase = (current_cost - baseline_cost) / baseline_cost
                 if cost_increase > self.cost_threshold:
-                    regressions.append({
-                        "type": "cost_regression",
-                        "severity": "medium",
-                        "baseline": baseline_cost,
-                        "current": current_cost,
-                        "increase_percent": cost_increase * 100,
-                        "threshold": self.cost_threshold * 100
-                    })
+                    regressions.append(
+                        {
+                            "type": "cost_regression",
+                            "severity": "medium",
+                            "baseline": baseline_cost,
+                            "current": current_cost,
+                            "increase_percent": cost_increase * 100,
+                            "threshold": self.cost_threshold * 100,
+                        }
+                    )
             # If baseline is 0, skip percentage check (can't measure % increase from free tier)
 
         # Check latency regression
@@ -108,14 +107,16 @@ class RegressionDetector:
             if baseline_latency > 0:
                 latency_increase = (current_latency - baseline_latency) / baseline_latency
                 if latency_increase > self.latency_threshold:
-                    regressions.append({
-                        "type": "latency_regression",
-                        "severity": "medium",
-                        "baseline": baseline_latency,
-                        "current": current_latency,
-                        "increase_percent": latency_increase * 100,
-                        "threshold": self.latency_threshold * 100
-                    })
+                    regressions.append(
+                        {
+                            "type": "latency_regression",
+                            "severity": "medium",
+                            "baseline": baseline_latency,
+                            "current": current_latency,
+                            "increase_percent": latency_increase * 100,
+                            "threshold": self.latency_threshold * 100,
+                        }
+                    )
             # If baseline is 0, skip percentage check
 
         return regressions
@@ -131,11 +132,7 @@ class PharmaceuticalBenchmarkTracker:
     - BenchmarkRunner for results aggregation
     """
 
-    def __init__(
-        self,
-        cost_analyzer: Optional[Any] = None,
-        baseline_path: Optional[str] = None
-    ):
+    def __init__(self, cost_analyzer: Optional[Any] = None, baseline_path: Optional[str] = None):
         self.cost_analyzer = cost_analyzer
         self.baseline_path = Path(baseline_path) if baseline_path else None
         self.metrics = BenchmarkMetrics()
@@ -155,7 +152,7 @@ class PharmaceuticalBenchmarkTracker:
     def load_baseline(self) -> None:
         """Load baseline metrics from file."""
         try:
-            with open(self.baseline_path, 'r') as f:
+            with open(self.baseline_path) as f:
                 self.baseline_metrics = json.load(f)
             logger.info(f"Loaded baseline metrics from {self.baseline_path}")
         except Exception as e:
@@ -173,7 +170,7 @@ class PharmaceuticalBenchmarkTracker:
         endpoint: Optional[str] = None,
         run_id: Optional[str] = None,
         idempotency_key: Optional[str] = None,
-        estimated_tokens: Optional[int] = None
+        estimated_tokens: Optional[int] = None,
     ) -> None:
         """Track individual query result."""
         self.metrics.total_queries += 1
@@ -213,10 +210,18 @@ class PharmaceuticalBenchmarkTracker:
                 # Infer cost tier: any non-zero credits treated as infrastructure; zero as free tier
                 cost_tier = "infrastructure" if (cost or 0) > 0 else "free_tier"
                 # Prefer provided estimated_tokens; otherwise heuristic from latency
-                est_tokens = int(estimated_tokens) if isinstance(estimated_tokens, (int, float)) and int(estimated_tokens) > 0 else max(1, int((latency_ms or 0) / 2))
+                est_tokens = (
+                    int(estimated_tokens)
+                    if isinstance(estimated_tokens, (int, float)) and int(estimated_tokens) > 0
+                    else max(1, int((latency_ms or 0) / 2))
+                )
 
                 # Tag for downstream analysis to identify tracker-forwarded events
-                endpoint_tag = f"endpoint:{endpoint}" if endpoint else ("endpoint:cloud" if (cost or 0) > 0 else "endpoint:self_hosted")
+                endpoint_tag = (
+                    f"endpoint:{endpoint}"
+                    if endpoint
+                    else ("endpoint:cloud" if (cost or 0) > 0 else "endpoint:self_hosted")
+                )
                 tags = [
                     "benchmark",
                     category,
@@ -234,7 +239,7 @@ class PharmaceuticalBenchmarkTracker:
                     cost_tier=cost_tier,
                     estimated_tokens=est_tokens,
                     project_id=(self.project_id or "benchmark_run"),
-                    tags=tags
+                    tags=tags,
                 )
             except Exception as e:
                 # Don't let cost recording break metric tracking
@@ -274,15 +279,11 @@ class PharmaceuticalBenchmarkTracker:
                 return {}
             # Prefer canonical if present; otherwise map from average_* keys
             # Cost key can appear as average_cost_per_query (dataset) or average_credits_per_query (runtime)
-            cost_value = (
-                b.get("cost_per_query",
-                      b.get("average_credits_per_query",
-                            b.get("average_cost_per_query", 0)))
-            )
+            cost_value = b.get("cost_per_query", b.get("average_credits_per_query", b.get("average_cost_per_query", 0)))
             return {
                 "accuracy": float(b.get("accuracy", b.get("average_accuracy", 0)) or 0),
                 "cost_per_query": float(cost_value or 0),
-                "latency_ms": float(b.get("latency_ms", b.get("average_latency_ms", 0)) or 0)
+                "latency_ms": float(b.get("latency_ms", b.get("average_latency_ms", 0)) or 0),
             }
 
         # Handle dual-endpoint results (mode="both")
@@ -306,12 +307,10 @@ class PharmaceuticalBenchmarkTracker:
                     cloud_current = {
                         "accuracy": cloud_metrics.get("average_accuracy", 0),
                         "cost_per_query": cloud_metrics.get("average_credits_per_query", 0),
-                        "latency_ms": cloud_metrics.get("average_latency_ms", 0)
+                        "latency_ms": cloud_metrics.get("average_latency_ms", 0),
                     }
                     cloud_baseline = _normalize_baseline_keys(baseline["cloud"])
-                    cloud_regressions = self.regression_detector.detect_regression(
-                        cloud_current, cloud_baseline
-                    )
+                    cloud_regressions = self.regression_detector.detect_regression(cloud_current, cloud_baseline)
                     for regression in cloud_regressions:
                         regression["category"] = category
                         regression["endpoint"] = "cloud"
@@ -324,12 +323,10 @@ class PharmaceuticalBenchmarkTracker:
                     sh_current = {
                         "accuracy": sh_metrics.get("average_accuracy", 0),
                         "cost_per_query": sh_metrics.get("average_credits_per_query", 0),
-                        "latency_ms": sh_metrics.get("average_latency_ms", 0)
+                        "latency_ms": sh_metrics.get("average_latency_ms", 0),
                     }
                     sh_baseline = _normalize_baseline_keys(baseline["self_hosted"])
-                    sh_regressions = self.regression_detector.detect_regression(
-                        sh_current, sh_baseline
-                    )
+                    sh_regressions = self.regression_detector.detect_regression(sh_current, sh_baseline)
                     for regression in sh_regressions:
                         regression["category"] = category
                         regression["endpoint"] = "self_hosted"
@@ -345,7 +342,7 @@ class PharmaceuticalBenchmarkTracker:
                 current = {
                     "accuracy": metrics.get("average_accuracy", 0),
                     "cost_per_query": metrics.get("average_credits_per_query", 0),
-                    "latency_ms": metrics.get("average_latency_ms", 0)
+                    "latency_ms": metrics.get("average_latency_ms", 0),
                 }
                 baseline = self.baseline_metrics.get(category, {})
 
@@ -412,16 +409,13 @@ class PharmaceuticalBenchmarkTracker:
                 summary["cost_efficiency"][category] = {
                     "avg_cost": round(avg_cost, 2),
                     "avg_accuracy": round(avg_accuracy, 3),
-                    "avg_tokens": int(sum(tokens)/len(tokens)) if tokens else 0,
-                    "efficiency_score": round(efficiency, 4)
+                    "avg_tokens": int(sum(tokens) / len(tokens)) if tokens else 0,
+                    "efficiency_score": round(efficiency, 4),
                 }
 
         return summary
 
-    def check_performance_targets(
-        self,
-        targets: Dict[str, Dict[str, float]]
-    ) -> Dict[str, bool]:
+    def check_performance_targets(self, targets: Dict[str, Dict[str, float]]) -> Dict[str, bool]:
         """Check if performance meets targets."""
         results = {}
 
@@ -431,7 +425,9 @@ class PharmaceuticalBenchmarkTracker:
                 continue
 
             # Check accuracy target
-            avg_accuracy = sum(self.metrics.accuracy_by_category[category]) / len(self.metrics.accuracy_by_category[category])
+            avg_accuracy = sum(self.metrics.accuracy_by_category[category]) / len(
+                self.metrics.accuracy_by_category[category]
+            )
             accuracy_met = avg_accuracy >= category_targets.get("accuracy", 0.8)
 
             # Check cost target if available
@@ -453,10 +449,10 @@ class PharmaceuticalBenchmarkTracker:
             "timestamp": datetime.now().isoformat(),
             "run_id": self.current_run_id,
             "summary": self.get_metrics_summary(),
-            "regression_flags": self.metrics.regression_flags
+            "regression_flags": self.metrics.regression_flags,
         }
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(metrics_export, f, indent=2)
 
         logger.info(f"Exported metrics to {output_path}")

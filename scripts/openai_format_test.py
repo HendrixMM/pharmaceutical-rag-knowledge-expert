@@ -7,7 +7,6 @@ for NVIDIA Build platform integration.
 Usage:
   python scripts/openai_format_test.py
 """
-
 import os
 import sys
 from pathlib import Path
@@ -20,6 +19,7 @@ for p in (ROOT,):
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     print("Warning: python-dotenv not installed. Using environment variables directly.")
@@ -31,6 +31,7 @@ except ImportError:
     print("Install with: pip install openai")
     sys.exit(1)
 
+
 def test_embedding_with_openai_format():
     """Test embedding using OpenAI format with NVIDIA Build."""
     print("🧪 Testing embedding with OpenAI format...")
@@ -41,14 +42,10 @@ def test_embedding_with_openai_format():
         return False
 
     try:
-        client = OpenAI(
-            api_key=api_key,
-            base_url="https://integrate.api.nvidia.com/v1"
-        )
+        client = OpenAI(api_key=api_key, base_url="https://integrate.api.nvidia.com/v1")
 
         response = client.embeddings.create(
-            input=["Test pharmaceutical research applications"],
-            model="nvidia/nv-embed-v1"
+            input=["Test pharmaceutical research applications"], model="nvidia/nv-embed-v1"
         )
 
         print("✅ Embedding successful!")
@@ -60,6 +57,7 @@ def test_embedding_with_openai_format():
         print(f"❌ Embedding failed: {str(e)}")
         return False
 
+
 def test_chat_with_openai_format():
     """Test chat completions using OpenAI format."""
     print("\n🧪 Testing chat completions with OpenAI format...")
@@ -70,18 +68,13 @@ def test_chat_with_openai_format():
         return False
 
     try:
-        client = OpenAI(
-            api_key=api_key,
-            base_url="https://integrate.api.nvidia.com/v1"
-        )
+        client = OpenAI(api_key=api_key, base_url="https://integrate.api.nvidia.com/v1")
 
         response = client.chat.completions.create(
             model="meta/llama-3.1-8b-instruct",
-            messages=[
-                {"role": "user", "content": "What are pharmaceutical drug interactions? Answer in 2 sentences."}
-            ],
+            messages=[{"role": "user", "content": "What are pharmaceutical drug interactions? Answer in 2 sentences."}],
             max_tokens=100,
-            temperature=0.1
+            temperature=0.1,
         )
 
         print("✅ Chat completion successful!")
@@ -92,6 +85,7 @@ def test_chat_with_openai_format():
     except Exception as e:
         print(f"❌ Chat completion failed: {str(e)}")
         return False
+
 
 def main():
     print("NVIDIA Build Platform - OpenAI Format Compatibility Test")
@@ -123,6 +117,7 @@ def main():
         print("🔧 Contact NVIDIA support with this test output")
 
     return 0 if (embedding_success or chat_success) else 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

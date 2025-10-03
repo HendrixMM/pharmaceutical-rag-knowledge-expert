@@ -1,14 +1,14 @@
 """Meta-summary generation and comparative analysis engine for pharmaceutical research."""
-
 from __future__ import annotations
 
 import logging
 import math
 import re
 import statistics
-from typing import Any, Dict, List, Optional, Set, Tuple
-from collections import defaultdict, Counter
+from collections import Counter
+from collections import defaultdict
 from dataclasses import dataclass
+from typing import Any
 
 try:
     from .pharmaceutical_processor import PharmaceuticalProcessor
@@ -31,47 +31,67 @@ logger = logging.getLogger(__name__)
 @dataclass
 class KeyFinding:
     """Structured representation of a key finding from a paper."""
+
     paper_id: str
     finding: str
     evidence_level: str
     confidence: float
-    drug_entities: List[str]
-    pk_parameters: Dict[str, Any]
+    drug_entities: list[str]
+    pk_parameters: dict[str, Any]
     study_type: str
 
 
 class BulletPoint(BaseModel):
     """Structured representation of a summary bullet point."""
+
     text: str = Field(..., description="The bullet point text")
     finding_type: str = Field(default="general", description="Type of finding (key, comparative, gap)")
-    confidence_score: Optional[float] = Field(default=None, description="Confidence score for this bullet point")
-    source_count: Optional[int] = Field(default=None, description="Number of sources supporting this point")
+    confidence_score: float | None = Field(default=None, description="Confidence score for this bullet point")
+    source_count: int | None = Field(default=None, description="Number of sources supporting this point")
 
 
 class ComparativeAnalysis(BaseModel):
     """Structured representation of comparative analysis results."""
-    convergent_findings: List[Dict[str, Any]] = Field(default_factory=list, description="Findings that converge across papers")
-    divergent_findings: List[Dict[str, Any]] = Field(default_factory=list, description="Findings that diverge across papers")
-    dose_response_patterns: List[Dict[str, Any]] = Field(default_factory=list, description="Identified dose-response patterns")
-    population_differences: List[Dict[str, Any]] = Field(default_factory=list, description="Population-specific differences")
-    methodological_variations: List[Dict[str, Any]] = Field(default_factory=list, description="Methodological variations across studies")
-    sample_size_comparison: Dict[str, Any] = Field(default_factory=dict, description="Sample size comparison statistics")
-    contradictions: List[Dict[str, Any]] = Field(default_factory=list, description="Identified contradictions")
+
+    convergent_findings: list[dict[str, Any]] = Field(
+        default_factory=list, description="Findings that converge across papers"
+    )
+    divergent_findings: list[dict[str, Any]] = Field(
+        default_factory=list, description="Findings that diverge across papers"
+    )
+    dose_response_patterns: list[dict[str, Any]] = Field(
+        default_factory=list, description="Identified dose-response patterns"
+    )
+    population_differences: list[dict[str, Any]] = Field(
+        default_factory=list, description="Population-specific differences"
+    )
+    methodological_variations: list[dict[str, Any]] = Field(
+        default_factory=list, description="Methodological variations across studies"
+    )
+    sample_size_comparison: dict[str, Any] = Field(
+        default_factory=dict, description="Sample size comparison statistics"
+    )
+    contradictions: list[dict[str, Any]] = Field(default_factory=list, description="Identified contradictions")
 
 
 class MetaSummary(BaseModel):
     """Structured representation of a meta-summary with comprehensive analysis."""
+
     query: str = Field(..., description="Original query that generated this summary")
     total_papers: int = Field(..., description="Total number of papers analyzed")
-    key_findings: List[Dict[str, Any]] = Field(default_factory=list, description="Key findings extracted from papers")
-    bullet_points: List[str] = Field(default_factory=list, description="Summary bullet points")
-    comparative_analysis: ComparativeAnalysis = Field(default_factory=ComparativeAnalysis, description="Comparative analysis results")
-    evidence_synthesis: Dict[str, Any] = Field(default_factory=dict, description="Evidence level synthesis")
-    confidence_scores: Dict[str, float] = Field(default_factory=dict, description="Confidence scores for various aspects")
-    research_gaps: List[str] = Field(default_factory=list, description="Identified research gaps")
-    citations: List[str] = Field(default_factory=list, description="Formatted citations")
-    summary_statistics: Dict[str, Any] = Field(default_factory=dict, description="Summary statistics")
-    error: Optional[str] = Field(default=None, description="Error message if generation failed")
+    key_findings: list[dict[str, Any]] = Field(default_factory=list, description="Key findings extracted from papers")
+    bullet_points: list[str] = Field(default_factory=list, description="Summary bullet points")
+    comparative_analysis: ComparativeAnalysis = Field(
+        default_factory=ComparativeAnalysis, description="Comparative analysis results"
+    )
+    evidence_synthesis: dict[str, Any] = Field(default_factory=dict, description="Evidence level synthesis")
+    confidence_scores: dict[str, float] = Field(
+        default_factory=dict, description="Confidence scores for various aspects"
+    )
+    research_gaps: list[str] = Field(default_factory=list, description="Identified research gaps")
+    citations: list[str] = Field(default_factory=list, description="Formatted citations")
+    summary_statistics: dict[str, Any] = Field(default_factory=dict, description="Summary statistics")
+    error: str | None = Field(default=None, description="Error message if generation failed")
 
 
 class BulletGenerationStrategy:
@@ -83,7 +103,7 @@ class BulletGenerationStrategy:
         min_points: int = 3,
         include_bullet_glyph: bool = False,
         normalization_enabled: bool = True,
-        similarity_threshold: float = 0.75
+        similarity_threshold: float = 0.75,
     ):
         """Initialize the bullet generation strategy.
 
@@ -101,17 +121,14 @@ class BulletGenerationStrategy:
         self.similarity_threshold = similarity_threshold
 
         # State for deduplication
-        self.normalized_texts: List[str] = []
-        self.normalized_signatures: List[Set[str]] = []
+        self.normalized_texts: list[str] = []
+        self.normalized_signatures: list[set[str]] = []
 
     def generate_bullets(
-        self,
-        key_findings: List[Any],
-        comparative_analysis: Dict[str, Any],
-        research_gaps: List[str]
-    ) -> List[str]:
+        self, key_findings: list[Any], comparative_analysis: dict[str, Any], research_gaps: list[str]
+    ) -> list[str]:
         """Generate bullet points using unified strategy."""
-        bullet_points: List[str] = []
+        bullet_points: list[str] = []
 
         # Reset state
         self.normalized_texts = []
@@ -128,9 +145,9 @@ class BulletGenerationStrategy:
             gap_candidates = self._build_gap_candidates(research_gaps)
 
             # Process candidates with priority ordering
-            supplemental_candidates: List[str] = []
+            supplemental_candidates: list[str] = []
 
-            def reserve_category(candidates: List[str]) -> None:
+            def reserve_category(candidates: list[str]) -> None:
                 if not candidates:
                     return
                 if len(bullet_points) >= self.max_points:
@@ -140,7 +157,7 @@ class BulletGenerationStrategy:
                 added = False
                 for idx, candidate in enumerate(candidates):
                     if self._try_add_point(candidate, bullet_points):
-                        supplemental_candidates.extend(candidates[idx + 1:])
+                        supplemental_candidates.extend(candidates[idx + 1 :])
                         added = True
                         break
                 if not added:
@@ -163,7 +180,7 @@ class BulletGenerationStrategy:
 
             # Truncate to max_points if needed
             if len(bullet_points) > self.max_points:
-                bullet_points = bullet_points[:self.max_points]
+                bullet_points = bullet_points[: self.max_points]
 
             return bullet_points
 
@@ -171,7 +188,7 @@ class BulletGenerationStrategy:
             logger.error(f"Error in unified bullet generation strategy: {e}")
             return [f"{self.bullet_prefix}Error generating summary points: {str(e)}"]
 
-    def _normalize_tokens(self, text: str) -> Set[str]:
+    def _normalize_tokens(self, text: str) -> set[str]:
         """Normalize text to tokens for similarity comparison."""
         if not self.normalization_enabled:
             return {text.lower()}
@@ -180,12 +197,14 @@ class BulletGenerationStrategy:
         keywords = {token for token in tokens if len(token) > 2}
         return keywords or {text.lower()}
 
-    def _try_add_point(self, point: str, bullet_points: List[str]) -> bool:
+    def _try_add_point(self, point: str, bullet_points: list[str]) -> bool:
         """Try to add a point with deduplication."""
         if len(bullet_points) >= self.max_points or not point:
             return False
 
-        clean_point = point[len(self.bullet_prefix):] if self.bullet_prefix and point.startswith(self.bullet_prefix) else point
+        clean_point = (
+            point[len(self.bullet_prefix) :] if self.bullet_prefix and point.startswith(self.bullet_prefix) else point
+        )
         clean_point = clean_point.strip()
         if not clean_point:
             return False
@@ -211,14 +230,18 @@ class BulletGenerationStrategy:
         bullet_points.append(point)
         return True
 
-    def _build_key_candidates(self, findings: List[Any]) -> List[str]:
+    def _build_key_candidates(self, findings: list[Any]) -> list[str]:
         """Build candidates from key findings with evidence weighting."""
-        candidates: List[str] = []
+        candidates: list[str] = []
 
         # Sort by evidence quality and confidence
         evidence_weights = {
-            "Level 1": 1.0, "Level 2": 0.9, "Level 3": 0.7,
-            "Level 4": 0.6, "Level 5": 0.4, "Level 6": 0.2
+            "Level 1": 1.0,
+            "Level 2": 0.9,
+            "Level 3": 0.7,
+            "Level 4": 0.6,
+            "Level 5": 0.4,
+            "Level 6": 0.2,
         }
 
         weighted_findings = []
@@ -232,7 +255,7 @@ class BulletGenerationStrategy:
         weighted_findings.sort(key=lambda x: x[1], reverse=True)
 
         for finding, weight in weighted_findings:
-            context_bits: List[str] = []
+            context_bits: list[str] = []
             if getattr(finding, "evidence_level", None):
                 context_bits.append(str(finding.evidence_level))
             if getattr(finding, "study_type", None):
@@ -247,17 +270,13 @@ class BulletGenerationStrategy:
 
         return candidates
 
-    def _build_comparative_candidates(self, comparative_analysis: Dict[str, Any]) -> List[str]:
+    def _build_comparative_candidates(self, comparative_analysis: dict[str, Any]) -> list[str]:
         """Build candidates from comparative analysis."""
-        candidates: List[str] = []
+        candidates: list[str] = []
 
         # Convergent findings (sorted by weighted score)
         convergent_findings = comparative_analysis.get("convergent_findings", [])
-        convergent_findings_sorted = sorted(
-            convergent_findings,
-            key=lambda x: x.get("weighted_score", 0),
-            reverse=True
-        )
+        convergent_findings_sorted = sorted(convergent_findings, key=lambda x: x.get("weighted_score", 0), reverse=True)
 
         for conv in convergent_findings_sorted:
             drug = conv.get("drug", "unknown target")
@@ -288,24 +307,22 @@ class BulletGenerationStrategy:
             median = sample_summary.get("median")
             spread = f"{sample_summary['min']} to {sample_summary['max']} participants"
             median_note = f" (median {median})" if median else ""
-            candidates.append(
-                f"{self.bullet_prefix}Sample sizes span {spread}{median_note} across the evidence base"
-            )
+            candidates.append(f"{self.bullet_prefix}Sample sizes span {spread}{median_note} across the evidence base")
 
         return candidates
 
-    def _build_gap_candidates(self, research_gaps: List[str]) -> List[str]:
+    def _build_gap_candidates(self, research_gaps: list[str]) -> list[str]:
         """Build candidates from research gaps."""
         return [f"{self.bullet_prefix}Research gap: {gap}" for gap in research_gaps if gap]
 
-    def _add_fallback_bullets(self, bullet_points: List[str], findings_count: int) -> None:
+    def _add_fallback_bullets(self, bullet_points: list[str], findings_count: int) -> None:
         """Add fallback bullets to meet minimum count requirement."""
         safe_fallback_notes = [
             f"{self.bullet_prefix}[Meta-analysis] Evidence synthesis based on {findings_count} weighted findings",
             f"{self.bullet_prefix}[Methodology] Analysis employed evidence quality weighting (study design, sample size, consistency)",
             f"{self.bullet_prefix}[Quality] Current synthesis represents best available evidence with transparency scoring",
             f"{self.bullet_prefix}[Evidence] Quality-weighted analysis performed across available literature",
-            f"{self.bullet_prefix}[Future research] Additional high-quality studies would strengthen confidence in conclusions"
+            f"{self.bullet_prefix}[Future research] Additional high-quality studies would strengthen confidence in conclusions",
         ]
 
         for fallback_note in safe_fallback_notes:
@@ -336,7 +353,7 @@ class SynthesisEngine:
         summary = engine.generate_meta_summary(papers, "drug interactions", max_bullet_points=5)
     """
 
-    def __init__(self, pharma_processor: Optional[PharmaceuticalProcessor] = None):
+    def __init__(self, pharma_processor: PharmaceuticalProcessor | None = None):
         """Initialize synthesis engine with optional pharmaceutical processor.
 
         Args:
@@ -359,12 +376,12 @@ class SynthesisEngine:
                 r"rct\b",
                 r"phase\s+(?:i|ii|iii|iv|v|1|2|3|4|5)\s+(?:trial|study|clinical)",
                 r"phase\s+(?:i|ii|iii|iv|v|1|2|3|4|5).*(?:trial|study|investigation)",
-                r"phase\s+(?:i|ii|iii|iv|v|1|2|3|4|5)\b"
+                r"phase\s+(?:i|ii|iii|iv|v|1|2|3|4|5)\b",
             ],
             "case_report": [r"case report", r"case series"],
             "observational": [r"cohort(?!\s+trial)", r"case-control", r"cross-sectional", r"observational(?!\s+trial)"],
             "in_vitro": [r"in vitro", r"cell culture", r"laboratory", r"microsomal"],
-            "review": [r"review", r"narrative", r"expert opinion"]
+            "review": [r"review", r"narrative", r"expert opinion"],
         }
 
         # Evidence level mapping
@@ -374,14 +391,14 @@ class SynthesisEngine:
             "observational": "Level 3",
             "case_report": "Level 4",
             "in_vitro": "Level 5",
-            "review": "Level 6"
+            "review": "Level 6",
         }
 
-    def _prepare_papers(self, papers: List[Any]) -> List[Dict[str, Any]]:
+    def _prepare_papers(self, papers: list[Any]) -> list[dict[str, Any]]:
         """Validate and normalise paper inputs using the Paper schema."""
         if not papers:
             return []
-        prepared: List[Dict[str, Any]] = []
+        prepared: list[dict[str, Any]] = []
 
         for index, paper in enumerate(papers):
             try:
@@ -394,7 +411,7 @@ class SynthesisEngine:
 
         return prepared
 
-    def _ensure_prepared_papers(self, papers: List[Any]) -> List[Dict[str, Any]]:
+    def _ensure_prepared_papers(self, papers: list[Any]) -> list[dict[str, Any]]:
         """Return schema-validated papers, coercing input when necessary."""
         if not papers:
             return []
@@ -404,12 +421,12 @@ class SynthesisEngine:
 
     def generate_meta_summary(
         self,
-        papers: List[Dict],
+        papers: list[dict],
         query: str,
         max_bullet_points: int = 7,
         min_bullet_points: int = 3,
         include_bullet_glyph: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate comprehensive meta-summary from multiple papers.
 
         Guarantees 3-7 bullet points in the summary through post-processing to ensure
@@ -425,7 +442,7 @@ class SynthesisEngine:
         Returns:
             Dictionary containing structured meta-summary with findings, analysis, and citations
         """
-        prepared_papers: List[Dict[str, Any]] = []
+        prepared_papers: list[dict[str, Any]] = []
         try:
             prepared_papers = self._ensure_prepared_papers(papers)
             logger.info(
@@ -492,13 +509,15 @@ class SynthesisEngine:
                         "confidence": finding.confidence,
                         "paper_id": finding.paper_id,
                         "drug_entities": finding.drug_entities,
-                        "study_type": finding.study_type
+                        "study_type": finding.study_type,
                     }
                     for finding in key_findings
                 ],
                 "bullet_points": bullet_points,
                 "comparative_analysis": (
-                    comparative_analysis.model_dump() if hasattr(comparative_analysis, "model_dump") else comparative_analysis
+                    comparative_analysis.model_dump()
+                    if hasattr(comparative_analysis, "model_dump")
+                    else comparative_analysis
                 ),
                 "evidence_synthesis": evidence_synthesis,
                 "confidence_scores": confidence_scores,
@@ -507,8 +526,8 @@ class SynthesisEngine:
                 "summary_statistics": {
                     "study_types": self._count_study_types(prepared_papers),
                     "drug_mentions": self._count_drug_mentions(key_findings),
-                    "evidence_distribution": self._count_evidence_levels(key_findings)
-                }
+                    "evidence_distribution": self._count_evidence_levels(key_findings),
+                },
             }
 
             logger.info("Meta-summary generation completed successfully")
@@ -527,14 +546,10 @@ class SynthesisEngine:
                 "confidence_scores": {},
                 "research_gaps": [],
                 "citations": [],
-                "summary_statistics": {
-                    "study_types": {},
-                    "drug_mentions": {},
-                    "evidence_distribution": {}
-                }
+                "summary_statistics": {"study_types": {}, "drug_mentions": {}, "evidence_distribution": {}},
             }
 
-    def _extract_key_findings(self, papers: List[Dict]) -> List[KeyFinding]:
+    def _extract_key_findings(self, papers: list[dict]) -> list[KeyFinding]:
         """Extract structured key findings from papers."""
         papers = self._ensure_prepared_papers(papers)
         findings = []
@@ -571,7 +586,7 @@ class SynthesisEngine:
                     confidence=confidence,
                     drug_entities=drug_entities,
                     pk_parameters=pk_parameters,
-                    study_type=study_type
+                    study_type=study_type,
                 )
                 findings.append(finding)
 
@@ -581,7 +596,7 @@ class SynthesisEngine:
 
         return sorted(findings, key=lambda x: (-len(x.drug_entities), -x.confidence))
 
-    def _perform_comparative_analysis(self, papers: List[Dict], query: str) -> Dict[str, Any]:
+    def _perform_comparative_analysis(self, papers: list[dict], query: str) -> dict[str, Any]:
         """Perform comparative analysis across papers with query-aware weighting."""
         try:
             papers = self._ensure_prepared_papers(papers)
@@ -593,7 +608,7 @@ class SynthesisEngine:
                 "population_differences": [],
                 "methodological_variations": [],
                 "sample_size_comparison": {"per_paper": [], "aggregate": {}},
-                "contradictions": []
+                "contradictions": [],
             }
 
             # Extract query terms for relevance scoring
@@ -602,8 +617,8 @@ class SynthesisEngine:
             # Group papers by similar drug entities or outcomes
             drug_groups = defaultdict(list)
             outcome_groups = defaultdict(list)
-            paper_summaries: Dict[str, Dict[str, Any]] = {}
-            processed_divergence_keys: Set[str] = set()
+            paper_summaries: dict[str, dict[str, Any]] = {}
+            processed_divergence_keys: set[str] = set()
 
             for paper in papers:
                 content = paper.get("page_content") or paper.get("content", "")
@@ -611,7 +626,7 @@ class SynthesisEngine:
                 paper_id = metadata.get("pmid") or paper.get("id") or metadata.get("title", "unknown")
 
                 # Extract drug mentions for grouping
-                drugs: List[Dict[str, Any]] = []
+                drugs: list[dict[str, Any]] = []
                 if self.pharma_processor:
                     drugs = self.pharma_processor.extract_drug_names(content)
                     for drug in drugs:
@@ -639,24 +654,26 @@ class SynthesisEngine:
                     "primary_finding": primary_finding,
                     "direction": direction,
                     "confidence_intervals": confidence_intervals,
-                    "drug_mentions": [
-                        drug["name"].lower() for drug in drugs if drug.get("confidence", 0) > 0.5
-                    ] if self.pharma_processor and drugs else [],
+                    "drug_mentions": [drug["name"].lower() for drug in drugs if drug.get("confidence", 0) > 0.5]
+                    if self.pharma_processor and drugs
+                    else [],
                     "population_markers": population_markers,
                 }
 
             # Calculate weighted scoring for findings based on evidence quality and sample size first
             # This needs to be done before convergent findings analysis
             per_paper_samples = []
-            all_sample_sizes: List[int] = []
+            all_sample_sizes: list[int] = []
             for summary in paper_summaries.values():
                 if summary["sample_sizes"]:
-                    per_paper_samples.append({
-                        "paper_id": summary["paper_id"],
-                        "sample_sizes": summary["sample_sizes"],
-                        "largest_cohort": max(summary["sample_sizes"]),
-                        "smallest_cohort": min(summary["sample_sizes"])
-                    })
+                    per_paper_samples.append(
+                        {
+                            "paper_id": summary["paper_id"],
+                            "sample_sizes": summary["sample_sizes"],
+                            "largest_cohort": max(summary["sample_sizes"]),
+                            "smallest_cohort": min(summary["sample_sizes"]),
+                        }
+                    )
                     all_sample_sizes.extend(summary["sample_sizes"])
 
             weighting_summary = self._calculate_finding_weights(paper_summaries, per_paper_samples)
@@ -669,11 +686,9 @@ class SynthesisEngine:
                         content = paper.get("page_content") or paper.get("content", "")
                         finding = self._extract_main_finding(content, paper.get("metadata", {}))
                         relevance_score = self._calculate_query_relevance(content + " " + finding, query_terms)
-                        findings_with_relevance.append({
-                            "finding": finding,
-                            "relevance_score": relevance_score,
-                            "content": content
-                        })
+                        findings_with_relevance.append(
+                            {"finding": finding, "relevance_score": relevance_score, "content": content}
+                        )
 
                     # Sort by relevance score so query-relevant findings surface first
                     findings_with_relevance.sort(key=lambda x: x["relevance_score"], reverse=True)
@@ -686,65 +701,68 @@ class SynthesisEngine:
                             paper_ids, paper_summaries, weighting_summary
                         )
 
-                        analysis["convergent_findings"].append({
-                            "drug": drug,
-                            "papers_count": len(drug_papers),
-                            "convergent_finding": self._synthesize_convergent_finding(findings),
-                            "query_relevance_score": sum(f["relevance_score"] for f in findings_with_relevance) / len(findings_with_relevance),
-                            "finding_weight": finding_weight,
-                            "weighted_score": finding_weight * (sum(f["relevance_score"] for f in findings_with_relevance) / len(findings_with_relevance))
-                        })
+                        analysis["convergent_findings"].append(
+                            {
+                                "drug": drug,
+                                "papers_count": len(drug_papers),
+                                "convergent_finding": self._synthesize_convergent_finding(findings),
+                                "query_relevance_score": sum(f["relevance_score"] for f in findings_with_relevance)
+                                / len(findings_with_relevance),
+                                "finding_weight": finding_weight,
+                                "weighted_score": finding_weight
+                                * (
+                                    sum(f["relevance_score"] for f in findings_with_relevance)
+                                    / len(findings_with_relevance)
+                                ),
+                            }
+                        )
 
             # Identify dose-response patterns
             for drug, drug_papers in drug_groups.items():
                 dose_responses = self._extract_dose_response_data(drug_papers, drug)
                 if dose_responses:
-                    analysis["dose_response_patterns"].append({
-                        "drug": drug,
-                        "patterns": dose_responses
-                    })
+                    analysis["dose_response_patterns"].append({"drug": drug, "patterns": dose_responses})
 
             # Capture methodological variations per paper
             analysis["methodological_variations"] = [
                 {
                     "paper_id": summary["paper_id"],
                     "study_type": summary["study_type"],
-                    "methodology_descriptors": summary["methodology_notes"]
+                    "methodology_descriptors": summary["methodology_notes"],
                 }
                 for summary in paper_summaries.values()
             ]
 
             # Summarize sample sizes (already calculated above)
-            aggregate: Dict[str, Any] = {}
+            aggregate: dict[str, Any] = {}
             if all_sample_sizes:
                 aggregate = {
                     "min": min(all_sample_sizes),
                     "max": max(all_sample_sizes),
                     "median": statistics.median(all_sample_sizes),
                     "mean": round(statistics.mean(all_sample_sizes), 2),
-                    "papers_with_sample_sizes": len(per_paper_samples)
+                    "papers_with_sample_sizes": len(per_paper_samples),
                 }
 
             analysis["sample_size_comparison"] = {
                 "per_paper": per_paper_samples,
                 "aggregate": aggregate,
-                "weighting_summary": weighting_summary
+                "weighting_summary": weighting_summary,
             }
 
-            divergent_records: List[Dict[str, Any]] = []
+            divergent_records: list[dict[str, Any]] = []
 
             for drug, drug_papers in drug_groups.items():
                 related_summaries = [
                     paper_summaries.get(
-                        paper.get("metadata", {}).get("pmid") or paper.get("id") or
-                        paper.get("metadata", {}).get("title", "unknown")
+                        paper.get("metadata", {}).get("pmid")
+                        or paper.get("id")
+                        or paper.get("metadata", {}).get("title", "unknown")
                     )
                     for paper in drug_papers
                 ]
                 related_summaries = [s for s in related_summaries if s]
-                directional_set = {
-                    s["direction"] for s in related_summaries if s["direction"] != "neutral"
-                }
+                directional_set = {s["direction"] for s in related_summaries if s["direction"] != "neutral"}
 
                 if len(directional_set.intersection({"increase", "decrease"})) == 2:
                     key = f"drug::{drug}"
@@ -757,25 +775,22 @@ class SynthesisEngine:
                                 "directions": sorted(directional_set),
                                 "papers": [s["paper_id"] for s in related_summaries],
                                 "sample_findings": [
-                                    s["primary_finding"]
-                                    for s in related_summaries[:3]
-                                    if s.get("primary_finding")
-                                ]
+                                    s["primary_finding"] for s in related_summaries[:3] if s.get("primary_finding")
+                                ],
                             }
                         )
 
             for outcome, outcome_papers in outcome_groups.items():
                 related_summaries = [
                     paper_summaries.get(
-                        paper.get("metadata", {}).get("pmid") or paper.get("id") or
-                        paper.get("metadata", {}).get("title", "unknown")
+                        paper.get("metadata", {}).get("pmid")
+                        or paper.get("id")
+                        or paper.get("metadata", {}).get("title", "unknown")
                     )
                     for paper in outcome_papers
                 ]
                 related_summaries = [s for s in related_summaries if s]
-                directional_set = {
-                    s["direction"] for s in related_summaries if s["direction"] != "neutral"
-                }
+                directional_set = {s["direction"] for s in related_summaries if s["direction"] != "neutral"}
 
                 if len(directional_set.intersection({"increase", "decrease"})) == 2:
                     key = f"outcome::{outcome}"
@@ -788,23 +803,22 @@ class SynthesisEngine:
                                 "directions": sorted(directional_set),
                                 "papers": [s["paper_id"] for s in related_summaries],
                                 "sample_findings": [
-                                    s["primary_finding"]
-                                    for s in related_summaries[:3]
-                                    if s.get("primary_finding")
-                                ]
+                                    s["primary_finding"] for s in related_summaries[:3] if s.get("primary_finding")
+                                ],
                             }
                         )
 
             analysis["divergent_findings"] = divergent_records
 
-            population_differences: List[Dict[str, Any]] = []
+            population_differences: list[dict[str, Any]] = []
 
             for drug, drug_papers in drug_groups.items():
-                population_map: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+                population_map: dict[str, list[dict[str, Any]]] = defaultdict(list)
                 for paper in drug_papers:
                     summary = paper_summaries.get(
-                        paper.get("metadata", {}).get("pmid") or paper.get("id") or
-                        paper.get("metadata", {}).get("title", "unknown")
+                        paper.get("metadata", {}).get("pmid")
+                        or paper.get("id")
+                        or paper.get("metadata", {}).get("title", "unknown")
                     )
                     if not summary:
                         continue
@@ -815,19 +829,13 @@ class SynthesisEngine:
                             {
                                 "paper_id": summary["paper_id"],
                                 "finding": summary.get("primary_finding"),
-                                "direction": summary.get("direction")
+                                "direction": summary.get("direction"),
                             }
                         )
 
                 if len(population_map) >= 2:
                     population_differences.append(
-                        {
-                            "drug": drug,
-                            "populations": {
-                                label: entries[:3]
-                                for label, entries in population_map.items()
-                            }
-                        }
+                        {"drug": drug, "populations": {label: entries[:3] for label, entries in population_map.items()}}
                     )
 
             analysis["population_differences"] = population_differences
@@ -837,8 +845,9 @@ class SynthesisEngine:
             for drug, drug_papers in drug_groups.items():
                 related_summaries = [
                     paper_summaries.get(
-                        paper.get("metadata", {}).get("pmid") or paper.get("id") or
-                        paper.get("metadata", {}).get("title", "unknown")
+                        paper.get("metadata", {}).get("pmid")
+                        or paper.get("id")
+                        or paper.get("metadata", {}).get("title", "unknown")
                     )
                     for paper in drug_papers
                 ]
@@ -846,29 +855,31 @@ class SynthesisEngine:
 
                 directions = {s["direction"] for s in related_summaries if s["direction"] != "neutral"}
                 if len(directions) > 1:
-                    contradictions.append({
-                        "drug": drug,
-                        "type": "directional_conflict",
-                        "details": f"Conflicting directions reported: {', '.join(sorted(directions))}",
-                        "papers": [s["paper_id"] for s in related_summaries]
-                    })
+                    contradictions.append(
+                        {
+                            "drug": drug,
+                            "type": "directional_conflict",
+                            "details": f"Conflicting directions reported: {', '.join(sorted(directions))}",
+                            "papers": [s["paper_id"] for s in related_summaries],
+                        }
+                    )
 
                 cis = [ci for s in related_summaries for ci in s["confidence_intervals"]]
                 conflicting_ci = self._find_conflicting_confidence_intervals(cis)
                 if conflicting_ci:
-                    contradictions.append({
-                        "drug": drug,
-                        "type": "confidence_interval_conflict",
-                        "details": f"Non-overlapping confidence intervals detected: {conflicting_ci}",
-                        "papers": [s["paper_id"] for s in related_summaries]
-                    })
+                    contradictions.append(
+                        {
+                            "drug": drug,
+                            "type": "confidence_interval_conflict",
+                            "details": f"Non-overlapping confidence intervals detected: {conflicting_ci}",
+                            "papers": [s["paper_id"] for s in related_summaries],
+                        }
+                    )
 
             analysis["contradictions"] = contradictions
 
             # Sort convergent findings by weighted score (evidence quality + sample size + relevance)
-            analysis["convergent_findings"].sort(
-                key=lambda x: x.get("weighted_score", 0), reverse=True
-            )
+            analysis["convergent_findings"].sort(key=lambda x: x.get("weighted_score", 0), reverse=True)
 
             return analysis
 
@@ -876,18 +887,20 @@ class SynthesisEngine:
             logger.error(f"Error in comparative analysis: {e}")
             return {"error": str(e)}
 
-    def _calculate_finding_weights(self, paper_summaries: Dict[str, Dict], per_paper_samples: List[Dict]) -> Dict[str, Any]:
+    def _calculate_finding_weights(
+        self, paper_summaries: dict[str, dict], per_paper_samples: list[dict]
+    ) -> dict[str, Any]:
         """Calculate weighted scoring based on evidence level, sample size, and consistency."""
         try:
             # Evidence level weights (higher is better)
             evidence_weights = {
-                "Level 1": 1.0,   # Systematic reviews/meta-analyses
-                "Level 2": 0.9,   # RCTs
-                "Level 3": 0.7,   # Cohort studies
-                "Level 4": 0.6,   # Case-control studies
-                "Level 5": 0.4,   # Case series/reports
-                "Level 6": 0.2,   # Expert opinion
-                "Unknown": 0.1
+                "Level 1": 1.0,  # Systematic reviews/meta-analyses
+                "Level 2": 0.9,  # RCTs
+                "Level 3": 0.7,  # Cohort studies
+                "Level 4": 0.6,  # Case-control studies
+                "Level 5": 0.4,  # Case series/reports
+                "Level 6": 0.2,  # Expert opinion
+                "Unknown": 0.1,
             }
 
             # Sample size normalization (log scale to prevent huge studies from dominating)
@@ -940,19 +953,21 @@ class SynthesisEngine:
                     "evidence_weight": evidence_weight,
                     "sample_size_weight": sample_weight,
                     "consistency_weight": consistency_weight,
-                    "combined_weight": combined_weight
+                    "combined_weight": combined_weight,
                 }
 
             return {
                 "paper_weights": paper_weights,
-                "evidence_distribution": dict(Counter(s.get("evidence_level", "Unknown") for s in paper_summaries.values())),
+                "evidence_distribution": dict(
+                    Counter(s.get("evidence_level", "Unknown") for s in paper_summaries.values())
+                ),
                 "sample_size_stats": {
                     "papers_with_samples": len(sample_size_weights),
                     "range": [min(all_samples), max(all_samples)] if all_samples else [0, 0],
-                    "median": statistics.median(all_samples) if all_samples else 0
+                    "median": statistics.median(all_samples) if all_samples else 0,
                 },
                 "consistency_analysis": dict(Counter(consistency_weights.values())),
-                "weighting_methodology": "Combined score: f(evidence_level, sample_size, consistency)"
+                "weighting_methodology": "Combined score: f(evidence_level, sample_size, consistency)",
             }
 
         except Exception as e:
@@ -960,10 +975,7 @@ class SynthesisEngine:
             return {"error": str(e)}
 
     def _calculate_convergent_finding_weight(
-        self,
-        paper_ids: List[str],
-        paper_summaries: Dict[str, Dict],
-        weighting_summary: Dict[str, Any]
+        self, paper_ids: list[str], paper_summaries: dict[str, dict], weighting_summary: dict[str, Any]
     ) -> float:
         """Calculate the combined weight for a convergent finding based on its constituent papers."""
         try:
@@ -1001,13 +1013,13 @@ class SynthesisEngine:
 
     def _generate_bullet_points(
         self,
-        key_findings: List[Any],
-        comparative_analysis: Dict[str, Any],
-        research_gaps: List[str],
+        key_findings: list[Any],
+        comparative_analysis: dict[str, Any],
+        research_gaps: list[str],
         max_points: int,
         min_points: int,
         include_bullet_glyph: bool = False,
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate bullet points using unified strategy with normalization and similarity deduping."""
         try:
             # Use the unified bullet generation strategy
@@ -1016,13 +1028,11 @@ class SynthesisEngine:
                 min_points=min_points,
                 include_bullet_glyph=include_bullet_glyph,
                 normalization_enabled=True,
-                similarity_threshold=0.75
+                similarity_threshold=0.75,
             )
 
             return bullet_generator.generate_bullets(
-                key_findings=key_findings,
-                comparative_analysis=comparative_analysis,
-                research_gaps=research_gaps
+                key_findings=key_findings, comparative_analysis=comparative_analysis, research_gaps=research_gaps
             )
 
         except Exception as e:
@@ -1030,7 +1040,7 @@ class SynthesisEngine:
             bullet_prefix = "• " if include_bullet_glyph else ""
             return [f"{bullet_prefix}Error generating evidence-based summary"]
 
-    def _synthesize_evidence_levels(self, papers: List[Dict]) -> Dict[str, Any]:
+    def _synthesize_evidence_levels(self, papers: list[dict]) -> dict[str, Any]:
         """Synthesize evidence levels across papers."""
         try:
             papers = self._ensure_prepared_papers(papers)
@@ -1054,14 +1064,14 @@ class SynthesisEngine:
                 "total_papers": total_papers,
                 "evidence_strength_score": round(evidence_strength, 2),
                 "primary_evidence_level": evidence_counts.most_common(1)[0][0] if evidence_counts else "Unknown",
-                "high_quality_papers": evidence_counts.get("Level 1", 0) + evidence_counts.get("Level 2", 0)
+                "high_quality_papers": evidence_counts.get("Level 1", 0) + evidence_counts.get("Level 2", 0),
             }
 
         except Exception as e:
             logger.error(f"Error synthesizing evidence levels: {e}")
             return {"error": str(e)}
 
-    def _extract_methodology_descriptors(self, content: str) -> List[str]:
+    def _extract_methodology_descriptors(self, content: str) -> list[str]:
         """Identify notable methodology descriptors from paper content."""
         descriptors = []
         methodology_patterns = {
@@ -1073,7 +1083,7 @@ class SynthesisEngine:
             "single_center": r"single[-\s]?center",
             "multi_center": r"multi[-\s]?center",
             "prospective": r"prospective",
-            "retrospective": r"retrospective"
+            "retrospective": r"retrospective",
         }
 
         lowered = content.lower()
@@ -1083,14 +1093,14 @@ class SynthesisEngine:
 
         return descriptors
 
-    def _extract_sample_sizes(self, content: str) -> List[int]:
+    def _extract_sample_sizes(self, content: str) -> list[int]:
         """Extract sample sizes from study descriptions."""
-        sample_sizes: Set[int] = set()
+        sample_sizes: set[int] = set()
         patterns = [
             r"\b[ns]\s*[:=]\s*(\d{2,4})\b",
             r"\b(\d{2,4})\s+participants\b",
             r"\bcohort of\s+(\d{2,4})",
-            r"\benrolled\s+(\d{2,4})\s+patients"
+            r"\benrolled\s+(\d{2,4})\s+patients",
         ]
 
         for pattern in patterns:
@@ -1117,12 +1127,12 @@ class SynthesisEngine:
             return "decrease"
         return "neutral"
 
-    def _extract_confidence_intervals(self, content: str) -> List[Tuple[float, float]]:
+    def _extract_confidence_intervals(self, content: str) -> list[tuple[float, float]]:
         """Extract numeric confidence intervals from text."""
-        intervals: List[Tuple[float, float]] = []
+        intervals: list[tuple[float, float]] = []
         patterns = [
             r"95%\s*(?:ci|confidence interval)[^\d]*(\d+(?:\.\d+)?)\s*(?:to|-|–)\s*(\d+(?:\.\d+)?)",
-            r"ci[:\s]*(\d+(?:\.\d+)?)\s*(?:to|-|–)\s*(\d+(?:\.\d+)?)"
+            r"ci[:\s]*(\d+(?:\.\d+)?)\s*(?:to|-|–)\s*(\d+(?:\.\d+)?)",
         ]
 
         for pattern in patterns:
@@ -1139,8 +1149,8 @@ class SynthesisEngine:
         return intervals
 
     def _find_conflicting_confidence_intervals(
-        self, intervals: List[Tuple[float, float]]
-    ) -> Optional[Tuple[Tuple[float, float], Tuple[float, float]]]:
+        self, intervals: list[tuple[float, float]]
+    ) -> tuple[tuple[float, float], tuple[float, float]] | None:
         """Identify pairs of non-overlapping confidence intervals."""
         if len(intervals) < 2:
             return None
@@ -1154,7 +1164,7 @@ class SynthesisEngine:
 
         return None
 
-    def _identify_population_markers(self, content: str) -> List[str]:
+    def _identify_population_markers(self, content: str) -> list[str]:
         """Detect population-specific markers within study content."""
         population_patterns = {
             "pediatric": r"pediatric|children|childhood|adolescent",
@@ -1162,19 +1172,15 @@ class SynthesisEngine:
             "pregnancy": r"pregnan(?:cy|t)|maternal|prenatal",
             "renal_impairment": r"renal impairment|kidney failure|dialysis|chronic kidney",
             "hepatic_impairment": r"hepatic impairment|cirrhosis|liver failure",
-            "genetic_variants": r"polymorphism|genotype|poor metabolizer|ultrarapid metabolizer"
+            "genetic_variants": r"polymorphism|genotype|poor metabolizer|ultrarapid metabolizer",
         }
 
         lowered = content.lower()
-        markers = [
-            label for label, pattern in population_patterns.items()
-            if re.search(pattern, lowered)
-        ]
+        markers = [label for label, pattern in population_patterns.items() if re.search(pattern, lowered)]
 
         return markers
 
-
-    def _identify_research_gaps(self, papers: List[Dict], query: str) -> List[str]:
+    def _identify_research_gaps(self, papers: list[dict], query: str) -> list[str]:
         """Identify research gaps based on paper analysis."""
         gaps = []
 
@@ -1218,7 +1224,7 @@ class SynthesisEngine:
             logger.error(f"Error identifying research gaps: {e}")
             return ["Error analyzing research gaps"]
 
-    def _calculate_confidence_scores(self, papers: List[Dict]) -> Dict[str, float]:
+    def _calculate_confidence_scores(self, papers: list[dict]) -> dict[str, float]:
         """Calculate overall confidence scores for the synthesis."""
         try:
             papers = self._ensure_prepared_papers(papers)
@@ -1252,7 +1258,7 @@ class SynthesisEngine:
             logger.error(f"Error calculating confidence scores: {e}")
             return {"overall": 0.5, "error": str(e)}
 
-    def _format_citations(self, papers: List[Dict]) -> List[str]:
+    def _format_citations(self, papers: list[dict]) -> list[str]:
         """Format citations for the papers."""
         papers = self._ensure_prepared_papers(papers)
         citations = []
@@ -1272,7 +1278,7 @@ class SynthesisEngine:
                 # Handle missing metadata with fallback templates
                 if not title:
                     title = f"Untitled Paper {i+1}"
-                
+
                 # Format author string
                 if authors and isinstance(authors, list):
                     if len(authors) > 3:
@@ -1292,13 +1298,13 @@ class SynthesisEngine:
 
                 # Build citation with robust fallbacks
                 citation_parts = [author_str]
-                
+
                 if title:
                     citation_parts.append(title)
-                
+
                 citation_parts.append(journal)
                 citation_parts.append(str(year))
-                
+
                 citation = ". ".join(citation_parts) + "."
 
                 # Add identifier if available
@@ -1333,13 +1339,13 @@ class SynthesisEngine:
 
         return "review"  # Default fallback
 
-    def _extract_main_finding(self, content: str, metadata: Dict) -> str:
+    def _extract_main_finding(self, content: str, metadata: dict) -> str:
         """Extract the main finding from paper content."""
         # Look for conclusion or results sections
         conclusion_patterns = [
             r"conclusion[s]?[:\s]+(.*?)(?:\n\n|\Z)",
             r"results[:\s]+(.*?)(?:\n\n|\Z)",
-            r"findings[:\s]+(.*?)(?:\n\n|\Z)"
+            r"findings[:\s]+(.*?)(?:\n\n|\Z)",
         ]
 
         for pattern in conclusion_patterns:
@@ -1361,7 +1367,7 @@ class SynthesisEngine:
         sentences = content.split(". ")
         return ". ".join(sentences[:2]) + "." if len(sentences) > 1 else "Finding extraction failed"
 
-    def _calculate_finding_confidence(self, content: str, study_type: str, metadata: Dict) -> float:
+    def _calculate_finding_confidence(self, content: str, study_type: str, metadata: dict) -> float:
         """Calculate confidence score for a finding."""
         base_confidence = 0.5
 
@@ -1372,7 +1378,7 @@ class SynthesisEngine:
             "observational": 0.2,
             "case_report": 0.1,
             "in_vitro": 0.1,
-            "review": 0.05
+            "review": 0.05,
         }
         base_confidence += type_bonus.get(study_type, 0)
 
@@ -1388,7 +1394,7 @@ class SynthesisEngine:
 
         return min(1.0, base_confidence)
 
-    def _extract_outcomes(self, content: str) -> List[str]:
+    def _extract_outcomes(self, content: str) -> list[str]:
         """Extract outcome measures from content."""
         outcome_patterns = [
             r"primary endpoint",
@@ -1398,7 +1404,7 @@ class SynthesisEngine:
             r"adverse events",
             r"mortality",
             r"progression-free survival",
-            r"overall survival"
+            r"overall survival",
         ]
 
         outcomes = []
@@ -1409,32 +1415,72 @@ class SynthesisEngine:
 
         return outcomes
 
-    def _are_findings_convergent(self, findings: List[str]) -> bool:
+    def _are_findings_convergent(self, findings: list[str]) -> bool:
         """Check if findings are convergent (simplified heuristic)."""
         if len(findings) < 2:
             return False
 
         stopwords = {
-            "the", "and", "for", "with", "that", "this", "from", "into", "onto", "were",
-            "was", "are", "have", "has", "had", "also", "while", "between", "above",
-            "below", "after", "before", "their", "there", "these", "those", "such", "than",
-            "within", "without", "across", "about", "among", "using", "based"
+            "the",
+            "and",
+            "for",
+            "with",
+            "that",
+            "this",
+            "from",
+            "into",
+            "onto",
+            "were",
+            "was",
+            "are",
+            "have",
+            "has",
+            "had",
+            "also",
+            "while",
+            "between",
+            "above",
+            "below",
+            "after",
+            "before",
+            "their",
+            "there",
+            "these",
+            "those",
+            "such",
+            "than",
+            "within",
+            "without",
+            "across",
+            "about",
+            "among",
+            "using",
+            "based",
         }
         domain_keywords = {
-            "increase", "decrease", "reduction", "elevation", "improvement", "decline",
-            "efficacy", "safety", "toxicity", "exposure", "clearance", "auc", "cmax",
-            "response", "benefit"
+            "increase",
+            "decrease",
+            "reduction",
+            "elevation",
+            "improvement",
+            "decline",
+            "efficacy",
+            "safety",
+            "toxicity",
+            "exposure",
+            "clearance",
+            "auc",
+            "cmax",
+            "response",
+            "benefit",
         }
 
-        filtered_tokens: List[Set[str]] = []
+        filtered_tokens: list[set[str]] = []
         aggregate_counts: Counter[str] = Counter()
 
         for finding in findings:
             tokens = re.findall(r"\b[\w-]+\b", finding.lower())
-            cleaned = {
-                token for token in tokens
-                if len(token) > 2 and token not in stopwords
-            }
+            cleaned = {token for token in tokens if len(token) > 2 and token not in stopwords}
             if cleaned:
                 filtered_tokens.append(cleaned)
                 aggregate_counts.update(cleaned)
@@ -1443,10 +1489,7 @@ class SynthesisEngine:
             return False
 
         threshold = max(2, len(filtered_tokens) - 1)
-        shared_tokens = {
-            token for token, count in aggregate_counts.items()
-            if count >= threshold
-        }
+        shared_tokens = {token for token, count in aggregate_counts.items() if count >= threshold}
 
         if shared_tokens & domain_keywords:
             return True
@@ -1454,7 +1497,7 @@ class SynthesisEngine:
         # Require at least two overlapping content words when domain keywords are absent
         return len(shared_tokens - domain_keywords) >= 2
 
-    def _synthesize_convergent_finding(self, findings: List[str]) -> str:
+    def _synthesize_convergent_finding(self, findings: list[str]) -> str:
         """Synthesize convergent findings into a single statement."""
         if not findings:
             return "No convergent findings identified"
@@ -1462,7 +1505,7 @@ class SynthesisEngine:
         # Simple approach - take the shortest finding as representative
         return min(findings, key=len)
 
-    def _extract_dose_response_data(self, papers: List[Dict], drug: str) -> List[Dict]:
+    def _extract_dose_response_data(self, papers: list[dict], drug: str) -> list[dict]:
         """Extract dose-response data for a specific drug."""
         dose_data = []
 
@@ -1478,54 +1521,95 @@ class SynthesisEngine:
 
             for dosage in dosages:
                 if drug.lower() in content.lower():
-                    dose_data.append({
-                        "amount": dosage["amount"],
-                        "unit": dosage["unit"],
-                        "paper_id": paper.get("metadata", {}).get("pmid", "unknown")
-                    })
+                    dose_data.append(
+                        {
+                            "amount": dosage["amount"],
+                            "unit": dosage["unit"],
+                            "paper_id": paper.get("metadata", {}).get("pmid", "unknown"),
+                        }
+                    )
 
         return dose_data
 
-    def _count_study_types(self, papers: List[Dict]) -> Dict[str, int]:
+    def _count_study_types(self, papers: list[dict]) -> dict[str, int]:
         """Count study types across papers."""
         papers = self._ensure_prepared_papers(papers)
         study_types = [self._classify_study_type(p.get("page_content", "")) for p in papers]
         return dict(Counter(study_types))
 
-    def _count_drug_mentions(self, findings: List[KeyFinding]) -> Dict[str, int]:
+    def _count_drug_mentions(self, findings: list[KeyFinding]) -> dict[str, int]:
         """Count drug mentions across findings."""
         all_drugs = []
         for finding in findings:
             all_drugs.extend(finding.drug_entities)
         return dict(Counter(all_drugs))
 
-    def _count_evidence_levels(self, findings: List[KeyFinding]) -> Dict[str, int]:
+    def _count_evidence_levels(self, findings: list[KeyFinding]) -> dict[str, int]:
         """Count evidence levels across findings."""
         evidence_levels = [f.evidence_level for f in findings]
         return dict(Counter(evidence_levels))
 
-    def _extract_query_terms(self, query: str) -> List[str]:
+    def _extract_query_terms(self, query: str) -> list[str]:
         """Extract meaningful terms from query for relevance scoring."""
         if not query:
             return []
 
         # Simple tokenization and filtering
         import re
-        tokens = re.findall(r'\b\w+\b', query.lower())
+
+        tokens = re.findall(r"\b\w+\b", query.lower())
 
         # Remove common stopwords
         stopwords = {
-            'the', 'and', 'for', 'with', 'that', 'this', 'from', 'into', 'onto',
-            'were', 'was', 'are', 'have', 'has', 'had', 'also', 'while', 'between',
-            'above', 'below', 'after', 'before', 'their', 'there', 'these', 'those',
-            'such', 'than', 'within', 'without', 'across', 'about', 'among', 'using',
-            'based', 'what', 'how', 'when', 'where', 'why', 'which', 'who', 'whom'
+            "the",
+            "and",
+            "for",
+            "with",
+            "that",
+            "this",
+            "from",
+            "into",
+            "onto",
+            "were",
+            "was",
+            "are",
+            "have",
+            "has",
+            "had",
+            "also",
+            "while",
+            "between",
+            "above",
+            "below",
+            "after",
+            "before",
+            "their",
+            "there",
+            "these",
+            "those",
+            "such",
+            "than",
+            "within",
+            "without",
+            "across",
+            "about",
+            "among",
+            "using",
+            "based",
+            "what",
+            "how",
+            "when",
+            "where",
+            "why",
+            "which",
+            "who",
+            "whom",
         }
 
         meaningful_terms = [token for token in tokens if len(token) > 2 and token not in stopwords]
         return meaningful_terms[:10]  # Limit to top 10 terms
 
-    def _calculate_query_relevance(self, text: str, query_terms: List[str]) -> float:
+    def _calculate_query_relevance(self, text: str, query_terms: list[str]) -> float:
         """Calculate relevance score based on query term frequency and proximity."""
         if not query_terms or not text:
             return 0.0
@@ -1566,7 +1650,7 @@ class SynthesisEngine:
                 if len(positions) > 1:
                     positions.sort()
                     # Bonus if terms appear within 20 words of each other
-                    min_distance = min(positions[i+1] - positions[i] for i in range(len(positions)-1))
+                    min_distance = min(positions[i + 1] - positions[i] for i in range(len(positions) - 1))
                     if min_distance <= 20:
                         proximity_bonus = 0.2 * (20 - min_distance) / 20
 
