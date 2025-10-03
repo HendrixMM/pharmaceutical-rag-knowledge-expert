@@ -81,40 +81,23 @@ emails=$(echo "$candidate_lines" | grep -E '^(PUBMED_EMAIL=|OPENALEX_EMAIL=)' | 
 {
   echo "# Sensitive Patterns for BFG Repo-Cleaner"
   echo "# Generated: $(ts)"
-  echo "# Do not include full secret values; only prefixes/fingerprints."
-  echo ""
-  echo "# NVIDIA API key prefixes"
-  echo "nvapi-"
-  echo "NVIDIA_API_KEY=nvapi-"
-  echo ""
-  echo "# PubMed E-utilities"
-  echo "PUBMED_EUTILS_API_KEY="
-  echo "PUBMED_EMAIL="
-  echo ""
-  echo "# Apify tokens"
-  echo "APIFY_TOKEN="
-  echo ""
-  echo "# Generic tokens"
-  echo "Bearer "
-  echo "Authorization: Bearer "
-  echo ""
-  echo "# OpenAlex email"
-  echo "OPENALEX_EMAIL="
+  echo "# Only include concrete leaked fingerprints; no generic patterns."
+  echo "# Do not include full secret values; use safe prefixes/fingerprints."
   echo ""
   if [[ -n "$nv_keys" ]]; then
-    echo "# Discovered NVIDIA key fingerprints"
-    echo "$nv_keys" | sed 's/^/nvapi-/'
+    echo "# Discovered NVIDIA key fingerprints (truncated)"
+    echo "$nv_keys"
   fi
   if [[ -n "$pb_keys" ]]; then
-    echo "# Discovered PubMed key fingerprints"
+    echo "# Discovered PubMed key fingerprints (truncated)"
     echo "$pb_keys"
   fi
   if [[ -n "$ap_keys" ]]; then
-    echo "# Discovered Apify token fingerprints"
+    echo "# Discovered Apify token fingerprints (truncated)"
     echo "$ap_keys"
   fi
   if [[ -n "$emails" ]]; then
-    echo "# Discovered emails"
+    echo "# Discovered emails from .env history"
     echo "$emails"
   fi
 } > "${out_file}.tmp"

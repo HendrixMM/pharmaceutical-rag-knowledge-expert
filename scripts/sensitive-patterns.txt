@@ -2,28 +2,11 @@
 # Purpose: Replace known secret patterns in git history with ***REMOVED***
 # Usage: bfg --replace-text scripts/sensitive-patterns.txt repo-mirror.git
 # Notes:
-# - Do NOT include full secret values; use prefixes/fingerprints only
-# - One pattern per line; case-sensitive by default
-# - Review this file before running cleanup
+# - Only include concrete leaked fingerprints discovered by the scanner
+#   (e.g., truncated key prefixes like `nvapi-XXXXXXXX` or hashed IDs).
+# - One pattern per line; case-sensitive by default.
+# - Do NOT add generic tokens (e.g., `PUBMED_EUTILS_API_KEY=`) to avoid
+#   erasing legitimate placeholders or documentation.
+# - Generate fresh content with: bash scripts/identify_secrets_in_history.sh
 
-# NVIDIA API key prefixes
-nvapi-
-NVIDIA_API_KEY=nvapi-
-
-# PubMed E-utilities
-PUBMED_EUTILS_API_KEY=
-PUBMED_EMAIL=
-
-# Apify tokens
-APIFY_TOKEN=
-
-# Generic common tokens
-Bearer 
-Authorization: Bearer 
-
-# OpenAlex email
-OPENALEX_EMAIL=
-
-# Example emails (replace with known emails if discovered)
-@example.com
-
+# Discovered fingerprints will be appended here by the scanner.
