@@ -298,10 +298,10 @@ class OpenAIWrapper:
             # Check if OpenAI client supports timeout and max_retries parameters
             try:
                 self.client = OpenAI(timeout=timeout, max_retries=max_retries, **client_kwargs)
-            except TypeError as te:
+            except TypeError as err:
                 # Fall back to defaults if parameters not supported
                 logger.warning(
-                    f"OpenAI SDK initialization parameters not supported (timeout, max_retries): {te}. "
+                    f"OpenAI SDK initialization parameters not supported (timeout, max_retries): {err}. "
                     "Using defaults."
                 )
                 self.client = OpenAI(**client_kwargs)
