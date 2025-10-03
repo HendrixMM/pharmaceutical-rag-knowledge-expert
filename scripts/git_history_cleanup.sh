@@ -110,9 +110,22 @@ if git --git-dir="$mirror_dir" log -p --all -- .env | grep -i 'NVIDIA_API_KEY=nv
 else
   nvk_ok=true
 fi
+
+# PubMed and Apify fingerprints must not remain in history
+if git --git-dir="$mirror_dir" log -p --all -- .env | grep -i 'PUBMED_EUTILS_API_KEY=' >/dev/null 2>&1; then
+  pb_ok=false
+else
+  pb_ok=true
+fi
+
+if git --git-dir="$mirror_dir" log -p --all -- .env | grep -i 'APIFY_TOKEN=' >/dev/null 2>&1; then
+  ap_ok=false
+else
+  ap_ok=true
+fi
 set -e
 
-if $env_ok && $nv_ok && $nvk_ok; then
+if $env_ok && $nv_ok && $nvk_ok && $pb_ok && $ap_ok; then
   info "✅ Mirror verification passed (no .env or NVIDIA keys)."
 else
   fail "Verification failed in mirror. Inspect $mirror_dir and try again."
