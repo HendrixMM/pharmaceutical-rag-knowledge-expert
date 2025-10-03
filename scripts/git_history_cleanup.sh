@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 set -euo pipefail
 
 # git_history_cleanup.sh
@@ -120,4 +119,3 @@ log_file="backups/cleanup-log-$(date +%Y%m%d-%H%M%S).txt"
 info "📄 Log saved: $log_file"
 
 exit 0
-

@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 set -euo pipefail
 
 # identify_secrets_in_history.sh
@@ -150,4 +149,3 @@ if [[ $total_found -gt 0 || $count_env_commits -gt 0 ]]; then
   exit 1
 fi
 exit 0
-

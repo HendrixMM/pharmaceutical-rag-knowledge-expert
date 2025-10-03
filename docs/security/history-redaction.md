@@ -1,11 +1,34 @@
 ---
 Last Updated: 2025-10-03
 Owner: Security Team
-Review Cadence: After each history cleanup (as needed)
+Review Cadence: Monthly
 Status: PENDING
 ---
 
 # Git History Cleanup and Secret Redaction Runbook
+
+<!-- TOC -->
+- [Executive Summary](#executive-summary)
+- [Incident Timeline](#incident-timeline)
+- [Approval Workflow](#approval-workflow)
+- [Exposed Secrets Inventory](#exposed-secrets-inventory)
+- [Cleanup Process Runbook](#cleanup-process-runbook)
+  - [Step 1: Preparation](#step-1-preparation)
+  - [Step 2: Secret Identification](#step-2-secret-identification)
+  - [Step 3: BFG Execution](#step-3-bfg-execution)
+  - [Step 4: Force-Push](#step-4-force-push)
+  - [Step 5: Key Rotation](#step-5-key-rotation)
+  - [Step 6: Verification](#step-6-verification)
+- [Verification Procedures](#verification-procedures)
+- [Key Rotation Checklist](#key-rotation-checklist)
+- [Team Coordination](#team-coordination)
+- [Fork Handling](#fork-handling)
+- [Lessons Learned](#lessons-learned)
+- [Audit Artifacts](#audit-artifacts)
+- [References](#references)
+- [Appendix: Edge Cases](#appendix-edge-cases)
+<!-- /TOC -->
+
 
 This runbook documents the complete process to identify, remove, verify, and prevent secret exposure in git history. It provides an audit trail, roles and responsibilities, and step‑by‑step execution guidance.
 
@@ -162,4 +185,3 @@ Questions? Contact: [Security Team Contact]
 - CI failures: update secrets in CI before force‑push.
 - Large repos: use `--no-blob-protection` with care; confirm with backups.
 - Multiple env variants: scan `.env.local`, `.env.production`, etc.
-

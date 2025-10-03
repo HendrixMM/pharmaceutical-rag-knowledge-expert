@@ -7,6 +7,7 @@
 .PHONY: start-rerank stop-rerank down-all
 .PHONY: bench-ci
 .PHONY: docs docs-serve docs-linkcheck docs-linkcheck-all docs-validate docs-all docs-check-toc
+.PHONY: mcp-github-add mcp-github-verify mcp-github-remove
 
 # Default target
 help:
@@ -57,6 +58,11 @@ help:
 	@echo "  setup-dev        Complete development setup"
 	@echo "  pre-commit       Install pre-commit hooks"
 	@echo "  clean            Clean temporary files"
+	@echo ""
+	@echo "🧩 MCP (Claude) Integrations:"
+	@echo "  mcp-github-add    Configure GitHub MCP server (project-scoped)"
+	@echo "  mcp-github-verify Verify GitHub MCP server configuration"
+	@echo "  mcp-github-remove Remove GitHub MCP server from project scope"
 
 # Installation targets
 install:
@@ -198,6 +204,17 @@ bench-ci:
 	  --output $${OUT:-results/benchmark_runs/orchestrated_local} \
 	  --summary-output $${OUT:-results/benchmark_runs/orchestrated_local}/summary.json \
 	  --auto-concurrency --skip-classifier-validation \
+
+# MCP (Claude) — GitHub server wiring
+mcp-github-add:
+	bash scripts/setup_github_mcp.sh
+
+mcp-github-verify:
+	bash scripts/verify_github_mcp.sh
+
+mcp-github-remove:
+	-claude mcp remove -s project github || true
+	@echo "✅ Removed project-scoped 'github' MCP server (if present)."
 	  --preflight-sample-count $${PF_SAMPLES:-1} \
 	  --preflight-min-concurrency $${PF_MIN_CONC:-2} \
 	  --fail-on-preflight \
@@ -304,3 +321,8 @@ rotate-keys:
 	echo "" && \
 	echo "═══════════════════════════════════════════════════════════" && \
 	echo "📖 Full documentation: docs/security/key-rotation-tracker.md"
+
+secrets-baseline:
+	@echo "🔐 Updating detect-secrets baseline..." && \
+	detect-secrets scan --baseline .secrets.baseline --update && \
+	echo "✅ Baseline updated. Review and commit .secrets.baseline"

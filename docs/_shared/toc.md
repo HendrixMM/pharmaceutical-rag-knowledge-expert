@@ -8,7 +8,6 @@ Purpose: Canonical navigation structure for all project documentation
 # Documentation Navigation (Canonical TOC)
 
 <!-- TOC -->
-
 - [Getting Started](#getting-started)
 - [Core Documentation](#core-documentation)
 - [Specialized Guides](#specialized-guides)
@@ -61,6 +60,8 @@ This is the canonical navigation blueprint for the repository. It defines the lo
 
 - [docs/TROUBLESHOOTING_GUIDE.md](../TROUBLESHOOTING_GUIDE.md) — Troubleshooting and maintenance
 - [docs/TROUBLESHOOTING_NVIDIA_BUILD.md](../TROUBLESHOOTING_NVIDIA_BUILD.md) — NVIDIA Build-specific troubleshooting
+- [docs/security/history-redaction.md](../security/history-redaction.md) — Git history cleanup runbook
+- [docs/security/key-rotation-tracker.md](../security/key-rotation-tracker.md) — API key rotation audit log
 - [SECURITY.md](../../SECURITY.md) — Security policy and practices
 - [CHANGELOG.md](../../CHANGELOG.md) — Release notes and changes
 - [docs/\_shared/metadata_template.md](./metadata_template.md) — Template for required documentation metadata

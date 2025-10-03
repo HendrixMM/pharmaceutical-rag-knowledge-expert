@@ -1,10 +1,26 @@
 ---
 Last Updated: 2025-10-03
 Owner: Security Team
-Review Cadence: After each rotation
+Review Cadence: Monthly
 ---
 
 # API Key Rotation Tracker
+
+<!-- TOC -->
+- [Purpose](#purpose)
+- [Rotation History](#rotation-history)
+  - [NVIDIA API Key](#nvidia-api-key)
+  - [PubMed E-utilities API Key](#pubmed-e-utilities-api-key)
+  - [Apify Token](#apify-token)
+- [Rotation Procedures](#rotation-procedures)
+  - [Standard Rotation Process](#standard-rotation-process)
+  - [Emergency Rotation (Suspected Compromise)](#emergency-rotation-suspected-compromise)
+- [Rotation Schedule](#rotation-schedule)
+- [Audit Trail](#audit-trail)
+- [Compliance Notes](#compliance-notes)
+- [References](#references)
+<!-- /TOC -->
+
 
 ## Purpose
 
@@ -122,11 +138,10 @@ Tracks all API key rotations performed as part of git history cleanup and ongoin
 
 ## References
 
-- [Security Policy](../SECURITY.md)
+- [Security Policy](../../SECURITY.md)
 - [Git History Cleanup Documentation](history-redaction.md)
 - [NVIDIA API Key Management](https://build.nvidia.com)
 - [PubMed API Key Management](https://www.ncbi.nlm.nih.gov/account/)
 - [Apify Token Management](https://console.apify.com)
 
 Note: Only store key IDs (hashes/prefixes) here, never full values.
-

@@ -7,7 +7,6 @@ Review Cadence: Quarterly
 # Maintainers Guide
 
 <!-- TOC -->
-
 - [Ownership & Review Routing](#ownership--review-routing)
 - [Review SLAs (Targets)](#review-slas-targets)
 - [PR Acceptance Criteria](#pr-acceptance-criteria)

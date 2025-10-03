@@ -1,4 +1,15 @@
-# Microsoft Learn MCP Integration for NeMo Retriever
+# MCP Integrations (Claude)
+
+This repo ships with turnkey wiring for Claude MCP servers to enrich your agent with live context. It includes:
+
+- Microsoft Learn MCP (NVIDIA/NeMo docs)
+- GitHub MCP (repositories, issues/PRs, Actions, Dependabot, etc.)
+
+Below are quick-start guides for both.
+
+---
+
+## Microsoft Learn MCP Integration for NeMo Retriever
 
 This implementation provides a comprehensive framework for integrating Microsoft Learn's Model Context Protocol (MCP) server with your Claude-Code agent to access up-to-date NVIDIA NeMo Retriever documentation.
 
@@ -198,6 +209,88 @@ client = NeMoMCPClient(enable_fallback=True)
 
 # Custom config path
 client = NeMoMCPClient(config_path="custom_mcp_config.json")
+
+---
+
+## GitHub MCP Server Integration (Claude)
+
+GitHub’s official MCP server lets Claude read/manage repos, issues/PRs, Actions, releases, and security alerts. Two ways to use it:
+
+### Option A: Remote server (recommended; no cloning)
+
+Requirements:
+- Claude Code CLI installed (`claude` on PATH)
+- GitHub Personal Access Token (PAT) in `.env` as `GITHUB_PAT` (use minimal scopes; start read-only)
+
+Setup (project-scoped; writes `.mcp.json`, which is git-ignored):
+
+```bash
+make mcp-github-add
+# Verify
+make mcp-github-verify
+```
+
+What this does:
+- Runs `claude mcp add -s project --transport http -H "Authorization: Bearer $GITHUB_PAT" github https://api.githubcopilot.com/mcp/`
+- Creates `.mcp.json` in the project directory (not committed)
+
+Remove:
+
+```bash
+make mcp-github-remove
+```
+
+### Option B: Local server via Docker (Claude Desktop or CLI)
+
+If Claude Desktop cannot use the remote server (OAuth limitations), run the containerized server locally.
+
+1) Ensure Docker is running and set `GITHUB_PAT` in your shell or `.env`.
+2) Claude Desktop: open Settings → Developer → Edit Config and merge the snippet below into your config file:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop after saving the config.
+
+CLI equivalent (no Desktop):
+
+```bash
+claude mcp add github -e GITHUB_PERSONAL_ACCESS_TOKEN=$GITHUB_PAT -- \
+  docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server
+```
+
+### Token and Security Notes
+- Start with minimal scopes; add `repo` only if you need write operations (issues/PRs).
+- Store tokens in `.env` (already git-ignored). Rotate if ever exposed.
+- `.mcp.json` is now git-ignored to prevent committing headers.
+
+### Troubleshooting
+- `claude mcp list` and `claude mcp get github` to inspect config.
+- Docker pull issues: `docker logout ghcr.io` then retry.
+- Claude Desktop logs (macOS): `~/Library/Logs/Claude/`.
+
 
 # Agent with custom MCP client
 agent = MCPEnhancedAgent(mcp_client=client, enable_auto_context=True)

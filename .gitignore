@@ -8,6 +8,9 @@
 !.env.example
 !.env.template
 
+# Claude Code project-scoped MCP config (contains secrets if headers are stored)
+.mcp.json
+
 # Security and cleanup artifacts
 # Generated during git history cleanup and security audits
 repo-mirror.git/

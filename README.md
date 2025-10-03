@@ -104,6 +104,7 @@ See docs/DEVELOPMENT.md for a deeper breakdown.
 
 - Getting Started: QUICK_START.md, SETUP_GUIDE.md
 - Core Docs: docs/FEATURES.md, docs/API_REFERENCE.md, docs/EXAMPLES.md, docs/DEVELOPMENT.md, docs/DEPLOYMENT.md
+- Security: docs/security/history-redaction.md, docs/security/key-rotation-tracker.md
 - Specialized Guides: docs/API_INTEGRATION_GUIDE.md, docs/PHARMACEUTICAL_BEST_PRACTICES.md, docs/NEMO_PIPELINE_GUIDE.md,
   docs/NVIDIA_MODEL_ACCESS_GUIDE.md, docs/NVIDIA_BUILD_SELF_HOSTED_NIM.md, docs/FREE_TIER_MAXIMIZATION.md, docs/CHEAPEST_DEPLOYMENT.md
 - Reference: docs/TROUBLESHOOTING_GUIDE.md, SECURITY.md, CONTRIBUTING.md, CHANGELOG.md

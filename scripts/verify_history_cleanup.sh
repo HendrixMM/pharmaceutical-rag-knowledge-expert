@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 set -euo pipefail
 
 usage() {
@@ -126,4 +125,3 @@ echo ""
 echo "📄 Report saved to: $report_file"
 
 exit "$overall"
-
