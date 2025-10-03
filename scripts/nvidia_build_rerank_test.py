@@ -12,7 +12,7 @@ try:
     from dotenv import load_dotenv
 
     load_dotenv()
-except Exception:
+except Exception:  # nosec B110 - optional dotenv import should not fail tests
     pass
 
 try:
