@@ -1,130 +1,135 @@
-# Universal Business Intelligence Platform
+# 🧠 Domain Expert AI Platform
 
-**Transform industry documents + live data into executive-ready insights**
+**Open-source RAG template for enterprise knowledge retrieval and compliance**
 
-_Demo highlight: 4-hour research task completed in 30 seconds_
+[![CI](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/tests.yml)
+[![Docs](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/docs.yml)
+[![Demo-Streamlit](https://img.shields.io/badge/Demo-Streamlit-ff69b4)](#-try-it-now)
+[![License](https://img.shields.io/github/license/HendrixMM/pharmaceutical-rag-knowledge-expert)](LICENSE)
 
-## Executive Summary
+_Demo: Pharmaceutical intelligence—thousands of documents + live APIs + compliance validation in real-time_
 
-- **Problem:** Analysts spend 60% of their time manually reviewing documents and external data sources.
-- **Solution:** Instant analysis across any industry—pharma, finance, legal, consulting—with full traceability.
-- **Impact:** 70% time savings with complete source tracking for compliance.
-- **Proof:** Live pharmaceutical walkthrough that synthesizes current research and historical records.
-- **Scale:** Deployable for new industries in days, not months.
-
-## Business Problem
-
-Every industry shares the same bottleneck: experts must digest mountains of reports, filings, and research before decisions can be made. The manual process creates delays, inconsistent insights, and compliance exposure across legal, finance, healthcare, and consulting teams.
-
-## How It Works
-
-- **Input:** Upload industry documents and connect live data sources.
-- **Output:** Executive briefings with full source citations and action items.
-- **Time:** Minutes instead of hours.
-- **Quality:** Expert-level analysis with audit trails for every fact.
-
-## Business Capabilities
-
-- **Process Automation:** Document review • Data analysis • Report generation
-- **Compliance:** Source tracking • Audit trails • Regulatory alignment
-- **Scalability:** Multi-industry rollouts • Real-time updates • Team collaboration
-
-## Business Impact
-
-| Business Outcome             | Before       | After          | Improvement                                    |
-| ---------------------------- | ------------ | -------------- | ---------------------------------------------- |
-| Analyst wait time per answer | 3.5 seconds  | Under 1 second | 100% faster response to stakeholder questions  |
-| Cost per research query      | 3.20 credits | 0.87 credits   | 72.8% lower operating cost for pilots          |
-| Drug-safety answer accuracy  | 85%          | 98%            | Meets industry thresholds for confident action |
-| Free tier utilization        | 60%          | 95%            | Maximizes ROI before enterprise purchase       |
-
-## Industry Applications
-
-- **Legal:** Contract review, case research, regulatory compliance monitoring
-- **Finance:** Investment research, regulatory filing analysis, market intelligence
-- **Healthcare:** Clinical evidence review, drug safety monitoring, research synthesis
-- **Consulting:** Market analysis, competitive intelligence, industry trend tracking
-
-## Information Sources
-
-- **Live updates:** Government databases, regulatory filings, research publications
-- **Historical analysis:** Contract libraries, case archives, clinical studies
-- **Quality assurance:** Source credibility checks, recency validation, regulatory compliance
-- **Audit trail:** Full documentation for legal and compliance teams
-
-## Business Case: Pharmaceutical Research
-
-- **Challenge:** Teams must combine the latest drug interaction studies with historical clinical data before safety decisions.
-- **Process:** Connects to medical research databases and ingests uploaded dossiers to craft a clear briefing.
-- **Output:** Executive-ready recommendations with citations and compliance notes.
-- **Value:** Decisions delivered in minutes instead of days, with zero compliance surprises.
-
-## Business Expansion
-
-- **30 days:** Financial services deployment (SEC filings + market data)
-- **60 days:** Legal services deployment (case law + current regulations)
-- **90 days:** Cross-team enterprise rollout with shared briefings
-- **6 months:** Real-time regulatory alerting layered onto executive dashboards
-
-## Get Started
-
-1. Upload your industry documents.
-2. Connect the relevant live data sources.
-3. Generate executive briefings in minutes.
-4. Share insights with full source documentation.
-
-## Why This Matters
-
-- **Speed:** Hours of expert review reduced to minutes.
-- **Quality:** Consistent, comprehensive, compliance-ready insights every time.
-- **Scale:** Works across industries without rebuilding processes.
-- **Risk:** Complete audit trails eliminate compliance gaps.
-- **Cost:** One analyst now delivers the output of an entire research pod.
-
-## Contact
-
-📧 your.email@example.com • 💼 https://www.linkedin.com/in/your-profile • 🔗 Demo available on request
+> Open-source RAG template for domain-specific intelligence — customizable, compliant, and enterprise-ready.
 
 ---
 
-### Portfolio Extras Inside the Repository
+## 📈 Executive Summary
 
-- **Executive Brief:** One-page business story for recruiters (`docs/business/EXECUTIVE_BRIEF.md`).
-- **Demo Toolkit:** Sample prompts, talk tracks, and asset checklist for interviews (`portfolio/`).
+- Problem: Accurate and up-to-date information is critical in every domain—from pharmaceuticals to finance—but teams still rely on manual research across disconnected sources.
+- Context: Retrieval-Augmented Generation (RAG) is now standard across industries, yet most implementations are closed, proprietary, and difficult to adapt.
+- Solution: This project offers an open-source, enterprise-ready RAG template that organizations can easily customize with their own data, APIs, and compliance rules.
+- Scale: Handle thousands of documents and live data streams with domain-specific optimization.
+- Compliance: Built-in guardrails for regulatory and cultural alignment.
+- Impact: Turn hours of research into minutes of analysis with transparent source traceability and audit confidence.
 
-## Documentation
+Tech overview: See Architecture and Examples for system design and end-to-end workflows.
 
-### Core Documentation
+---
 
-- **[API Reference](docs/API_REFERENCE.md)** — Comprehensive API configuration, edge cases, and pharmaceutical-specific patterns
-- **[Examples](docs/EXAMPLES.md)** — 12+ complete code examples with pharmaceutical workflows and error handling
-- **[Benchmarks](docs/BENCHMARKS.md)** — Performance metrics, cost analysis, and free tier optimization strategies
-- **[Architecture Decision Records](docs/adr/)** — Design rationale and technology selection decisions
+## 🏢 Business Problem
 
-### Additional Resources
+Every industry depends on accurate, timely information to make decisions. Yet domain experts in healthcare, finance, law, and consulting still spend significant time manually reviewing reports, filings, and datasets to ensure completeness and compliance.
 
-- **[Architecture](docs/ARCHITECTURE.md)** — System design, data flow, and guardrail tracing
-- **[Installation](docs/INSTALLATION.md)** — Step-by-step setup guide
-- **[Quick Start](docs/QUICK_START.md)** — Get running in 5 minutes
-- **[Configuration](docs/CONFIGURATION.md)** — Environment variables and settings reference
-- **[Troubleshooting](docs/TROUBLESHOOTING_GUIDE.md)** — Common issues and diagnostic decision trees
-- **[Deployment](docs/DEPLOYMENT.md)** — Cloud-first vs self-hosted strategies
-- **[Testing](docs/TESTING.md)** — Test framework and validation procedures
+These manual processes slow down analysis, increase inconsistency, and create compliance risks — especially in regulated sectors where traceability and validation are essential.
 
-### Documentation Validation
+---
 
-Validate documentation integrity using MkDocs:
+## 🔍 How It Works
+
+1️⃣ Feed – Upload document libraries (thousands of files) and connect relevant APIs
+2️⃣ Customize – Configure industry rules, compliance constraints, and vocabulary
+3️⃣ Query – Ask questions naturally, using your domain's language
+4️⃣ Deliver – Generate concise expert briefings with full source traceability
+
+---
+
+## ⚡️ Try It Now
 
 ```bash
-# Install MkDocs with Material theme
-pip install mkdocs mkdocs-material mkdocs-minify-plugin
+# 1) Clone and enter the project
+git clone https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert.git
+cd pharmaceutical-rag-knowledge-expert
 
-# Build documentation with strict link checking
-mkdocs build --strict
+# 2) Create a virtual environment (optional but recommended)
+python -m venv venv && source venv/bin/activate
 
-# Preview documentation locally
-mkdocs serve
-# Visit http://127.0.0.1:8000
+# 3) Install dependencies and prepare environment
+pip install -r requirements.txt
+cp .env.example .env
+
+# 4) Set your NVIDIA API key in .env (required)
+# NVIDIA_API_KEY=your_api_key_here
+
+# 5) Add a few PDFs to the default docs folder
+# mkdir -p Data/Docs && cp /path/to/*.pdf Data/Docs/
+
+# Option A: Run the CLI assistant
+python main.py
+
+# Option B: Launch the Streamlit web app
+streamlit run streamlit_app.py
 ```
 
-The `mkdocs build --strict` command validates all internal links and fails on broken references, ensuring documentation accuracy. This validation is integrated into CI/CD pipelines for continuous quality assurance.
+---
+
+## 🧩 Business Capabilities
+
+| Category              | Capabilities                                                          |
+| --------------------- | --------------------------------------------------------------------- |
+| Data Integration      | Thousands of documents • Live API connections • Multi-source fusion   |
+| Domain Optimization   | Custom vocabularies • Retrieval tuning • Quality filtering            |
+| Enterprise Compliance | Regulatory alignment • Internal policy guardrails • Full audit trails |
+| Real-Time Insights    | Continuous data updates • Change monitoring • Timely intelligence     |
+
+---
+
+## 🚀 Business Impact
+
+| Business Outcome    | Manual Process           | AI Template          | Improvement             |
+| ------------------- | ------------------------ | -------------------- | ----------------------- |
+| Research Time       | Hours per review         | Minutes per review   | ⏱️ 10x faster           |
+| Source Coverage     | Limited to a few sources | Hundreds of sources  | 🌐 20x broader          |
+| Compliance Risk     | Manual checks            | Automated validation | 🛡️ Reduced risk         |
+| Expert Availability | Limited capacity         | Always accessible    | 🔄 Continuous operation |
+
+---
+
+## 🌍 Industry Applications
+
+- Pharma – Research archives + PubMed API + FDA compliance + safety validation
+- Finance – Filings + market feeds + regulatory alignment + risk analysis
+- Legal – Case databases + court APIs + jurisdiction rules + confidentiality checks
+- Consulting – Market reports + industry APIs + client confidentiality + QA standards
+
+---
+
+## 💊 Demo: Pharmaceutical Research
+
+Scenario: A pharmaceutical analyst needs the latest data on drug interactions and historical trial results.
+Process: The platform connects to medical databases and uploaded research files, consolidating findings.
+Output: An executive briefing with cited sources and safety notes.
+Result: Informed decisions in minutes instead of days, with compliance transparency and source validation.
+
+---
+
+## 🧭 Extension Opportunities
+
+This template can be easily extended to new domains:
+
+- Finance – Integrate SEC filings, market data APIs, and compliance rules
+- Legal – Connect case law databases and jurisdiction-specific policies
+- Enterprise – Deploy across departments with custom data access and audit trails
+- Regulatory Intelligence – Add live monitoring for policy or compliance updates
+
+---
+
+## 📚 Tech Overview
+
+- Architecture: docs/ARCHITECTURE.md
+- Examples: docs/EXAMPLES.md
+
+---
+
+## 📞 Contact
+
+📧 hendrixmoreau123@gmail.com • 💼 LinkedIn • 🔗 Live Demo (Streamlit instructions above)
