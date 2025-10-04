@@ -252,7 +252,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 2. No NGC account required
 3. Self-hosted fallback options available
 
-See [NGC_DEPRECATION_IMMUNITY.md](docs/NGC_DEPRECATION_IMMUNITY.md) for details.
+See [NGC_DEPRECATION_IMMUNITY.md](NGC_DEPRECATION_IMMUNITY.md) for details.
 
 ### Migrating from v1.x to v2.0+
 

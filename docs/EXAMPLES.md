@@ -1581,7 +1581,7 @@ Warfarin and aspirin interact through multiple mechanisms. Warfarin inhibits vit
 
 ### Configuration & Setup
 - [API Reference](API_REFERENCE.md) - Configuration details
-- [Environment Variables](.env.example) - All available settings
+- Environment Variables (see `.env.example` in project root) - All available settings
 - [Development Guide](DEVELOPMENT.md) - Setup instructions
 
 ### Advanced Topics
