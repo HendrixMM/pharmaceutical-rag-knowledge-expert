@@ -91,3 +91,40 @@ Every industry shares the same bottleneck: experts must digest mountains of repo
 
 - **Executive Brief:** One-page business story for recruiters (`docs/business/EXECUTIVE_BRIEF.md`).
 - **Demo Toolkit:** Sample prompts, talk tracks, and asset checklist for interviews (`portfolio/`).
+
+## Documentation
+
+### Core Documentation
+
+- **[API Reference](docs/API_REFERENCE.md)** — Comprehensive API configuration, edge cases, and pharmaceutical-specific patterns
+- **[Examples](docs/EXAMPLES.md)** — 12+ complete code examples with pharmaceutical workflows and error handling
+- **[Benchmarks](docs/BENCHMARKS.md)** — Performance metrics, cost analysis, and free tier optimization strategies
+- **[Architecture Decision Records](docs/adr/)** — Design rationale and technology selection decisions
+
+### Additional Resources
+
+- **[Architecture](docs/ARCHITECTURE.md)** — System design, data flow, and guardrail tracing
+- **[Installation](docs/INSTALLATION.md)** — Step-by-step setup guide
+- **[Quick Start](docs/QUICK_START.md)** — Get running in 5 minutes
+- **[Configuration](docs/CONFIGURATION.md)** — Environment variables and settings reference
+- **[Troubleshooting](docs/TROUBLESHOOTING_GUIDE.md)** — Common issues and diagnostic decision trees
+- **[Deployment](docs/DEPLOYMENT.md)** — Cloud-first vs self-hosted strategies
+- **[Testing](docs/TESTING.md)** — Test framework and validation procedures
+
+### Documentation Validation
+
+Validate documentation integrity using MkDocs:
+
+```bash
+# Install MkDocs with Material theme
+pip install mkdocs mkdocs-material mkdocs-minify-plugin
+
+# Build documentation with strict link checking
+mkdocs build --strict
+
+# Preview documentation locally
+mkdocs serve
+# Visit http://127.0.0.1:8000
+```
+
+The `mkdocs build --strict` command validates all internal links and fails on broken references, ensuring documentation accuracy. This validation is integrated into CI/CD pipelines for continuous quality assurance.
