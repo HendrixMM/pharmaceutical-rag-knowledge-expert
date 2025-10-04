@@ -366,10 +366,10 @@ bash scripts/verify_history_cleanup.sh
 ### Internal
 
 - [Security Policy](SECURITY.md)
-- [Git History Cleanup Runbook](docs/security/history-redaction.md)
-- [API Reference (keys/config)](docs/API_REFERENCE.md)
-- [NGC Deprecation Immunity](docs/NGC_DEPRECATION_IMMUNITY.md)
-- [Deployment Security](docs/DEPLOYMENT.md)
+- [Git History Cleanup Runbook](security/history-redaction.md)
+- [API Reference (keys/config)](API_REFERENCE.md)
+- [NGC Deprecation Immunity](NGC_DEPRECATION_IMMUNITY.md)
+- [Deployment Security](DEPLOYMENT.md)
 
 ### External
 

@@ -149,7 +149,7 @@ The pharmaceutical and medical domain-specific sections are customized for this 
 
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - Contribution guidelines and development workflow
 - [SECURITY.md](./SECURITY.md) - Security policy and vulnerability reporting
-- [index.md](docs/index.md) - Project overview and getting started
+- [index.md](index.md) - Project overview and getting started
 
 ---
 
