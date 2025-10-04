@@ -10,6 +10,11 @@ _Cloud-first RAG system with pharmaceutical safety guardrails, PubMed integratio
 
 > Production-ready pharmaceutical research platform featuring NVIDIA NeMo Retriever embeddings, reranking, and medical compliance guardrails.
 
+<div align="center" style="margin: 6px 0 2px;">
+  <a href="#try-it-now"><img alt="Get Started" src="https://img.shields.io/badge/Get_Started-CLI_%26_Web_App-2ea44f?style=for-the-badge"></a>
+  <a href="#tech-overview"><img alt="Architecture & Examples" src="https://img.shields.io/badge/Architecture-%26_Examples-0ea5e9?style=for-the-badge"></a>
+</div>
+
 ## 🔗 Quick Links
 
 [Try It Now](#try-it-now) • [How It Works](#how-it-works) • [Capabilities](#business-capabilities) • [Impact](#business-impact) • [Industry](#industry-applications) • [Demo](#demo-pharmaceutical-research) • [Tech Overview](#tech-overview)
@@ -36,6 +41,17 @@ _Cloud-first RAG system with pharmaceutical safety guardrails, PubMed integratio
 - Open-source template designed for customization and control
 - Compliance-ready guardrails with full source traceability
 - Cross-industry scalability: pharma, finance, legal, consulting
+
+---
+
+## 🧭 At a Glance
+
+| Guardrails (Compliance)                                | PubMed Integration                          | DDI Analysis                                     |
+| ------------------------------------------------------ | ------------------------------------------- | ------------------------------------------------ |
+| Safety filters, audit trails, and regulatory alignment | Hybrid retrieval from PubMed and local docs | Drug–drug interaction detection and safety notes |
+
+> [!IMPORTANT]
+> Sources are cited in-line for every answer. Briefings include evidence links and safety disclaimers to support compliance review.
 
 ---
 
