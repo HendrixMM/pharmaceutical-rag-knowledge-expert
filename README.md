@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/tests.yml)
 [![Docs](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/docs.yml)
-[![Demo-Streamlit](https://img.shields.io/badge/Demo-Streamlit-ff69b4)](#-try-it-now)
+[![Demo-Streamlit](https://img.shields.io/badge/Demo-Streamlit-ff69b4)](#try-it-now)
 [![License](https://img.shields.io/github/license/HendrixMM/pharmaceutical-rag-knowledge-expert)](LICENSE)
 
 _Demo: Pharmaceutical intelligence—thousands of documents + live APIs + compliance validation in real-time_
