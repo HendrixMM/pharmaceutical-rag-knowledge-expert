@@ -1,15 +1,18 @@
-# 🧠 Domain Expert AI Platform
+# Pharmaceutical RAG Template - NVIDIA NeMo Retriever
 
-**Open-source RAG template for enterprise knowledge retrieval and compliance**
+**Production-grade RAG system for pharmaceutical research with NGC deprecation immunity**
 
-[![CI](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/tests.yml)
-[![Docs](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/HendrixMM/pharmaceutical-rag-knowledge-expert/actions/workflows/docs.yml)
-[![Demo-Streamlit](https://img.shields.io/badge/Demo-Streamlit-ff69b4)](#try-it-now)
-[![License](https://img.shields.io/github/license/HendrixMM/pharmaceutical-rag-knowledge-expert)](LICENSE)
+[![NGC Immune](https://img.shields.io/badge/NGC-Immune_March_2026-green)](https://github.com/hendrixmm/RAG-Template-for-NVIDIA-nemoretriever)
+[![Free Tier](https://img.shields.io/badge/NVIDIA_Build-10K_Free_Requests-blue)](https://build.nvidia.com)
+[![License](https://img.shields.io/github/license/hendrixmm/RAG-Template-for-NVIDIA-nemoretriever)](LICENSE)
 
-_Demo: Pharmaceutical intelligence—thousands of documents + live APIs + compliance validation in real-time_
+_Cloud-first RAG system with pharmaceutical safety guardrails, PubMed integration, and drug interaction detection_
 
-> Open-source RAG template for domain-specific intelligence — customizable, compliant, and enterprise-ready.
+> Production-ready pharmaceutical research platform featuring NVIDIA NeMo Retriever embeddings, reranking, and medical compliance guardrails.
+
+## 🔗 Quick Links
+
+[Try It Now](#try-it-now) • [How It Works](#how-it-works) • [Capabilities](#business-capabilities) • [Impact](#business-impact) • [Industry](#industry-applications) • [Demo](#demo-pharmaceutical-research) • [Tech Overview](#tech-overview)
 
 ---
 
@@ -22,7 +25,17 @@ _Demo: Pharmaceutical intelligence—thousands of documents + live APIs + compli
 - Compliance: Built-in guardrails for regulatory and cultural alignment.
 - Impact: Turn hours of research into minutes of analysis with transparent source traceability and audit confidence.
 
-Tech overview: See Architecture and Examples for system design and end-to-end workflows.
+> [!TIP]
+> Tech overview: See Architecture and Examples for system design and end-to-end workflows.
+
+---
+
+## ✨ Highlights
+
+- Business-focused language with clear outcomes and value
+- Open-source template designed for customization and control
+- Compliance-ready guardrails with full source traceability
+- Cross-industry scalability: pharma, finance, legal, consulting
 
 ---
 
