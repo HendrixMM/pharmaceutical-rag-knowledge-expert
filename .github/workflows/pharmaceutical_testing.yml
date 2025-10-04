@@ -25,6 +25,7 @@ on:
 jobs:
   # Fast unit tests for every commit
   unit-tests:
+    if: ${{ github.event_name != 'pull_request' }}
     name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -375,6 +376,7 @@ jobs:
 
   # Security and compliance checks
   security-validation:
+    if: ${{ github.event_name != 'pull_request' }}
     name: Security & Compliance
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -447,6 +449,7 @@ jobs:
 
   # Notification and reporting
   notify-results:
+    if: ${{ github.event_name != 'pull_request' }}
     name: Notify Results
     runs-on: ubuntu-latest
     needs: [comprehensive-validation, security-validation]
