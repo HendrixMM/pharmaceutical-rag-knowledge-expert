@@ -1,4 +1,4 @@
-# 🧠 Domain Expert AI Platform  
+# Domain Expert Knowledge base
 **Open-source RAG template for enterprise knowledge retrieval and compliance**
 
 *Demo: Pharmaceutical intelligence—thousands of documents + live APIs + compliance validation in real-time*
@@ -7,7 +7,7 @@
 
 ---
 
-## 📈 Executive Summary  
+## Executive Summary  
 - **Problem**: Accurate and up-to-date information is critical in every domain—from pharmaceuticals to finance—but teams still rely on manual research across disconnected sources.  
 - **Context**: Retrieval-Augmented Generation (RAG) is now standard across industries, yet most implementations are closed, proprietary, and difficult to adapt.  
 - **Solution**: This project offers an **open-source, enterprise-ready RAG template** that organizations can easily customize with their own data, APIs, and compliance rules.  
@@ -17,7 +17,7 @@
 
 ---
 
-## 🏢 Business Problem  
+## Business Problem  
 Every industry depends on accurate, timely information to make decisions. Yet domain experts in healthcare, finance, law, and consulting still spend significant time manually reviewing reports, filings, and datasets to ensure completeness and compliance.  
 
 These manual processes slow down analysis, increase inconsistency, and create compliance risks — especially in regulated sectors where traceability and validation are essential.
@@ -34,7 +34,7 @@ Unlike closed commercial solutions, this project is designed as a **flexible fou
 
 ---
 
-## 🔍 How It Works  
+## How It Works  
 1️⃣ **Feed** – Upload document libraries (thousands of files) and connect relevant APIs  
 2️⃣ **Customize** – Configure industry rules, compliance constraints, and vocabulary  
 3️⃣ **Query** – Ask questions naturally, using your domain's language  
@@ -42,7 +42,7 @@ Unlike closed commercial solutions, this project is designed as a **flexible fou
 
 ---
 
-## 🧩 Business Capabilities  
+## Business Capabilities  
 | Category | Capabilities |
 |-----------|--------------|
 | **Data Integration** | Thousands of documents • Live API connections • Multi-source fusion |
@@ -62,7 +62,7 @@ Unlike closed commercial solutions, this project is designed as a **flexible fou
 
 ---
 
-## 🌍 Industry Applications  
+## Industry Applications  
 - **Pharma** – Research archives + PubMed API + FDA compliance + safety validation  
 - **Finance** – Filings + market feeds + regulatory alignment + risk analysis  
 - **Legal** – Case databases + court APIs + jurisdiction rules + confidentiality checks  
@@ -70,7 +70,7 @@ Unlike closed commercial solutions, this project is designed as a **flexible fou
 
 ---
 
-## 💊 Demo: Pharmaceutical Research  
+## Demo: Pharmaceutical Research  
 **Scenario**: A pharmaceutical analyst needs the latest data on drug interactions and historical trial results.  
 **Process**: The platform connects to medical databases and uploaded research files, consolidating findings.  
 **Output**: An executive briefing with cited sources and safety notes.  
@@ -78,7 +78,7 @@ Unlike closed commercial solutions, this project is designed as a **flexible fou
 
 ---
 
-## 🧭 Extension Opportunities  
+## Extension Opportunities  
 This template can be easily extended to new domains:  
 - **Finance** – Integrate SEC filings, market data APIs, and compliance rules  
 - **Legal** – Connect case law databases and jurisdiction-specific policies  
