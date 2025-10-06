@@ -3,7 +3,7 @@
 
 *Demo: Pharmaceutical intelligence—thousands of documents + live APIs + compliance validation in real-time*
 
-> **Open-source RAG template for domain-specific intelligence — customizable, compliant, and enterprise-ready.**
+> **Open-source RAG framework for domain-specific intelligence**
 
 ---
 
