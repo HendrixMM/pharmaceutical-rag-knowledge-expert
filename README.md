@@ -1,4 +1,4 @@
-# Domain Expert Knowledge base
+# Domain Specific Automated-Resseacher
 **Open-source RAG template for enterprise knowledge retrieval and compliance**
 
 *Demo: Pharmaceutical intelligence—thousands of documents + live APIs + compliance validation in real-time*
